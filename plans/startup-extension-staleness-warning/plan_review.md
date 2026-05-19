@@ -4,23 +4,21 @@
 
 | ID | Severity | Issue | Location | Decision required | Status |
 |---|---|---|---|---|---|
-| RN-01 | Critical | Logic bug: interactive launch whitelist is still undefined | Open Questions / Acceptance checklist / T3 | Yes | open |
-| RN-02 | Major | Logic bug: startup-mode timeout/concurrency/expiry defaults are still open | Assumptions / Open Questions / T2 / T3 | Yes | open |
+| RN-01 | Critical | Logic bug: interactive launch whitelist is still undefined | Open Questions / Acceptance checklist / T3 | No | applied |
+| RN-02 | Major | Logic bug: startup-mode timeout/concurrency/expiry defaults are still open | Assumptions / Open Questions / T2 / T3 | No | applied |
 | RN-03 | Major | Logic bug: startup workflow wording could false-green via docs-only coverage | T4 / T5 / Coverage Matrix | No | applied |
 | RN-04 | Major | Status-engine/manual-helper contract tests omitted required reason-code, warning-shape, and npm-only update safeguards | T2 / Tooling contract / Coverage Matrix | No | applied |
 | RN-05 | Major | Logic bug: wrapper/runtime wiring and startup snapshot contract verification were under-specified | Acceptance checklist / T3 / T4 | No | applied |
 | RN-06 | Major | Logic bug: warning taxonomy required skip/ignored warning payloads that conflict with silent no-op paths | Warning taxonomy / Acceptance checklist / T3 / T4 | No | applied |
 | RN-07 | Major | Logic bug: notifier footer/status summary behavior lacked concrete verification | Acceptance checklist / T4 / Coverage Matrix | No | applied |
 | RN-08 | Major | Logic bug: wrapper PATH-shadowing guard for Node/helper resolution was not concretely tested | Acceptance checklist / T3 / Coverage Matrix | No | applied |
-| RN-09 | Critical | Logic bug: whole-run status-check failure contract is still contradictory | Exit code policy / Warning taxonomy / T2 / T3 / T4 | Yes | open |
+| RN-09 | Critical | Logic bug: whole-run status-check failure contract is still contradictory | Exit code policy / Warning taxonomy / T2 / T3 / T4 | No | applied |
 
 ## Open Decisions (roll-up — update each pass)
 
 | ID | Decision | Options | Recommendation | Status |
 |---|---|---|---|---|
-| OD-01 | Which argv forms count as documented interactive launches in v1? | Plain `pi` only; plain `pi` plus an explicit whitelist; broader argv classifier | Pick and enumerate the exact whitelist in the plan, then make every other form an explicit fail-open skip case | Open |
-| OD-02 | What startup-mode defaults ship for time budget and freshness? | Concrete per-source/overall/concurrency/expiry defaults; config-driven defaults; defer tuning to implementer | Choose concrete defaults now and keep tests injectable so runtime behavior is predictable | Open |
-| OD-03 | What should startup/manual surfaces do when the shared checker fails as a whole? | Wrapper/manual frontend synthesize degraded fallback output; startup fallback only with manual hard error; silent startup skip + manual hard error | Assign fallback responsibility explicitly per surface and align warning code, exit status, snapshot behavior, and notifier/manual UX around that choice | Open |
+| none | none | n/a | n/a | closed |
 
 ---
 
@@ -298,3 +296,50 @@
 ### Review Status
 - Significant issues found: 3
 - Status: NEEDS_ANOTHER_PASS
+
+## Review 2026-05-19 (Review 4)
+
+**Plan:** `plans/startup-extension-staleness-warning/plan.md`
+**Scope:** delta
+**Handoff readiness:** Yes
+
+### Implementer Decisions Remaining
+- None after this review pass.
+
+Re-checked the three previously open contract issues: the v1 interactive-launch rule is now explicitly exact zero-argument `pi` only, startup-mode defaults are fixed at `2000ms` per source / `4000ms` overall / `4` concurrent probes with a `60s` snapshot window, and whole-run checker failure now has one consistent fail-open/no-snapshot startup policy plus a non-zero manual failure policy.
+
+### Test Adequacy Assessment
+- Coverage matrix complete: Yes
+- Negative/edge cases identified for each row: Yes
+- Bad-test avoidance addressed in approach.md: Yes
+- E2E seed/fixture data confirmed to support scenarios: N/A
+- TDD checklists include break-it step for all tasks: Yes
+
+### Issues
+
+#### Blocker
+<none>
+
+#### Critical
+<none>
+
+#### Major
+<none>
+
+#### Minor
+<none>
+
+### Summary
+| ID | Severity | Location | Decision required | Status |
+|---|---|---|---|---|
+| RN-01 | Critical | Decisions / Acceptance checklist / T3 | No | applied |
+| RN-02 | Major | Assumptions / Decisions / Tooling contract / T2 / T3 / T4 | No | applied |
+| RN-09 | Critical | Decisions / Exit code policy / Warning taxonomy / T2 / T3 / T4 | No | applied |
+
+### Changes Applied to Plan
+- none
+
+### Review Status
+- Significant issues found: 0
+- Status: COMPLETE
+
