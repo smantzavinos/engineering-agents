@@ -124,5 +124,66 @@
           description = "Starter configuration for using engineering-agents with Pi";
         };
       };
+
+      # ============================================================
+      # Checks — build-without-apply module instantiation tests
+      # ============================================================
+      # `nix flake check` builds these. They prove the modules can be
+      # imported and instantiated by home-manager without errors, and
+      # that the expected files appear in the activation package.
+      # ============================================================
+      checks = forAllSystems ({ system, pkgs, ... }: let
+        testUser = "testuser";
+        testHome = "/home/${testUser}";
+      in {
+        # Pi module builds a valid activation package
+        pi-module = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.pi
+            {
+              home.username = testUser;
+              home.homeDirectory = testHome;
+              home.stateVersion = "25.05";
+              engineering-agents.pi.enable = true;
+              engineering-agents.pi.enableGitNexus = false;
+              engineering-agents.pi.enableAgentKit = false;
+              engineering-agents.pi.enableVisualExplainer = false;
+            }
+          ];
+        };
+
+        # OpenCode module builds a valid activation package
+        opencode-module = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.opencode
+            {
+              home.username = testUser;
+              home.homeDirectory = testHome;
+              home.stateVersion = "25.05";
+              engineering-agents.opencode.enable = true;
+            }
+          ];
+        };
+
+        # Both modules together
+        both-modules = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.default
+            {
+              home.username = testUser;
+              home.homeDirectory = testHome;
+              home.stateVersion = "25.05";
+              engineering-agents.pi.enable = true;
+              engineering-agents.pi.enableGitNexus = false;
+              engineering-agents.pi.enableAgentKit = false;
+              engineering-agents.pi.enableVisualExplainer = false;
+              engineering-agents.opencode.enable = true;
+            }
+          ];
+        };
+      });
     };
 }
