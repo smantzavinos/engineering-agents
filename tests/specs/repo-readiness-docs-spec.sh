@@ -30,6 +30,7 @@ assert_file_exists "$REPO_ROOT/AGENTS.md" "Root AGENTS routing doc exists"
 assert_file_exists "$REPO_ROOT/docs/architecture.md" "Architecture doc exists"
 assert_file_exists "$REPO_ROOT/docs/coding-rules.md" "Coding rules doc exists"
 assert_file_exists "$REPO_ROOT/docs/development-environment.md" "Development environment doc exists"
+assert_file_exists "$REPO_ROOT/docs/testing-strategy.md" "Testing strategy doc exists"
 
 assert_file_contains "$REPO_ROOT/AGENTS.md" "# Project Agent Guide" "AGENTS has routing title"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Architecture" "AGENTS routes architecture section"
@@ -39,7 +40,7 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/coding-rules.md" "AGENTS route
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Development Environment" "AGENTS routes development environment section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/development-environment.md" "AGENTS routes to development environment doc"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Test Infrastructure" "AGENTS routes test infrastructure section"
-assert_file_contains "$REPO_ROOT/AGENTS.md" "tests/README.md" "AGENTS points to canonical current test docs"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/testing-strategy.md" "AGENTS points to the canonical testing strategy"
 
 assert_file_contains "$REPO_ROOT/docs/architecture.md" "# Repository Architecture" "Architecture doc has title"
 assert_file_contains "$REPO_ROOT/docs/architecture.md" "## Repository Purpose" "Architecture doc describes repository purpose"
@@ -58,6 +59,16 @@ assert_file_contains "$REPO_ROOT/docs/development-environment.md" "## Required T
 assert_file_contains "$REPO_ROOT/docs/development-environment.md" "## Setup and Apply" "Development environment doc explains setup"
 assert_file_contains "$REPO_ROOT/docs/development-environment.md" "home-manager switch --flake .#<hostname>" "Development environment doc includes apply command"
 assert_file_contains "$REPO_ROOT/docs/development-environment.md" "## Verification Entry Points" "Development environment doc lists verification entry points"
+
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "# Testing Strategy" "Testing strategy doc has title"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "## Standard Level Mapping" "Testing strategy doc maps commands to standard levels"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "./tests/run-tests.sh fast" "Testing strategy doc covers the fast gate"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "./tests/run-tests.sh all" "Testing strategy doc covers the final gate"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "./tests/run-tests.sh full" "Testing strategy doc covers the full gate"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "## Scope, Timing, and Prerequisites" "Testing strategy doc explains scope and prerequisites"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "task completion gate" "Testing strategy doc identifies the task gate"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "final plan gate" "Testing strategy doc identifies the final gate"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "bash tests/specs/proof-set-runtime-spec.sh" "Testing strategy doc lists targeted proof-set feedback"
 
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"

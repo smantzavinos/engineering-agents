@@ -22,4 +22,4 @@ home-manager switch --flake .#<hostname>
 - `./tests/run-tests.sh full` — everything in `all` plus Pi CLI smoke checks.
 - `bash tests/specs/repo-readiness-docs-spec.sh` — targeted fast feedback for the readiness-doc contract introduced by this plan.
 
-For the current canonical command list, prerequisites, and individual spec entry points, see `tests/README.md`.
+For the canonical testing-level mapping and gate roles, see `docs/testing-strategy.md`. For suite inventory and individual spec entry points, see `tests/README.md`.

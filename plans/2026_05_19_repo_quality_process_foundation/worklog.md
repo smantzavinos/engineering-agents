@@ -121,7 +121,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 ## Task Status
 
 - [x] T1: Add root routing and core contributor docs
-- [ ] T2: Canonicalize testing strategy and fix verification trust gap
+- [x] T2: Canonicalize testing strategy and fix verification trust gap
 - [ ] T3: Establish repo backlog/task-tracking contract
 - [ ] T4: Establish lightweight requirements system
 - [ ] T5: Add specialized-area guidance and `.llm/` instructions
@@ -137,18 +137,18 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T2 — Canonicalize testing strategy and fix verification trust gap
+**Current Task:** T3 — Establish repo backlog/task-tracking contract
 
-Read `plan.md` § `T2: Canonicalize testing strategy and fix verification trust gap` for the full TDD checklist and implementation details.
+Read `plan.md` § `T3: Establish repo backlog/task-tracking contract` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. Extend the readiness-doc spec and add the proof-set runtime regression spec before implementation changes.
-2. Keep `./tests/run-tests.sh fast` as the reliable task gate and treat `./tests/run-tests.sh all` as the final plan gate once T2 repairs verification trust.
-3. Record any accepted non-critical follow-up work in this worklog only because T3 has not established the backlog yet.
-4. Mark T2 done above.
-5. Set NEXT STEP to T3.
+1. Extend the readiness-doc spec with failing backlog/task-tracking assertions before implementation changes.
+2. Keep `./tests/run-tests.sh fast` as the task completion gate.
+3. Record any accepted non-critical follow-up work in this worklog only until T3 establishes the repo backlog mechanism.
+4. Mark T3 done above.
+5. Set NEXT STEP to T4.
 6. Append to the execution log below.
-7. Commit: `task(T2): <short description>`
+7. Commit: `task(T3): <short description>`
 
 ## Execution Log
 
@@ -160,3 +160,12 @@ After completing this task:
 - **Backlog items created:** none yet (no repo backlog mechanism until T3)
 - **Requirement changes applied:** none
 - **Notes:** Kept the root `AGENTS.md` concise and routing-oriented; `tests/README.md` remains the canonical testing doc until T2 introduces `docs/testing-strategy.md`.
+
+### T2 — 2026-05-19
+- **Changes:** Added `tests/specs/proof-set-runtime-spec.sh`, wired it into the fast suite, extended `tests/specs/repo-readiness-docs-spec.sh` for `docs/testing-strategy.md`, created `docs/testing-strategy.md`, updated `AGENTS.md`, `tests/README.md`, and `docs/development-environment.md`, taught `tests/scripts/resource-snapshot.mjs` to resolve both `@earendil-works/pi-coding-agent` and `@mariozechner/pi-coding-agent`, and fixed `tests/test-fast.sh` plus `tests/run-tests.sh` to propagate explicit environment failures.
+- **Tests:** `bash tests/specs/proof-set-runtime-spec.sh` and `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation; break-it check temporarily forced `tests/scripts/resource-snapshot.mjs` back to the legacy-only module path and `bash tests/specs/proof-set-runtime-spec.sh` failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T2): canonicalize testing strategy and proof-set checks`
+- **Backlog items created:** none (no repo backlog mechanism until T3)
+- **Requirement changes applied:** none
+- **Notes:** Preserved `schemaVersion: 2`, kept the warning taxonomy unchanged, and made module-entrypoint resolution failure an explicit non-zero environment error instead of a false-green path.

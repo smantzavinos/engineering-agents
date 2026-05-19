@@ -197,13 +197,16 @@ function buildPiModulePath() {
     throw error;
   }
 
-  const modulePath = path.join(
-    path.dirname(path.dirname(piBinary)),
-    'lib/node_modules/@mariozechner/pi-coding-agent/dist/index.js',
-  );
+  const prefixDir = path.dirname(path.dirname(piBinary));
+  const candidatePaths = [
+    path.join(prefixDir, 'lib/node_modules/@earendil-works/pi-coding-agent/dist/index.js'),
+    path.join(prefixDir, 'lib/node_modules/@mariozechner/pi-coding-agent/dist/index.js'),
+  ];
 
-  if (!existsSync(modulePath)) {
-    const error = new Error(`Unable to locate Pi module entrypoint at ${modulePath}`);
+  const modulePath = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+
+  if (!modulePath) {
+    const error = new Error(`Unable to locate Pi module entrypoint. Tried: ${candidatePaths.join(', ')}`);
     error.exitCode = EXIT_ENVIRONMENT;
     throw error;
   }

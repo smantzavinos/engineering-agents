@@ -33,12 +33,26 @@ EOF
   exit "$EXIT_ENVIRONMENT"
 }
 
+normalize_status() {
+  case "$1" in
+    0|1|2|3)
+      printf '%s\n' "$1"
+      ;;
+    *)
+      printf '%s\n' "$EXIT_SPEC"
+      ;;
+  esac
+}
+
 run_specs() {
   local pass=true
+  local overall_status=0
+  local status normalized_status
   printf 'Running repo-local specs...\n\n'
 
   for spec in "$SCRIPT_DIR/specs/repo-structure-spec.sh" \
               "$SCRIPT_DIR/specs/repo-readiness-docs-spec.sh" \
+              "$SCRIPT_DIR/specs/proof-set-runtime-spec.sh" \
               "$SCRIPT_DIR/specs/skill-content-spec.sh" \
               "$SCRIPT_DIR/specs/pi-module-content-spec.sh" \
               "$SCRIPT_DIR/specs/preset-spec.sh" \
@@ -48,34 +62,45 @@ run_specs() {
       if bash "$spec"; then
         printf '  OK\n\n'
       else
-        printf '  FAILED\n\n' >&2
+        status=$?
+        normalized_status="$(normalize_status "$status")"
+        if [[ "$normalized_status" -gt "$overall_status" ]]; then
+          overall_status="$normalized_status"
+        fi
+        printf '  FAILED (exit %s)\n\n' "$normalized_status" >&2
         pass=false
       fi
     fi
   done
 
   if [[ "$pass" != "true" ]]; then
-    return "$EXIT_SPEC"
+    return "${overall_status:-$EXIT_SPEC}"
   fi
 }
 
 run_flake_eval() {
+  local status normalized_status
   printf 'Running flake evaluation spec...\n\n'
   if bash "$SCRIPT_DIR/specs/flake-eval-spec.sh"; then
     printf '  OK\n\n'
   else
-    printf '  FAILED\n\n' >&2
-    return "$EXIT_SPEC"
+    status=$?
+    normalized_status="$(normalize_status "$status")"
+    printf '  FAILED (exit %s)\n\n' "$normalized_status" >&2
+    return "$normalized_status"
   fi
 }
 
 run_proof_set() {
+  local status normalized_status
   printf 'Running Pi proof-set verification...\n\n'
   if bash "$SCRIPT_DIR/test-fast.sh"; then
     printf '  OK\n\n'
   else
-    printf '  FAILED\n\n' >&2
-    return "$EXIT_SPEC"
+    status=$?
+    normalized_status="$(normalize_status "$status")"
+    printf '  FAILED (exit %s)\n\n' "$normalized_status" >&2
+    return "$normalized_status"
   fi
 }
 

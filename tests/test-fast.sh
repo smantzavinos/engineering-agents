@@ -43,8 +43,11 @@ if [[ ! -r "$ASSERT_SCRIPT" ]]; then
 fi
 
 # Generate snapshot from live Pi state
-if ! PI_OFFLINE=1 node "$SNAPSHOT_SCRIPT" --fixture "$FIXTURE_PATH" >"$SNAPSHOT_PATH"; then
-  exit $?
+snapshot_status=0
+PI_OFFLINE=1 node "$SNAPSHOT_SCRIPT" --fixture "$FIXTURE_PATH" >"$SNAPSHOT_PATH" || snapshot_status=$?
+
+if [[ "$snapshot_status" -ne 0 ]]; then
+  exit "$snapshot_status"
 fi
 
 if ! jq -e '.proofSet | type == "array"' "$SNAPSHOT_PATH" >/dev/null 2>&1; then

@@ -22,4 +22,5 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - `docs/development-environment.md` — required tooling, setup/apply flow, and verification entry points.
 
 ## Test Infrastructure
-- `tests/README.md` — current canonical test commands, tiers, prerequisites, and individual spec entry points.
+- `docs/testing-strategy.md` — canonical testing levels, task/final gates, scope, timing, and prerequisites.
+- `tests/README.md` — suite inventory, individual spec entry points, and file-layout details.
