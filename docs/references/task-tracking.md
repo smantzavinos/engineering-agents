@@ -700,7 +700,7 @@ gh issue reopen 123 --comment "Reopening because <reason>."
 
 ### GitHub Project field commands
 
-Project v2 updates require repo-specific owner, project number, project item, field, and option IDs. If agents are expected to update Project fields, the repo task-tracking doc must include those IDs or a deterministic command to discover them.
+Project v2 updates require repo-specific owner, project number, project item, field, and option IDs. If agents are expected to update Project fields, the repo task-tracking doc must include those IDs or a deterministic command to discover them (see Project ID Discovery below).
 
 Document IDs in the repo like this:
 
@@ -781,6 +781,50 @@ gh project item-edit \
 ```
 
 Because item IDs differ from issue numbers, repos should document how to find the project item for an issue. If this is not documented, agents should create/comment on the issue and ask before attempting Project field automation.
+
+### Project ID Discovery
+
+If project IDs, field IDs, and option IDs have not been pre-configured in the repo's task-tracking doc, an agent can discover them from scratch using the `gh` CLI. This turns the ID tables from a prerequisite into something an agent can bootstrap.
+
+Repos should document the project name and GitHub owner so agents can match the right project.
+
+Find the project:
+
+```bash
+gh project list --owner "<owner>" --format json
+```
+
+Match the project by name, note its number, then get the project ID and field IDs:
+
+```bash
+gh project view "<project-number>" --owner "<owner>" --json id,title,fields
+```
+
+The output includes the project-level `id` plus a `fields` array with `name` and `id` for each field.
+
+Get the option IDs for each single-select field:
+
+```bash
+gh project field-list "<project-number>" --owner "<owner>" --format json
+```
+
+Each field will have an `options` array with `name` and `id` for every choice. Map these to the ID tables and populate the placeholders so future agents can skip re-discovery.
+
+### Project v2 Fallback
+
+If Project IDs, field IDs, option IDs, or item IDs are not configured and discovery fails, agents must not guess IDs.
+
+Use this fallback sequence:
+
+1. Use `gh issue` commands for issue creation, comments, labels, and close/reopen operations — these do not require Project IDs.
+2. Add an issue comment stating the intended Project transition, for example:
+
+   ```md
+   Intended Project update: set `Status = Ready`, `Track = Standard implementation`, `Priority = P2`.
+   I did not mutate Project fields because the required Project v2 IDs are not available.
+   ```
+
+3. Record the limitation in the final summary and ask the human or automation owner to update the Project item.
 
 ### Human approval boundary
 
