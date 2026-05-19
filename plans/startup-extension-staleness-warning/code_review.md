@@ -4,7 +4,7 @@
 
 | ID | Severity | Issue | File(s) | Status |
 |---|---|---|---|---|
-| RN-03 | Critical | Pinned-tag git handling now tracks tag refs instead of the approved default-branch policy, and non-version tag names still fall back to branch semantics | `nix/modules/pi/build-managed-package-install-state.mjs`, `nix/modules/pi/check-managed-package-status.mjs`, `tests/specs/managed-package-install-state-spec.sh`, `tests/specs/managed-package-status-spec.sh` | open |
+| RN-04 | Critical | Branch refs now fall back to default-branch status when only a same-named tag exists, so deleted/renamed branches are misreported instead of `REF_MISSING` | `nix/modules/pi/check-managed-package-status.mjs`, `tests/spec-fixtures/managed-package-status/manifest.ok.json`, `tests/spec-fixtures/managed-package-status/fake-git`, `tests/specs/managed-package-status-spec.sh` | open |
 
 ---
 
@@ -194,6 +194,106 @@ Use when the repo maintains requirements or the plan cites requirement IDs.
 | ID | Severity | File(s) | Status |
 |---|---|---|---|
 | RN-03 | Critical | `nix/modules/pi/build-managed-package-install-state.mjs`, `nix/modules/pi/check-managed-package-status.mjs`, `tests/specs/managed-package-install-state-spec.sh`, `tests/specs/managed-package-status-spec.sh` | open |
+
+### Review Status
+- New significant issues: 1
+- Suggested backlog items: 1
+- Total open significant issues: 1
+- Status: NEEDS_FIX
+
+---
+
+## Review 2026-05-19 (Review 3)
+
+**Plan:** `plans/startup-extension-staleness-warning/plan.md`
+**Diff:** `main..HEAD`
+**Mode:** delta
+
+### Coverage Matrix Compliance
+
+| Behavior | Primary test | Negative/edge | Status |
+|----------|-------------|---------------|--------|
+| Activation persists authoritative install facts for each managed source | ✅ `tests/specs/managed-package-install-state-spec.sh` + `tests/specs/flake-eval-spec.sh` | ⚠️ Shared-source fan-out, deterministic ordering, and git commit/tag capture are covered, but missing materialized-path / missing-metadata failure cases are still not exercised behaviorally | ⚠️ partial |
+| Shared checker classifies npm and git sources as `current` / `stale` / `unknown` | ⚠️ `tests/specs/managed-package-status-spec.sh` | ⚠️ npm lookup failure, branch/default drift, timeout/auth/offline, shared-source dedupe, and pinned-tag default-branch policy are covered, but branch deletion now misclassifies when a same-named tag remains on the remote | ⚠️ partial |
+| Manual `check-updates --dry-run` matches startup semantics and stays informational | ✅ `tests/specs/managed-package-status-spec.sh` | ✅ exit codes, grouped results, npm-only rewrite behavior, and helper error propagation are exercised | ✅ covered |
+| `pi` wrapper checks only interactive launches and exports a launch-owned snapshot path | ✅ `tests/specs/pi-startup-wrapper-spec.sh` | ✅ skip paths, env clearing, helper failure, PATH poisoning, and unique snapshots are exercised | ✅ covered |
+| Startup notifier renders stale and unknown distinctly, keeps footer/status summary aligned, uses actionable managed-scope copy, and consumes a snapshot once | ✅ `tests/specs/startup-warning-extension-spec.sh` | ✅ expired/malformed/missing/unowned snapshots, replay prevention, and grouped package rendering are exercised | ✅ covered |
+| Startup warning copy, helper output, and docs point users to the supported inspection/apply workflow | ✅ `tests/specs/pi-startup-warning-contract-spec.sh` + harness output + `./tests/run-tests.sh all` | ✅ Packaged helper build/run, startup copy, README wording, and runner/docs integration are exercised behaviorally | ✅ covered |
+
+### Prior Findings Resolution (delta mode only)
+
+| ID | Prior status | Current status | Evidence |
+|----|-------------|----------------|----------|
+| RN-03 | open | ✅ resolved | Commit `6aa4a21` updates `nix/modules/pi/build-managed-package-install-state.mjs:117-152,192-216` to honor persisted `requestedRefType` metadata, and `nix/modules/pi/check-managed-package-status.mjs:478-515` now tracks pinned tags against default-branch `HEAD` while the refreshed install-state/status specs cover both versioned and non-version tag pins. |
+
+### Test Adequacy
+
+- Anti-patterns found: none in the delta.
+- Break-it evidence in worklog:
+  - T1: ✅ recorded
+  - T2: ✅ recorded
+  - T3: ✅ recorded
+  - T4: ✅ recorded
+  - T5: ✅ recorded
+- TODOs without backlog IDs: none
+- Reviewer verification:
+  - `bash tests/specs/managed-package-install-state-spec.sh`: ✅ pass
+  - `bash tests/specs/managed-package-status-spec.sh`: ✅ pass
+  - `bash tests/specs/pi-startup-warning-contract-spec.sh`: ✅ pass
+  - `./tests/run-tests.sh fast`: ✅ pass
+  - `./tests/run-tests.sh all`: ✅ pass
+
+### Implementation Findings
+
+#### Blocker
+<none>
+
+#### Critical
+
+##### RN-04: Missing branch refs are now misreported when a same-named tag still exists
+- **Severity:** Critical
+- **File(s):** `nix/modules/pi/check-managed-package-status.mjs:478-515`, `tests/spec-fixtures/managed-package-status/manifest.ok.json:217-231`, `tests/spec-fixtures/managed-package-status/fake-git:79-85`, `tests/specs/managed-package-status-spec.sh:161-198`
+- **Problem:** The new branch handling in `resolveTrackedGitRef()` falls back to `resolveDefaultTrackedGitRef()` whenever a branch ref is missing but a tag with the same name exists. That means a manifest entry that explicitly says `gitRef.kind == "branch"` no longer honors the plan's `missing/deleted ref → unknown` rule. The current fixture demonstrates the regression directly: `src-014-git-tag-nonversion-stale` declares `gitRef.kind = "branch"` / `value = "stable"`, the fake remote advertises only `refs/tags/stable` plus default-branch `HEAD`, and the checker now reports the source as `stale` against `refs/heads/main` instead of `unknown` / `REF_MISSING`.
+- **Why it matters:** This is core stale-classification behavior on the highest-risk matrix row. Real branch installs can legitimately end up in this state if a branch is deleted or renamed while a same-named release tag remains. Startup/manual warnings would underreport a broken branch-tracking configuration as an ordinary stale result, and the new status spec now codifies that incorrect behavior.
+- **Proposed fix:** Remove the branch→tag fallback so branch specs always return `REF_MISSING` when `refs/heads/<branch>` is absent. Keep non-version tag coverage by representing those installs as pinned tags in the manifest/status fixtures (which the install-state helper now supports), and add a dedicated regression case asserting that a deleted branch with a same-named tag remains `unknown`.
+- **Status:** open
+
+#### Major
+<none>
+
+#### Minor
+<none>
+
+### Suggested Backlog Items
+
+#### Make packaged-helper contract tests current-system aware
+- **Kind:** hardening
+- **Origin:** review-finding
+- **Suggested priority:** P2
+- **Rationale:** `tests/specs/pi-startup-warning-contract-spec.sh:115` still hardcodes `packages.x86_64-linux.check-updates`, even though `flake.nix` advertises multiple supported systems. Using the host system dynamically would avoid false failures when the fast suite is run on Darwin or aarch64 hosts.
+- **Acceptance:** Build the `check-updates` package for the current Nix system in the contract spec instead of hardcoding `x86_64-linux`, and keep the packaged-helper behavioral assertions unchanged.
+
+### Documentation Alignment
+
+| Promised update | Present in diff? | Status |
+|----------------|-----------------|--------|
+| README documents the managed-package startup-warning workflow and out-of-scope direct clones | Yes | ✅ |
+| `tests/README.md` and `tests/run-tests.sh` list the new fast-suite coverage | Yes | ✅ |
+| Startup notifier / helper copy points users to `check-updates --dry-run` and `home-manager switch --flake .#<hostname>` | Yes | ✅ |
+
+### Requirements Alignment
+
+Use when the repo maintains requirements or the plan cites requirement IDs.
+
+- Cited requirements still satisfied: N/A
+- Approved requirement updates applied: Yes
+- Undocumented requirement changes: branch-missing handling now diverges from the approved `missing/deleted ref → unknown` contract (tracked as RN-04)
+- Tests/evidence cite requirements where expected: N/A
+
+### Summary
+| ID | Severity | File(s) | Status |
+|---|---|---|---|
+| RN-04 | Critical | `nix/modules/pi/check-managed-package-status.mjs`, `tests/spec-fixtures/managed-package-status/manifest.ok.json`, `tests/spec-fixtures/managed-package-status/fake-git`, `tests/specs/managed-package-status-spec.sh` | open |
 
 ### Review Status
 - New significant issues: 1
