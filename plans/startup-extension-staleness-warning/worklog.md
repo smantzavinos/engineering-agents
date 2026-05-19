@@ -134,6 +134,7 @@ The plan includes approved requirement-oriented changes, but **no canonical repo
   - Apply the approved manual-workflow contract that startup warnings point to `check-updates --dry-run` for inspection and `home-manager switch --flake ...` for applying changes.
 - **Applied requirement updates:**
   - T2: `check-updates` now treats `--dry-run`/default as the supported inspection path, directs users to `home-manager switch --flake ...` for applying changes, and keeps `--update` explicitly npm-only.
+  - T4: startup notifier copy now explicitly says the warning covers managed packages/plugins and points users to `check-updates --dry-run` for inspection plus `home-manager switch --flake ...` for applying changes.
 - **Requirement-change approval source:** `./plan.md` → `Requirement Updates`
 - **Requirement IDs/reference format:** None documented.
 - **Test requirement citation format:** None documented.
@@ -150,7 +151,7 @@ Execution rules for requirement-related work in this plan:
 | T1 | Add the managed-package install-state manifest contract | — | Activation writes `managed-packages.install-state.json` via a tested helper, with deterministic schema, source identity/install fields, and shared-source fan-out | `bash tests/specs/managed-package-install-state-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
-| T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
+| T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T5 | Wire user-facing workflow docs, helper availability, and final contract coverage | T2, T3, T4 | Installed `check-updates` helper, aligned startup/helper/README wording, managed-scope contract coverage, and fast-suite coverage for the new repo contract | `bash tests/specs/pi-startup-warning-contract-spec.sh`, `./tests/run-tests.sh fast`, `./tests/run-tests.sh all` | ⬜ |
 
 ## Task Status
@@ -158,7 +159,7 @@ Execution rules for requirement-related work in this plan:
 - [x] T1: Add the managed-package install-state manifest contract
 - [x] T2: Build the shared status engine and align `check-updates` with it
 - [x] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
-- [ ] T4: Add the Pi startup notifier extension
+- [x] T4: Add the Pi startup notifier extension
 - [ ] T5: Wire user-facing workflow docs, helper availability, and final contract coverage
 
 ## Decisions / Constraints Discovered (append-only)
@@ -167,16 +168,16 @@ Execution rules for requirement-related work in this plan:
 
 ## NEXT STEP
 
-T4 — Add the Pi startup notifier extension.
+T5 — Wire user-facing workflow docs, helper availability, and final contract coverage.
 
-Read `plan.md` § `T4: Add the Pi startup notifier extension` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
+Read `plan.md` § `T5: Wire user-facing workflow docs, helper availability, and final contract coverage` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
 
-After completing T4:
+After completing T5:
 1. Update the task evidence in this file.
-2. Mark T4 done above and update the Task Queue status.
-3. Set NEXT STEP to T5.
+2. Mark T5 done above and update the Task Queue status.
+3. Update Completion Criteria / NEXT STEP for plan completion.
 4. Append to the execution log below.
-5. Commit: `task(T4): add the Pi startup notifier extension`
+5. Commit: `task(T5): wire startup warning docs and final contract coverage`
 
 ## Execution Log
 
@@ -202,3 +203,10 @@ After completing T4:
   - Verification: `bash tests/specs/pi-startup-wrapper-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
   - Backlog items created: none (repo backlog mechanism not documented).
   - Requirement changes applied: none in T3.
+- 2026-05-19 — T4 completed.
+  - Red: added `tests/specs/startup-warning-extension-spec.sh`, harness `tests/scripts/run-startup-warning-extension.mjs`, fixtures under `tests/spec-fixtures/startup-warning-extension/`, and fast-suite/docs wiring; confirmed initial failure because `nix/modules/pi/extensions/startup-staleness-warning/index.ts` did not exist.
+  - Green: implemented `nix/modules/pi/extensions/startup-staleness-warning/index.ts`; updated `nix/modules/pi/default.nix` to install the repo-owned notifier directly under `~/.pi/agent/extensions/`; and added deterministic notifier coverage for stale/unknown rendering, status summary behavior, freshness checks, owned-path validation, and consume-once handling.
+  - Break-it: temporarily collapsed the unknown section into the stale section, re-ran `bash tests/specs/startup-warning-extension-spec.sh`, confirmed failure, then restored the distinct stale-vs-unknown rendering.
+  - Verification: `bash tests/specs/startup-warning-extension-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
+  - Backlog items created: none (repo backlog mechanism not documented).
+  - Requirement changes applied: startup notifier copy now explicitly says managed packages/plugins and points users to `check-updates --dry-run` for inspection plus `home-manager switch --flake ...` for applying changes.

@@ -410,6 +410,10 @@ in
       ".pi/agent/extensions/guardrails.json".source =
         config.lib.file.mkOutOfStoreSymlink guardrailsConfigPath;
 
+      # Repo-owned startup notifier extension
+      ".pi/agent/extensions/startup-staleness-warning/index.ts".source =
+        "${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning/index.ts";
+
       # Agent guidance
       ".pi/agent/CODEX.md".text = ''
         ## GPT-Optimized Guidance (injected only for OpenAI Codex models)
