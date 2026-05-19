@@ -72,7 +72,7 @@ Check for presence AND quality of:
 **Agent configuration:**
 - [ ] `.pi/settings.json` exists with `subagents.agentOverrides` (if repo needs non-default models)
 - [ ] Agent model overrides match the repo's tech stack (e.g., UI-strong model for frontend repos)
-- [ ] No full agent `.md` copies in `.pi/agents/` (use `agentOverrides` for automatic prompt updates)
+- [ ] No full agent `.md` copies in `.pi/agents/` (use `.pi/settings.json` → `subagents.agentOverrides` for automatic prompt updates)
 
 ### 3. Assess Quality (not just existence)
 
@@ -108,7 +108,7 @@ For documents that exist, evaluate:
 - Per-directory AGENTS.md files where patterns are needed
 
 **If updating:** Modify existing configuration:
-- Update `.pi/settings.json` agent model overrides
+- Update `.pi/settings.json` → `subagents.agentOverrides`
 - Update test architecture doc when commands change
 - Update task-tracking docs when backlog policy changes
 - Update requirements docs when requirements policy changes
@@ -337,7 +337,7 @@ If the repo does not maintain requirements separately, document that explicitly.
 
 ## Agent Configuration Guide
 
-When setting up or updating agent models for a repo, use `agentOverrides` in `.pi/settings.json` — NOT full agent file copies in `.pi/agents/`. This ensures repos automatically get updates when global agent definitions change (new skills, updated prompts, tool changes).
+When setting up or updating agent models for a repo, use `.pi/settings.json` → `subagents.agentOverrides` — NOT full agent file copies in `.pi/agents/`. This ensures repos automatically get updates when global agent definitions change (new skills, updated prompts, tool changes).
 
 ```json
 {
@@ -401,7 +401,7 @@ Map discovered commands to the standard levels:
 ...
 
 ### Agent Configuration
-- .pi/settings.json with agentOverrides: Yes/No
+- .pi/settings.json with subagents.agentOverrides: Yes/No
 - Model choices appropriate for stack: Yes/No/N/A
 - Recommendations: <specific model suggestions>
 
@@ -480,7 +480,7 @@ Use severities consistently:
 
 - Do not invent test commands (discover them from package.json, Makefile, etc.)
 - Do not assume model preferences without asking
-- Do not create full agent `.md` files in `.pi/agents/` — use `agentOverrides` in `.pi/settings.json`
+- Do not create full agent `.md` files in `.pi/agents/` — use `.pi/settings.json` → `subagents.agentOverrides`
 - Do not produce a generic report — reference specific files and paths in THIS repo
 - Do not guess at architecture or patterns — report what's there and what's missing
 - Do not mark backlog or requirements handling as agent-ready just because headings exist; required operations must be concrete enough to execute

@@ -423,9 +423,22 @@ function normalizeExtensionLoadError(packageId, error, packageRoot) {
   };
 }
 
+function isSuppressedThemeOverrideCollision(diagnostic, configuredPackage, configuredPackages) {
+  if (diagnostic?.type !== 'collision' || diagnostic?.collision?.resourceType !== 'theme') {
+    return false;
+  }
+
+  if (!isPathWithinPackage(configuredPackage?.installedPath, diagnostic.collision?.loserPath)) {
+    return false;
+  }
+
+  return !findConfiguredPackageByPath(configuredPackages, diagnostic.collision?.winnerPath);
+}
+
 function gatherPackageDiagnostics({
   packageId,
   configuredPackage,
+  configuredPackages,
   extensionLoadErrors,
   extensionDiagnostics,
   skillDiagnostics,
@@ -476,6 +489,7 @@ function gatherPackageDiagnostics({
     themes: stableSort(
       themeDiagnostics
         .filter((diagnostic) => matchesPackageDiagnostic(diagnostic))
+        .filter((diagnostic) => !isSuppressedThemeOverrideCollision(diagnostic, configuredPackage, configuredPackages))
         .map((diagnostic) => normalizeDiagnostic('theme', packageId, diagnostic, packageRoot)),
       (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
     ),
@@ -693,6 +707,7 @@ async function main() {
     const diagnostics = gatherPackageDiagnostics({
       packageId: fixtureEntry.packageId,
       configuredPackage,
+      configuredPackages,
       extensionLoadErrors: extensionsResult.errors,
       extensionDiagnostics: [],
       skillDiagnostics: skillsResult.diagnostics,

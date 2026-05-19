@@ -77,6 +77,29 @@ write_fixture() {
 EOF
 }
 
+write_theme_collision_fixture() {
+  local fixture_path="$1"
+  cat >"$fixture_path" <<'EOF'
+{
+  "schemaVersion": 2,
+  "packages": [
+    {
+      "packageId": "beta",
+      "sourceManifestName": "beta-manifest",
+      "sourceSpec": "beta@2.0.0",
+      "resourceExpectations": {
+        "extensions": [],
+        "skills": [],
+        "themes": [
+          "beta-theme"
+        ]
+      }
+    }
+  ]
+}
+EOF
+}
+
 prepare_fake_home() {
   local home_dir="$1"
   local agent_dir="$home_dir/.pi/agent"
@@ -476,9 +499,12 @@ assert_theme_override_collision_preserves_proof_theme() {
   local fixture_path="$tmp_dir/proof-set.json"
   local snapshot_path="$tmp_dir/snapshot.json"
   local stderr_path="$tmp_dir/stderr.txt"
+  local contract_stdout="$tmp_dir/assert-stdout.txt"
+  local contract_stderr="$tmp_dir/assert-stderr.txt"
+  local contract_status=0
 
   prepare_fake_home "$home_dir"
-  write_fixture "$fixture_path"
+  write_theme_collision_fixture "$fixture_path"
   write_fake_theme_override_pi_module "$prefix_dir" '@earendil-works'
 
   if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
@@ -496,6 +522,22 @@ assert_theme_override_collision_preserves_proof_theme() {
   local override_warning_count
   override_warning_count="$(jq -r '[.warnings[] | select(.code == "PI_VERIFY_WARN_LOCAL_THEME_OVERRIDE")] | length' "$snapshot_path")"
   assert_equals "$override_warning_count" '0' 'Theme override collision does not emit a false local-theme warning'
+
+  local beta_theme_diagnostic_count
+  beta_theme_diagnostic_count="$(jq -r '[.proofSet[] | select(.packageId == "beta") | .diagnostics.themes[]?] | length' "$snapshot_path")"
+  assert_equals "$beta_theme_diagnostic_count" '0' 'Theme override collision does not leave per-package theme diagnostics behind'
+
+  if bash "$REPO_ROOT/tests/scripts/assert-contract.sh" \
+    --fixture "$fixture_path" \
+    --snapshot "$snapshot_path" \
+    >"$contract_stdout" 2>"$contract_stderr"; then
+    contract_status=0
+  else
+    contract_status=$?
+  fi
+
+  assert_equals "$contract_status" '0' 'Theme override collision snapshot passes assert-contract helper'
+  assert_file_contains "$contract_stdout" 'Pi proof-set contract ok' 'Theme override collision contract run reports proof-set success'
 
   rm -rf "$tmp_dir"
 }

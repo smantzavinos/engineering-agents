@@ -1,6 +1,6 @@
 # Agent Configuration Per Repository
 
-This document defines how to configure agent models for a specific repository using `agentOverrides` in project settings.
+This document defines how to configure agent models for a specific repository using `.pi/settings.json` → `subagents.agentOverrides`.
 
 ## Why Per-Repo Configuration
 
@@ -12,7 +12,7 @@ Default agent definitions use general-purpose models. Repos benefit from overrid
 
 ## How It Works
 
-Agent overrides live in `.pi/settings.json` at the project root. They modify specific fields of your user-level agents **without copying the full agent file**. This means:
+Agent overrides live in `.pi/settings.json` at the project root under `subagents.agentOverrides`. They modify specific fields of your user-level agents **without copying the full agent file**. This means:
 
 - Agent system prompts, skills, and tools stay centralized in `~/.pi/agent/agents/`
 - Updates to agent definitions automatically apply to all repos
@@ -143,7 +143,7 @@ Project overrides (`.pi/settings.json`) beat user overrides (`~/.pi/agent/settin
 | Location | Use for |
 |----------|---------|
 | `~/.pi/agent/settings.json` | Global defaults: `disableBuiltins`, default model preferences |
-| `.pi/settings.json` (project) | Per-repo model overrides, disable unused agents for this repo |
+| `.pi/settings.json` (project) | Per-repo `subagents.agentOverrides`, disable unused agents for this repo |
 
 ## Disabling Agents Per-Repo
 

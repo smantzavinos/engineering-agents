@@ -562,7 +562,7 @@ Execution: Implementing 01... complete. Starting 02_resolver_layer...
 
 ## Per-Repository Model Configuration
 
-The agent definitions (planner, plan-reviewer, code-reviewer, worker, ui-worker, etc.) are installed globally with default model settings. Repositories can override specific fields (typically just `model` and `thinking`) using `agentOverrides` in `.pi/settings.json` at the repo root.
+The agent definitions (planner, plan-reviewer, code-reviewer, worker, ui-worker, etc.) are installed globally with default model settings. Repositories can override specific fields (typically just `model` and `thinking`) using `.pi/settings.json` → `subagents.agentOverrides` at the repo root.
 
 ### How Agent Overrides Work
 
@@ -580,7 +580,7 @@ Overrides modify specific fields of the agent definition **without copying the f
 
 ### Overriding Models Per Repo
 
-Create `.pi/settings.json` in the repo root:
+Create `.pi/settings.json` in the repo root and add a `subagents.agentOverrides` block:
 
 ```json
 {
@@ -654,9 +654,9 @@ Supported override fields: `model`, `thinking`, `fallbackModels`, `skills`, `too
 
 ### Why NOT Full Agent File Copies
 
-Do NOT create `.pi/agents/{name}.md` files to override models. While pi supports this (project scope wins), it creates maintenance burden:
+Do NOT create repo-local `.pi/agents/{name}.md` copies to override models. Field-level overrides in `.pi/settings.json` → `subagents.agentOverrides` are the supported path, and full file copies create maintenance burden:
 - When global agent prompts/skills change, every repo copy goes stale
 - No automatic updates — requires manual sync across all repos
 - Easy to drift on system prompt quality
 
-Use `agentOverrides` — you get model customization with zero maintenance.
+Use `.pi/settings.json` → `subagents.agentOverrides` — you get model customization with zero maintenance.
