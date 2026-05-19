@@ -4,8 +4,8 @@
 
 | ID | Severity | Issue | File(s) | Status |
 |---|---|---|---|---|
-| RN-01 | Critical | Theme-override collision snapshots still fail the real proof-set contract helper | `tests/scripts/resource-snapshot.mjs`, `tests/specs/proof-set-runtime-spec.sh` | open |
-| RN-02 | Major | Override-guidance consistency sweep and readiness coverage are incomplete | `docs/orchestration.md`, `agents/README.md`, `agents/AGENTS.md`, `skills/assess-repo/SKILL.md`, `skills/assess-repo/references/agent-configuration.md`, `tests/specs/repo-readiness-docs-spec.sh` | open |
+| RN-01 | Critical | Theme-override collision snapshots still fail the real proof-set contract helper | `tests/scripts/resource-snapshot.mjs`, `tests/specs/proof-set-runtime-spec.sh` | resolved |
+| RN-02 | Major | Override-guidance consistency sweep and readiness coverage are incomplete | `docs/orchestration.md`, `agents/README.md`, `agents/AGENTS.md`, `skills/assess-repo/SKILL.md`, `skills/assess-repo/references/agent-configuration.md`, `tests/specs/repo-readiness-docs-spec.sh` | resolved |
 
 ---
 
@@ -118,3 +118,104 @@ Code Review Summary:
 - Suggested backlog items: 0
 - Total open significant issues: 2
 - Status: NEEDS_FIX
+
+---
+
+## Review 2026-05-19 (Review 2)
+
+**Plan:** `plans/2026_05_19_repo_quality_process_foundation/plan.md`
+**Diff:** `da95416..3205f05` (`fix(review): address proof-set collision and override guidance consistency`)
+**Mode:** delta (full branch context from Review 1 retained)
+
+### Coverage Matrix Compliance
+
+| Behavior | Primary test | Negative/edge | Status |
+|----------|-------------|---------------|--------|
+| Root agent entry point routes to the correct repo-specific docs | ✅ `tests/specs/repo-readiness-docs-spec.sh` | ✅ Missing routes / missing anchors are checked | ✅ covered |
+| Canonical testing strategy maps commands to standard levels, scope, timing, and prerequisites | ✅ `tests/specs/repo-readiness-docs-spec.sh` | ✅ Missing gate wording / command references are checked | ✅ covered |
+| Repo backlog operations are agent-executable with stable IDs and source backlinks | ✅ `tests/specs/repo-readiness-docs-spec.sh` | ✅ Missing operations / source-backlink rules are checked | ✅ covered |
+| Repo requirements are durable and citeable with explicit approval boundaries | ✅ `tests/specs/repo-readiness-docs-spec.sh`, `tests/specs/proof-set-runtime-spec.sh` | ✅ Missing ID/citation/approval-boundary hooks are checked | ✅ covered |
+| Specialized areas expose local guidance instead of overloading the root doc | ✅ `tests/specs/repo-readiness-docs-spec.sh` | ✅ Missing local guides / anti-pattern sections are checked | ✅ covered |
+| Proof-set verification resolves the active Pi module package path and surfaces failures honestly | ✅ `tests/specs/proof-set-runtime-spec.sh`, `tests/scripts/assert-contract.sh`, `./tests/run-tests.sh all` | ✅ Current+legacy namespaces, explicit env failure, top-level theme collision, and real helper-path assertion are covered | ✅ covered |
+| Override guidance consistently prefers `agentOverrides` over copied `.pi/agents/*.md` files | ✅ `tests/specs/repo-readiness-docs-spec.sh` | ✅ Readiness coverage now checks `docs/orchestration.md`, `agents/README.md`, and assess-repo guidance for the canonical `.pi/settings.json` → `subagents.agentOverrides` wording | ✅ covered |
+
+### Prior Findings Resolution (delta mode only)
+
+| ID | Prior status | Current status | Evidence |
+|----|-------------|----------------|----------|
+| RN-01 | open | ✅ resolved | `tests/scripts/resource-snapshot.mjs` now suppresses top-level-winner theme collisions from per-package diagnostics, and `tests/specs/proof-set-runtime-spec.sh` exercises the collision snapshot through `tests/scripts/assert-contract.sh`; verified with `bash tests/specs/proof-set-runtime-spec.sh` and `./tests/run-tests.sh all`. |
+| RN-02 | open | ✅ resolved | `docs/orchestration.md`, `skills/assess-repo/SKILL.md`, and `skills/assess-repo/references/agent-configuration.md` now use the canonical `.pi/settings.json` → `subagents.agentOverrides` wording, and `tests/specs/repo-readiness-docs-spec.sh` asserts those docs directly. |
+
+### Test Adequacy
+
+- Anti-patterns found: none
+- Break-it evidence in worklog:
+  - T1: ✅ recorded
+  - T2: ✅ recorded
+  - T3: ✅ recorded
+  - T4: ✅ recorded
+  - T5: ✅ recorded
+  - T6: ✅ recorded
+  - T7: ✅ recorded
+- TODOs without backlog IDs: none
+- Reviewer verification run:
+  - ✅ `bash tests/specs/proof-set-runtime-spec.sh`
+  - ✅ `bash tests/specs/repo-readiness-docs-spec.sh`
+  - ✅ `./tests/run-tests.sh fast`
+  - ✅ `./tests/run-tests.sh all`
+
+### Implementation Findings
+
+#### Blocker
+<none>
+
+#### Critical
+<none>
+
+#### Major
+<none>
+
+#### Minor
+<none>
+
+### Suggested Backlog Items
+
+<none>
+
+### Documentation Alignment
+
+| Promised update | Present in diff? | Status |
+|----------------|-----------------|--------|
+| Root routing + canonical repo docs | Yes | ✅ |
+| Testing strategy made canonical in `AGENTS.md` / `tests/README.md` | Yes | ✅ |
+| Backlog + requirements + operational-memory docs added and cross-linked | Yes | ✅ |
+| Override-guidance cleanup across the declared source docs | Yes | ✅ |
+| Proof-set namespace support and explicit environment-failure handling | Yes | ✅ |
+
+### Requirements Alignment
+
+- Cited requirements still satisfied: Yes
+- Approved requirement updates applied: Yes
+- Undocumented requirement changes: none
+- Tests/evidence cite requirements where expected: Yes
+
+### Summary
+| ID | Severity | File(s) | Status |
+|---|---|---|---|
+| RN-01 | Critical | `tests/scripts/resource-snapshot.mjs`, `tests/specs/proof-set-runtime-spec.sh` | resolved |
+| RN-02 | Major | `docs/orchestration.md`, `agents/README.md`, `agents/AGENTS.md`, `skills/assess-repo/SKILL.md`, `skills/assess-repo/references/agent-configuration.md`, `tests/specs/repo-readiness-docs-spec.sh` | resolved |
+
+### Review Status
+- New significant issues: 0
+- Prior issues resolved: 2
+- Suggested backlog items: 0
+- Total open significant issues: 0
+- Status: COMPLETE
+
+Code Review Summary:
+- Coverage matrix: 7/7 rows covered
+- New issues: 0 Blocker, 0 Critical, 0 Major
+- Prior issues resolved: 2
+- Suggested backlog items: 0
+- Total open significant issues: 0
+- Status: COMPLETE
