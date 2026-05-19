@@ -115,7 +115,7 @@ function inferPinnedRefType(fragment) {
 }
 
 function normalizeRequestedRefType(value) {
-  if (value === 'branch' || value === 'commit' || value === 'tag' || value === 'semver') {
+  if (value === 'branch' || value === 'commit' || value === 'tag' || value === 'semver' || value === 'default') {
     return value;
   }
 
