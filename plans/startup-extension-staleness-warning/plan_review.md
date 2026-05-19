@@ -12,7 +12,7 @@
 | RN-06 | Major | Logic bug: warning taxonomy required skip/ignored warning payloads that conflict with silent no-op paths | Warning taxonomy / Acceptance checklist / T3 / T4 | No | applied |
 | RN-07 | Major | Logic bug: notifier footer/status summary behavior lacked concrete verification | Acceptance checklist / T4 / Coverage Matrix | No | applied |
 | RN-08 | Major | Logic bug: wrapper PATH-shadowing guard for Node/helper resolution was not concretely tested | Acceptance checklist / T3 / Coverage Matrix | No | applied |
-| RN-09 | Major | Logic bug: whole-run status-check failure contract is still contradictory | Exit code policy / Warning taxonomy / T2 / T3 / T4 | Yes | open |
+| RN-09 | Critical | Logic bug: whole-run status-check failure contract is still contradictory | Exit code policy / Warning taxonomy / T2 / T3 / T4 | Yes | open |
 
 ## Open Decisions (roll-up — update each pass)
 
@@ -224,4 +224,77 @@
 
 ### Review Status
 - Significant issues found: 6
+- Status: NEEDS_ANOTHER_PASS
+
+
+## Review 2026-05-19 (Review 3)
+
+**Plan:** `plans/startup-extension-staleness-warning/plan.md`
+**Scope:** delta
+**Handoff readiness:** No
+
+### Implementer Decisions Remaining
+- Exact CLI whitelist of invocation forms that count as documented interactive launches beyond plain `pi`, plus which forms are explicitly skipped.
+- Concrete default per-source timeout, overall startup timeout, concurrency cap, and snapshot freshness/expiry window for startup mode.
+- Exact whole-run failure policy when the shared checker cannot produce a result: which layer synthesizes fallback output, whether startup writes a degraded snapshot or stays silent, and what `check-updates` prints/exits with in that path.
+- All three decisions still change user-visible startup/manual behavior; the launch-whitelist and whole-run failure choices touch CLI/TUI contract boundaries.
+
+### Test Adequacy Assessment
+- Coverage matrix complete: No (whole-run checker failure fallback still lacks an explicit mapped behavior/test row)
+- Negative/edge cases identified for each row: No (whole-run checker failure still lacks explicit fallback verification)
+- Bad-test avoidance addressed in approach.md: Yes
+- E2E seed/fixture data confirmed to support scenarios: N/A
+- TDD checklists include break-it step for all tasks: Yes
+
+### Issues
+
+#### Blocker
+<none>
+
+#### Critical
+
+##### RN-01: Logic bug: interactive launch whitelist is still undefined
+- **Severity:** Critical
+- **Location:** Open Questions / Acceptance checklist / T3
+- **Problem:** Review 3 still finds no chosen v1 whitelist. The plan continues to refer to “documented interactive launches” while only concretely testing plain `pi`, `--help`, `list`, and `--version`.
+- **Why it matters:** This remains a CLI-boundary decision. Different implementers could still ship materially different warning coverage for argv-bearing interactive launches, which changes both wrapper behavior and user-visible warning reach.
+- **Fix:** Choose and enumerate the exact supported interactive launch forms in the plan, then make every other form an explicit fail-open skip case.
+- **Decision required:** Yes
+- **Status:** open
+
+##### RN-09: Logic bug: whole-run status-check failure contract is still contradictory
+- **Severity:** Critical
+- **Location:** Exit code policy / Warning taxonomy / T2 / T3 / T4
+- **Problem:** The plan still requires `PI_PACKAGE_WARN_STATUS_CHECK_FAILED` when startup/manual flows “fall back” after a whole-run checker failure, but it still assigns exit `2`/`3` to checker/manual dependency or internal failures and never assigns which layer synthesizes fallback JSON/text or whether startup should emit a degraded snapshot versus staying silent.
+- **Why it matters:** This is now clearly a CLI/TUI contract-boundary gap: `check-updates` exit behavior, startup snapshot semantics, warning payload emission, and notifier/manual UX are all still ambiguous. Different implementers could legitimately ship incompatible behavior while still claiming plan compliance.
+- **Fix:** Pick one explicit whole-run failure policy per surface, then update T2/T3/T4 so the responsible layer, exit status, snapshot behavior, warning code emission, and notifier/manual UX are tested together.
+- **Decision required:** Yes
+- **Status:** open
+
+#### Major
+
+##### RN-02: Logic bug: startup-mode timeout/concurrency/expiry defaults are still open
+- **Severity:** Major
+- **Location:** Assumptions / Open Questions / T2 / T3
+- **Problem:** Review 3 still finds no concrete per-source timeout, overall timeout, concurrency cap, or snapshot freshness/expiry default in the plan.
+- **Why it matters:** Those values still determine startup latency, `unknown` frequency, and whether notifier freshness checks accept or ignore a snapshot. Leaving them open pushes product behavior decisions into implementation.
+- **Fix:** Choose concrete v1 defaults in the plan and add them to the contract/acceptance language while keeping the values injectable in tests.
+- **Decision required:** Yes
+- **Status:** open
+
+#### Minor
+<none>
+
+### Summary
+| ID | Severity | Location | Decision required | Status |
+|---|---|---|---|---|
+| RN-01 | Critical | Open Questions / Acceptance checklist / T3 | Yes | open |
+| RN-09 | Critical | Exit code policy / Warning taxonomy / T2 / T3 / T4 | Yes | open |
+| RN-02 | Major | Assumptions / Open Questions / T2 / T3 | Yes | open |
+
+### Changes Applied to Plan
+- none
+
+### Review Status
+- Significant issues found: 3
 - Status: NEEDS_ANOTHER_PASS
