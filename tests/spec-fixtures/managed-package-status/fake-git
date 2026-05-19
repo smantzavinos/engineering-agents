@@ -62,8 +62,8 @@ EOF
   https://github.com/demo/git-tag-current.git)
     cat <<'EOF'
 ref: refs/heads/main	HEAD
-1010101010101010101010101010101010101010	HEAD
-1010101010101010101010101010101010101010	refs/heads/main
+1234123412341234123412341234123412341234	HEAD
+1234123412341234123412341234123412341234	refs/heads/main
 1234123412341234123412341234123412341234	refs/tags/v1.2.3
 EOF
     ;;
@@ -74,6 +74,14 @@ ref: refs/heads/main	HEAD
 2020202020202020202020202020202020202020	refs/heads/main
 deadbeefdeadbeefdeadbeefdeadbeefdeadbeef	refs/tags/v2.0.0
 9999999999999999999999999999999999999999	refs/tags/v2.0.0^{}
+EOF
+    ;;
+  https://github.com/demo/git-tag-nonversion.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+3030303030303030303030303030303030303030	HEAD
+3030303030303030303030303030303030303030	refs/heads/main
+4040404040404040404040404040404040404040	refs/tags/stable
 EOF
     ;;
   https://github.com/demo/git-missing-ref.git)

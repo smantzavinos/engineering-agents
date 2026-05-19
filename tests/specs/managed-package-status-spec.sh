@@ -166,8 +166,9 @@ assert_json \
    and any(.sources[]; .sourceKey == "src-006-git-branch-current" and .status == "current" and .remote.ref == "refs/heads/feature")
    and any(.sources[]; .sourceKey == "src-007-git-branch-stale" and .status == "stale" and .remote.ref == "refs/heads/release")
    and any(.sources[]; .sourceKey == "src-008-git-pinned-shared-stale" and .status == "stale" and .remote.ref == "refs/heads/main" and .packageIds == ["git-shared-alpha", "git-shared-beta"])
-   and any(.sources[]; .sourceKey == "src-009-git-tag-current" and .status == "current" and .remote.ref == "refs/tags/v1.2.3" and .remote.commit == "1234123412341234123412341234123412341234")
-   and any(.sources[]; .sourceKey == "src-010-git-tag-stale" and .status == "stale" and .remote.ref == "refs/tags/v2.0.0" and .remote.commit == "9999999999999999999999999999999999999999")'
+   and any(.sources[]; .sourceKey == "src-009-git-tag-current" and .status == "current" and .remote.ref == "refs/heads/main" and .remote.commit == "1234123412341234123412341234123412341234")
+   and any(.sources[]; .sourceKey == "src-010-git-tag-stale" and .status == "stale" and .remote.ref == "refs/heads/main" and .remote.commit == "2020202020202020202020202020202020202020")
+   and any(.sources[]; .sourceKey == "src-014-git-tag-nonversion-stale" and .status == "stale" and .remote.ref == "refs/heads/main" and .remote.commit == "3030303030303030303030303030303030303030")'
 
 assert_json \
   'git unknown states expose stable reason codes for missing refs, auth failures, and offline failures' \
@@ -179,8 +180,8 @@ assert_json \
 assert_json \
   'summary counts and warning object shape stay stable when warnings are emitted' \
   "$JSON_STDOUT" \
-  '.summary.current == 4 and .summary.stale == 5 and .summary.unknown == 4
-   and (.warnings | length) == 9
+  '.summary.current == 4 and .summary.stale == 6 and .summary.unknown == 4
+   and (.warnings | length) == 10
    and all(.warnings[]; (.code | type) == "string" and (.message | type) == "string" and (.sourceKey | type) == "string" and (.packageIds | type) == "array" and (.detail | type) == "object")'
 
 if ! run_helper text "$FIXTURE_DIR/manifest.ok.json" "$TEXT_STDOUT" "$TEXT_STDERR"; then
@@ -191,15 +192,16 @@ if ! run_helper text "$FIXTURE_DIR/manifest.ok.json" "$TEXT_STDOUT" "$TEXT_STDER
   fail 'helper should emit status text for the fixture manifest'
 fi
 
-assert_contains 'text output lists stale sources before unknown sources' "$TEXT_STDOUT" 'Stale managed package sources (5):'
+assert_contains 'text output lists stale sources before unknown sources' "$TEXT_STDOUT" 'Stale managed package sources (6):'
 assert_contains 'text output includes grouped packageIds deterministically for shared sources' "$TEXT_STDOUT" 'git-shared-alpha, git-shared-beta'
 assert_contains 'text output includes unknown section with stable reason labels' "$TEXT_STDOUT" 'Unknown managed package sources (4):'
+assert_contains 'text output reports non-version tag refs against the default branch head' "$TEXT_STDOUT" 'github:demo/git-tag-nonversion#stable (4444444444444444444444444444444444444444 -> 3030303030303030303030303030303030303030)'
 
 if ! python3 - "$TEXT_STDOUT" <<'PY'
 import pathlib
 import sys
 text = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
-stale_index = text.index('Stale managed package sources (5):')
+stale_index = text.index('Stale managed package sources (6):')
 unknown_index = text.index('Unknown managed package sources (4):')
 if stale_index >= unknown_index:
     raise SystemExit(1)

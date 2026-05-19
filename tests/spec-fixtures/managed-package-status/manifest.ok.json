@@ -212,6 +212,23 @@
         "kind": "default",
         "value": null
       }
+    },
+    {
+      "sourceKey": "src-014-git-tag-nonversion-stale",
+      "packageIds": ["git-tag-nonversion"],
+      "materializedPath": "/fixtures/git-tag-nonversion",
+      "materializedKey": "src-014-git-tag-nonversion-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-nonversion#stable",
+        "installSpec": "github:demo/git-tag-nonversion#stable",
+        "packageName": "git-tag-nonversion"
+      },
+      "installedCommit": "4444444444444444444444444444444444444444",
+      "gitRef": {
+        "kind": "branch",
+        "value": "stable"
+      }
     }
   ]
 }

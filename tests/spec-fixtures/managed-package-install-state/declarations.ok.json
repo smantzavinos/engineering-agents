@@ -31,6 +31,16 @@
       }
     },
     {
+      "packageId": "git-tag-stable",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/stable-tag-plugin#stable",
+        "installSpec": "github:demo/stable-tag-plugin#stable",
+        "packageName": "stable-tag-plugin",
+        "materializedPath": "./sources/stable-tag-plugin"
+      }
+    },
+    {
       "packageId": "npm-fancy-tool",
       "source": {
         "type": "npm",

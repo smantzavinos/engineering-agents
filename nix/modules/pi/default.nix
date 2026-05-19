@@ -619,20 +619,27 @@ in
           esac
         }
 
-        resolve_git_install_commit() {
+        resolve_git_install_metadata() {
           local install_spec="$1"
           local requested_ref=""
+          local requested_ref_type="default"
           local remote_url
           local ls_remote
           local commit=""
+          local branch_commit=""
+          local tag_commit=""
 
           if [[ "$install_spec" == *#* ]]; then
             requested_ref="''${install_spec#*#}"
           fi
 
           if [[ -n "$requested_ref" && "$requested_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
-            printf '%s\n' "$requested_ref"
+            printf '%s\tcommit\n' "$requested_ref"
             return 0
+          fi
+
+          if [[ -n "$requested_ref" && "$requested_ref" == semver:* ]]; then
+            requested_ref_type="semver"
           fi
 
           remote_url="$(normalize_git_remote_url "$install_spec")" || return 1
@@ -640,15 +647,26 @@ in
 
           if [[ -z "$requested_ref" ]]; then
             commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk '$2 == "HEAD" { print $1; exit }')"
+          elif [[ "$requested_ref_type" == "semver" ]]; then
+            commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v tag_ref="refs/tags/$requested_ref" -v peeled_tag_ref="refs/tags/$requested_ref^{}" '$2 == peeled_tag_ref || $2 == tag_ref { print $1; exit }')"
           else
-            commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v branch_ref="refs/heads/$requested_ref" -v tag_ref="refs/tags/$requested_ref" -v peeled_tag_ref="refs/tags/$requested_ref^{}" '$2 == branch_ref || $2 == peeled_tag_ref || $2 == tag_ref { print $1; exit }')"
+            branch_commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v branch_ref="refs/heads/$requested_ref" '$2 == branch_ref { print $1; exit }')"
+            tag_commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v tag_ref="refs/tags/$requested_ref" -v peeled_tag_ref="refs/tags/$requested_ref^{}" '$2 == peeled_tag_ref || $2 == tag_ref { print $1; exit }')"
+
+            if [[ -n "$branch_commit" ]]; then
+              commit="$branch_commit"
+              requested_ref_type="branch"
+            elif [[ -n "$tag_commit" ]]; then
+              commit="$tag_commit"
+              requested_ref_type="tag"
+            fi
           fi
 
           if [[ -z "$commit" ]]; then
             return 1
           fi
 
-          printf '%s\n' "$commit"
+          printf '%s\t%s\n' "$commit" "$requested_ref_type"
         }
 
         echo "Installing managed Pi package sources..."
@@ -686,15 +704,17 @@ in
           rm -rf "$HOME/.pi/packages/lib/node_modules/$package_name"
           npm install -g --install-links --legacy-peer-deps "$install_spec" 2>&1
 
-          installed_commit="$(resolve_git_install_commit "$install_spec")" || {
-            echo "Failed to resolve installed git commit for $package_name ($install_spec)" >&2
+          git_metadata="$(resolve_git_install_metadata "$install_spec")" || {
+            echo "Failed to resolve installed git metadata for $package_name ($install_spec)" >&2
             exit 1
           }
+          IFS=$'\t' read -r installed_commit requested_ref_type <<< "$git_metadata"
 
           cat > "$local_metadata_path" <<EOF
 {
   "schemaVersion": 1,
-  "installedCommit": "$installed_commit"
+  "installedCommit": "$installed_commit",
+  "requestedRefType": "$requested_ref_type"
 }
 EOF
         done

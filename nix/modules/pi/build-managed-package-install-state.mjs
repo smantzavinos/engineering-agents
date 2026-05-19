@@ -114,13 +114,35 @@ function inferPinnedRefType(fragment) {
   return 'tag';
 }
 
-function parseGitRef(spec) {
+function normalizeRequestedRefType(value) {
+  if (value === 'branch' || value === 'commit' || value === 'tag' || value === 'semver') {
+    return value;
+  }
+
+  return null;
+}
+
+function parseGitRef(spec, metadata = null) {
   const fragmentIndex = spec.indexOf('#');
   if (fragmentIndex === -1 || fragmentIndex === spec.length - 1) {
     return { kind: 'default', value: null };
   }
 
   const fragment = spec.slice(fragmentIndex + 1);
+  const requestedRefType = normalizeRequestedRefType(metadata?.requestedRefType);
+
+  if (requestedRefType === 'branch') {
+    return { kind: 'branch', value: fragment };
+  }
+
+  if (requestedRefType === 'commit' || requestedRefType === 'tag' || requestedRefType === 'semver') {
+    return {
+      kind: 'pinned',
+      value: fragment,
+      refType: requestedRefType,
+    };
+  }
+
   if (looksLikeCommitRef(fragment) || fragment.startsWith('semver:') || looksLikeTagRef(fragment)) {
     return {
       kind: 'pinned',
@@ -167,7 +189,7 @@ async function loadInstalledPackageVersion(materializedPath) {
   return manifest.version;
 }
 
-async function loadInstalledGitCommit(materializedPath) {
+async function loadInstalledGitMetadata(materializedPath) {
   const metadata = await readJson(path.join(materializedPath, '.pi-managed-install.json'), {
     exitCode: 2,
     label: 'git install metadata',
@@ -181,7 +203,18 @@ async function loadInstalledGitCommit(materializedPath) {
     throw new ExitError(`git install metadata missing installedCommit: ${materializedPath}`, 3);
   }
 
-  return metadata.installedCommit;
+  const requestedRefType = metadata.requestedRefType == null
+    ? null
+    : normalizeRequestedRefType(metadata.requestedRefType);
+
+  if (metadata.requestedRefType != null && requestedRefType == null) {
+    throw new ExitError(`git install metadata has unsupported requestedRefType: ${materializedPath}`, 3);
+  }
+
+  return {
+    installedCommit: metadata.installedCommit,
+    requestedRefType,
+  };
 }
 
 async function buildInstallState({ declarationsPath, generatedAt }) {
@@ -220,8 +253,15 @@ async function buildInstallState({ declarationsPath, generatedAt }) {
     const materializedPath = path.resolve(declarationsDir, declaration.source.materializedPath);
     const materializedKey = buildMaterializedKey(declaration.source);
     const sourceKey = materializedKey;
+    const installSpec = declaration.source.installSpec ?? declaration.source.spec;
+
+    let gitMetadata = null;
+    if (declaration.source.type === 'git') {
+      gitMetadata = await loadInstalledGitMetadata(materializedPath);
+    }
+
     const gitRef = declaration.source.type === 'git'
-      ? parseGitRef(declaration.source.installSpec ?? declaration.source.spec)
+      ? parseGitRef(installSpec, gitMetadata)
       : null;
 
     let grouped = groupedSources.get(sourceKey);
@@ -244,7 +284,7 @@ async function buildInstallState({ declarationsPath, generatedAt }) {
       }
 
       if (declaration.source.type === 'git') {
-        grouped.installedCommit = await loadInstalledGitCommit(materializedPath);
+        grouped.installedCommit = gitMetadata.installedCommit;
         grouped.gitRef = gitRef;
       }
 

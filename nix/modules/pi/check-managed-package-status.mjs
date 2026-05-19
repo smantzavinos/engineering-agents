@@ -458,31 +458,61 @@ function parseLsRemoteOutput(stdout) {
   };
 }
 
-function resolveTrackedGitRef(source, parsed) {
-  if (source.gitRef.kind === 'branch') {
-    const trackedRef = `refs/heads/${source.gitRef.value}`;
-    return {
-      trackedRef,
-      trackedCommit: parsed.refs.get(trackedRef) ?? null,
-      missingReason: `remote ref ${trackedRef} is missing`,
-    };
-  }
-
-  if (source.gitRef.kind === 'pinned' && source.gitRef.refType === 'tag') {
-    const trackedRef = `refs/tags/${source.gitRef.value}`;
-    return {
-      trackedRef,
-      trackedCommit: parsed.refs.get(`${trackedRef}^{}`) ?? parsed.refs.get(trackedRef) ?? null,
-      missingReason: `remote ref ${trackedRef} is missing`,
-    };
-  }
-
+function resolveDefaultTrackedGitRef(parsed) {
   const trackedRef = parsed.defaultRef;
   return {
     trackedRef,
     trackedCommit: parsed.headCommit ?? (trackedRef ? parsed.refs.get(trackedRef) : null),
     missingReason: 'remote default branch could not be resolved',
   };
+}
+
+function resolveGitTag(parsed, tagName) {
+  const tagRef = `refs/tags/${tagName}`;
+  return {
+    tagRef,
+    tagCommit: parsed.refs.get(`${tagRef}^{}`) ?? parsed.refs.get(tagRef) ?? null,
+  };
+}
+
+function resolveTrackedGitRef(source, parsed) {
+  if (source.gitRef.kind === 'branch') {
+    const trackedRef = `refs/heads/${source.gitRef.value}`;
+    const trackedCommit = parsed.refs.get(trackedRef) ?? null;
+    if (trackedCommit) {
+      return {
+        trackedRef,
+        trackedCommit,
+        missingReason: `remote ref ${trackedRef} is missing`,
+      };
+    }
+
+    const tagMatch = resolveGitTag(parsed, source.gitRef.value);
+    if (tagMatch.tagCommit) {
+      return resolveDefaultTrackedGitRef(parsed);
+    }
+
+    return {
+      trackedRef,
+      trackedCommit: null,
+      missingReason: `remote ref ${trackedRef} is missing`,
+    };
+  }
+
+  if (source.gitRef.kind === 'pinned' && source.gitRef.refType === 'tag') {
+    const tagMatch = resolveGitTag(parsed, source.gitRef.value);
+    if (!tagMatch.tagCommit) {
+      return {
+        ...resolveDefaultTrackedGitRef(parsed),
+        trackedCommit: null,
+        missingReason: `remote ref ${tagMatch.tagRef} is missing`,
+      };
+    }
+
+    return resolveDefaultTrackedGitRef(parsed);
+  }
+
+  return resolveDefaultTrackedGitRef(parsed);
 }
 
 async function classifyGitSource(source, context) {

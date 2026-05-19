@@ -73,7 +73,7 @@ assert_json \
 assert_json \
   'local declarations are omitted from runtime install-state output' \
   "$STDOUT_PATH" \
-  '(.sources | length) == 4 and all(.sources[]; .source.type != "local")'
+  '(.sources | length) == 5 and all(.sources[]; .source.type != "local")'
 
 assert_json \
   'npm source persists stable source identity and installedVersion facts' \
@@ -131,6 +131,21 @@ assert_json \
       and .installedCommit == "1234123412341234123412341234123412341234"
       and .gitRef.kind == "pinned"
       and .gitRef.value == "v1.2.3"
+      and .gitRef.refType == "tag"
+    )'
+
+assert_json \
+  'non-version git tag names also preserve pinned tag intent' \
+  "$STDOUT_PATH" \
+  'any(.sources[];
+      .source.type == "git"
+      and .source.spec == "github:demo/stable-tag-plugin#stable"
+      and .source.installSpec == "github:demo/stable-tag-plugin#stable"
+      and .source.packageName == "stable-tag-plugin"
+      and .packageIds == ["git-tag-stable"]
+      and .installedCommit == "abababababababababababababababababababab"
+      and .gitRef.kind == "pinned"
+      and .gitRef.value == "stable"
       and .gitRef.refType == "tag"
     )'
 
