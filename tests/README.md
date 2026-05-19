@@ -4,7 +4,7 @@
 
 | Tier | What | Requires | Runner |
 |------|------|----------|--------|
-| **Repo-local specs** | File structure, frontmatter, skill/agent refs, compiler, presets | `bash`, `jq`, `node` | `tests/run-tests.sh fast` |
+| **Repo-local specs** | File structure, readiness docs, frontmatter, skill/agent refs, compiler, presets | `bash`, `jq`, `node` | `tests/run-tests.sh fast` |
 | **Flake eval** | Nix module evaluation, package builds | `nix` | `tests/run-tests.sh all` |
 | **Pi proof-set** | Live facade/provenance verification | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
 | **CLI smoke** | `pi --help`, `pi list` output | Pi installed | `tests/run-tests.sh full` |
@@ -23,6 +23,7 @@
 
 # Individual specs
 bash tests/specs/repo-structure-spec.sh
+bash tests/specs/repo-readiness-docs-spec.sh
 bash tests/specs/skill-content-spec.sh
 bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
@@ -43,6 +44,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 New tests specific to this repo:
 
 - **`repo-structure-spec.sh`** — All required files/dirs exist, README has key content
+- **`repo-readiness-docs-spec.sh`** — Root AGENTS routing and canonical contributor docs exist with required anchors
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
@@ -63,6 +65,7 @@ tests/
 │   └── update-checker/              # Update checker test fixtures
 ├── specs/
 │   ├── repo-structure-spec.sh       # File/dir existence checks
+│   ├── repo-readiness-docs-spec.sh  # Root routing and core contributor docs
 │   ├── skill-content-spec.sh        # Skill quality checks
 │   ├── pi-module-content-spec.sh    # Module content integrity
 │   ├── preset-spec.sh               # Preset configuration validation

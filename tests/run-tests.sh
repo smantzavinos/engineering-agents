@@ -38,6 +38,7 @@ run_specs() {
   printf 'Running repo-local specs...\n\n'
 
   for spec in "$SCRIPT_DIR/specs/repo-structure-spec.sh" \
+              "$SCRIPT_DIR/specs/repo-readiness-docs-spec.sh" \
               "$SCRIPT_DIR/specs/skill-content-spec.sh" \
               "$SCRIPT_DIR/specs/pi-module-content-spec.sh" \
               "$SCRIPT_DIR/specs/preset-spec.sh" \

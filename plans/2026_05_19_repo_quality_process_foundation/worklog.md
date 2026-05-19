@@ -120,7 +120,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 
 ## Task Status
 
-- [ ] T1: Add root routing and core contributor docs
+- [x] T1: Add root routing and core contributor docs
 - [ ] T2: Canonicalize testing strategy and fix verification trust gap
 - [ ] T3: Establish repo backlog/task-tracking contract
 - [ ] T4: Establish lightweight requirements system
@@ -137,24 +137,26 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T1 — Add root routing and core contributor docs
+**Current Task:** T2 — Canonicalize testing strategy and fix verification trust gap
 
-Read `plan.md` § `T1: Add root routing and core contributor docs` for the full TDD checklist and implementation details.
+Read `plan.md` § `T2: Canonicalize testing strategy and fix verification trust gap` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. If T1 discovers accepted non-critical follow-up work, record it in this worklog only because T3 has not established the backlog yet.
-2. Mark T1 done above.
-3. Set NEXT STEP to T2.
-4. Append to the execution log below.
-5. Commit: `task(T1): <short description>`
+1. Extend the readiness-doc spec and add the proof-set runtime regression spec before implementation changes.
+2. Keep `./tests/run-tests.sh fast` as the reliable task gate and treat `./tests/run-tests.sh all` as the final plan gate once T2 repairs verification trust.
+3. Record any accepted non-critical follow-up work in this worklog only because T3 has not established the backlog yet.
+4. Mark T2 done above.
+5. Set NEXT STEP to T3.
+6. Append to the execution log below.
+7. Commit: `task(T2): <short description>`
 
 ## Execution Log
 
-### T1 — YYYY-MM-DD
-- **Changes:** <what was done>
-- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → pass/fail
-- **Verification:** `./tests/run-tests.sh fast` → pass/fail
-- **Commit:** `<sha>` — `task(T1): <short description>`
+### T1 — 2026-05-19
+- **Changes:** Added `tests/specs/repo-readiness-docs-spec.sh`, wired it into `tests/run-tests.sh` fast mode and `tests/README.md`, and created the initial repo-local routing docs in `AGENTS.md`, `docs/architecture.md`, `docs/coding-rules.md`, and `docs/development-environment.md`.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation, fail during break-it when the `docs/coding-rules.md` route was removed from `AGENTS.md`, then pass after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T1): add root routing and core contributor docs`
 - **Backlog items created:** none yet (no repo backlog mechanism until T3)
 - **Requirement changes applied:** none
-- **Notes:** <anything notable>
+- **Notes:** Kept the root `AGENTS.md` concise and routing-oriented; `tests/README.md` remains the canonical testing doc until T2 introduces `docs/testing-strategy.md`.
