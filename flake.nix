@@ -103,11 +103,11 @@
         '';
 
         check-updates = pkgs.writeShellScriptBin "check-updates" ''
-          export PI_UPDATE_CHECKER_HELPER="${self}/nix/modules/pi/check-managed-package-status.mjs"
-          export PI_UPDATE_CHECKER_NODE_BIN="${pkgs.nodejs}/bin/node"
-          export PI_UPDATE_CHECKER_NPM_BIN="${pkgs.nodejs}/bin/npm"
-          export PI_UPDATE_CHECKER_GIT_BIN="${pkgs.git}/bin/git"
-          export PI_UPDATE_CHECKER_PYTHON_BIN="${pkgs.python3}/bin/python3"
+          export PI_UPDATE_CHECKER_HELPER="''${PI_UPDATE_CHECKER_HELPER:-${self}/nix/modules/pi/check-managed-package-status.mjs}"
+          export PI_UPDATE_CHECKER_NODE_BIN="''${PI_UPDATE_CHECKER_NODE_BIN:-${pkgs.nodejs}/bin/node}"
+          export PI_UPDATE_CHECKER_NPM_BIN="''${PI_UPDATE_CHECKER_NPM_BIN:-${pkgs.nodejs}/bin/npm}"
+          export PI_UPDATE_CHECKER_GIT_BIN="''${PI_UPDATE_CHECKER_GIT_BIN:-${pkgs.git}/bin/git}"
+          export PI_UPDATE_CHECKER_PYTHON_BIN="''${PI_UPDATE_CHECKER_PYTHON_BIN:-${pkgs.python3}/bin/python3}"
           exec ${self}/scripts/check-updates.sh "$@"
         '';
 

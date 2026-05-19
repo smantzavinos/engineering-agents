@@ -12,7 +12,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-NIX_FILE="${PI_UPDATE_CHECKER_NIX_FILE:-$REPO_ROOT/nix/modules/pi/default.nix}"
+DEFAULT_NIX_RELATIVE_PATH="nix/modules/pi/default.nix"
 INSTALL_STATE_FILE="${PI_UPDATE_CHECKER_INSTALL_STATE_FILE:-${HOME}/.pi/agent/managed-packages.install-state.json}"
 HELPER_PATH="${PI_UPDATE_CHECKER_HELPER:-$REPO_ROOT/nix/modules/pi/check-managed-package-status.mjs}"
 NODE_BIN="${PI_UPDATE_CHECKER_NODE_BIN:-node}"
@@ -61,6 +61,55 @@ require_command() {
 require_readable_file() {
   local file_path="$1"
   [[ -r "$file_path" ]] || fail_dependency "Missing required file: $file_path"
+}
+
+find_workspace_nix_file() {
+  local search_dir="${PWD}"
+
+  while true; do
+    local candidate="$search_dir/$DEFAULT_NIX_RELATIVE_PATH"
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+
+    local parent_dir
+    parent_dir="$(dirname "$search_dir")"
+    if [[ "$parent_dir" == "$search_dir" ]]; then
+      return 1
+    fi
+    search_dir="$parent_dir"
+  done
+}
+
+resolve_nix_file() {
+  if [[ -n "${PI_UPDATE_CHECKER_NIX_FILE:-}" ]]; then
+    printf '%s\n' "$PI_UPDATE_CHECKER_NIX_FILE"
+    return 0
+  fi
+
+  local bundled_nix_file="$REPO_ROOT/$DEFAULT_NIX_RELATIVE_PATH"
+  local workspace_nix_file=''
+  workspace_nix_file="$(find_workspace_nix_file 2>/dev/null || true)"
+
+  if [[ "$bundled_nix_file" != /nix/store/* && -f "$bundled_nix_file" && -w "$bundled_nix_file" ]]; then
+    printf '%s\n' "$bundled_nix_file"
+    return 0
+  fi
+
+  if [[ -n "$workspace_nix_file" ]]; then
+    printf '%s\n' "$workspace_nix_file"
+    return 0
+  fi
+
+  printf '%s\n' "$bundled_nix_file"
+}
+
+require_writable_update_target() {
+  local file_path="$1"
+
+  [[ -f "$file_path" ]] || fail_dependency "Missing required file: $file_path"
+  [[ -w "$file_path" ]] || fail_dependency "--update requires a writable declaration file: $file_path (run from your engineering-agents checkout or set PI_UPDATE_CHECKER_NIX_FILE)"
 }
 
 run_shared_checker() {
@@ -269,6 +318,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+NIX_FILE="$(resolve_nix_file)"
+
 require_command "$NODE_BIN"
 require_readable_file "$HELPER_PATH"
 require_command "$NPM_BIN"
@@ -282,6 +333,7 @@ if [[ "$UPDATE_MODE" == false ]]; then
 fi
 
 require_command "$PYTHON_BIN"
+require_writable_update_target "$NIX_FILE"
 helper_text="$(run_shared_checker text)" || exit "$?"
 helper_json="$(run_shared_checker json)" || exit "$?"
 updates_json="$(extract_npm_updates_json "$helper_json")"

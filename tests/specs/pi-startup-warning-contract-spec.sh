@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/common.sh
 source "$SCRIPT_DIR/../lib/common.sh"
 
-require_commands node jq python3 >/dev/null
+require_commands node jq python3 nix >/dev/null
 
 REPO_ROOT="$(repo_root)"
 README_PATH="$REPO_ROOT/README.md"
@@ -17,6 +17,8 @@ FLAKE_PATH="$REPO_ROOT/flake.nix"
 EXTENSION_PATH="$REPO_ROOT/nix/modules/pi/extensions/startup-staleness-warning/index.ts"
 HARNESS_PATH="$REPO_ROOT/tests/scripts/run-startup-warning-extension.mjs"
 FIXTURE_DIR="$(tests_dir)/spec-fixtures/startup-warning-extension"
+MANAGED_STATUS_FIXTURE_DIR="$(tests_dir)/spec-fixtures/managed-package-status"
+UPDATE_FIXTURE_PATH="$(tests_dir)/spec-fixtures/update-checker/pi.nix.sample"
 CHECK_UPDATES_PATH="$REPO_ROOT/scripts/check-updates.sh"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -54,6 +56,18 @@ assert_json() {
   fi
 }
 
+assert_exit_code() {
+  local description="$1"
+  local expected="$2"
+  local actual="$3"
+
+  if [[ "$expected" == "$actual" ]]; then
+    printf 'PASS: %s\n' "$description"
+  else
+    fail "$description (expected exit $expected, got $actual)"
+  fi
+}
+
 run_harness() {
   local home_dir="$1"
   local snapshot_path="$2"
@@ -79,7 +93,13 @@ HARNESS_SNAPSHOT_DIR="$HARNESS_HOME/.pi/agent/startup-status"
 HARNESS_SNAPSHOT="$HARNESS_SNAPSHOT_DIR/launch.json"
 HARNESS_OUTPUT="$TMP_DIR/harness.json"
 HELP_OUTPUT="$TMP_DIR/check-updates-help.txt"
-mkdir -p "$HARNESS_SNAPSHOT_DIR"
+PACKAGED_WORKSPACE="$TMP_DIR/packaged-helper-workspace"
+PACKAGED_SUBDIR="$PACKAGED_WORKSPACE/subdir"
+PACKAGED_NIX_PATH="$PACKAGED_WORKSPACE/nix/modules/pi/default.nix"
+PACKAGED_STDOUT="$TMP_DIR/packaged-check-updates.out"
+PACKAGED_STDERR="$TMP_DIR/packaged-check-updates.err"
+mkdir -p "$HARNESS_SNAPSHOT_DIR" "$PACKAGED_SUBDIR" "$(dirname "$PACKAGED_NIX_PATH")"
+cp "$UPDATE_FIXTURE_PATH" "$PACKAGED_NIX_PATH"
 cp "$FIXTURE_DIR/snapshot.valid.json" "$HARNESS_SNAPSHOT"
 
 if ! run_harness "$HARNESS_HOME" "$HARNESS_SNAPSHOT" '2026-05-19T12:00:30.000Z' "$HARNESS_OUTPUT"; then
@@ -112,14 +132,31 @@ assert_contains \
   "$HELP_OUTPUT" \
   'Rewrite stale npm declarations only; git/local declarations are never rewritten'
 
-assert_contains \
-  'flake packaging exposes a dedicated check-updates helper wrapper' \
-  "$FLAKE_PATH" \
-  'writeShellScriptBin "check-updates"'
-assert_contains \
-  'packaged check-updates helper delegates to the repo-owned script' \
-  "$FLAKE_PATH" \
-  'exec ${self}/scripts/check-updates.sh "$@"'
+PACKAGED_CHECK_UPDATES_OUT=$(nix build "$REPO_ROOT#packages.x86_64-linux.check-updates" --no-link --print-out-paths 2>&1) || true
+PACKAGED_CHECK_UPDATES_OUT=$(printf '%s\n' "$PACKAGED_CHECK_UPDATES_OUT" | grep '^/nix/store' | head -1 || true)
+PACKAGED_CHECK_UPDATES_PATH="$PACKAGED_CHECK_UPDATES_OUT/bin/check-updates"
+
+if [[ -x "$PACKAGED_CHECK_UPDATES_PATH" ]]; then
+  printf 'PASS: flake packaging builds a check-updates helper wrapper\n'
+else
+  printf 'Build output:\n%s\n' "$PACKAGED_CHECK_UPDATES_OUT" >&2
+  fail 'flake packaging should build an executable check-updates helper wrapper'
+fi
+
+set +e
+(
+  cd "$PACKAGED_SUBDIR"
+  PI_UPDATE_CHECKER_INSTALL_STATE_FILE="$MANAGED_STATUS_FIXTURE_DIR/manifest.update.json" \
+  PI_UPDATE_CHECKER_NPM_BIN="$MANAGED_STATUS_FIXTURE_DIR/fake-npm" \
+  PI_UPDATE_CHECKER_GIT_BIN="$MANAGED_STATUS_FIXTURE_DIR/fake-git" \
+  PI_UPDATE_CHECKER_ASSUME_YES="1" \
+    "$PACKAGED_CHECK_UPDATES_PATH" --update >"$PACKAGED_STDOUT" 2>"$PACKAGED_STDERR"
+)
+packaged_update_status=$?
+set -e
+assert_exit_code 'packaged check-updates preserves npm-only --update behavior from a writable repo checkout' 0 "$packaged_update_status"
+assert_contains 'packaged check-updates resolves the writable working-tree declaration path' "$PACKAGED_STDOUT" "$PACKAGED_NIX_PATH"
+assert_contains 'packaged check-updates rewrites the npm version field in the writable checkout file' "$PACKAGED_NIX_PATH" 'version = "2.0.0";'
 assert_contains \
   'Pi module installs the packaged check-updates helper for repo users' \
   "$PI_MODULE_PATH" \
