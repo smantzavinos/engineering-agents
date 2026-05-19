@@ -41,7 +41,8 @@ run_specs() {
               "$SCRIPT_DIR/specs/skill-content-spec.sh" \
               "$SCRIPT_DIR/specs/pi-module-content-spec.sh" \
               "$SCRIPT_DIR/specs/preset-spec.sh" \
-              "$SCRIPT_DIR/specs/compiler-contract-spec.sh"; do
+              "$SCRIPT_DIR/specs/compiler-contract-spec.sh" \
+              "$SCRIPT_DIR/specs/managed-package-install-state-spec.sh"; do
     if [[ -x "$spec" ]]; then
       printf '%s\n' "--- $(basename "$spec") ---"
       if bash "$spec"; then

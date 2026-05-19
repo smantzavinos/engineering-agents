@@ -57,12 +57,12 @@ Run all package-wide and repo-wide gates before T1 implementation.
 
 | Command | Scope | Baseline status | Related failures? | Notes |
 |---------|-------|-----------------|-------------------|-------|
-| `./tests/run-tests.sh fast` | package-wide | ⏳ not yet recorded | TBD | Required pre-T1 baseline for the deterministic repo-local suite |
-| `./tests/run-tests.sh all` | repo-wide | ⏳ not yet recorded | TBD | Required pre-T1 baseline for flake eval + proof-set verification |
-| `./tests/run-tests.sh full` | repo-wide | ⏳ not yet recorded | TBD | Optional smoke; record when the executor's environment has a functional Pi CLI |
+| `./tests/run-tests.sh fast` | package-wide | ✅ pass (2026-05-19 baseline) | no | Green before T1 changes |
+| `./tests/run-tests.sh all` | repo-wide | ✅ pass (2026-05-19 baseline) | no | Green before T1 changes; Pi proof-set printed the existing entrypoint warning but exited 0 |
+| `./tests/run-tests.sh full` | repo-wide | ❌ fail (2026-05-19 baseline) | no | Pre-existing optional smoke failure: `pi --help` output unexpected before T1 changes |
 
-- [ ] All baseline gates checked before implementation began
-- [ ] Pre-existing failures documented above
+- [x] All baseline gates checked before implementation began
+- [x] Pre-existing failures documented above
 
 ## Testing & Verification
 
@@ -106,7 +106,7 @@ Always run the documented gate command(s) before marking a task complete, even i
 ### Unrelated Gate Failures Log
 | Date | Command | Failure | Related to current task? | Action |
 |------|---------|---------|--------------------------|--------|
-| _none yet_ |  |  |  |  |
+| 2026-05-19 | `./tests/run-tests.sh full` | `pi --help` output unexpected during optional CLI smoke baseline | no | Recorded as pre-existing baseline failure; not blocking T1 under `allow-scoped-completion` |
 
 - If a task-specific test fails: fix before marking the task complete.
 
@@ -146,7 +146,7 @@ Execution rules for requirement-related work in this plan:
 
 | ID | Task | Depends on | Deliverable | Verification | Status |
 |---:|------|------------|-------------|--------------|--------|
-| T1 | Add the managed-package install-state manifest contract | — | Activation writes `managed-packages.install-state.json` via a tested helper, with deterministic schema, source identity/install fields, and shared-source fan-out | `bash tests/specs/managed-package-install-state-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
+| T1 | Add the managed-package install-state manifest contract | — | Activation writes `managed-packages.install-state.json` via a tested helper, with deterministic schema, source identity/install fields, and shared-source fan-out | `bash tests/specs/managed-package-install-state-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
 | T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
 | T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
@@ -154,7 +154,7 @@ Execution rules for requirement-related work in this plan:
 
 ## Task Status
 
-- [ ] T1: Add the managed-package install-state manifest contract
+- [x] T1: Add the managed-package install-state manifest contract
 - [ ] T2: Build the shared status engine and align `check-updates` with it
 - [ ] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
 - [ ] T4: Add the Pi startup notifier extension
@@ -166,19 +166,24 @@ Execution rules for requirement-related work in this plan:
 
 ## NEXT STEP
 
-**Preflight required:** Run and record the Baseline Gate Audit commands above before implementation.
+T2 — Build the shared status engine and align `check-updates` with it.
 
-**Current Task after baseline:** T1 — Add the managed-package install-state manifest contract
+Read `plan.md` § `T2: Build the shared status engine and align `check-updates` with it` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
 
-Read `plan.md` § `T1: Add the managed-package install-state manifest contract` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
-
-After completing T1:
-1. Update the baseline/task evidence in this file.
-2. Mark T1 done above and update the Task Queue status.
-3. Set NEXT STEP to T2.
+After completing T2:
+1. Update the task evidence in this file.
+2. Mark T2 done above and update the Task Queue status.
+3. Set NEXT STEP to T3.
 4. Append to the execution log below.
-5. Commit: `task(T1): add the managed-package install-state manifest contract`
+5. Commit: `task(T2): build the shared status engine and align check-updates`
 
 ## Execution Log
 
-_No execution yet._
+- 2026-05-19 — T1 completed.
+  - Baseline audit recorded before implementation: `./tests/run-tests.sh fast` ✅, `./tests/run-tests.sh all` ✅, `./tests/run-tests.sh full` ❌ (`pi --help` smoke failure; pre-existing and unrelated to T1).
+  - Red: added `tests/specs/managed-package-install-state-spec.sh`, fixtures under `tests/spec-fixtures/managed-package-install-state/`, and fast-suite/docs wiring; confirmed initial failure because `nix/modules/pi/build-managed-package-install-state.mjs` did not exist.
+  - Green: implemented `nix/modules/pi/build-managed-package-install-state.mjs`; updated `nix/modules/pi/default.nix` to preserve richer managed-package declarations, persist git install metadata, and write `~/.pi/agent/managed-packages.install-state.json` during activation.
+  - Break-it: temporarily removed persisted `installedCommit` from git source output, re-ran `bash tests/specs/managed-package-install-state-spec.sh`, confirmed failure, then restored the field.
+  - Verification: `bash tests/specs/managed-package-install-state-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
+  - Backlog items created: none (repo backlog mechanism not documented).
+  - Requirement changes applied: none in T1.

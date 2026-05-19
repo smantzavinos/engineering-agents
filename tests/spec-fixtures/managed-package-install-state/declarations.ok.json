@@ -1,0 +1,53 @@
+{
+  "packages": [
+    {
+      "packageId": "git-shared-beta",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-plugin#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "installSpec": "github:demo/shared-plugin#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "packageName": "shared-plugin",
+        "materializedPath": "./sources/shared-plugin"
+      }
+    },
+    {
+      "packageId": "git-default-branch",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/default-branch-plugin",
+        "installSpec": "github:demo/default-branch-plugin",
+        "packageName": "default-branch-plugin",
+        "materializedPath": "./sources/default-branch-plugin"
+      }
+    },
+    {
+      "packageId": "npm-fancy-tool",
+      "source": {
+        "type": "npm",
+        "spec": "pi-fancy-tool@1.2.3",
+        "installSpec": "pi-fancy-tool@1.2.3",
+        "packageName": "pi-fancy-tool",
+        "materializedPath": "./sources/pi-fancy-tool"
+      }
+    },
+    {
+      "packageId": "git-shared-alpha",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-plugin#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "installSpec": "github:demo/shared-plugin#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "packageName": "shared-plugin",
+        "materializedPath": "./sources/shared-plugin"
+      }
+    },
+    {
+      "packageId": "local-placeholder",
+      "source": {
+        "type": "local",
+        "spec": "./local/local-placeholder",
+        "installSpec": "./local/local-placeholder",
+        "packageName": "local-placeholder"
+      }
+    }
+  ]
+}

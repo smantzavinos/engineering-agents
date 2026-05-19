@@ -28,6 +28,7 @@ bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/compiler-contract-spec.sh
+bash tests/specs/managed-package-install-state-spec.sh
 ```
 
 ## Test Adaptation
@@ -47,6 +48,7 @@ New tests specific to this repo:
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
+- **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 
 ## File Layout
 
@@ -59,6 +61,7 @@ tests/
 │   └── resource-snapshot.mjs        # Live Pi state snapshot generator
 ├── spec-fixtures/
 │   ├── compiler/                    # compile-managed-packages.mjs test inputs
+│   ├── managed-package-install-state/ # install-state helper test inputs
 │   ├── resource-snapshot.*          # Snapshot contract test fixtures
 │   └── update-checker/              # Update checker test fixtures
 ├── specs/
@@ -67,7 +70,8 @@ tests/
 │   ├── pi-module-content-spec.sh    # Module content integrity
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
-│   └── compiler-contract-spec.sh    # Compile helper contract tests
+│   ├── compiler-contract-spec.sh    # Compile helper contract tests
+│   └── managed-package-install-state-spec.sh # Install-state helper contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification
 └── run-tests.sh                     # Main test runner (fast/all/full)
 ```
