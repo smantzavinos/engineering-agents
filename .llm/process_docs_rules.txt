@@ -1,0 +1,9 @@
+When to read: read this before editing repo process documentation, routing docs, plans/worklogs templates, or cross-link-heavy Markdown.
+
+Rules:
+- Keep voice concise, directive, and operational; prefer short statements over broad narrative.
+- Preserve the root AGENTS.md as a routing layer and move detailed policy into the canonical target doc.
+- Keep section names stable when tests or worklogs rely on them.
+- Maintain cross-link discipline: update the source doc, root route, and touched test/docs references together when a canonical path changes.
+- Prefer executable wording tied to the documented commands, files, and artifacts used in this repo.
+- Do not invent a second canonical source for backlog, requirements, or verification policy.

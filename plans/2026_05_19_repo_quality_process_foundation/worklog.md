@@ -121,7 +121,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 - [x] T2: Canonicalize testing strategy and fix verification trust gap
 - [x] T3: Establish repo backlog/task-tracking contract
 - [x] T4: Establish lightweight requirements system
-- [ ] T5: Add specialized-area guidance and `.llm/` instructions
+- [x] T5: Add specialized-area guidance and `.llm/` instructions
 - [ ] T6: Add operational memory docs and consistency cleanups
 - [ ] T7: Final consistency sweep and repo-wide verification
 
@@ -134,18 +134,18 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T5 — Add specialized-area guidance and `.llm/` instructions
+**Current Task:** T6 — Add operational memory docs and consistency cleanups
 
-Read `plan.md` § `T5: Add specialized-area guidance and `.llm/` instructions` for the full TDD checklist and implementation details.
+Read `plan.md` § `T6: Add operational memory docs and consistency cleanups` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. Extend the readiness-doc spec with failing assertions for the per-directory `AGENTS.md` files, `.llm/` files, and root routing to them.
-2. Implement the local guidance and `.llm/` instruction files with concise patterns, anti-patterns, and navigation rules.
+1. Extend the readiness-doc spec with failing assertions for `plans/README.md`, ADR docs, issues/learnings docs, and the removal of stale `.pi/agents/` override guidance from `agents/README.md`.
+2. Implement the operational memory docs and consistency updates called for by T6.
 3. Keep `./tests/run-tests.sh fast` as the task completion gate.
-4. Mark T5 done above.
-5. Set NEXT STEP to T6.
+4. Mark T6 done above.
+5. Set NEXT STEP to T7.
 6. Append to the execution log below.
-7. Commit: `task(T5): <short description>`
+7. Commit: `task(T6): <short description>`
 
 ## Execution Log
 
@@ -184,3 +184,12 @@ After completing this task:
 - **Backlog items created:** none
 - **Requirement changes applied:** introduced `docs/requirements.md`; added `ACT-001`–`ACT-003`, `UC-001`–`UC-004`, `WF-001`–`WF-004`, `FR-001`–`FR-006`, `NFR-001`–`NFR-002`, and `OPR-001`–`OPR-002`
 - **Notes:** Requirement citations now use the documented `Requirement: <ID>` format in the materially edited readiness-related specs touched by this task.
+
+### T5 — 2026-05-19
+- **Changes:** Extended `tests/specs/repo-readiness-docs-spec.sh` with per-directory `AGENTS.md`, `.llm/`, and root-routing assertions; created `agents/AGENTS.md`, `skills/AGENTS.md`, `tests/AGENTS.md`, `nix/AGENTS.md`, `templates/AGENTS.md`, `.llm/process_docs_rules.txt`, and `.llm/nix_rules.txt`; and updated root `AGENTS.md` with Per-Directory Rules plus LLM Instruction Files routing.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation; break-it check temporarily renamed `## Placeholder Discipline` in `templates/AGENTS.md` and `bash tests/specs/repo-readiness-docs-spec.sh` failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T5): add local guidance and llm instruction files`
+- **Backlog items created:** none
+- **Requirement changes applied:** none
+- **Notes:** Kept the root guide routing-oriented and used the T4 requirements-backed readiness spec to cover the new local guidance surface (`FR-001`, `NFR-002`, `OPR-001`).

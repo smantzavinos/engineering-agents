@@ -5,6 +5,7 @@
 # Requirement: FR-003
 # Requirement: FR-004
 # Requirement: FR-005
+# Requirement: NFR-002
 # Requirement: OPR-001
 set -euo pipefail
 
@@ -39,6 +40,13 @@ assert_file_exists "$REPO_ROOT/docs/development-environment.md" "Development env
 assert_file_exists "$REPO_ROOT/docs/testing-strategy.md" "Testing strategy doc exists"
 assert_file_exists "$REPO_ROOT/docs/backlog.md" "Backlog doc exists"
 assert_file_exists "$REPO_ROOT/docs/requirements.md" "Requirements doc exists"
+assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
+assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
+assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
+assert_file_exists "$REPO_ROOT/nix/AGENTS.md" "Nix directory guide exists"
+assert_file_exists "$REPO_ROOT/templates/AGENTS.md" "Templates directory guide exists"
+assert_file_exists "$REPO_ROOT/.llm/process_docs_rules.txt" "Process-doc LLM rules exist"
+assert_file_exists "$REPO_ROOT/.llm/nix_rules.txt" "Nix LLM rules exist"
 
 assert_file_contains "$REPO_ROOT/AGENTS.md" "# Project Agent Guide" "AGENTS has routing title"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Architecture" "AGENTS routes architecture section"
@@ -63,6 +71,16 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "NFR-001" "AGENTS documents non-func
 assert_file_contains "$REPO_ROOT/AGENTS.md" "OPR-001" "AGENTS documents operational requirement ID prefix"
 assert_file_contains "$REPO_ROOT/AGENTS.md" 'Requirement: FR-001' "AGENTS documents the test requirement citation format"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "Canonical requirement edits require human approval unless explicitly delegated" "AGENTS states the requirement approval boundary"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "## Per-Directory Rules" "AGENTS routes per-directory rules section"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "agents/AGENTS.md" "AGENTS routes to agents directory guide"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "skills/AGENTS.md" "AGENTS routes to skills directory guide"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "tests/AGENTS.md" "AGENTS routes to tests directory guide"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "nix/AGENTS.md" "AGENTS routes to nix directory guide"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "templates/AGENTS.md" "AGENTS routes to templates directory guide"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "## LLM Instruction Files" "AGENTS routes LLM instruction files section"
+assert_file_contains "$REPO_ROOT/AGENTS.md" ".llm/process_docs_rules.txt" "AGENTS routes to process-doc LLM rules"
+assert_file_contains "$REPO_ROOT/AGENTS.md" ".llm/nix_rules.txt" "AGENTS routes to nix LLM rules"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "Read these only when editing the matching surface" "AGENTS explains when to read LLM instruction files"
 
 assert_file_contains "$REPO_ROOT/docs/architecture.md" "# Repository Architecture" "Architecture doc has title"
 assert_file_contains "$REPO_ROOT/docs/architecture.md" "## Repository Purpose" "Architecture doc describes repository purpose"
@@ -152,6 +170,46 @@ assert_file_contains "$REPO_ROOT/docs/requirements.md" "## Non-Functional Requir
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "NFR-001" "Requirements doc defines a non-functional requirement"
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "## Operational Requirements" "Requirements doc has operational requirements section"
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "OPR-001" "Requirements doc defines an operational requirement"
+
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "# Agents Directory Guide" "Agents guide has title"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Agent Frontmatter Conventions" "Agents guide covers frontmatter conventions"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Role Boundaries" "Agents guide covers role boundaries"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "agentOverrides" "Agents guide points to agentOverrides"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" ".pi/agents/" "Agents guide warns against repo-local .pi/agents overrides"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## When to Read Each Agent File" "Agents guide explains when to read each agent file"
+assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Anti-Patterns" "Agents guide lists anti-patterns"
+
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "# Skills Directory Guide" "Skills guide has title"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "## Skill Structure" "Skills guide covers skill structure"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "SKILL.md" "Skills guide references SKILL.md"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "references/" "Skills guide references optional references directory"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "templates" "Skills guide references templates support"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "## Naming Rules" "Skills guide covers naming rules"
+assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "## Process Constraints" "Skills guide covers process constraints"
+
+assert_file_contains "$REPO_ROOT/tests/AGENTS.md" "# Tests Directory Guide" "Tests guide has title"
+assert_file_contains "$REPO_ROOT/tests/AGENTS.md" "## Shell Spec Style" "Tests guide covers shell spec style"
+assert_file_contains "$REPO_ROOT/tests/AGENTS.md" "## Fixture Patterns" "Tests guide covers fixture patterns"
+assert_file_contains "$REPO_ROOT/tests/AGENTS.md" "## Verification Expectations" "Tests guide covers verification expectations"
+assert_file_contains "$REPO_ROOT/tests/AGENTS.md" "## Adding New Specs" "Tests guide explains how to add new specs"
+
+assert_file_contains "$REPO_ROOT/nix/AGENTS.md" "# Nix Directory Guide" "Nix guide has title"
+assert_file_contains "$REPO_ROOT/nix/AGENTS.md" "## Module Boundaries" "Nix guide covers module boundaries"
+assert_file_contains "$REPO_ROOT/nix/AGENTS.md" "compile-managed-packages.mjs" "Nix guide covers compile helper behavior"
+assert_file_contains "$REPO_ROOT/nix/AGENTS.md" "guardrails.json" "Nix guide covers guardrails config"
+assert_file_contains "$REPO_ROOT/nix/AGENTS.md" "generated package" "Nix guide covers generated package conventions"
+
+assert_file_contains "$REPO_ROOT/templates/AGENTS.md" "# Templates Directory Guide" "Templates guide has title"
+assert_file_contains "$REPO_ROOT/templates/AGENTS.md" "## Starter Content Rules" "Templates guide covers starter content rules"
+assert_file_contains "$REPO_ROOT/templates/AGENTS.md" "## Placeholder Discipline" "Templates guide covers placeholder discipline"
+assert_file_contains "$REPO_ROOT/templates/AGENTS.md" "anti-pattern" "Templates guide lists anti-patterns"
+
+assert_file_contains "$REPO_ROOT/.llm/process_docs_rules.txt" "When to read" "Process-doc LLM rules explain when to read"
+assert_file_contains "$REPO_ROOT/.llm/process_docs_rules.txt" "cross-link" "Process-doc LLM rules cover cross-link discipline"
+assert_file_contains "$REPO_ROOT/.llm/process_docs_rules.txt" "voice" "Process-doc LLM rules cover voice"
+assert_file_contains "$REPO_ROOT/.llm/nix_rules.txt" "When to read" "Nix LLM rules explain when to read"
+assert_file_contains "$REPO_ROOT/.llm/nix_rules.txt" "module" "Nix LLM rules cover modules"
+assert_file_contains "$REPO_ROOT/.llm/nix_rules.txt" "generated package" "Nix LLM rules cover generated packages"
 
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-001' "Readiness docs spec cites a functional requirement"
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-004' "Readiness docs spec cites the requirements-system contract"

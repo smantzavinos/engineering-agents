@@ -1,0 +1,9 @@
+When to read: read this before editing Nix modules, guardrails policy, or generated-package helpers in this repo.
+
+Rules:
+- Preserve existing module boundaries between `nix/modules/pi/` and `nix/modules/opencode/` unless the task explicitly changes architecture.
+- Keep Nix changes declarative and reproducible; prefer small option or data edits over large rewrites.
+- Treat `compile-managed-packages.mjs` as part of the module contract: preserve CLI arguments, deterministic output, and tested exit semantics unless the task updates the contract and specs together.
+- Keep `guardrails.json` valid JSON and change only the narrow rule set needed.
+- Preserve generated package conventions such as path-safe IDs, metadata, and stable layout.
+- Do not handwave verification; run the documented tests that cover the touched module behavior.

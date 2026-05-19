@@ -36,3 +36,15 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - Tests cite requirements they verify using `Requirement: FR-001`.
 - Draft requirement changes stay in plan artifacts until approved.
 - Canonical requirement edits require human approval unless explicitly delegated.
+
+## Per-Directory Rules
+- `agents/AGENTS.md` — read before editing agent files, frontmatter, role boundaries, or model override guidance.
+- `skills/AGENTS.md` — read before creating or changing skill structure, naming, references, or templates.
+- `tests/AGENTS.md` — read before adding specs, fixtures, or changing verification wiring.
+- `nix/AGENTS.md` — read before editing Nix modules, compile helpers, guardrails, or generated-package behavior.
+- `templates/AGENTS.md` — read before editing starter content or placeholders.
+
+## LLM Instruction Files
+Read these only when editing the matching surface or reviewing generated changes against it.
+- `.llm/process_docs_rules.txt` — read before editing process documentation, routing docs, or cross-link-heavy Markdown.
+- `.llm/nix_rules.txt` — read before editing Nix modules, guardrails, or generated-package helpers.
