@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-19T12:00:00.000Z",
+  "sources": [
+    {
+      "sourceKey": "src-012-git-timeout",
+      "packageIds": ["git-timeout"],
+      "materializedPath": "/fixtures/git-timeout",
+      "materializedKey": "src-012-git-timeout",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-timeout",
+        "installSpec": "github:demo/git-timeout",
+        "packageName": "git-timeout"
+      },
+      "installedCommit": "2222222222222222222222222222222222222222",
+      "gitRef": {
+        "kind": "default",
+        "value": null
+      }
+    }
+  ]
+}

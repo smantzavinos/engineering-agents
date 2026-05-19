@@ -29,6 +29,7 @@ bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
+bash tests/specs/managed-package-status-spec.sh
 ```
 
 ## Test Adaptation
@@ -49,6 +50,7 @@ New tests specific to this repo:
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
+- **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
 
 ## File Layout
 
@@ -62,6 +64,7 @@ tests/
 ├── spec-fixtures/
 │   ├── compiler/                    # compile-managed-packages.mjs test inputs
 │   ├── managed-package-install-state/ # install-state helper test inputs
+│   ├── managed-package-status/      # shared status engine + check-updates fixtures
 │   ├── resource-snapshot.*          # Snapshot contract test fixtures
 │   └── update-checker/              # Update checker test fixtures
 ├── specs/
@@ -71,7 +74,8 @@ tests/
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
 │   ├── compiler-contract-spec.sh    # Compile helper contract tests
-│   └── managed-package-install-state-spec.sh # Install-state helper contract tests
+│   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
+│   └── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification
 └── run-tests.sh                     # Main test runner (fast/all/full)
 ```

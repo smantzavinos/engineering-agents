@@ -132,7 +132,8 @@ The plan includes approved requirement-oriented changes, but **no canonical repo
 - **Approved requirement updates from plan:**
   - Apply the approved approach scope clarification that v1 stale-warning coverage is limited to managed `piPackages` install types.
   - Apply the approved manual-workflow contract that startup warnings point to `check-updates --dry-run` for inspection and `home-manager switch --flake ...` for applying changes.
-- **Applied requirement updates:** None yet.
+- **Applied requirement updates:**
+  - T2: `check-updates` now treats `--dry-run`/default as the supported inspection path, directs users to `home-manager switch --flake ...` for applying changes, and keeps `--update` explicitly npm-only.
 - **Requirement-change approval source:** `./plan.md` → `Requirement Updates`
 - **Requirement IDs/reference format:** None documented.
 - **Test requirement citation format:** None documented.
@@ -147,7 +148,7 @@ Execution rules for requirement-related work in this plan:
 | ID | Task | Depends on | Deliverable | Verification | Status |
 |---:|------|------------|-------------|--------------|--------|
 | T1 | Add the managed-package install-state manifest contract | — | Activation writes `managed-packages.install-state.json` via a tested helper, with deterministic schema, source identity/install fields, and shared-source fan-out | `bash tests/specs/managed-package-install-state-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
-| T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
+| T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
 | T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
 | T5 | Wire user-facing workflow docs, helper availability, and final contract coverage | T2, T3, T4 | Installed `check-updates` helper, aligned startup/helper/README wording, managed-scope contract coverage, and fast-suite coverage for the new repo contract | `bash tests/specs/pi-startup-warning-contract-spec.sh`, `./tests/run-tests.sh fast`, `./tests/run-tests.sh all` | ⬜ |
@@ -155,7 +156,7 @@ Execution rules for requirement-related work in this plan:
 ## Task Status
 
 - [x] T1: Add the managed-package install-state manifest contract
-- [ ] T2: Build the shared status engine and align `check-updates` with it
+- [x] T2: Build the shared status engine and align `check-updates` with it
 - [ ] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
 - [ ] T4: Add the Pi startup notifier extension
 - [ ] T5: Wire user-facing workflow docs, helper availability, and final contract coverage
@@ -166,16 +167,16 @@ Execution rules for requirement-related work in this plan:
 
 ## NEXT STEP
 
-T2 — Build the shared status engine and align `check-updates` with it.
+T3 — Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle.
 
-Read `plan.md` § `T2: Build the shared status engine and align `check-updates` with it` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
+Read `plan.md` § `T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
 
-After completing T2:
+After completing T3:
 1. Update the task evidence in this file.
-2. Mark T2 done above and update the Task Queue status.
-3. Set NEXT STEP to T3.
+2. Mark T3 done above and update the Task Queue status.
+3. Set NEXT STEP to T4.
 4. Append to the execution log below.
-5. Commit: `task(T2): build the shared status engine and align check-updates`
+5. Commit: `task(T3): add the repo-owned pi launch wrapper and startup snapshot lifecycle`
 
 ## Execution Log
 
@@ -187,3 +188,10 @@ After completing T2:
   - Verification: `bash tests/specs/managed-package-install-state-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
   - Backlog items created: none (repo backlog mechanism not documented).
   - Requirement changes applied: none in T1.
+- 2026-05-19 — T2 completed.
+  - Red: added `tests/specs/managed-package-status-spec.sh`, fixtures under `tests/spec-fixtures/managed-package-status/`, and fast-suite/docs wiring; confirmed initial failure because `nix/modules/pi/check-managed-package-status.mjs` did not exist.
+  - Green: implemented `nix/modules/pi/check-managed-package-status.mjs` with shared npm/git stale classification, fixed startup defaults, timeout/unknown taxonomy, JSON/text output, and grouped-source handling; updated `scripts/check-updates.sh` to use the shared checker for inspection while keeping `--update` npm-only.
+  - Break-it: temporarily changed pinned git sources to compare against the installed commit instead of the chosen upstream ref, re-ran `bash tests/specs/managed-package-status-spec.sh`, confirmed failure, then restored the default-branch comparison rule.
+  - Verification: `bash tests/specs/managed-package-status-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
+  - Backlog items created: none (repo backlog mechanism not documented).
+  - Requirement changes applied: manual inspection/apply workflow now points to `check-updates --dry-run` for inspection and `home-manager switch --flake ...` as the apply step; `--update` remains npm-only.
