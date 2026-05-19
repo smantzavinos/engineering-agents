@@ -78,16 +78,16 @@ async function loadExtension(extensionPath) {
 }
 
 function findSessionStartHandler(extension) {
-  if (typeof extension === 'function') {
-    return extension;
+  if (extension?.hooks && typeof extension.hooks.session_start === 'function') {
+    return extension.hooks.session_start;
   }
 
   if (extension && typeof extension.session_start === 'function') {
     return extension.session_start;
   }
 
-  if (extension?.hooks && typeof extension.hooks.session_start === 'function') {
-    return extension.hooks.session_start;
+  if (typeof extension === 'function') {
+    return extension;
   }
 
   throw new Error('extension does not expose a session_start handler');
@@ -127,8 +127,8 @@ async function main() {
       notify(payload) {
         notifications.push(normalizeNotification(payload));
       },
-      setStatus(payload) {
-        currentStatus = payload ?? null;
+      setStatus(id, text) {
+        currentStatus = arguments.length > 1 ? (text ?? null) : (id ?? null);
         statuses.push(currentStatus);
       },
     },

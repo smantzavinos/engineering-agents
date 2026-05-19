@@ -12,12 +12,6 @@ function getNow(ctx) {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-function clearStatus(ctx) {
-  if (ctx?.ui && typeof ctx.ui.setStatus === 'function') {
-    ctx.ui.setStatus(null);
-  }
-}
-
 function sortPackageIds(packageIds) {
   return Array.isArray(packageIds)
     ? [...packageIds].filter((value) => typeof value === 'string' && value.length > 0).sort((left, right) => left.localeCompare(right))
@@ -158,6 +152,12 @@ async function consumeSnapshot(snapshotPath) {
   }
 }
 
+function clearStatus(ctx) {
+  if (ctx?.ui && typeof ctx.ui.setStatus === 'function') {
+    ctx.ui.setStatus(STATUS_ID, null);
+  }
+}
+
 async function sessionStart(ctx) {
   const snapshotPath = process.env[STATUS_ENV_VAR] ?? ctx?.env?.[STATUS_ENV_VAR];
   const ownedSnapshotPath = await resolveOwnedSnapshotPath(snapshotPath);
@@ -184,7 +184,6 @@ async function sessionStart(ctx) {
   const unknownEntries = normalizeSourceList(payload, 'unknown');
 
   if (staleEntries.length === 0 && unknownEntries.length === 0) {
-    clearStatus(ctx);
     await consumeSnapshot(ownedSnapshotPath);
     return;
   }
@@ -202,15 +201,20 @@ async function sessionStart(ctx) {
   }
 
   if (ctx?.ui && typeof ctx.ui.setStatus === 'function') {
-    ctx.ui.setStatus(statusText);
+    ctx.ui.setStatus(STATUS_ID, statusText);
   }
 
   await consumeSnapshot(ownedSnapshotPath);
 }
 
-module.exports = {
-  name: 'startup-staleness-warning',
-  hooks: {
-    session_start: sessionStart,
-  },
-};
+// Pi extension factory: receives ExtensionAPI, registers session_start handler
+function startupStalenessWarning(pi) {
+  pi.on('session_start', sessionStart);
+}
+
+// Default export for Pi's extension loader
+module.exports = startupStalenessWarning;
+module.exports.default = startupStalenessWarning;
+
+// Also expose hooks for the test harness
+module.exports.hooks = { session_start: sessionStart };

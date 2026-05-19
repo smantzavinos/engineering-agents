@@ -56,6 +56,30 @@ run_harness() {
   return "$status"
 }
 
+# --- Factory shape validation ---
+# Pi expects extensions to export a default factory function.
+# This test catches the exact error that would cause:
+#   "Extension does not export a valid factory function"
+FACTORY_CHECK=$(node -e "
+  const mod = require('$EXTENSION_PATH');
+  const factory = mod.default || mod;
+  if (typeof factory !== 'function') {
+    process.stderr.write('Extension does not export a function (got ' + typeof factory + ')\\n');
+    process.exit(1);
+  }
+  // Verify the factory accepts a pi-like object and calls .on()
+  let registered = null;
+  const fakePi = { on: (event, handler) => { registered = { event, handler }; } };
+  factory(fakePi);
+  if (!registered || registered.event !== 'session_start' || typeof registered.handler !== 'function') {
+    process.stderr.write('Factory did not register a session_start handler\\n');
+    process.exit(1);
+  }
+  process.stdout.write('ok\\n');
+" 2>&1) || fail "extension must export a valid Pi factory function: $FACTORY_CHECK"
+printf 'PASS: extension exports a valid Pi factory function that registers session_start\n'
+
+# --- Harness-based behavioral tests ---
 VALID_HOME="$TMP_DIR/home-valid"
 VALID_SNAPSHOT_DIR="$VALID_HOME/.pi/agent/startup-status"
 VALID_SNAPSHOT="$VALID_SNAPSHOT_DIR/launch-valid.json"
