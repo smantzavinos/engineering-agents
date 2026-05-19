@@ -90,15 +90,12 @@ Always run the gate command before marking a task complete, even if the task-lev
 
 ## Backlog Capture Policy
 
-- **Repo backlog:** none documented yet. This plan establishes the backlog mechanism in T3.
-- **Before T3:** accepted non-critical follow-up work must be noted in this worklog only; it cannot yet be formally captured in a repo backlog.
-- **Create item procedure after T3:** follow `docs/backlog.md` exactly once T3 creates it.
-- **Stable ID/reference format after T3:** `TASK-XXXX` as specified by T3.
-- **Default non-critical follow-up status after T3:** `Inbox`.
-- **Default origin for execution follow-ups after T3:** use the source backlink rules defined in `docs/backlog.md` to point back to this plan/worklog/review.
+- **Repo backlog:** `docs/backlog.md`.
+- **Create item procedure:** follow `docs/backlog.md` exactly.
+- **Stable ID/reference format:** `TASK-XXXX`.
+- **Default non-critical follow-up status:** `Inbox`.
+- **Default origin for execution follow-ups:** use the source backlink rules defined in `docs/backlog.md` to point back to this plan/worklog/review.
 - **Critical/current-plan-affecting discoveries:** stop and ask whether to fix immediately, re-plan, or defer after explicit approval.
-
-Until T3 exists, do **not** invent backlog IDs, statuses, or storage locations.
 
 ## Backlog Items Created
 
@@ -122,7 +119,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 
 - [x] T1: Add root routing and core contributor docs
 - [x] T2: Canonicalize testing strategy and fix verification trust gap
-- [ ] T3: Establish repo backlog/task-tracking contract
+- [x] T3: Establish repo backlog/task-tracking contract
 - [ ] T4: Establish lightweight requirements system
 - [ ] T5: Add specialized-area guidance and `.llm/` instructions
 - [ ] T6: Add operational memory docs and consistency cleanups
@@ -137,18 +134,18 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T3 — Establish repo backlog/task-tracking contract
+**Current Task:** T4 — Establish lightweight requirements system
 
-Read `plan.md` § `T3: Establish repo backlog/task-tracking contract` for the full TDD checklist and implementation details.
+Read `plan.md` § `T4: Establish lightweight requirements system` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. Extend the readiness-doc spec with failing backlog/task-tracking assertions before implementation changes.
-2. Keep `./tests/run-tests.sh fast` as the task completion gate.
-3. Record any accepted non-critical follow-up work in this worklog only until T3 establishes the repo backlog mechanism.
-4. Mark T3 done above.
-5. Set NEXT STEP to T4.
+1. Extend the readiness-doc spec with failing requirements-system assertions before implementation changes.
+2. Add the approved requirement citations in materially edited readiness-related tests using the documented `Requirement: <ID>` format.
+3. Keep `./tests/run-tests.sh fast` as the task completion gate.
+4. Mark T4 done above.
+5. Set NEXT STEP to T5.
 6. Append to the execution log below.
-7. Commit: `task(T3): <short description>`
+7. Commit: `task(T4): <short description>`
 
 ## Execution Log
 
@@ -169,3 +166,12 @@ After completing this task:
 - **Backlog items created:** none (no repo backlog mechanism until T3)
 - **Requirement changes applied:** none
 - **Notes:** Preserved `schemaVersion: 2`, kept the warning taxonomy unchanged, and made module-entrypoint resolution failure an explicit non-zero environment error instead of a false-green path.
+
+### T3 — 2026-05-19
+- **Changes:** Extended `tests/specs/repo-readiness-docs-spec.sh` with backlog and task-tracking assertions, created `docs/backlog.md` as the canonical Markdown backlog with required operations, stable `TASK-XXXX` IDs, source backlink rules, and lifecycle sections, and updated root `AGENTS.md` to route task tracking and capture policy guidance to the backlog doc.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation; break-it check temporarily renamed the `List Up next` operation in `docs/backlog.md` and the spec failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T3): establish backlog tracking contract`
+- **Backlog items created:** none
+- **Requirement changes applied:** none
+- **Notes:** The worklog backlog policy now points to `docs/backlog.md`, so future accepted non-critical follow-ups should be captured there with stable source backlinks.

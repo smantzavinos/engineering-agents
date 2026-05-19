@@ -24,3 +24,8 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Test Infrastructure
 - `docs/testing-strategy.md` — canonical testing levels, task/final gates, scope, timing, and prerequisites.
 - `tests/README.md` — suite inventory, individual spec entry points, and file-layout details.
+
+## Task Tracking
+- `docs/backlog.md` — canonical backlog and task-tracking contract for durable non-critical follow-up work.
+- Non-critical follow-up work belongs in the backlog with a stable `TASK-XXXX` ID and a source backlink.
+- Critical discoveries that affect correctness, safety, scope, or verification must be raised immediately instead of being deferred into backlog-only tracking.
