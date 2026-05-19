@@ -37,6 +37,14 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - Draft requirement changes stay in plan artifacts until approved.
 - Canonical requirement edits require human approval unless explicitly delegated.
 
+## Planning Artifacts
+- `plans/README.md` — repo-specific planning guidance, canonical verification sources, and plan/worklog constraints for this repo.
+- Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
+
+## Operational Memory
+- `docs/issues_learnings.md` — lightweight log for recurring issues and confirmed learnings that should stay visible across plans.
+- `docs/adr/README.md` — ADR index and format guidance for durable repo-level decisions.
+
 ## Per-Directory Rules
 - `agents/AGENTS.md` — read before editing agent files, frontmatter, role boundaries, or model override guidance.
 - `skills/AGENTS.md` — read before creating or changing skill structure, naming, references, or templates.

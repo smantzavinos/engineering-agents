@@ -37,6 +37,11 @@ Use this template for every new item:
 
 The `TASK-XXXX` placeholder describes the required stable ID format. Replace `XXXX` with the next unused four-digit number.
 
+## Related Docs
+- `plans/README.md` — when plans and worklogs should capture accepted follow-up work here.
+- `docs/requirements.md` — cite requirement IDs there when backlog work implies durable requirement changes.
+- `docs/issues_learnings.md` — use the learnings log for repeat observations that are not yet accepted backlog work.
+
 ## Up next
 
 _No items yet._

@@ -69,4 +69,4 @@ Then:
 
 ## Per-Repo Model Overrides
 
-Repos can override agent models by placing agent files at `.pi/agents/` in the repo root. See the orchestration doc's "Per-Repository Model Configuration" section for details.
+Repos should override models or thinking levels in `.pi/settings.json` using `subagents.agentOverrides` rather than copying agent files into `.pi/agents/`. That keeps the canonical checked-in agent prompts centralized while still allowing repo-local tuning. See the orchestration doc's "Per-Repository Model Configuration" section for details.

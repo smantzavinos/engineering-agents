@@ -122,7 +122,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 - [x] T3: Establish repo backlog/task-tracking contract
 - [x] T4: Establish lightweight requirements system
 - [x] T5: Add specialized-area guidance and `.llm/` instructions
-- [ ] T6: Add operational memory docs and consistency cleanups
+- [x] T6: Add operational memory docs and consistency cleanups
 - [ ] T7: Final consistency sweep and repo-wide verification
 
 ## Decisions / Constraints Discovered (append-only)
@@ -134,18 +134,17 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T6 — Add operational memory docs and consistency cleanups
+**Current Task:** T7 — Final consistency sweep and repo-wide verification
 
-Read `plan.md` § `T6: Add operational memory docs and consistency cleanups` for the full TDD checklist and implementation details.
+Read `plan.md` § `T7: Final consistency sweep and repo-wide verification` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. Extend the readiness-doc spec with failing assertions for `plans/README.md`, ADR docs, issues/learnings docs, and the removal of stale `.pi/agents/` override guidance from `agents/README.md`.
-2. Implement the operational memory docs and consistency updates called for by T6.
-3. Keep `./tests/run-tests.sh fast` as the task completion gate.
-4. Mark T6 done above.
-5. Set NEXT STEP to T7.
-6. Append to the execution log below.
-7. Commit: `task(T6): <short description>`
+1. Add any final failing consistency assertions needed to cover the remaining canonical routes and verification posture.
+2. Implement the minimal cleanup required to keep the fast suite fully green.
+3. Run `./tests/run-tests.sh fast` and then the repo-wide final gate `./tests/run-tests.sh all`.
+4. Mark T7 done above.
+5. Update plan completion status and append to the execution log below.
+6. Commit: `task(T7): <short description>` or the plan-completion checkpoint message required by the final task.
 
 ## Execution Log
 
@@ -193,3 +192,12 @@ After completing this task:
 - **Backlog items created:** none
 - **Requirement changes applied:** none
 - **Notes:** Kept the root guide routing-oriented and used the T4 requirements-backed readiness spec to cover the new local guidance surface (`FR-001`, `NFR-002`, `OPR-001`).
+
+### T6 — 2026-05-19
+- **Changes:** Extended `tests/specs/repo-readiness-docs-spec.sh` with assertions for `plans/README.md`, `docs/issues_learnings.md`, `docs/adr/README.md`, `docs/adr/0001-repo-operational-contracts.md`, new root routes, README cross-links, and the removal of stale `.pi/agents/` override guidance from `agents/README.md`; created the new planning, learnings, and ADR docs; replaced the stale override recommendation in `agents/README.md` with `.pi/settings.json` → `subagents.agentOverrides`; and updated `AGENTS.md`, `README.md`, `docs/testing-strategy.md`, `docs/backlog.md`, and `docs/requirements.md` for consistent cross-linking.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation; break-it check temporarily restored the stale `.pi/agents/` override guidance in `agents/README.md` and `bash tests/specs/repo-readiness-docs-spec.sh` failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T6): add operational memory docs`
+- **Backlog items created:** none
+- **Requirement changes applied:** none
+- **Notes:** Used requirement IDs in the new planning/ADR guidance where relevant (`FR-001`, `FR-002`, `FR-003`, `FR-004`, `NFR-002`, `OPR-001`) without changing the canonical requirements set.

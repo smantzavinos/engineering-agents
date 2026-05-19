@@ -143,3 +143,8 @@ Repo-operating docs shall stay concise, routing-oriented where appropriate, and 
 **Scope:** UC-004, WF-004
 
 Approved requirement changes shall be applied during normal task execution, and the affected requirement IDs shall be recorded in the matching worklog update.
+
+## Related Docs
+- `plans/README.md` — repo-specific rules for citing and applying these IDs in plans and worklogs.
+- `docs/testing-strategy.md` — canonical verification commands that provide evidence for requirement-backed behavior.
+- `docs/adr/README.md` — durable decision records for directional changes that affect requirement posture.

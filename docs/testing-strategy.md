@@ -61,4 +61,9 @@
 - **Final plan gate:** `./tests/run-tests.sh all`
 - **Optional release smoke:** `./tests/run-tests.sh full`
 
+## Related Docs
+- `plans/README.md` — tells plans and worklogs where to source these commands and gate roles.
+- `tests/README.md` — suite inventory, file layout, and individual spec entry points.
+- `docs/issues_learnings.md` — place recurring verification surprises or lessons here when they should stay visible.
+
 `tests/README.md` remains the suite inventory and file-layout companion document. This file is the canonical mapping from the repo's command surface to the standard testing levels used by plans and worklogs.

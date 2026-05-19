@@ -30,6 +30,12 @@ assert_file_contains() {
   if grep -Fq "$needle" "$path"; then pass "$desc"; else fail "$desc (missing: $needle in $path)"; fi
 }
 
+assert_file_not_contains() {
+  local path="$1" needle="$2" desc="$3"
+  if [[ ! -f "$path" ]]; then fail "$desc (file missing: $path)"; return; fi
+  if grep -Fq "$needle" "$path"; then fail "$desc (unexpected: $needle in $path)"; else pass "$desc"; fi
+}
+
 printf 'Repo readiness docs verification\n'
 printf '================================\n\n'
 
@@ -40,6 +46,10 @@ assert_file_exists "$REPO_ROOT/docs/development-environment.md" "Development env
 assert_file_exists "$REPO_ROOT/docs/testing-strategy.md" "Testing strategy doc exists"
 assert_file_exists "$REPO_ROOT/docs/backlog.md" "Backlog doc exists"
 assert_file_exists "$REPO_ROOT/docs/requirements.md" "Requirements doc exists"
+assert_file_exists "$REPO_ROOT/plans/README.md" "Plans guidance doc exists"
+assert_file_exists "$REPO_ROOT/docs/issues_learnings.md" "Issues and learnings log exists"
+assert_file_exists "$REPO_ROOT/docs/adr/README.md" "ADR index exists"
+assert_file_exists "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Initial ADR exists"
 assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
 assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
 assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
@@ -63,6 +73,11 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "Non-critical follow-up work belongs
 assert_file_contains "$REPO_ROOT/AGENTS.md" "Critical discoveries that affect correctness, safety, scope, or verification must be raised immediately" "AGENTS states critical discovery policy"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Requirements" "AGENTS routes requirements section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/requirements.md" "AGENTS points to the canonical requirements doc"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "## Planning Artifacts" "AGENTS routes planning artifacts section"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "plans/README.md" "AGENTS points to the plans guidance doc"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "## Operational Memory" "AGENTS routes operational memory section"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/issues_learnings.md" "AGENTS points to the issues/learnings log"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/adr/README.md" "AGENTS points to the ADR index"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "ACT-001" "AGENTS documents actor ID prefix"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "UC-001" "AGENTS documents use-case ID prefix"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "WF-001" "AGENTS documents workflow ID prefix"
@@ -171,6 +186,37 @@ assert_file_contains "$REPO_ROOT/docs/requirements.md" "NFR-001" "Requirements d
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "## Operational Requirements" "Requirements doc has operational requirements section"
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "OPR-001" "Requirements doc defines an operational requirement"
 
+assert_file_contains "$REPO_ROOT/plans/README.md" "# Plans Directory Guide" "Plans guidance doc has title"
+assert_file_contains "$REPO_ROOT/plans/README.md" "## Canonical Verification Sources" "Plans guidance doc points to verification sources"
+assert_file_contains "$REPO_ROOT/plans/README.md" "docs/testing-strategy.md" "Plans guidance doc references the testing strategy"
+assert_file_contains "$REPO_ROOT/plans/README.md" "tests/README.md" "Plans guidance doc references the test inventory"
+assert_file_contains "$REPO_ROOT/plans/README.md" "## Repo-Specific Plan Constraints" "Plans guidance doc lists repo-specific plan constraints"
+assert_file_contains "$REPO_ROOT/plans/README.md" "docs/backlog.md" "Plans guidance doc references the backlog"
+assert_file_contains "$REPO_ROOT/plans/README.md" "docs/requirements.md" "Plans guidance doc references the requirements store"
+assert_file_contains "$REPO_ROOT/plans/README.md" "OPR-001" "Plans guidance doc cites the task and final gate requirement"
+
+assert_file_contains "$REPO_ROOT/docs/issues_learnings.md" "# Issues and Learnings Log" "Issues/learnings log has title"
+assert_file_contains "$REPO_ROOT/docs/issues_learnings.md" "## How to Use This Log" "Issues/learnings log explains usage"
+assert_file_contains "$REPO_ROOT/docs/issues_learnings.md" "## Open Issues" "Issues/learnings log has open issues section"
+assert_file_contains "$REPO_ROOT/docs/issues_learnings.md" "## Confirmed Learnings" "Issues/learnings log has confirmed learnings section"
+assert_file_contains "$REPO_ROOT/docs/issues_learnings.md" "Requirement refs" "Issues/learnings log supports requirement references"
+
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "# Architecture Decision Records" "ADR index has title"
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "## ADR File Format" "ADR index explains the file format"
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "## Lifecycle" "ADR index explains ADR lifecycle"
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "0001-repo-operational-contracts.md" "ADR index lists the first ADR"
+
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "# ADR 0001" "Initial ADR has title"
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Status: Accepted" "Initial ADR records accepted status"
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Context" "Initial ADR documents context"
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Decision" "Initial ADR documents the decision"
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Consequences" "Initial ADR documents consequences"
+assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "FR-001" "Initial ADR cites relevant requirement IDs"
+
+assert_file_contains "$REPO_ROOT/README.md" "plans/README.md" "README links to the plans guidance doc"
+assert_file_contains "$REPO_ROOT/README.md" "docs/issues_learnings.md" "README links to the issues/learnings log"
+assert_file_contains "$REPO_ROOT/README.md" "docs/adr/README.md" "README links to the ADR index"
+
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "# Agents Directory Guide" "Agents guide has title"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Agent Frontmatter Conventions" "Agents guide covers frontmatter conventions"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Role Boundaries" "Agents guide covers role boundaries"
@@ -178,6 +224,9 @@ assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "agentOverrides" "Agents guid
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" ".pi/agents/" "Agents guide warns against repo-local .pi/agents overrides"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## When to Read Each Agent File" "Agents guide explains when to read each agent file"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Anti-Patterns" "Agents guide lists anti-patterns"
+assert_file_contains "$REPO_ROOT/agents/README.md" "agentOverrides" "Agents README points to agentOverrides"
+assert_file_contains "$REPO_ROOT/agents/README.md" ".pi/settings.json" "Agents README points to .pi/settings.json for overrides"
+assert_file_not_contains "$REPO_ROOT/agents/README.md" 'Repos can override agent models by placing agent files at `.pi/agents/` in the repo root.' "Agents README removes stale .pi/agents override guidance"
 
 assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "# Skills Directory Guide" "Skills guide has title"
 assert_file_contains "$REPO_ROOT/skills/AGENTS.md" "## Skill Structure" "Skills guide covers skill structure"

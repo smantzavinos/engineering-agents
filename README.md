@@ -69,6 +69,17 @@ opencode auth login
 | [Orchestration](docs/orchestration.md) | Detailed reference: three agent modes, prompt patterns |
 | [Extension Spec](docs/extension-spec.md) | Minimal state validation and continuation enforcement |
 
+### Repo Operational Contracts
+
+This repository also documents its own operating contract so contributors can use the process here without guessing:
+- [Root Agent Guide](AGENTS.md)
+- [Testing Strategy](docs/testing-strategy.md)
+- [Backlog](docs/backlog.md)
+- [Requirements](docs/requirements.md)
+- [Plans Directory Guide](plans/README.md)
+- [Issues and Learnings Log](docs/issues_learnings.md)
+- [ADR Index](docs/adr/README.md)
+
 ### Skills (`skills/`)
 
 14 skills covering the full development lifecycle:
