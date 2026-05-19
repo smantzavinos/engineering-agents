@@ -127,7 +127,43 @@
       }
     },
     {
-      "sourceKey": "src-009-git-missing-ref",
+      "sourceKey": "src-009-git-tag-current",
+      "packageIds": ["git-tag-current"],
+      "materializedPath": "/fixtures/git-tag-current",
+      "materializedKey": "src-009-git-tag-current",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-current#v1.2.3",
+        "installSpec": "github:demo/git-tag-current#v1.2.3",
+        "packageName": "git-tag-current"
+      },
+      "installedCommit": "1234123412341234123412341234123412341234",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "v1.2.3",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-010-git-tag-stale",
+      "packageIds": ["git-tag-stale"],
+      "materializedPath": "/fixtures/git-tag-stale",
+      "materializedKey": "src-010-git-tag-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-stale#v2.0.0",
+        "installSpec": "github:demo/git-tag-stale#v2.0.0",
+        "packageName": "git-tag-stale"
+      },
+      "installedCommit": "2222222222222222222222222222222222222222",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "v2.0.0",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-011-git-missing-ref",
       "packageIds": ["git-missing-ref"],
       "materializedPath": "/fixtures/git-missing-ref",
       "materializedKey": "src-009-git-missing-ref",
@@ -144,10 +180,10 @@
       }
     },
     {
-      "sourceKey": "src-010-git-auth-required",
+      "sourceKey": "src-012-git-auth-required",
       "packageIds": ["git-auth-required"],
       "materializedPath": "/fixtures/git-auth-required",
-      "materializedKey": "src-010-git-auth-required",
+      "materializedKey": "src-012-git-auth-required",
       "source": {
         "type": "git",
         "spec": "github:demo/git-auth-required",
@@ -161,10 +197,10 @@
       }
     },
     {
-      "sourceKey": "src-011-git-offline",
+      "sourceKey": "src-013-git-offline",
       "packageIds": ["git-offline"],
       "materializedPath": "/fixtures/git-offline",
-      "materializedKey": "src-011-git-offline",
+      "materializedKey": "src-013-git-offline",
       "source": {
         "type": "git",
         "spec": "github:demo/git-offline",

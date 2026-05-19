@@ -94,6 +94,26 @@ function buildMaterializedKey(source) {
   return `src-${digest}`;
 }
 
+function looksLikeCommitRef(fragment) {
+  return /^[0-9a-f]{7,40}$/iu.test(fragment);
+}
+
+function looksLikeTagRef(fragment) {
+  return /^(?:v)?\d+(?:\.\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$/u.test(fragment);
+}
+
+function inferPinnedRefType(fragment) {
+  if (looksLikeCommitRef(fragment)) {
+    return 'commit';
+  }
+
+  if (fragment.startsWith('semver:')) {
+    return 'semver';
+  }
+
+  return 'tag';
+}
+
 function parseGitRef(spec) {
   const fragmentIndex = spec.indexOf('#');
   if (fragmentIndex === -1 || fragmentIndex === spec.length - 1) {
@@ -101,8 +121,12 @@ function parseGitRef(spec) {
   }
 
   const fragment = spec.slice(fragmentIndex + 1);
-  if (/^[0-9a-f]{7,40}$/iu.test(fragment) || fragment.startsWith('semver:')) {
-    return { kind: 'pinned', value: fragment };
+  if (looksLikeCommitRef(fragment) || fragment.startsWith('semver:') || looksLikeTagRef(fragment)) {
+    return {
+      kind: 'pinned',
+      value: fragment,
+      refType: inferPinnedRefType(fragment),
+    };
   }
 
   return { kind: 'branch', value: fragment };

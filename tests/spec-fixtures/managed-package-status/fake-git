@@ -59,6 +59,23 @@ ref: refs/heads/main	HEAD
 515352c80bc1ee7e22ed08add915efa220c4c822	refs/tags/v0.1.0
 EOF
     ;;
+  https://github.com/demo/git-tag-current.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+1010101010101010101010101010101010101010	HEAD
+1010101010101010101010101010101010101010	refs/heads/main
+1234123412341234123412341234123412341234	refs/tags/v1.2.3
+EOF
+    ;;
+  https://github.com/demo/git-tag-stale.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+2020202020202020202020202020202020202020	HEAD
+2020202020202020202020202020202020202020	refs/heads/main
+deadbeefdeadbeefdeadbeefdeadbeefdeadbeef	refs/tags/v2.0.0
+9999999999999999999999999999999999999999	refs/tags/v2.0.0^{}
+EOF
+    ;;
   https://github.com/demo/git-missing-ref.git)
     cat <<'EOF'
 ref: refs/heads/main	HEAD

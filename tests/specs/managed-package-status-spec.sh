@@ -159,26 +159,28 @@ assert_json \
    and any(.sources[]; .sourceKey == "src-003-npm-lookup-failure" and .status == "unknown" and .reasonCode == "LOOKUP_FAILED")'
 
 assert_json \
-  'git default, branch, and pinned semantics classify current or stale correctly' \
+  'git default, branch, pinned commit, and pinned tag semantics classify current or stale correctly' \
   "$JSON_STDOUT" \
   'any(.sources[]; .sourceKey == "src-004-git-default-current" and .status == "current" and .remote.commit == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
    and any(.sources[]; .sourceKey == "src-005-git-default-stale" and .status == "stale" and .remote.commit == "9999999999999999999999999999999999999999")
    and any(.sources[]; .sourceKey == "src-006-git-branch-current" and .status == "current" and .remote.ref == "refs/heads/feature")
    and any(.sources[]; .sourceKey == "src-007-git-branch-stale" and .status == "stale" and .remote.ref == "refs/heads/release")
-   and any(.sources[]; .sourceKey == "src-008-git-pinned-shared-stale" and .status == "stale" and .remote.ref == "refs/heads/main" and .packageIds == ["git-shared-alpha", "git-shared-beta"])'
+   and any(.sources[]; .sourceKey == "src-008-git-pinned-shared-stale" and .status == "stale" and .remote.ref == "refs/heads/main" and .packageIds == ["git-shared-alpha", "git-shared-beta"])
+   and any(.sources[]; .sourceKey == "src-009-git-tag-current" and .status == "current" and .remote.ref == "refs/tags/v1.2.3" and .remote.commit == "1234123412341234123412341234123412341234")
+   and any(.sources[]; .sourceKey == "src-010-git-tag-stale" and .status == "stale" and .remote.ref == "refs/tags/v2.0.0" and .remote.commit == "9999999999999999999999999999999999999999")'
 
 assert_json \
   'git unknown states expose stable reason codes for missing refs, auth failures, and offline failures' \
   "$JSON_STDOUT" \
-  'any(.sources[]; .sourceKey == "src-009-git-missing-ref" and .status == "unknown" and .reasonCode == "REF_MISSING")
-   and any(.sources[]; .sourceKey == "src-010-git-auth-required" and .status == "unknown" and .reasonCode == "AUTH_REQUIRED")
-   and any(.sources[]; .sourceKey == "src-011-git-offline" and .status == "unknown" and .reasonCode == "OFFLINE")'
+  'any(.sources[]; .sourceKey == "src-011-git-missing-ref" and .status == "unknown" and .reasonCode == "REF_MISSING")
+   and any(.sources[]; .sourceKey == "src-012-git-auth-required" and .status == "unknown" and .reasonCode == "AUTH_REQUIRED")
+   and any(.sources[]; .sourceKey == "src-013-git-offline" and .status == "unknown" and .reasonCode == "OFFLINE")'
 
 assert_json \
   'summary counts and warning object shape stay stable when warnings are emitted' \
   "$JSON_STDOUT" \
-  '.summary.current == 3 and .summary.stale == 4 and .summary.unknown == 4
-   and (.warnings | length) == 8
+  '.summary.current == 4 and .summary.stale == 5 and .summary.unknown == 4
+   and (.warnings | length) == 9
    and all(.warnings[]; (.code | type) == "string" and (.message | type) == "string" and (.sourceKey | type) == "string" and (.packageIds | type) == "array" and (.detail | type) == "object")'
 
 if ! run_helper text "$FIXTURE_DIR/manifest.ok.json" "$TEXT_STDOUT" "$TEXT_STDERR"; then
@@ -189,7 +191,7 @@ if ! run_helper text "$FIXTURE_DIR/manifest.ok.json" "$TEXT_STDOUT" "$TEXT_STDER
   fail 'helper should emit status text for the fixture manifest'
 fi
 
-assert_contains 'text output lists stale sources before unknown sources' "$TEXT_STDOUT" 'Stale managed package sources (4):'
+assert_contains 'text output lists stale sources before unknown sources' "$TEXT_STDOUT" 'Stale managed package sources (5):'
 assert_contains 'text output includes grouped packageIds deterministically for shared sources' "$TEXT_STDOUT" 'git-shared-alpha, git-shared-beta'
 assert_contains 'text output includes unknown section with stable reason labels' "$TEXT_STDOUT" 'Unknown managed package sources (4):'
 
@@ -197,7 +199,7 @@ if ! python3 - "$TEXT_STDOUT" <<'PY'
 import pathlib
 import sys
 text = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
-stale_index = text.index('Stale managed package sources (4):')
+stale_index = text.index('Stale managed package sources (5):')
 unknown_index = text.index('Unknown managed package sources (4):')
 if stale_index >= unknown_index:
     raise SystemExit(1)

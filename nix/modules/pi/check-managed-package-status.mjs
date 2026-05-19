@@ -171,6 +171,30 @@ function validatePackageIds(packageIds, sourceKey) {
   return [...packageIds].sort((left, right) => left.localeCompare(right));
 }
 
+function looksLikeCommitRef(fragment) {
+  return typeof fragment === 'string' && /^[0-9a-f]{7,40}$/iu.test(fragment);
+}
+
+function inferPinnedGitRefType(gitRef) {
+  if (!isPlainObject(gitRef) || typeof gitRef.value !== 'string' || gitRef.value.length === 0) {
+    return null;
+  }
+
+  if (gitRef.refType === 'commit' || gitRef.refType === 'tag' || gitRef.refType === 'semver') {
+    return gitRef.refType;
+  }
+
+  if (looksLikeCommitRef(gitRef.value)) {
+    return 'commit';
+  }
+
+  if (gitRef.value.startsWith('semver:')) {
+    return 'semver';
+  }
+
+  return 'tag';
+}
+
 function validateSourceContract(entry) {
   if (!isPlainObject(entry)) {
     throw new ExitError('malformed install-state contract: sources[] entries must be objects', 3);
@@ -226,11 +250,28 @@ function validateSourceContract(entry) {
     if (entry.gitRef.kind === 'branch' && (typeof entry.gitRef.value !== 'string' || entry.gitRef.value.length === 0)) {
       throw new ExitError(`malformed install-state contract: gitRef.value required for branch source ${entry.sourceKey}`, 3);
     }
+
+    if (entry.gitRef.kind === 'pinned') {
+      if (typeof entry.gitRef.value !== 'string' || entry.gitRef.value.length === 0) {
+        throw new ExitError(`malformed install-state contract: gitRef.value required for pinned source ${entry.sourceKey}`, 3);
+      }
+
+      const pinnedRefType = inferPinnedGitRefType(entry.gitRef);
+      if (pinnedRefType == null) {
+        throw new ExitError(`malformed install-state contract: unsupported gitRef.refType for ${entry.sourceKey}`, 3);
+      }
+    }
   }
 
   return {
     ...entry,
     packageIds,
+    gitRef: entry.source.type === 'git' && entry.gitRef.kind === 'pinned'
+      ? {
+        ...entry.gitRef,
+        refType: inferPinnedGitRefType(entry.gitRef),
+      }
+      : entry.gitRef,
   };
 }
 
@@ -417,6 +458,33 @@ function parseLsRemoteOutput(stdout) {
   };
 }
 
+function resolveTrackedGitRef(source, parsed) {
+  if (source.gitRef.kind === 'branch') {
+    const trackedRef = `refs/heads/${source.gitRef.value}`;
+    return {
+      trackedRef,
+      trackedCommit: parsed.refs.get(trackedRef) ?? null,
+      missingReason: `remote ref ${trackedRef} is missing`,
+    };
+  }
+
+  if (source.gitRef.kind === 'pinned' && source.gitRef.refType === 'tag') {
+    const trackedRef = `refs/tags/${source.gitRef.value}`;
+    return {
+      trackedRef,
+      trackedCommit: parsed.refs.get(`${trackedRef}^{}`) ?? parsed.refs.get(trackedRef) ?? null,
+      missingReason: `remote ref ${trackedRef} is missing`,
+    };
+  }
+
+  const trackedRef = parsed.defaultRef;
+  return {
+    trackedRef,
+    trackedCommit: parsed.headCommit ?? (trackedRef ? parsed.refs.get(trackedRef) : null),
+    missingReason: 'remote default branch could not be resolved',
+  };
+}
+
 async function classifyGitSource(source, context) {
   const remoteUrl = normalizeGitRemoteUrl(source.source.installSpec || source.source.spec);
   const timeoutMs = context.remainingTimeout();
@@ -445,26 +513,12 @@ async function classifyGitSource(source, context) {
   }
 
   const parsed = parseLsRemoteOutput(result.stdout);
-  const defaultRef = parsed.defaultRef;
-  const defaultCommit = parsed.headCommit ?? (defaultRef ? parsed.refs.get(defaultRef) : null);
-
-  let trackedRef = null;
-  let trackedCommit = null;
-
-  if (source.gitRef.kind === 'branch') {
-    trackedRef = `refs/heads/${source.gitRef.value}`;
-    trackedCommit = parsed.refs.get(trackedRef) ?? null;
-  } else {
-    trackedRef = defaultRef;
-    trackedCommit = defaultCommit ?? null;
-  }
+  const { trackedRef, trackedCommit, missingReason } = resolveTrackedGitRef(source, parsed);
 
   if (!trackedCommit) {
     return buildUnknownResult(source, {
       reasonCode: 'REF_MISSING',
-      reason: source.gitRef.kind === 'branch'
-        ? `remote ref refs/heads/${source.gitRef.value} is missing`
-        : 'remote default branch could not be resolved',
+      reason: missingReason,
     });
   }
 

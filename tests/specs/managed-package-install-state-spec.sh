@@ -73,7 +73,7 @@ assert_json \
 assert_json \
   'local declarations are omitted from runtime install-state output' \
   "$STDOUT_PATH" \
-  '(.sources | length) == 3 and all(.sources[]; .source.type != "local")'
+  '(.sources | length) == 4 and all(.sources[]; .source.type != "local")'
 
 assert_json \
   'npm source persists stable source identity and installedVersion facts' \
@@ -116,6 +116,22 @@ assert_json \
       and .installedCommit == "515352c80bc1ee7e22ed08add915efa220c4c822"
       and .gitRef.kind == "pinned"
       and .gitRef.value == "515352c80bc1ee7e22ed08add915efa220c4c822"
+      and .gitRef.refType == "commit"
+    )'
+
+assert_json \
+  'git tag sources preserve pinned tag intent instead of degrading to branch refs' \
+  "$STDOUT_PATH" \
+  'any(.sources[];
+      .source.type == "git"
+      and .source.spec == "github:demo/tag-plugin#v1.2.3"
+      and .source.installSpec == "github:demo/tag-plugin#v1.2.3"
+      and .source.packageName == "tag-plugin"
+      and .packageIds == ["git-tag-release"]
+      and .installedCommit == "1234123412341234123412341234123412341234"
+      and .gitRef.kind == "pinned"
+      and .gitRef.value == "v1.2.3"
+      and .gitRef.refType == "tag"
     )'
 
 printf 'managed package install-state spec ok\n'

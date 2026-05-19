@@ -21,6 +21,16 @@
       }
     },
     {
+      "packageId": "git-tag-release",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/tag-plugin#v1.2.3",
+        "installSpec": "github:demo/tag-plugin#v1.2.3",
+        "packageName": "tag-plugin",
+        "materializedPath": "./sources/tag-plugin"
+      }
+    },
+    {
       "packageId": "npm-fancy-tool",
       "source": {
         "type": "npm",
