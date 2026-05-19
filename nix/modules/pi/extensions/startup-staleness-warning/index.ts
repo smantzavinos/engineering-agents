@@ -132,7 +132,7 @@ function buildNotificationMessage(staleEntries, unknownEntries) {
   }
 
   lines.push(...buildSection('Unknown managed package sources', unknownEntries, formatUnknownLine));
-  lines.push('', 'Inspect with check-updates --dry-run.', 'Apply changes with home-manager switch --flake ...');
+  lines.push('', 'Inspect with check-updates --dry-run.', 'Apply changes with home-manager switch --flake .#<hostname>.');
 
   return lines.join('\n');
 }

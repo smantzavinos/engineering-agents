@@ -102,6 +102,15 @@
           cp ${./README.md} $out/share/doc/engineering-agents/README.md
         '';
 
+        check-updates = pkgs.writeShellScriptBin "check-updates" ''
+          export PI_UPDATE_CHECKER_HELPER="${self}/nix/modules/pi/check-managed-package-status.mjs"
+          export PI_UPDATE_CHECKER_NODE_BIN="${pkgs.nodejs}/bin/node"
+          export PI_UPDATE_CHECKER_NPM_BIN="${pkgs.nodejs}/bin/npm"
+          export PI_UPDATE_CHECKER_GIT_BIN="${pkgs.git}/bin/git"
+          export PI_UPDATE_CHECKER_PYTHON_BIN="${pkgs.python3}/bin/python3"
+          exec ${self}/scripts/check-updates.sh "$@"
+        '';
+
         pi-launch-wrapper = pkgs.writeShellScriptBin "pi" ''
           export PI_WRAPPER_REAL_PI_BIN="${llmAgents.packages.${system}.pi}/bin/pi"
           export PI_WRAPPER_NODE_BIN="${pkgs.nodejs}/bin/node"

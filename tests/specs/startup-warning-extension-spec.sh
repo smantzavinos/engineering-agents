@@ -85,7 +85,7 @@ assert_json \
   "$VALID_OUTPUT" \
   '(.notifications[0].message | contains("packages/plugins")
    and contains("check-updates --dry-run")
-   and contains("home-manager switch --flake ..."))
+   and contains("home-manager switch --flake .#<hostname>"))
    and ((.finalStatus | contains("2 stale")) and (.finalStatus | contains("2 unknown")))'
 
 assert_json \

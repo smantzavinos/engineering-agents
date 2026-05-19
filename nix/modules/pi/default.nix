@@ -228,6 +228,7 @@ let
   agentKitRev = "16b100a70195852b291720e7213eed51c714d230";
 
   piPkg = llmAgents.packages.${pkgs.system}.pi;
+  checkUpdatesPkg = self.packages.${pkgs.system}.check-updates;
   piWrapperPkg = lib.hiPrio self.packages.${pkgs.system}.pi-launch-wrapper;
 
   guardrailsConfigPath = "${self}/nix/modules/pi/guardrails.json";
@@ -345,6 +346,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = [
+      checkUpdatesPkg
       piWrapperPkg
       piPkg
       pkgs.ast-grep

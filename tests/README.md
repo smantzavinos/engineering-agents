@@ -32,6 +32,7 @@ bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
 bash tests/specs/pi-startup-wrapper-spec.sh
 bash tests/specs/startup-warning-extension-spec.sh
+bash tests/specs/pi-startup-warning-contract-spec.sh
 ```
 
 ## Test Adaptation
@@ -55,6 +56,7 @@ New tests specific to this repo:
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
 - **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
 - **`startup-warning-extension-spec.sh`** — Startup notifier rendering, footer/status sync, and snapshot consumption tests
+- **`pi-startup-warning-contract-spec.sh`** — Startup warning/helper/README workflow alignment and helper-install wiring tests
 
 ## File Layout
 
@@ -83,7 +85,8 @@ tests/
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 │   ├── pi-startup-wrapper-spec.sh   # Repo-owned pi wrapper contract tests
-│   └── startup-warning-extension-spec.sh # Startup notifier contract tests
+│   ├── startup-warning-extension-spec.sh # Startup notifier contract tests
+│   └── pi-startup-warning-contract-spec.sh # Startup warning/helper/docs contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification
 └── run-tests.sh                     # Main test runner (fast/all/full)
 ```

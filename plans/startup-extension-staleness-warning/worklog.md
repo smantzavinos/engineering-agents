@@ -24,14 +24,14 @@
 ## Completion Criteria
 
 All of these must be true before the plan is considered complete:
-- [ ] All tasks marked done below
-- [ ] All new targeted specs pass
-- [ ] `./tests/run-tests.sh fast` passes
-- [ ] `bash tests/specs/flake-eval-spec.sh` passes after the final packaging changes
-- [ ] `./tests/run-tests.sh all` passes, or unchanged unrelated baseline failures are documented under the gate policy
-- [ ] All coverage-matrix rows have tests or explicit harness coverage
-- [ ] Startup warning copy, README guidance, and `check-updates` behavior all point to the same inspection/apply workflow
-- [ ] Final task commit made
+- [x] All tasks marked done below
+- [x] All new targeted specs pass
+- [x] `./tests/run-tests.sh fast` passes
+- [x] `bash tests/specs/flake-eval-spec.sh` passes after the final packaging changes
+- [x] `./tests/run-tests.sh all` passes, or unchanged unrelated baseline failures are documented under the gate policy
+- [x] All coverage-matrix rows have tests or explicit harness coverage
+- [x] Startup warning copy, README guidance, and `check-updates` behavior all point to the same inspection/apply workflow
+- [x] Final task commit made
 
 ## Prerequisites
 
@@ -135,6 +135,7 @@ The plan includes approved requirement-oriented changes, but **no canonical repo
 - **Applied requirement updates:**
   - T2: `check-updates` now treats `--dry-run`/default as the supported inspection path, directs users to `home-manager switch --flake ...` for applying changes, and keeps `--update` explicitly npm-only.
   - T4: startup notifier copy now explicitly says the warning covers managed packages/plugins and points users to `check-updates --dry-run` for inspection plus `home-manager switch --flake ...` for applying changes.
+  - T5: packaged `check-updates` is now installed for repo users, startup/helper/README wording is aligned on `check-updates --dry-run` plus `home-manager switch --flake .#<hostname>`, and user-facing docs explicitly keep direct cloned installs out of the managed startup-warning scope.
 - **Requirement-change approval source:** `./plan.md` → `Requirement Updates`
 - **Requirement IDs/reference format:** None documented.
 - **Test requirement citation format:** None documented.
@@ -152,7 +153,7 @@ Execution rules for requirement-related work in this plan:
 | T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
-| T5 | Wire user-facing workflow docs, helper availability, and final contract coverage | T2, T3, T4 | Installed `check-updates` helper, aligned startup/helper/README wording, managed-scope contract coverage, and fast-suite coverage for the new repo contract | `bash tests/specs/pi-startup-warning-contract-spec.sh`, `./tests/run-tests.sh fast`, `./tests/run-tests.sh all` | ⬜ |
+| T5 | Wire user-facing workflow docs, helper availability, and final contract coverage | T2, T3, T4 | Installed `check-updates` helper, aligned startup/helper/README wording, managed-scope contract coverage, and fast-suite coverage for the new repo contract | `bash tests/specs/pi-startup-warning-contract-spec.sh`, `./tests/run-tests.sh fast`, `./tests/run-tests.sh all` | ✅ |
 
 ## Task Status
 
@@ -160,7 +161,7 @@ Execution rules for requirement-related work in this plan:
 - [x] T2: Build the shared status engine and align `check-updates` with it
 - [x] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
 - [x] T4: Add the Pi startup notifier extension
-- [ ] T5: Wire user-facing workflow docs, helper availability, and final contract coverage
+- [x] T5: Wire user-facing workflow docs, helper availability, and final contract coverage
 
 ## Decisions / Constraints Discovered (append-only)
 
@@ -168,16 +169,9 @@ Execution rules for requirement-related work in this plan:
 
 ## NEXT STEP
 
-T5 — Wire user-facing workflow docs, helper availability, and final contract coverage.
+Plan complete — no pending tasks remain in `plans/startup-extension-staleness-warning/plan.md`.
 
-Read `plan.md` § `T5: Wire user-facing workflow docs, helper availability, and final contract coverage` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
-
-After completing T5:
-1. Update the task evidence in this file.
-2. Mark T5 done above and update the Task Queue status.
-3. Update Completion Criteria / NEXT STEP for plan completion.
-4. Append to the execution log below.
-5. Commit: `task(T5): wire startup warning docs and final contract coverage`
+T5 is committed locally as `task(T5): wire startup warning docs and final contract coverage`.
 
 ## Execution Log
 
@@ -210,3 +204,10 @@ After completing T5:
   - Verification: `bash tests/specs/startup-warning-extension-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
   - Backlog items created: none (repo backlog mechanism not documented).
   - Requirement changes applied: startup notifier copy now explicitly says managed packages/plugins and points users to `check-updates --dry-run` for inspection plus `home-manager switch --flake ...` for applying changes.
+- 2026-05-19 — T5 completed.
+  - Red: added `tests/specs/pi-startup-warning-contract-spec.sh` plus fast-suite/docs wiring in `tests/run-tests.sh` and `tests/README.md`; confirmed initial failure because the startup notifier still said `home-manager switch --flake ...`, the Pi module did not install `check-updates`, README lacked the managed-scope workflow guidance, and flake packaging had no dedicated `check-updates` wrapper.
+  - Green: added a packaged `check-updates` wrapper in `flake.nix`, installed it from `nix/modules/pi/default.nix`, aligned notifier copy on `home-manager switch --flake .#<hostname>`, updated README/testing docs, and refreshed the notifier spec to match the final workflow contract.
+  - Break-it: temporarily reverted the notifier apply step back to `home-manager switch --flake ...`, re-ran `bash tests/specs/pi-startup-warning-contract-spec.sh`, confirmed failure, then restored the final `. #<hostname>` workflow wording.
+  - Verification: `bash tests/specs/pi-startup-warning-contract-spec.sh` ✅, `./tests/run-tests.sh fast` ✅, `./tests/run-tests.sh all` ✅.
+  - Backlog items created: none (repo backlog mechanism not documented).
+  - Requirement changes applied: packaged helper availability plus startup/helper/README wording now align on `check-updates --dry-run` for inspection, `home-manager switch --flake .#<hostname>` for apply, and explicit managed-package scope excluding direct cloned installs.
