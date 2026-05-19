@@ -269,6 +269,117 @@ export class DefaultResourceLoader {
 EOF
 }
 
+write_fake_theme_override_pi_module() {
+  local prefix_dir="$1" namespace="$2"
+  local module_root="$prefix_dir/lib/node_modules/$namespace/pi-coding-agent"
+
+  mkdir -p "$prefix_dir/bin" "$module_root/dist"
+
+  cat >"$prefix_dir/bin/pi" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$prefix_dir/bin/pi"
+
+  cat >"$module_root/package.json" <<'EOF'
+{ "type": "module" }
+EOF
+
+  cat >"$module_root/dist/index.js" <<'EOF'
+import path from 'node:path';
+
+function packageRoot(agentDir, packageId) {
+  return path.join(agentDir, 'packages', packageId);
+}
+
+function configuredPackage(agentDir, packageId) {
+  return {
+    source: `./packages/${packageId}`,
+    scope: 'user',
+    filtered: false,
+    installedPath: packageRoot(agentDir, packageId),
+  };
+}
+
+export class SettingsManager {
+  constructor(cwd, agentDir) {
+    this.cwd = cwd;
+    this.agentDir = agentDir;
+  }
+
+  static create(cwd, agentDir) {
+    return new SettingsManager(cwd, agentDir);
+  }
+
+  async reload() {}
+
+  getTheme() {
+    return 'beta-theme';
+  }
+}
+
+export class DefaultPackageManager {
+  constructor({ agentDir }) {
+    this.agentDir = agentDir;
+  }
+
+  listConfiguredPackages() {
+    return [configuredPackage(this.agentDir, 'beta')];
+  }
+}
+
+export class DefaultResourceLoader {
+  constructor({ agentDir }) {
+    this.agentDir = agentDir;
+  }
+
+  async reload() {}
+
+  getExtensions() {
+    return { extensions: [], errors: [] };
+  }
+
+  getSkills() {
+    return { skills: [], diagnostics: [] };
+  }
+
+  getThemes() {
+    const topLevelPath = path.join(this.agentDir, 'themes', 'beta-theme.json');
+    const packageThemePath = path.join(packageRoot(this.agentDir, 'beta'), '_source', 'themes', 'beta-theme.json');
+
+    return {
+      themes: [
+        {
+          name: 'beta-theme',
+          sourcePath: topLevelPath,
+          sourceInfo: {
+            path: topLevelPath,
+            source: 'auto',
+            scope: 'user',
+            origin: 'top-level',
+            baseDir: this.agentDir,
+          },
+        },
+      ],
+      diagnostics: [
+        {
+          type: 'collision',
+          message: 'name "beta-theme" collision',
+          path: packageThemePath,
+          collision: {
+            resourceType: 'theme',
+            name: 'beta-theme',
+            winnerPath: topLevelPath,
+            loserPath: packageThemePath,
+          },
+        },
+      ],
+    };
+  }
+}
+EOF
+}
+
 assert_snapshot_case() {
   local namespace="$1" label="$2"
   local tmp_dir
@@ -357,6 +468,38 @@ EOF
   rm -rf "$tmp_dir"
 }
 
+assert_theme_override_collision_preserves_proof_theme() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local prefix_dir="$tmp_dir/prefix"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local snapshot_path="$tmp_dir/snapshot.json"
+  local stderr_path="$tmp_dir/stderr.txt"
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  write_fake_theme_override_pi_module "$prefix_dir" '@earendil-works'
+
+  if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
+    pass 'Theme override collision snapshot succeeds'
+  else
+    fail "Theme override collision snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
+    rm -rf "$tmp_dir"
+    return
+  fi
+
+  local beta_themes
+  beta_themes="$(jq -r '.proofSet[] | select(.packageId == "beta") | [.discovered.themes[].name] | join(",")' "$snapshot_path")"
+  assert_equals "$beta_themes" 'beta-theme' 'Theme override collision preserves proof-set theme discovery'
+
+  local override_warning_count
+  override_warning_count="$(jq -r '[.warnings[] | select(.code == "PI_VERIFY_WARN_LOCAL_THEME_OVERRIDE")] | length' "$snapshot_path")"
+  assert_equals "$override_warning_count" '0' 'Theme override collision does not emit a false local-theme warning'
+
+  rm -rf "$tmp_dir"
+}
+
 assert_test_fast_propagates_environment_failures() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -391,6 +534,26 @@ EOF
   rm -rf "$tmp_dir"
 }
 
+assert_contract_script_accepts_valid_snapshot_fixture() {
+  local stdout_path stderr_path status=0
+  stdout_path="$(mktemp)"
+  stderr_path="$(mktemp)"
+
+  if bash "$REPO_ROOT/tests/scripts/assert-contract.sh" \
+    --fixture "$REPO_ROOT/tests/fixtures/proof-set.json" \
+    --snapshot "$REPO_ROOT/tests/spec-fixtures/resource-snapshot.v2.ok.json" \
+    >"$stdout_path" 2>"$stderr_path"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  assert_equals "$status" '0' 'assert-contract accepts the valid snapshot fixture'
+  assert_file_contains "$stdout_path" 'Pi proof-set contract ok' 'assert-contract reports proof-set contract success'
+
+  rm -f "$stdout_path" "$stderr_path"
+}
+
 printf 'Proof-set runtime verification\n'
 printf '==============================\n\n'
 
@@ -399,7 +562,9 @@ assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Require
 assert_snapshot_case '@earendil-works' 'Current namespace'
 assert_snapshot_case '@mariozechner' 'Legacy namespace'
 assert_missing_module_fails
+assert_theme_override_collision_preserves_proof_theme
 assert_test_fast_propagates_environment_failures
+assert_contract_script_accepts_valid_snapshot_fixture
 
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"

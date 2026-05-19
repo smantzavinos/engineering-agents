@@ -239,7 +239,7 @@ assert_shared_source_key() {
 
 main() {
   parse_args "$@"
-  pi_require_commands jq >/dev/null
+  require_commands jq >/dev/null
   require_readable_json "$FIXTURE_PATH" 'Proof-set fixture'
   require_readable_json "$SNAPSHOT_PATH" 'Snapshot'
   validate_fixture_contract

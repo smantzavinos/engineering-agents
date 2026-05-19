@@ -26,12 +26,12 @@
 ## Completion Criteria
 
 All of these must be true before the plan is considered complete:
-- [ ] All tasks marked done below
-- [ ] `./tests/run-tests.sh fast` passes for each completed task
-- [ ] `./tests/run-tests.sh all` passes before plan completion
-- [ ] Root `AGENTS.md` routes to all canonical docs and local guidance files introduced by this plan
-- [ ] Backlog and requirements mechanisms are documented as agent-executable systems for this repo
-- [ ] Final commit made
+- [x] All tasks marked done below
+- [x] `./tests/run-tests.sh fast` passes for each completed task
+- [x] `./tests/run-tests.sh all` passes before plan completion
+- [x] Root `AGENTS.md` routes to all canonical docs and local guidance files introduced by this plan
+- [x] Backlog and requirements mechanisms are documented as agent-executable systems for this repo
+- [x] Final commit made
 
 ## Prerequisites
 
@@ -123,7 +123,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 - [x] T4: Establish lightweight requirements system
 - [x] T5: Add specialized-area guidance and `.llm/` instructions
 - [x] T6: Add operational memory docs and consistency cleanups
-- [ ] T7: Final consistency sweep and repo-wide verification
+- [x] T7: Final consistency sweep and repo-wide verification
 
 ## Decisions / Constraints Discovered (append-only)
 
@@ -134,17 +134,7 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T7 — Final consistency sweep and repo-wide verification
-
-Read `plan.md` § `T7: Final consistency sweep and repo-wide verification` for the full TDD checklist and implementation details.
-
-After completing this task:
-1. Add any final failing consistency assertions needed to cover the remaining canonical routes and verification posture.
-2. Implement the minimal cleanup required to keep the fast suite fully green.
-3. Run `./tests/run-tests.sh fast` and then the repo-wide final gate `./tests/run-tests.sh all`.
-4. Mark T7 done above.
-5. Update plan completion status and append to the execution log below.
-6. Commit: `task(T7): <short description>` or the plan-completion checkpoint message required by the final task.
+Plan complete. No pending tasks remain in `plan.md`.
 
 ## Execution Log
 
@@ -201,3 +191,12 @@ After completing this task:
 - **Backlog items created:** none
 - **Requirement changes applied:** none
 - **Notes:** Used requirement IDs in the new planning/ADR guidance where relevant (`FR-001`, `FR-002`, `FR-003`, `FR-004`, `NFR-002`, `OPR-001`) without changing the canonical requirements set.
+
+### T7 — 2026-05-19
+- **Changes:** Extended `tests/specs/repo-readiness-docs-spec.sh` with final README cross-link assertions for the canonical architecture, coding-rules, and development-environment docs; updated `README.md` to link those canonical docs from the repo operational contracts section; extended `tests/specs/proof-set-runtime-spec.sh` to exercise the real assertion helper and a top-level theme-override collision case; fixed `tests/scripts/assert-contract.sh` to use the shared command-check helper; and updated `tests/scripts/resource-snapshot.mjs` to preserve proof-set theme discovery when a top-level theme shadows a package theme while avoiding a false local-theme warning.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after README cross-link updates; `bash tests/specs/proof-set-runtime-spec.sh` → fail before the assertion-helper/theme-collision fixes, pass after implementation; break-it check temporarily restored the stale `pi_require_commands` call in `tests/scripts/assert-contract.sh` and `bash tests/specs/proof-set-runtime-spec.sh` failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass; `./tests/run-tests.sh all` → pass
+- **Commit:** `task(T7): finalize repo consistency and verification gates`
+- **Backlog items created:** none
+- **Requirement changes applied:** none
+- **Notes:** Final repo-wide verification now passes through the flake-eval and live Pi proof-set stages, including the real local theme-shadowing case for `catppuccin-mocha`.

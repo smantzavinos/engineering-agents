@@ -213,6 +213,9 @@ assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "#
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Consequences" "Initial ADR documents consequences"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "FR-001" "Initial ADR cites relevant requirement IDs"
 
+assert_file_contains "$REPO_ROOT/README.md" "docs/architecture.md" "README links to the architecture doc"
+assert_file_contains "$REPO_ROOT/README.md" "docs/coding-rules.md" "README links to the coding rules doc"
+assert_file_contains "$REPO_ROOT/README.md" "docs/development-environment.md" "README links to the development environment doc"
 assert_file_contains "$REPO_ROOT/README.md" "plans/README.md" "README links to the plans guidance doc"
 assert_file_contains "$REPO_ROOT/README.md" "docs/issues_learnings.md" "README links to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/README.md" "docs/adr/README.md" "README links to the ADR index"

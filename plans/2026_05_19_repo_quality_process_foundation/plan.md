@@ -1,6 +1,6 @@
 # Plan: Repository Quality Process Foundation
 
-**Status:** draft
+**Status:** done
 **Owner:** pi planning agent
 **Created:** 2026-05-19
 **Related:** `./brief.md`, `./approach.md`, `./findings/current_state.md`, `./findings/verification_baseline.md`

@@ -73,6 +73,9 @@ opencode auth login
 
 This repository also documents its own operating contract so contributors can use the process here without guessing:
 - [Root Agent Guide](AGENTS.md)
+- [Repository Architecture](docs/architecture.md)
+- [Coding Rules](docs/coding-rules.md)
+- [Development Environment](docs/development-environment.md)
 - [Testing Strategy](docs/testing-strategy.md)
 - [Backlog](docs/backlog.md)
 - [Requirements](docs/requirements.md)

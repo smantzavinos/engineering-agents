@@ -368,15 +368,21 @@ function normalizeSkillEntry(skill, packageRoot, sourceRoot) {
   };
 }
 
-function normalizeThemeEntry(theme, packageRoot, sourceRoot) {
-  const packageRelativePath = asRelativePath(packageRoot, absolutePath(theme.sourcePath));
+function normalizeThemePathEntry(themeName, themePath, packageRoot, sourceRoot) {
+  const literalThemePath = literalAbsolutePath(themePath);
+  const normalizedThemePath = absolutePath(themePath);
+  const packageRelativePath = asRelativePath(packageRoot, literalThemePath);
 
   return {
-    name: theme.name,
+    name: themeName,
     relativePath: packageRelativePath,
-    sourceRelativePath: facadeRelativeToSourceRelative(packageRelativePath, theme.sourcePath, sourceRoot),
-    path: absolutePath(theme.sourcePath),
+    sourceRelativePath: facadeRelativeToSourceRelative(packageRelativePath, literalThemePath, sourceRoot),
+    path: normalizedThemePath,
   };
+}
+
+function normalizeThemeEntry(theme, packageRoot, sourceRoot) {
+  return normalizeThemePathEntry(theme.name, theme.sourcePath, packageRoot, sourceRoot);
 }
 
 function normalizeDiagnostic(resourceType, packageId, diagnostic, packageRoot) {
@@ -496,6 +502,71 @@ function readCompileReportWarnings(agentDir) {
   return report.warnings.filter((warning) => warning && typeof warning.code === 'string' && typeof warning.message === 'string');
 }
 
+function isPathWithinPackage(packageRoot, candidatePath) {
+  const normalizedPackageRoot = literalAbsolutePath(packageRoot);
+  const normalizedCandidate = literalAbsolutePath(candidatePath);
+
+  if (!normalizedPackageRoot || !normalizedCandidate) {
+    return false;
+  }
+
+  return normalizedCandidate === normalizedPackageRoot || normalizedCandidate.startsWith(`${normalizedPackageRoot}${path.sep}`);
+}
+
+function findConfiguredPackageByPath(configuredPackages, candidatePath) {
+  return configuredPackages.find((configuredPackage) => isPathWithinPackage(configuredPackage.installedPath, candidatePath));
+}
+
+function resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages) {
+  return sourceIndex.get(theme.sourceInfo?.source)
+    ?? findConfiguredPackageByPath(configuredPackages, theme.sourcePath ?? theme.sourceInfo?.path);
+}
+
+function collectCollisionThemeEntries(themeDiagnostics, configuredPackage, sourceRoot) {
+  return themeDiagnostics
+    .filter((diagnostic) => diagnostic?.type === 'collision' && diagnostic?.collision?.resourceType === 'theme')
+    .filter((diagnostic) => isPathWithinPackage(configuredPackage?.installedPath, diagnostic.collision?.loserPath))
+    .map((diagnostic) => normalizeThemePathEntry(diagnostic.collision.name, diagnostic.collision.loserPath, configuredPackage?.installedPath, sourceRoot));
+}
+
+function mergeThemeEntries(...themeEntrySets) {
+  const entries = new Map();
+
+  for (const themeEntrySet of themeEntrySets) {
+    for (const entry of themeEntrySet) {
+      const key = `${entry.name}\u0000${entry.path}`;
+      entries.set(key, entry);
+    }
+  }
+
+  return stableSort([...entries.values()], (entry) => `${entry.name}\u0000${entry.path}`);
+}
+
+function collectAvailableThemes(themes, themeDiagnostics, sourceIndex, configuredPackages) {
+  const directThemes = themes.map((theme) => {
+    const configuredPackage = resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages);
+    return {
+      name: theme.name,
+      packageId: configuredPackage?.packageId,
+      path: absolutePath(theme.sourcePath),
+    };
+  });
+
+  const collisionThemes = themeDiagnostics
+    .filter((diagnostic) => diagnostic?.type === 'collision' && diagnostic?.collision?.resourceType === 'theme')
+    .map((diagnostic) => {
+      const configuredPackage = findConfiguredPackageByPath(configuredPackages, diagnostic.collision?.loserPath);
+      return {
+        name: diagnostic.collision.name,
+        packageId: configuredPackage?.packageId,
+        path: absolutePath(diagnostic.collision.loserPath),
+      };
+    })
+    .filter((theme) => theme.path);
+
+  return mergeThemeEntries(directThemes, collisionThemes);
+}
+
 function createPackageSnapshot({
   fixtureEntry,
   configuredPackage,
@@ -587,14 +658,7 @@ async function main() {
   const { packageIdIndex, sourceIndex } = buildConfiguredPackageIndex(configuredPackages);
   const proofPackageIds = new Set(fixture.packages.map((entry) => entry.packageId));
 
-  const availableThemes = themesResult.themes.map((theme) => {
-    const configuredPackage = sourceIndex.get(theme.sourceInfo.source);
-    return {
-      name: theme.name,
-      packageId: configuredPackage?.packageId,
-      path: absolutePath(theme.sourcePath),
-    };
-  });
+  const availableThemes = collectAvailableThemes(themesResult.themes, themesResult.diagnostics, sourceIndex, configuredPackages);
   const compileReportWarnings = readCompileReportWarnings(agentDir);
 
   const proofSet = fixture.packages.map((fixtureEntry) => {
@@ -619,11 +683,11 @@ async function main() {
       (entry) => `${entry.name}\u0000${entry.path}`,
     );
 
-    const themeEntries = stableSort(
+    const themeEntries = mergeThemeEntries(
       themesResult.themes
-        .filter((theme) => theme.sourceInfo?.source === packageSource)
+        .filter((theme) => resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages)?.packageId === fixtureEntry.packageId)
         .map((theme) => normalizeThemeEntry(theme, packageRoot, sourceRoot)),
-      (entry) => `${entry.name}\u0000${entry.path}`,
+      collectCollisionThemeEntries(themesResult.diagnostics, configuredPackage, sourceRoot),
     );
 
     const diagnostics = gatherPackageDiagnostics({
