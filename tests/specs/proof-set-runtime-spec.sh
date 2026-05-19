@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Verify proof-set runtime namespace resolution, deterministic output, and environment-failure propagation.
+# Requirement: FR-006
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -392,6 +393,8 @@ EOF
 
 printf 'Proof-set runtime verification\n'
 printf '==============================\n\n'
+
+assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' 'Proof-set runtime spec uses the documented requirement citation format'
 
 assert_snapshot_case '@earendil-works' 'Current namespace'
 assert_snapshot_case '@mariozechner' 'Legacy namespace'

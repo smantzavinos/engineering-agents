@@ -29,3 +29,10 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - `docs/backlog.md` — canonical backlog and task-tracking contract for durable non-critical follow-up work.
 - Non-critical follow-up work belongs in the backlog with a stable `TASK-XXXX` ID and a source backlink.
 - Critical discoveries that affect correctness, safety, scope, or verification must be raised immediately instead of being deferred into backlog-only tracking.
+
+## Requirements
+- `docs/requirements.md` — canonical requirements system for the repo's current accepted requirements.
+- Stable IDs use `ACT-001`, `UC-001`, `WF-001`, `FR-001`, `NFR-001`, and `OPR-001`.
+- Tests cite requirements they verify using `Requirement: FR-001`.
+- Draft requirement changes stay in plan artifacts until approved.
+- Canonical requirement edits require human approval unless explicitly delegated.

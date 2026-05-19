@@ -108,7 +108,7 @@ This repo does not yet maintain a canonical requirements mechanism at worklog cr
 - **Repo requirements before T4:** none documented yet.
 - **Repo requirements after T4:** `docs/requirements.md` (to be created by T4).
 - **Approved requirement updates from plan:** introduce a canonical Markdown requirements system for this repo in T4.
-- **Applied requirement updates:** none yet.
+- **Applied requirement updates:** introduced `docs/requirements.md` as the canonical requirements store and added initial IDs `ACT-001` through `ACT-003`, `UC-001` through `UC-004`, `WF-001` through `WF-004`, `FR-001` through `FR-006`, `NFR-001` through `NFR-002`, and `OPR-001` through `OPR-002`.
 - **Requirement-change approval source:** `./plan.md` → `Requirement Updates` table.
 - **Expected stable ID/reference format after T4:** `ACT-001`, `UC-001`, `WF-001`, `FR-001`, `NFR-001`, `OPR-001`.
 - **Expected test requirement citation format after T4:** `Requirement: <ID>`.
@@ -120,7 +120,7 @@ If execution reveals a missing, unclear, or conflicting durable requirement befo
 - [x] T1: Add root routing and core contributor docs
 - [x] T2: Canonicalize testing strategy and fix verification trust gap
 - [x] T3: Establish repo backlog/task-tracking contract
-- [ ] T4: Establish lightweight requirements system
+- [x] T4: Establish lightweight requirements system
 - [ ] T5: Add specialized-area guidance and `.llm/` instructions
 - [ ] T6: Add operational memory docs and consistency cleanups
 - [ ] T7: Final consistency sweep and repo-wide verification
@@ -134,18 +134,18 @@ Record any decisions made or constraints discovered during execution that weren'
 
 ## NEXT STEP
 
-**Current Task:** T4 — Establish lightweight requirements system
+**Current Task:** T5 — Add specialized-area guidance and `.llm/` instructions
 
-Read `plan.md` § `T4: Establish lightweight requirements system` for the full TDD checklist and implementation details.
+Read `plan.md` § `T5: Add specialized-area guidance and `.llm/` instructions` for the full TDD checklist and implementation details.
 
 After completing this task:
-1. Extend the readiness-doc spec with failing requirements-system assertions before implementation changes.
-2. Add the approved requirement citations in materially edited readiness-related tests using the documented `Requirement: <ID>` format.
+1. Extend the readiness-doc spec with failing assertions for the per-directory `AGENTS.md` files, `.llm/` files, and root routing to them.
+2. Implement the local guidance and `.llm/` instruction files with concise patterns, anti-patterns, and navigation rules.
 3. Keep `./tests/run-tests.sh fast` as the task completion gate.
-4. Mark T4 done above.
-5. Set NEXT STEP to T5.
+4. Mark T5 done above.
+5. Set NEXT STEP to T6.
 6. Append to the execution log below.
-7. Commit: `task(T4): <short description>`
+7. Commit: `task(T5): <short description>`
 
 ## Execution Log
 
@@ -175,3 +175,12 @@ After completing this task:
 - **Backlog items created:** none
 - **Requirement changes applied:** none
 - **Notes:** The worklog backlog policy now points to `docs/backlog.md`, so future accepted non-critical follow-ups should be captured there with stable source backlinks.
+
+### T4 — 2026-05-19
+- **Changes:** Extended `tests/specs/repo-readiness-docs-spec.sh` with requirements-system and requirement-citation assertions, added requirement-citation coverage to `tests/specs/proof-set-runtime-spec.sh`, created `docs/requirements.md` as the canonical requirements store with initial actors, use cases, workflows, FR/NFR/OPR entries, and updated root `AGENTS.md` to route and summarize the requirements system.
+- **Tests:** `bash tests/specs/repo-readiness-docs-spec.sh` → fail before implementation, pass after implementation; `bash tests/specs/proof-set-runtime-spec.sh` → pass after citation update; break-it check temporarily removed the approval-boundary wording from `docs/requirements.md` and `bash tests/specs/repo-readiness-docs-spec.sh` failed, then passed again after restore
+- **Verification:** `./tests/run-tests.sh fast` → pass
+- **Commit:** `task(T4): establish lightweight requirements system`
+- **Backlog items created:** none
+- **Requirement changes applied:** introduced `docs/requirements.md`; added `ACT-001`–`ACT-003`, `UC-001`–`UC-004`, `WF-001`–`WF-004`, `FR-001`–`FR-006`, `NFR-001`–`NFR-002`, and `OPR-001`–`OPR-002`
+- **Notes:** Requirement citations now use the documented `Requirement: <ID>` format in the materially edited readiness-related specs touched by this task.
