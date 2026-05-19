@@ -1,0 +1,30 @@
+{
+  "packages": [
+    {
+      "packageId": "shared-alpha",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-repo#main",
+        "materializedPath": "./sources/shared-repo"
+      },
+      "expose": {
+        "extensions": [
+          "./extensions/alpha.ts"
+        ]
+      }
+    },
+    {
+      "packageId": "shared-alpha-duplicate",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-repo#main",
+        "materializedPath": "./sources/shared-repo"
+      },
+      "expose": {
+        "extensions": [
+          "./extensions/alpha.ts"
+        ]
+      }
+    }
+  ]
+}

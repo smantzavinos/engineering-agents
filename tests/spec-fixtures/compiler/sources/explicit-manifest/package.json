@@ -1,0 +1,9 @@
+{
+  "name": "pi-explicit-manifest-source",
+  "version": "1.0.0",
+  "pi": {
+    "extensions": [
+      "./extensions/ping.ts"
+    ]
+  }
+}

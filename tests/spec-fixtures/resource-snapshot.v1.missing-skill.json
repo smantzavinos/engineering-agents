@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "settings": {
+    "path": "/tmp/pi/settings.json",
+    "isRegularFile": true,
+    "isSymlink": false,
+    "theme": "catppuccin-mocha"
+  },
+  "proofSet": [
+    {
+      "packageName": "pi-subagents",
+      "configuredSource": {
+        "source": "npm:pi-subagents",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/pi-subagents"
+      },
+      "resolvedPackageRoot": "/fixture/pi-subagents",
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./src/extension/index.ts",
+            "path": "/fixture/pi-subagents/src/extension/index.ts",
+            "resolvedPath": "/fixture/pi-subagents/src/extension/index.ts"
+          }
+        ],
+        "skills": [],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageName": "pi-hooks",
+      "configuredSource": {
+        "source": "npm:pi-hooks",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/pi-hooks"
+      },
+      "resolvedPackageRoot": "/fixture/pi-hooks",
+      "discovered": {
+        "extensions": [
+          { "relativePath": "./checkpoint/checkpoint.ts", "path": "/fixture/pi-hooks/checkpoint/checkpoint.ts", "resolvedPath": "/fixture/pi-hooks/checkpoint/checkpoint.ts" },
+          { "relativePath": "./lsp/lsp-tool.ts", "path": "/fixture/pi-hooks/lsp/lsp-tool.ts", "resolvedPath": "/fixture/pi-hooks/lsp/lsp-tool.ts" },
+          { "relativePath": "./lsp/lsp.ts", "path": "/fixture/pi-hooks/lsp/lsp.ts", "resolvedPath": "/fixture/pi-hooks/lsp/lsp.ts" },
+          { "relativePath": "./permission/permission.ts", "path": "/fixture/pi-hooks/permission/permission.ts", "resolvedPath": "/fixture/pi-hooks/permission/permission.ts" },
+          { "relativePath": "./ralph-loop/ralph-loop.ts", "path": "/fixture/pi-hooks/ralph-loop/ralph-loop.ts", "resolvedPath": "/fixture/pi-hooks/ralph-loop/ralph-loop.ts" },
+          { "relativePath": "./repeat/repeat.ts", "path": "/fixture/pi-hooks/repeat/repeat.ts", "resolvedPath": "/fixture/pi-hooks/repeat/repeat.ts" },
+          { "relativePath": "./token-rate/token-rate.ts", "path": "/fixture/pi-hooks/token-rate/token-rate.ts", "resolvedPath": "/fixture/pi-hooks/token-rate/token-rate.ts" }
+        ],
+        "skills": [],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageName": "@ujjwalgrover/pi-catppuccin",
+      "configuredSource": {
+        "source": "npm:@ujjwalgrover/pi-catppuccin",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/pi-catppuccin"
+      },
+      "resolvedPackageRoot": "/fixture/pi-catppuccin",
+      "discovered": {
+        "extensions": [],
+        "skills": [],
+        "themes": [
+          { "name": "catppuccin-frappe", "relativePath": "./themes/catppuccin-frappe.json", "path": "/fixture/pi-catppuccin/themes/catppuccin-frappe.json" },
+          { "name": "catppuccin-latte", "relativePath": "./themes/catppuccin-latte.json", "path": "/fixture/pi-catppuccin/themes/catppuccin-latte.json" },
+          { "name": "catppuccin-macchiato", "relativePath": "./themes/catppuccin-macchiato.json", "path": "/fixture/pi-catppuccin/themes/catppuccin-macchiato.json" },
+          { "name": "catppuccin-mocha", "relativePath": "./themes/catppuccin-mocha.json", "path": "/fixture/pi-catppuccin/themes/catppuccin-mocha.json" }
+        ]
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    }
+  ],
+  "diagnostics": [],
+  "secondarySmoke": {
+    "offline": true,
+    "cli": {
+      "list": { "status": "not-run" },
+      "help": { "status": "not-run" }
+    }
+  },
+  "warnings": []
+}

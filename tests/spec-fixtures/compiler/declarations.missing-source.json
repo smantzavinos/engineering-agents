@@ -1,0 +1,12 @@
+{
+  "packages": [
+    {
+      "packageId": "missing-source",
+      "source": {
+        "type": "npm",
+        "spec": "pi-missing@0.0.1",
+        "materializedPath": "./sources/does-not-exist"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "packages": [
+    {
+      "packageId": "bad-contract",
+      "source": {
+        "type": "npm"
+      }
+    }
+  ]
+}

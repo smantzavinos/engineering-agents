@@ -1,0 +1,67 @@
+{
+  "packages": [
+    {
+      "packageId": "shared-beta",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-repo#main",
+        "materializedPath": "./sources/shared-repo"
+      },
+      "expose": {
+        "extensions": [
+          "./extensions/beta.ts"
+        ]
+      }
+    },
+    {
+      "packageId": "explicit-ping",
+      "source": {
+        "type": "npm",
+        "spec": "pi-explicit-manifest@1.2.3",
+        "materializedPath": "./sources/explicit-manifest"
+      },
+      "expose": {
+        "extensions": [
+          "./extensions/ping.ts"
+        ]
+      }
+    },
+    {
+      "packageId": "shared-alpha",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/shared-repo#main",
+        "materializedPath": "./sources/shared-repo"
+      },
+      "expose": {
+        "extensions": [
+          "./extensions/alpha.ts"
+        ]
+      }
+    },
+    {
+      "packageId": "convention-demo",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/convention#v1",
+        "materializedPath": "./sources/convention"
+      },
+      "expose": {
+        "skills": [
+          "demo"
+        ],
+        "themes": [
+          "demo"
+        ]
+      }
+    },
+    {
+      "packageId": "root-skill-pkg",
+      "source": {
+        "type": "npm",
+        "spec": "pi-root-skill-source@1.0.0",
+        "materializedPath": "./sources/root-skill"
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "packages": [
+    {
+      "packageId": "convention-demo",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/convention#v1",
+        "materializedPath": "./sources/convention"
+      },
+      "expose": {
+        "skills": [
+          "missing-skill"
+        ]
+      }
+    }
+  ]
+}

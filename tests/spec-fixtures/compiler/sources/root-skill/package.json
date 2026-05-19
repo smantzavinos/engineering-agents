@@ -1,0 +1,12 @@
+{
+  "name": "pi-root-skill-source",
+  "version": "1.0.0",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "skills": [
+      "./SKILL.md"
+    ]
+  }
+}

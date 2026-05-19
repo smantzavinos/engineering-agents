@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 2,
+  "host": {
+    "hostname": "fixture-host",
+    "cwd": "/fixture/repo",
+    "agentDir": "/fixture/.pi/agent",
+    "piBinary": "/fixture/bin/pi",
+    "piModulePath": "/fixture/lib/node_modules/@mariozechner/pi-coding-agent/dist/index.js",
+    "nodeVersion": "v20.19.0",
+    "npmConfigPrefix": "/fixture/.pi/packages",
+    "offline": true
+  },
+  "generatedAt": "2026-05-06T00:00:00.000Z",
+  "settings": {
+    "path": "/tmp/pi/settings.json",
+    "isRegularFile": true,
+    "isSymlink": false,
+    "theme": "catppuccin-mocha-spiros",
+    "configuredPackages": [
+      {
+        "packageId": "catppuccin-mocha",
+        "source": "./packages/catppuccin-mocha",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/catppuccin-mocha"
+      },
+      {
+        "packageId": "pi-ding",
+        "source": "./packages/pi-ding",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-ding"
+      },
+      {
+        "packageId": "pi-ext-leader-key",
+        "source": "./packages/pi-ext-leader-key",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-ext-leader-key"
+      },
+      {
+        "packageId": "pi-ext-review",
+        "source": "./packages/pi-ext-review",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-ext-review"
+      },
+      {
+        "packageId": "pi-subagents",
+        "source": "./packages/pi-subagents",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-subagents"
+      }
+    ]
+  },
+  "proofSet": [
+    {
+      "packageId": "pi-ding",
+      "configuredPackagePath": "./packages/pi-ding",
+      "facadePath": "/fixture/.pi/agent/packages/pi-ding",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-pi-ding",
+      "sourceManifestName": "pi-ding",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-ding",
+        "source": {
+          "type": "npm",
+          "spec": "pi-ding@0.2.2",
+          "materializedKey": "src-pi-ding"
+        },
+        "sourceManifestName": "pi-ding",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-pi-ding",
+        "selectedResources": {
+          "extensions": [
+            "./extensions/ding.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/extensions/ding.ts",
+            "sourceRelativePath": "./extensions/ding.ts",
+            "path": "/fixture/.pi/agent/packages/pi-ding/_source/extensions/ding.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-ding/extensions/ding.ts",
+            "tools": [],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-subagents",
+      "configuredPackagePath": "./packages/pi-subagents",
+      "facadePath": "/fixture/.pi/agent/packages/pi-subagents",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-pi-subagents",
+      "sourceManifestName": "pi-subagents",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-subagents",
+        "source": {
+          "type": "git",
+          "spec": "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources",
+          "materializedKey": "src-pi-subagents"
+        },
+        "sourceManifestName": "pi-subagents",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-pi-subagents",
+        "selectedResources": {
+          "extensions": [
+            "./src/extension/index.ts"
+          ],
+          "skills": [
+            "pi-subagents"
+          ],
+          "prompts": [
+            "./prompts/gather-context-and-clarify.md",
+            "./prompts/parallel-cleanup.md"
+          ],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/src/extension/index.ts",
+            "sourceRelativePath": "./src/extension/index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/src/extension/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/src/extension/index.ts",
+            "tools": [],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [
+          {
+            "name": "pi-subagents",
+            "relativePath": "./_source/skills/pi-subagents/SKILL.md",
+            "sourceRelativePath": "./skills/pi-subagents/SKILL.md",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/skills/pi-subagents/SKILL.md"
+          }
+        ],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "catppuccin-mocha",
+      "configuredPackagePath": "./packages/catppuccin-mocha",
+      "facadePath": "/fixture/.pi/agent/packages/catppuccin-mocha",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-catppuccin",
+      "sourceManifestName": "@ujjwalgrover/pi-catppuccin",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "catppuccin-mocha",
+        "source": {
+          "type": "npm",
+          "spec": "@ujjwalgrover/pi-catppuccin@1.0.0",
+          "materializedKey": "src-catppuccin"
+        },
+        "sourceManifestName": "@ujjwalgrover/pi-catppuccin",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-catppuccin",
+        "selectedResources": {
+          "extensions": [],
+          "skills": [],
+          "prompts": [],
+          "themes": [
+            "catppuccin-mocha"
+          ]
+        }
+      },
+      "discovered": {
+        "extensions": [],
+        "skills": [],
+        "themes": [
+          {
+            "name": "catppuccin-mocha",
+            "relativePath": "./_source/themes/catppuccin-mocha.json",
+            "sourceRelativePath": "./themes/catppuccin-mocha.json",
+            "path": "/fixture/.pi/agent/packages/catppuccin-mocha/_source/themes/catppuccin-mocha.json"
+          }
+        ]
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-ext-leader-key",
+      "configuredPackagePath": "./packages/pi-ext-leader-key",
+      "facadePath": "/fixture/.pi/agent/packages/pi-ext-leader-key",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+      "sourceManifestName": "pi-ext",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-ext-leader-key",
+        "source": {
+          "type": "git",
+          "spec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
+          "materializedKey": "src-814e2d65bd08a81f"
+        },
+        "sourceManifestName": "pi-ext",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+        "selectedResources": {
+          "extensions": [
+            "./extensions/leader-key/index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/extensions/leader-key/index.ts",
+            "sourceRelativePath": "./extensions/leader-key/index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-ext-leader-key/_source/extensions/leader-key/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-ext/extensions/leader-key/index.ts",
+            "tools": [],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-ext-review",
+      "configuredPackagePath": "./packages/pi-ext-review",
+      "facadePath": "/fixture/.pi/agent/packages/pi-ext-review",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+      "sourceManifestName": "pi-ext",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-ext-review",
+        "source": {
+          "type": "git",
+          "spec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
+          "materializedKey": "src-814e2d65bd08a81f"
+        },
+        "sourceManifestName": "pi-ext",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+        "selectedResources": {
+          "extensions": [
+            "./extensions/review/review.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/extensions/review/review.ts",
+            "sourceRelativePath": "./extensions/review/review.ts",
+            "path": "/fixture/.pi/agent/packages/pi-ext-review/_source/extensions/review/review.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-ext/extensions/review/review.ts",
+            "tools": [],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    }
+  ],
+  "diagnostics": [],
+  "secondarySmoke": {
+    "offline": true,
+    "resourceLoader": {
+      "implementation": "DefaultResourceLoader.reload()",
+      "configuredPackageCount": 5
+    },
+    "cli": {
+      "list": {
+        "status": "not-run"
+      },
+      "help": {
+        "status": "not-run"
+      }
+    }
+  },
+  "warnings": [
+    {
+      "code": "PI_PACKAGE_WARN_STALE_ARTIFACT_PRUNED",
+      "message": "Pruned stale generated package artifact: /fixture/.pi/agent/packages/pi-ext-obsolete",
+      "path": "/fixture/.pi/agent/packages/pi-ext-obsolete"
+    }
+  ]
+}

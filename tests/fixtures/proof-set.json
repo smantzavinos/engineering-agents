@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "packages": [
+    {
+      "packageId": "pi-ding",
+      "sourceManifestName": "pi-ding",
+      "sourceSpec": "pi-ding@0.2.2",
+      "resourceExpectations": {
+        "extensions": [
+          "./extensions/ding.ts"
+        ],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-subagents",
+      "sourceManifestName": "pi-subagents",
+      "sourceSpec": "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources",
+      "resourceExpectations": {
+        "extensions": [
+          "./src/extension/index.ts"
+        ],
+        "skills": [
+          "pi-subagents"
+        ],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "catppuccin-mocha",
+      "sourceManifestName": "@ujjwalgrover/pi-catppuccin",
+      "sourceSpec": "@ujjwalgrover/pi-catppuccin@1.0.0",
+      "resourceExpectations": {
+        "extensions": [],
+        "skills": [],
+        "themes": [
+          "catppuccin-mocha"
+        ]
+      }
+    },
+    {
+      "packageId": "pi-ext-leader-key",
+      "sourceManifestName": "pi-ext",
+      "sourceSpec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
+      "sharedSourceKey": "src-814e2d65bd08a81f",
+      "resourceExpectations": {
+        "extensions": [
+          "./extensions/leader-key/index.ts"
+        ],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-ext-review",
+      "sourceManifestName": "pi-ext",
+      "sourceSpec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
+      "sharedSourceKey": "src-814e2d65bd08a81f",
+      "resourceExpectations": {
+        "extensions": [
+          "./extensions/review/review.ts"
+        ],
+        "skills": [],
+        "themes": []
+      }
+    }
+  ]
+}

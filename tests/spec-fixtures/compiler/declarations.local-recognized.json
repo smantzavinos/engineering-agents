@@ -1,0 +1,11 @@
+{
+  "packages": [
+    {
+      "packageId": "local-structural-placeholder",
+      "source": {
+        "type": "local",
+        "spec": "./local-packages/local-structural-placeholder"
+      }
+    }
+  ]
+}

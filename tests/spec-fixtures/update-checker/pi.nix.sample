@@ -1,0 +1,32 @@
+let
+  piPackages = {
+    sample-npm = {
+      source = {
+        type = "npm";
+        packageName = "sample-npm";
+        spec = "sample-npm@1.2.3";
+        installSpec = "sample-npm@1.2.3";
+        version = "1.2.3";
+      };
+    };
+
+    sample-git = {
+      source = {
+        type = "git";
+        packageName = "sample-git";
+        spec = "github:example/sample-git#abc123";
+        installSpec = "github:example/sample-git#abc123";
+      };
+    };
+
+    sample-local = {
+      source = {
+        type = "local";
+        packageName = "sample-local";
+        spec = "./local-packages/sample-local";
+        installSpec = "./local-packages/sample-local";
+      };
+    };
+  };
+in
+piPackages
