@@ -175,13 +175,14 @@ assert_json \
   "$JSON_STDOUT" \
   'any(.sources[]; .sourceKey == "src-011-git-missing-ref" and .status == "unknown" and .reasonCode == "REF_MISSING")
    and any(.sources[]; .sourceKey == "src-012-git-auth-required" and .status == "unknown" and .reasonCode == "AUTH_REQUIRED")
-   and any(.sources[]; .sourceKey == "src-013-git-offline" and .status == "unknown" and .reasonCode == "OFFLINE")'
+   and any(.sources[]; .sourceKey == "src-013-git-offline" and .status == "unknown" and .reasonCode == "OFFLINE")
+   and any(.sources[]; .sourceKey == "src-015-git-branch-tag-collision-missing" and .status == "unknown" and .reasonCode == "REF_MISSING" and (.reason | contains("refs/heads/stable")))'
 
 assert_json \
   'summary counts and warning object shape stay stable when warnings are emitted' \
   "$JSON_STDOUT" \
-  '.summary.current == 4 and .summary.stale == 6 and .summary.unknown == 4
-   and (.warnings | length) == 10
+  '.summary.current == 4 and .summary.stale == 6 and .summary.unknown == 5
+   and (.warnings | length) == 11
    and all(.warnings[]; (.code | type) == "string" and (.message | type) == "string" and (.sourceKey | type) == "string" and (.packageIds | type) == "array" and (.detail | type) == "object")'
 
 if ! run_helper text "$FIXTURE_DIR/manifest.ok.json" "$TEXT_STDOUT" "$TEXT_STDERR"; then
@@ -194,15 +195,16 @@ fi
 
 assert_contains 'text output lists stale sources before unknown sources' "$TEXT_STDOUT" 'Stale managed package sources (6):'
 assert_contains 'text output includes grouped packageIds deterministically for shared sources' "$TEXT_STDOUT" 'git-shared-alpha, git-shared-beta'
-assert_contains 'text output includes unknown section with stable reason labels' "$TEXT_STDOUT" 'Unknown managed package sources (4):'
+assert_contains 'text output includes unknown section with stable reason labels' "$TEXT_STDOUT" 'Unknown managed package sources (5):'
 assert_contains 'text output reports non-version tag refs against the default branch head' "$TEXT_STDOUT" 'github:demo/git-tag-nonversion#stable (4444444444444444444444444444444444444444 -> 3030303030303030303030303030303030303030)'
+assert_contains 'text output keeps missing branch/tag collisions as REF_MISSING unknowns' "$TEXT_STDOUT" 'github:demo/git-branch-tag-collision#stable [REF_MISSING] remote ref refs/heads/stable is missing'
 
 if ! python3 - "$TEXT_STDOUT" <<'PY'
 import pathlib
 import sys
 text = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
 stale_index = text.index('Stale managed package sources (6):')
-unknown_index = text.index('Unknown managed package sources (4):')
+unknown_index = text.index('Unknown managed package sources (5):')
 if stale_index >= unknown_index:
     raise SystemExit(1)
 PY

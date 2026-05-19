@@ -226,6 +226,24 @@
       },
       "installedCommit": "4444444444444444444444444444444444444444",
       "gitRef": {
+        "kind": "pinned",
+        "value": "stable",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-015-git-branch-tag-collision-missing",
+      "packageIds": ["git-branch-tag-collision-missing"],
+      "materializedPath": "/fixtures/git-branch-tag-collision-missing",
+      "materializedKey": "src-015-git-branch-tag-collision-missing",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-branch-tag-collision#stable",
+        "installSpec": "github:demo/git-branch-tag-collision#stable",
+        "packageName": "git-branch-tag-collision"
+      },
+      "installedCommit": "4545454545454545454545454545454545454545",
+      "gitRef": {
         "kind": "branch",
         "value": "stable"
       }

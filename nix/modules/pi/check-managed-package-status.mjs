@@ -479,22 +479,9 @@ function resolveTrackedGitRef(source, parsed) {
   if (source.gitRef.kind === 'branch') {
     const trackedRef = `refs/heads/${source.gitRef.value}`;
     const trackedCommit = parsed.refs.get(trackedRef) ?? null;
-    if (trackedCommit) {
-      return {
-        trackedRef,
-        trackedCommit,
-        missingReason: `remote ref ${trackedRef} is missing`,
-      };
-    }
-
-    const tagMatch = resolveGitTag(parsed, source.gitRef.value);
-    if (tagMatch.tagCommit) {
-      return resolveDefaultTrackedGitRef(parsed);
-    }
-
     return {
       trackedRef,
-      trackedCommit: null,
+      trackedCommit,
       missingReason: `remote ref ${trackedRef} is missing`,
     };
   }

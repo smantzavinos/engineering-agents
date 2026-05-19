@@ -84,6 +84,14 @@ ref: refs/heads/main	HEAD
 4040404040404040404040404040404040404040	refs/tags/stable
 EOF
     ;;
+  https://github.com/demo/git-branch-tag-collision.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+3030303030303030303030303030303030303030	HEAD
+3030303030303030303030303030303030303030	refs/heads/main
+4040404040404040404040404040404040404040	refs/tags/stable
+EOF
+    ;;
   https://github.com/demo/git-missing-ref.git)
     cat <<'EOF'
 ref: refs/heads/main	HEAD
