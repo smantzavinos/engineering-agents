@@ -82,7 +82,8 @@
         engineering-agents-scripts = final.runCommand "engineering-agents-scripts" { } ''
           mkdir -p $out/bin
           cp ${./scripts/check-updates.sh} $out/bin/check-updates
-          chmod +x $out/bin/check-updates
+          cp ${./scripts/pi-launch-wrapper.sh} $out/bin/pi-launch-wrapper
+          chmod +x $out/bin/check-updates $out/bin/pi-launch-wrapper
         '';
       };
 
@@ -99,6 +100,15 @@
           cp -r ${./skills} $out/share/doc/engineering-agents/skills
           cp -r ${./agents} $out/share/doc/engineering-agents/agents
           cp ${./README.md} $out/share/doc/engineering-agents/README.md
+        '';
+
+        pi-launch-wrapper = pkgs.writeShellScriptBin "pi" ''
+          export PI_WRAPPER_REAL_PI_BIN="${llmAgents.packages.${system}.pi}/bin/pi"
+          export PI_WRAPPER_NODE_BIN="${pkgs.nodejs}/bin/node"
+          export PI_WRAPPER_STATUS_HELPER="${self}/nix/modules/pi/check-managed-package-status.mjs"
+          export PI_WRAPPER_NPM_BIN="${pkgs.nodejs}/bin/npm"
+          export PI_WRAPPER_GIT_BIN="${pkgs.git}/bin/git"
+          exec ${self}/scripts/pi-launch-wrapper.sh "$@"
         '';
       });
 

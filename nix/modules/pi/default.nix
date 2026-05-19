@@ -228,6 +228,7 @@ let
   agentKitRev = "16b100a70195852b291720e7213eed51c714d230";
 
   piPkg = llmAgents.packages.${pkgs.system}.pi;
+  piWrapperPkg = lib.hiPrio self.packages.${pkgs.system}.pi-launch-wrapper;
 
   guardrailsConfigPath = "${self}/nix/modules/pi/guardrails.json";
 
@@ -344,6 +345,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = [
+      piWrapperPkg
       piPkg
       pkgs.ast-grep
     ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;

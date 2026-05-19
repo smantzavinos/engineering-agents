@@ -149,7 +149,7 @@ Execution rules for requirement-related work in this plan:
 |---:|------|------------|-------------|--------------|--------|
 | T1 | Add the managed-package install-state manifest contract | — | Activation writes `managed-packages.install-state.json` via a tested helper, with deterministic schema, source identity/install fields, and shared-source fan-out | `bash tests/specs/managed-package-install-state-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T2 | Build the shared status engine and align `check-updates` with it | T1 | One machine-readable checker plus a working `check-updates --dry-run` frontend using the correct declaration path, fixed startup defaults, stable unknown-reason/warning taxonomy, and explicit manual exit semantics | `bash tests/specs/managed-package-status-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
-| T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
+| T3 | Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle | T2 | Wrapper-produced per-launch snapshot files with launch metadata, injected real-binary/helper paths, interactive/noninteractive argv handling, env handoff, and non-blocking no-snapshot fail-open behavior | `bash tests/specs/pi-startup-wrapper-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ✅ |
 | T4 | Add the Pi startup notifier extension | T3 | Directly installed notifier extension that renders stale vs unknown results, keeps footer/status summary in sync while startup problems exist, uses actionable managed-scope copy, and consumes only the current launch snapshot | `bash tests/specs/startup-warning-extension-spec.sh`, `bash tests/specs/flake-eval-spec.sh`, `./tests/run-tests.sh fast` | ⬜ |
 | T5 | Wire user-facing workflow docs, helper availability, and final contract coverage | T2, T3, T4 | Installed `check-updates` helper, aligned startup/helper/README wording, managed-scope contract coverage, and fast-suite coverage for the new repo contract | `bash tests/specs/pi-startup-warning-contract-spec.sh`, `./tests/run-tests.sh fast`, `./tests/run-tests.sh all` | ⬜ |
 
@@ -157,7 +157,7 @@ Execution rules for requirement-related work in this plan:
 
 - [x] T1: Add the managed-package install-state manifest contract
 - [x] T2: Build the shared status engine and align `check-updates` with it
-- [ ] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
+- [x] T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle
 - [ ] T4: Add the Pi startup notifier extension
 - [ ] T5: Wire user-facing workflow docs, helper availability, and final contract coverage
 
@@ -167,16 +167,16 @@ Execution rules for requirement-related work in this plan:
 
 ## NEXT STEP
 
-T3 — Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle.
+T4 — Add the Pi startup notifier extension.
 
-Read `plan.md` § `T3: Add the repo-owned `pi` launch wrapper and startup snapshot lifecycle` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
+Read `plan.md` § `T4: Add the Pi startup notifier extension` for the full deliverable, task notes, TDD checklist, break-it requirement, and verification scope.
 
-After completing T3:
+After completing T4:
 1. Update the task evidence in this file.
-2. Mark T3 done above and update the Task Queue status.
-3. Set NEXT STEP to T4.
+2. Mark T4 done above and update the Task Queue status.
+3. Set NEXT STEP to T5.
 4. Append to the execution log below.
-5. Commit: `task(T3): add the repo-owned pi launch wrapper and startup snapshot lifecycle`
+5. Commit: `task(T4): add the Pi startup notifier extension`
 
 ## Execution Log
 
@@ -195,3 +195,10 @@ After completing T3:
   - Verification: `bash tests/specs/managed-package-status-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
   - Backlog items created: none (repo backlog mechanism not documented).
   - Requirement changes applied: manual inspection/apply workflow now points to `check-updates --dry-run` for inspection and `home-manager switch --flake ...` as the apply step; `--update` remains npm-only.
+- 2026-05-19 — T3 completed.
+  - Red: added `tests/specs/pi-startup-wrapper-spec.sh`, fixtures under `tests/spec-fixtures/pi-startup-wrapper/`, and fast-suite/docs wiring; confirmed initial failure because `scripts/pi-launch-wrapper.sh` did not exist.
+  - Green: implemented `scripts/pi-launch-wrapper.sh`; added flake packaging for a repo-owned `pi` wrapper that injects absolute real-Pi/node/helper paths; and updated `nix/modules/pi/default.nix` to install the wrapper ahead of the upstream Pi package.
+  - Break-it: temporarily stopped clearing `PI_MANAGED_PACKAGE_STARTUP_STATUS_PATH` on argv-bearing launches, re-ran `bash tests/specs/pi-startup-wrapper-spec.sh`, confirmed failure, then restored the skip-path env clearing.
+  - Verification: `bash tests/specs/pi-startup-wrapper-spec.sh` ✅, `bash tests/specs/flake-eval-spec.sh` ✅, `./tests/run-tests.sh fast` ✅.
+  - Backlog items created: none (repo backlog mechanism not documented).
+  - Requirement changes applied: none in T3.
