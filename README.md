@@ -55,6 +55,12 @@ pi
 opencode auth login
 ```
 
+### 5. Inspect managed package freshness
+
+If Pi warns that managed packages/plugins need attention, run `check-updates --dry-run` to inspect what is stale, then apply your configuration with `home-manager switch --flake .#<hostname>`.
+
+Direct cloned installs such as `agent-kit` and `visual-explainer` are outside this startup-warning scope.
+
 ## What's Included
 
 ### Process Documentation (`docs/`)

@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-19T12:00:00.000Z",
+  "sources": [
+    {
+      "sourceKey": "src-001-npm-current",
+      "packageIds": ["npm-current"],
+      "materializedPath": "/fixtures/npm-current",
+      "materializedKey": "src-001-npm-current",
+      "source": {
+        "type": "npm",
+        "spec": "npm-current@1.0.0",
+        "installSpec": "npm-current@1.0.0",
+        "packageName": "npm-current"
+      },
+      "installedVersion": "1.0.0"
+    },
+    {
+      "sourceKey": "src-002-npm-stale",
+      "packageIds": ["npm-stale"],
+      "materializedPath": "/fixtures/npm-stale",
+      "materializedKey": "src-002-npm-stale",
+      "source": {
+        "type": "npm",
+        "spec": "npm-stale@1.0.0",
+        "installSpec": "npm-stale@1.0.0",
+        "packageName": "npm-stale"
+      },
+      "installedVersion": "1.0.0"
+    },
+    {
+      "sourceKey": "src-003-npm-lookup-failure",
+      "packageIds": ["npm-lookup-failure"],
+      "materializedPath": "/fixtures/npm-lookup-failure",
+      "materializedKey": "src-003-npm-lookup-failure",
+      "source": {
+        "type": "npm",
+        "spec": "npm-lookup-failure@1.0.0",
+        "installSpec": "npm-lookup-failure@1.0.0",
+        "packageName": "npm-lookup-failure"
+      },
+      "installedVersion": "1.0.0"
+    },
+    {
+      "sourceKey": "src-004-git-default-current",
+      "packageIds": ["git-default-current"],
+      "materializedPath": "/fixtures/git-default-current",
+      "materializedKey": "src-004-git-default-current",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-default-current",
+        "installSpec": "github:demo/git-default-current",
+        "packageName": "git-default-current"
+      },
+      "installedCommit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "gitRef": {
+        "kind": "default",
+        "value": null
+      }
+    },
+    {
+      "sourceKey": "src-005-git-default-stale",
+      "packageIds": ["git-default-stale"],
+      "materializedPath": "/fixtures/git-default-stale",
+      "materializedKey": "src-005-git-default-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-default-stale",
+        "installSpec": "github:demo/git-default-stale",
+        "packageName": "git-default-stale"
+      },
+      "installedCommit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "gitRef": {
+        "kind": "default",
+        "value": null
+      }
+    },
+    {
+      "sourceKey": "src-006-git-branch-current",
+      "packageIds": ["git-branch-current"],
+      "materializedPath": "/fixtures/git-branch-current",
+      "materializedKey": "src-006-git-branch-current",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-branch-current#feature",
+        "installSpec": "github:demo/git-branch-current#feature",
+        "packageName": "git-branch-current"
+      },
+      "installedCommit": "cccccccccccccccccccccccccccccccccccccccc",
+      "gitRef": {
+        "kind": "branch",
+        "value": "feature"
+      }
+    },
+    {
+      "sourceKey": "src-007-git-branch-stale",
+      "packageIds": ["git-branch-stale"],
+      "materializedPath": "/fixtures/git-branch-stale",
+      "materializedKey": "src-007-git-branch-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-branch-stale#release",
+        "installSpec": "github:demo/git-branch-stale#release",
+        "packageName": "git-branch-stale"
+      },
+      "installedCommit": "dddddddddddddddddddddddddddddddddddddddd",
+      "gitRef": {
+        "kind": "branch",
+        "value": "release"
+      }
+    },
+    {
+      "sourceKey": "src-008-git-pinned-shared-stale",
+      "packageIds": ["git-shared-alpha", "git-shared-beta"],
+      "materializedPath": "/fixtures/git-shared",
+      "materializedKey": "src-008-git-pinned-shared-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-shared#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "installSpec": "github:demo/git-shared#515352c80bc1ee7e22ed08add915efa220c4c822",
+        "packageName": "git-shared"
+      },
+      "installedCommit": "515352c80bc1ee7e22ed08add915efa220c4c822",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "515352c80bc1ee7e22ed08add915efa220c4c822"
+      }
+    },
+    {
+      "sourceKey": "src-009-git-tag-current",
+      "packageIds": ["git-tag-current"],
+      "materializedPath": "/fixtures/git-tag-current",
+      "materializedKey": "src-009-git-tag-current",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-current#v1.2.3",
+        "installSpec": "github:demo/git-tag-current#v1.2.3",
+        "packageName": "git-tag-current"
+      },
+      "installedCommit": "1234123412341234123412341234123412341234",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "v1.2.3",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-010-git-tag-stale",
+      "packageIds": ["git-tag-stale"],
+      "materializedPath": "/fixtures/git-tag-stale",
+      "materializedKey": "src-010-git-tag-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-stale#v2.0.0",
+        "installSpec": "github:demo/git-tag-stale#v2.0.0",
+        "packageName": "git-tag-stale"
+      },
+      "installedCommit": "2222222222222222222222222222222222222222",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "v2.0.0",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-011-git-missing-ref",
+      "packageIds": ["git-missing-ref"],
+      "materializedPath": "/fixtures/git-missing-ref",
+      "materializedKey": "src-009-git-missing-ref",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-missing-ref#missing-branch",
+        "installSpec": "github:demo/git-missing-ref#missing-branch",
+        "packageName": "git-missing-ref"
+      },
+      "installedCommit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "gitRef": {
+        "kind": "branch",
+        "value": "missing-branch"
+      }
+    },
+    {
+      "sourceKey": "src-012-git-auth-required",
+      "packageIds": ["git-auth-required"],
+      "materializedPath": "/fixtures/git-auth-required",
+      "materializedKey": "src-012-git-auth-required",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-auth-required",
+        "installSpec": "github:demo/git-auth-required",
+        "packageName": "git-auth-required"
+      },
+      "installedCommit": "ffffffffffffffffffffffffffffffffffffffff",
+      "gitRef": {
+        "kind": "default",
+        "value": null
+      }
+    },
+    {
+      "sourceKey": "src-013-git-offline",
+      "packageIds": ["git-offline"],
+      "materializedPath": "/fixtures/git-offline",
+      "materializedKey": "src-013-git-offline",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-offline",
+        "installSpec": "github:demo/git-offline",
+        "packageName": "git-offline"
+      },
+      "installedCommit": "1111111111111111111111111111111111111111",
+      "gitRef": {
+        "kind": "default",
+        "value": null
+      }
+    },
+    {
+      "sourceKey": "src-014-git-tag-nonversion-stale",
+      "packageIds": ["git-tag-nonversion"],
+      "materializedPath": "/fixtures/git-tag-nonversion",
+      "materializedKey": "src-014-git-tag-nonversion-stale",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-tag-nonversion#stable",
+        "installSpec": "github:demo/git-tag-nonversion#stable",
+        "packageName": "git-tag-nonversion"
+      },
+      "installedCommit": "4444444444444444444444444444444444444444",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "stable",
+        "refType": "tag"
+      }
+    },
+    {
+      "sourceKey": "src-015-git-branch-tag-collision-missing",
+      "packageIds": ["git-branch-tag-collision-missing"],
+      "materializedPath": "/fixtures/git-branch-tag-collision-missing",
+      "materializedKey": "src-015-git-branch-tag-collision-missing",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/git-branch-tag-collision#stable",
+        "installSpec": "github:demo/git-branch-tag-collision#stable",
+        "packageName": "git-branch-tag-collision"
+      },
+      "installedCommit": "4545454545454545454545454545454545454545",
+      "gitRef": {
+        "kind": "branch",
+        "value": "stable"
+      }
+    }
+  ]
+}

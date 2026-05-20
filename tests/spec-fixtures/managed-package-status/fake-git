@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" -lt 3 || "$1" != "ls-remote" ]]; then
+  printf 'unexpected fake git invocation: %s\n' "$*" >&2
+  exit 64
+fi
+
+remote=''
+for arg in "$@"; do
+  case "$arg" in
+    http://*|https://*|ssh://*|git@*)
+      remote="$arg"
+      ;;
+  esac
+done
+
+if [[ -z "$remote" ]]; then
+  printf 'fake git could not determine remote from: %s\n' "$*" >&2
+  exit 64
+fi
+
+case "$remote" in
+  https://github.com/demo/git-default-current.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	HEAD
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	refs/heads/main
+EOF
+    ;;
+  https://github.com/demo/git-default-stale.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+9999999999999999999999999999999999999999	HEAD
+9999999999999999999999999999999999999999	refs/heads/main
+EOF
+    ;;
+  https://github.com/demo/git-branch-current.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+1212121212121212121212121212121212121212	HEAD
+1212121212121212121212121212121212121212	refs/heads/main
+cccccccccccccccccccccccccccccccccccccccc	refs/heads/feature
+EOF
+    ;;
+  https://github.com/demo/git-branch-stale.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+3434343434343434343434343434343434343434	HEAD
+3434343434343434343434343434343434343434	refs/heads/main
+abababababababababababababababababababab	refs/heads/release
+EOF
+    ;;
+  https://github.com/demo/git-shared.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+8989898989898989898989898989898989898989	HEAD
+8989898989898989898989898989898989898989	refs/heads/main
+515352c80bc1ee7e22ed08add915efa220c4c822	refs/tags/v0.1.0
+EOF
+    ;;
+  https://github.com/demo/git-tag-current.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+1234123412341234123412341234123412341234	HEAD
+1234123412341234123412341234123412341234	refs/heads/main
+1234123412341234123412341234123412341234	refs/tags/v1.2.3
+EOF
+    ;;
+  https://github.com/demo/git-tag-stale.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+2020202020202020202020202020202020202020	HEAD
+2020202020202020202020202020202020202020	refs/heads/main
+deadbeefdeadbeefdeadbeefdeadbeefdeadbeef	refs/tags/v2.0.0
+9999999999999999999999999999999999999999	refs/tags/v2.0.0^{}
+EOF
+    ;;
+  https://github.com/demo/git-tag-nonversion.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+3030303030303030303030303030303030303030	HEAD
+3030303030303030303030303030303030303030	refs/heads/main
+4040404040404040404040404040404040404040	refs/tags/stable
+EOF
+    ;;
+  https://github.com/demo/git-branch-tag-collision.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+3030303030303030303030303030303030303030	HEAD
+3030303030303030303030303030303030303030	refs/heads/main
+4040404040404040404040404040404040404040	refs/tags/stable
+EOF
+    ;;
+  https://github.com/demo/git-missing-ref.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+5656565656565656565656565656565656565656	HEAD
+5656565656565656565656565656565656565656	refs/heads/main
+EOF
+    ;;
+  https://github.com/demo/git-auth-required.git)
+    printf 'fatal: Authentication failed for %s\n' "$remote" >&2
+    exit 1
+    ;;
+  https://github.com/demo/git-offline.git)
+    printf 'fatal: unable to access %s: Could not resolve host: github.com\n' "$remote" >&2
+    exit 1
+    ;;
+  https://github.com/demo/git-timeout.git)
+    sleep 1
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+7777777777777777777777777777777777777777	HEAD
+7777777777777777777777777777777777777777	refs/heads/main
+EOF
+    ;;
+  https://github.com/example/sample-git.git)
+    cat <<'EOF'
+ref: refs/heads/main	HEAD
+fedcbafedcbafedcbafedcbafedcbafedcbafedc	HEAD
+fedcbafedcbafedcbafedcbafedcbafedcbafedc	refs/heads/main
+EOF
+    ;;
+  *)
+    printf 'unexpected remote for fake git: %s\n' "$remote" >&2
+    exit 64
+    ;;
+esac

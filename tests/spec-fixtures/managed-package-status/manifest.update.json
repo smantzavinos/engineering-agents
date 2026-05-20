@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-19T12:00:00.000Z",
+  "sources": [
+    {
+      "sourceKey": "src-update-npm",
+      "packageIds": ["sample-npm"],
+      "materializedPath": "/fixtures/sample-npm",
+      "materializedKey": "src-update-npm",
+      "source": {
+        "type": "npm",
+        "spec": "sample-npm@1.2.3",
+        "installSpec": "sample-npm@1.2.3",
+        "packageName": "sample-npm"
+      },
+      "installedVersion": "1.2.3"
+    },
+    {
+      "sourceKey": "src-update-git",
+      "packageIds": ["sample-git"],
+      "materializedPath": "/fixtures/sample-git",
+      "materializedKey": "src-update-git",
+      "source": {
+        "type": "git",
+        "spec": "github:example/sample-git#abc123",
+        "installSpec": "github:example/sample-git#abc123",
+        "packageName": "sample-git"
+      },
+      "installedCommit": "abc123abc123abc123abc123abc123abc123abc1",
+      "gitRef": {
+        "kind": "pinned",
+        "value": "abc123abc123abc123abc123abc123abc123abc1"
+      }
+    }
+  ]
+}

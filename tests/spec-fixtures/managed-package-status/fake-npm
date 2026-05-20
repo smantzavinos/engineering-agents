@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" -ne 3 || "$1" != "view" || "$3" != "version" ]]; then
+  printf 'unexpected fake npm invocation: %s\n' "$*" >&2
+  exit 64
+fi
+
+case "$2" in
+  npm-current)
+    printf '1.0.0\n'
+    ;;
+  npm-stale)
+    printf '2.0.0\n'
+    ;;
+  npm-lookup-failure)
+    printf 'npm ERR! 404 Not Found\n' >&2
+    exit 1
+    ;;
+  sample-npm)
+    printf '2.0.0\n'
+    ;;
+  *)
+    printf 'unexpected package for fake npm: %s\n' "$2" >&2
+    exit 64
+    ;;
+esac

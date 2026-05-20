@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
 #
-# check-updates.sh - Check or apply registry-backed updates for unified Pi package declarations.
+# check-updates.sh - Inspect managed Pi package freshness or rewrite npm declarations.
 #
 # Usage:
-#   ./check-updates.sh            # Dry-run (default)
-#   ./check-updates.sh --dry-run  # Dry-run explicitly
-#   ./check-updates.sh --update   # Apply available npm version updates to pi.nix
+#   ./check-updates.sh            # Dry-run inspection (default)
+#   ./check-updates.sh --dry-run  # Dry-run inspection explicitly
+#   ./check-updates.sh --update   # Rewrite stale npm declarations only
 #   ./check-updates.sh --help     # Show help
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NIX_FILE="${PI_UPDATE_CHECKER_NIX_FILE:-$SCRIPT_DIR/pi.nix}"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+DEFAULT_NIX_RELATIVE_PATH="nix/modules/pi/default.nix"
+INSTALL_STATE_FILE="${PI_UPDATE_CHECKER_INSTALL_STATE_FILE:-${HOME}/.pi/agent/managed-packages.install-state.json}"
+HELPER_PATH="${PI_UPDATE_CHECKER_HELPER:-$REPO_ROOT/nix/modules/pi/check-managed-package-status.mjs}"
+NODE_BIN="${PI_UPDATE_CHECKER_NODE_BIN:-node}"
 NPM_BIN="${PI_UPDATE_CHECKER_NPM_BIN:-npm}"
+GIT_BIN="${PI_UPDATE_CHECKER_GIT_BIN:-git}"
 PYTHON_BIN="${PI_UPDATE_CHECKER_PYTHON_BIN:-python3}"
 ASSUME_YES="${PI_UPDATE_CHECKER_ASSUME_YES:-0}"
 UPDATE_MODE=false
@@ -22,9 +27,13 @@ usage() {
 Usage: $0 [OPTIONS]
 
 Options:
-  --dry-run    Check for managed Pi package updates without modifying pi.nix (default)
-  --update     Apply available registry-backed npm version updates to pi.nix
+  --dry-run    Inspect managed Pi package status without modifying declarations (default)
+  --update     Rewrite stale npm declarations only; git/local declarations are never rewritten
   --help, -h   Show this help message
+
+Inspection workflow:
+  1. Run check-updates --dry-run to inspect managed Pi package status.
+  2. Apply declaration/runtime changes with home-manager switch --flake .#<hostname>.
 EOF
 }
 
@@ -38,11 +47,6 @@ fail_dependency() {
   exit 2
 }
 
-fail_update() {
-  printf '%s\n' "$1" >&2
-  exit 1
-}
-
 require_command() {
   local command_name="$1"
 
@@ -54,141 +58,97 @@ require_command() {
   command -v "$command_name" >/dev/null 2>&1 || fail_dependency "Missing required command: $command_name"
 }
 
-parse_declarations_json() {
-  "$PYTHON_BIN" - "$NIX_FILE" <<'PY'
+require_readable_file() {
+  local file_path="$1"
+  [[ -r "$file_path" ]] || fail_dependency "Missing required file: $file_path"
+}
+
+find_workspace_nix_file() {
+  local search_dir="${PWD}"
+
+  while true; do
+    local candidate="$search_dir/$DEFAULT_NIX_RELATIVE_PATH"
+    if [[ -f "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+
+    local parent_dir
+    parent_dir="$(dirname "$search_dir")"
+    if [[ "$parent_dir" == "$search_dir" ]]; then
+      return 1
+    fi
+    search_dir="$parent_dir"
+  done
+}
+
+resolve_nix_file() {
+  if [[ -n "${PI_UPDATE_CHECKER_NIX_FILE:-}" ]]; then
+    printf '%s\n' "$PI_UPDATE_CHECKER_NIX_FILE"
+    return 0
+  fi
+
+  local bundled_nix_file="$REPO_ROOT/$DEFAULT_NIX_RELATIVE_PATH"
+  local workspace_nix_file=''
+  workspace_nix_file="$(find_workspace_nix_file 2>/dev/null || true)"
+
+  if [[ "$bundled_nix_file" != /nix/store/* && -f "$bundled_nix_file" && -w "$bundled_nix_file" ]]; then
+    printf '%s\n' "$bundled_nix_file"
+    return 0
+  fi
+
+  if [[ -n "$workspace_nix_file" ]]; then
+    printf '%s\n' "$workspace_nix_file"
+    return 0
+  fi
+
+  printf '%s\n' "$bundled_nix_file"
+}
+
+require_writable_update_target() {
+  local file_path="$1"
+
+  [[ -f "$file_path" ]] || fail_dependency "Missing required file: $file_path"
+  [[ -w "$file_path" ]] || fail_dependency "--update requires a writable declaration file: $file_path (run from your engineering-agents checkout or set PI_UPDATE_CHECKER_NIX_FILE)"
+}
+
+run_shared_checker() {
+  local output_format="$1"
+
+  "$NODE_BIN" "$HELPER_PATH" \
+    --manifest "$INSTALL_STATE_FILE" \
+    --mode manual \
+    --format "$output_format" \
+    --npm-bin "$NPM_BIN" \
+    --git-bin "$GIT_BIN"
+}
+
+extract_npm_updates_json() {
+  local helper_json="$1"
+
+  "$PYTHON_BIN" - "$helper_json" <<'PY'
 import json
-import pathlib
-import re
 import sys
 
-PACKAGE_START_RE = re.compile(r'^\s*(?:"([^"]+)"|([A-Za-z0-9@._+-]+))\s*=\s*\{\s*(?:#.*)?$')
-SOURCE_START_RE = re.compile(r'^\s*source\s*=\s*\{\s*(?:#.*)?$')
-FIELD_RE = re.compile(r'^\s*(type|packageName|spec|installSpec|version)\s*=\s*"([^"]*)"\s*;.*$')
+payload = json.loads(sys.argv[1])
+updates = []
+for source in payload.get('sources', []):
+    if source.get('source', {}).get('type') != 'npm':
+        continue
+    if source.get('status') != 'stale':
+        continue
+    latest_version = source.get('latestVersion')
+    package_name = source.get('source', {}).get('packageName')
+    current_version = source.get('installedVersion')
+    for package_id in source.get('packageIds', []):
+        updates.append({
+            'packageId': package_id,
+            'packageName': package_name,
+            'currentVersion': current_version,
+            'latestVersion': latest_version,
+        })
 
-
-def brace_delta(line: str) -> int:
-    return line.count('{') - line.count('}')
-
-
-def unsupported(message: str) -> None:
-    print(message, file=sys.stderr)
-    raise SystemExit(2)
-
-
-def finalize_package(package: dict) -> dict:
-    source = package.get('source', {})
-    for field in ('type', 'packageName', 'spec', 'installSpec'):
-        value = source.get(field)
-        if not isinstance(value, str) or not value:
-            unsupported(
-                f"unsupported declaration contract: {package['packageId']} is missing source.{field} in piPackages"
-            )
-
-    if source['type'] == 'npm':
-        version = source.get('version')
-        if not isinstance(version, str) or not version:
-            unsupported(
-                f"unsupported declaration contract: {package['packageId']} is missing source.version for npm source"
-            )
-        expected_spec = f"{source['packageName']}@{version}"
-        if source['spec'] != expected_spec or source['installSpec'] != expected_spec:
-            unsupported(
-                f"unsupported declaration contract: {package['packageId']} npm source must keep spec/installSpec aligned with source.version"
-            )
-    elif source['type'] not in ('git', 'local'):
-        unsupported(
-            f"unsupported declaration contract: {package['packageId']} uses unsupported source.type {source['type']}"
-        )
-
-    return package
-
-
-def parse(path_str: str) -> list[dict]:
-    path = pathlib.Path(path_str)
-    try:
-        lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
-    except FileNotFoundError:
-        unsupported(f"declaration file does not exist: {path}")
-
-    start_index = None
-    for index, line in enumerate(lines):
-        if re.match(r'^\s*piPackages\s*=\s*\{\s*(?:#.*)?$', line):
-            start_index = index
-            break
-
-    if start_index is None:
-        unsupported('unsupported declaration contract: expected piPackages attrset')
-
-    packages = []
-    pi_depth = brace_delta(lines[start_index])
-    current = None
-    package_depth = 0
-    in_source = False
-    source_depth = 0
-
-    for index in range(start_index + 1, len(lines)):
-        line = lines[index]
-        delta = brace_delta(line)
-
-        if current is None and pi_depth == 1:
-            match = PACKAGE_START_RE.match(line)
-            if match:
-                package_id = match.group(1) or match.group(2)
-                current = {
-                    'packageId': package_id,
-                    'source': {},
-                    'lineNumbers': {},
-                }
-                package_depth = delta
-                pi_depth += delta
-                if package_depth == 0:
-                    packages.append(finalize_package(current))
-                    current = None
-                if pi_depth == 0:
-                    break
-                continue
-
-        if current is not None:
-            if in_source:
-                field_match = FIELD_RE.match(line)
-                if field_match:
-                    field_name, field_value = field_match.groups()
-                    current['source'][field_name] = field_value
-                    current['lineNumbers'][field_name] = index
-                source_depth += delta
-                package_depth += delta
-                if source_depth == 0:
-                    in_source = False
-            else:
-                if SOURCE_START_RE.match(line):
-                    in_source = True
-                    source_depth = delta
-                package_depth += delta
-
-            if package_depth == 0:
-                packages.append(finalize_package(current))
-                current = None
-
-            pi_depth += delta
-            if pi_depth == 0:
-                break
-            continue
-
-        pi_depth += delta
-        if pi_depth == 0:
-            break
-
-    if pi_depth != 0 or current is not None:
-        unsupported('unsupported declaration contract: unterminated piPackages attrset')
-
-    if not packages:
-        unsupported('unsupported declaration contract: piPackages attrset is empty')
-
-    packages.sort(key=lambda package: package['packageId'])
-    return packages
-
-
-print(json.dumps({'packages': parse(sys.argv[1])}))
+print(json.dumps({'updates': updates}))
 PY
 }
 
@@ -358,97 +318,42 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+NIX_FILE="$(resolve_nix_file)"
+
+require_command "$NODE_BIN"
+require_readable_file "$HELPER_PATH"
 require_command "$NPM_BIN"
-require_command "$PYTHON_BIN"
-
-printf 'Managed Pi package update checker\n'
-printf 'Declaration file: %s\n\n' "$NIX_FILE"
-
-parsed_json="$(parse_declarations_json)"
-mapfile -t package_lines < <(
-  "$PYTHON_BIN" - "$parsed_json" <<'PY'
-import json
-import sys
-
-payload = json.loads(sys.argv[1])
-for package in payload['packages']:
-    source = package['source']
-    print('\t'.join([
-        package['packageId'],
-        source['type'],
-        source['packageName'],
-        source['spec'],
-        source.get('version', ''),
-    ]))
-PY
-)
-
-declare -a updates=()
-
-for line in "${package_lines[@]}"; do
-  IFS=$'\t' read -r package_id source_type package_name source_spec current_version <<<"$line"
-
-  case "$source_type" in
-    npm)
-      latest_version="$("$NPM_BIN" view "$package_name" version 2>/dev/null || true)"
-      if [[ -z "$latest_version" ]]; then
-        fail_update "failed to query npm version for $package_name"
-      fi
-      printf '%s (%s): %s -> %s\n' "$package_id" "$package_name" "$current_version" "$latest_version"
-      if [[ "$current_version" != "$latest_version" ]]; then
-        updates+=("$package_id|$package_name|$current_version|$latest_version")
-      fi
-      ;;
-    git)
-      printf '[PI_PACKAGE_WARN_GIT_SOURCE_MANUAL_UPDATE] %s uses git source %s\n' "$package_id" "$source_spec" >&2
-      ;;
-    local)
-      printf '[PI_PACKAGE_WARN_LOCAL_SOURCE_NO_AUTO_UPDATE] %s uses local source %s\n' "$package_id" "$source_spec" >&2
-      ;;
-    *)
-      fail_dependency "unsupported declaration contract: $package_id uses unsupported source.type $source_type"
-      ;;
-  esac
-done
-
-printf '\n'
-if [[ ${#updates[@]} -eq 0 ]]; then
-  printf 'No registry-backed npm package updates available.\n'
-  exit 0
-fi
-
-printf 'Registry-backed npm updates available: %d\n' "${#updates[@]}"
+require_command "$GIT_BIN"
 
 if [[ "$UPDATE_MODE" == false ]]; then
-  printf 'Run with --update to apply these version changes.\n'
+  helper_text="$(run_shared_checker text)" || exit "$?"
+  printf 'Declaration file: %s\n' "$NIX_FILE"
+  printf '%s' "$helper_text"
   exit 0
 fi
 
+require_command "$PYTHON_BIN"
+require_writable_update_target "$NIX_FILE"
+helper_text="$(run_shared_checker text)" || exit "$?"
+helper_json="$(run_shared_checker json)" || exit "$?"
+updates_json="$(extract_npm_updates_json "$helper_json")"
+
+printf 'Declaration file: %s\n' "$NIX_FILE"
+printf '%s' "$helper_text"
+printf 'Update mode rewrites npm declarations only.\n'
+
 if [[ "$ASSUME_YES" != "1" ]]; then
-  read -r -p "Update $NIX_FILE with these versions? [y/N] " reply
+  read -r -p "Rewrite stale npm declarations in $NIX_FILE? [y/N] " reply
   if [[ ! "$reply" =~ ^[Yy]$ ]]; then
     printf 'Update cancelled.\n'
     exit 0
   fi
 fi
 
-updates_json="$(
-  "$PYTHON_BIN" - "${updates[@]}" <<'PY'
-import json
-import sys
-
-updates = []
-for raw_line in sys.argv[1:]:
-    package_id, package_name, current_version, latest_version = raw_line.split('|')
-    updates.append({
-        'packageId': package_id,
-        'packageName': package_name,
-        'currentVersion': current_version,
-        'latestVersion': latest_version,
-    })
-print(json.dumps({'updates': updates}))
-PY
-)"
+if [[ "$updates_json" == '{"updates": []}' ]]; then
+  printf 'No stale npm declarations to rewrite.\n'
+  exit 0
+fi
 
 apply_updates "$updates_json"
 printf 'Updated %s\n' "$NIX_FILE"

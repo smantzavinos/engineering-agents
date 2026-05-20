@@ -228,6 +228,8 @@ let
   agentKitRev = "16b100a70195852b291720e7213eed51c714d230";
 
   piPkg = llmAgents.packages.${pkgs.system}.pi;
+  checkUpdatesPkg = self.packages.${pkgs.system}.check-updates;
+  piWrapperPkg = lib.hiPrio self.packages.${pkgs.system}.pi-launch-wrapper;
 
   guardrailsConfigPath = "${self}/nix/modules/pi/guardrails.json";
 
@@ -344,6 +346,8 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = [
+      checkUpdatesPkg
+      piWrapperPkg
       piPkg
       pkgs.ast-grep
     ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;
@@ -407,6 +411,10 @@ in
       # Guardrails config (out-of-store symlink for runtime writes)
       ".pi/agent/extensions/guardrails.json".source =
         config.lib.file.mkOutOfStoreSymlink guardrailsConfigPath;
+
+      # Repo-owned startup notifier extension
+      ".pi/agent/extensions/startup-staleness-warning/index.ts".source =
+        "${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning/index.ts";
 
       # Agent guidance
       ".pi/agent/CODEX.md".text = ''
@@ -575,8 +583,10 @@ in
       installPiExtensions = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         MANAGED_PACKAGES_FILE="${piManagedPackagesFile}"
         COMPILER_HELPER="${self}/nix/modules/pi/compile-managed-packages.mjs"
+        INSTALL_STATE_HELPER="${self}/nix/modules/pi/build-managed-package-install-state.mjs"
         DECLARATIONS_PATH="$HOME/.pi/agent/managed-packages.declarations.json"
         COMPILE_REPORT_PATH="$HOME/.pi/agent/managed-packages.report.json"
+        INSTALL_STATE_PATH="$HOME/.pi/agent/managed-packages.install-state.json"
 
         mkdir -p "$HOME/.pi/agent/extensions"
         mkdir -p "$HOME/.pi/agent/skills"
@@ -588,6 +598,76 @@ in
         export PATH="${pkgs.nodejs}/bin:${pkgs.git}/bin:${pkgs.python3}/bin:${pkgs.gcc}/bin:${pkgs.gnumake}/bin:$PATH"
         export NPM_CONFIG_PREFIX="$HOME/.pi/packages"
         mkdir -p "$HOME/.pi/packages"
+
+        normalize_git_remote_url() {
+          local install_spec="$1"
+          local repo_spec="''${install_spec%%#*}"
+
+          case "$repo_spec" in
+            github:*)
+              printf 'https://github.com/%s.git\n' "''${repo_spec#github:}"
+              ;;
+            git+https://*|git+http://*)
+              printf '%s\n' "''${repo_spec#git+}"
+              ;;
+            https://*|http://*|git://*|ssh://*|git@*)
+              printf '%s\n' "$repo_spec"
+              ;;
+            *)
+              return 1
+              ;;
+          esac
+        }
+
+        resolve_git_install_metadata() {
+          local install_spec="$1"
+          local requested_ref=""
+          local requested_ref_type="default"
+          local remote_url
+          local ls_remote
+          local commit=""
+          local branch_commit=""
+          local tag_commit=""
+
+          if [[ "$install_spec" == *#* ]]; then
+            requested_ref="''${install_spec#*#}"
+          fi
+
+          if [[ -n "$requested_ref" && "$requested_ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            printf '%s\tcommit\n' "$requested_ref"
+            return 0
+          fi
+
+          if [[ -n "$requested_ref" && "$requested_ref" == semver:* ]]; then
+            requested_ref_type="semver"
+          fi
+
+          remote_url="$(normalize_git_remote_url "$install_spec")" || return 1
+          ls_remote="$(${pkgs.git}/bin/git ls-remote --symref "$remote_url" HEAD 'refs/heads/*' 'refs/tags/*' 'refs/tags/*^{}')" || return 1
+
+          if [[ -z "$requested_ref" ]]; then
+            commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk '$2 == "HEAD" { print $1; exit }')"
+          elif [[ "$requested_ref_type" == "semver" ]]; then
+            commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v tag_ref="refs/tags/$requested_ref" -v peeled_tag_ref="refs/tags/$requested_ref^{}" '$2 == peeled_tag_ref || $2 == tag_ref { print $1; exit }')"
+          else
+            branch_commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v branch_ref="refs/heads/$requested_ref" '$2 == branch_ref { print $1; exit }')"
+            tag_commit="$(printf '%s\n' "$ls_remote" | ${pkgs.gawk}/bin/awk -v tag_ref="refs/tags/$requested_ref" -v peeled_tag_ref="refs/tags/$requested_ref^{}" '$2 == peeled_tag_ref || $2 == tag_ref { print $1; exit }')"
+
+            if [[ -n "$branch_commit" ]]; then
+              commit="$branch_commit"
+              requested_ref_type="branch"
+            elif [[ -n "$tag_commit" ]]; then
+              commit="$tag_commit"
+              requested_ref_type="tag"
+            fi
+          fi
+
+          if [[ -z "$commit" ]]; then
+            return 1
+          fi
+
+          printf '%s\t%s\n' "$commit" "$requested_ref_type"
+        }
 
         echo "Installing managed Pi package sources..."
 
@@ -617,10 +697,26 @@ in
           | @tsv
         ' "$MANAGED_PACKAGES_FILE" |
         while IFS=$'\t' read -r package_name install_spec; do
+          local_metadata_path="$HOME/.pi/packages/lib/node_modules/$package_name/.pi-managed-install.json"
+
           echo "Installing $package_name from $install_spec (git source)..."
           npm uninstall -g "$package_name" >/dev/null 2>&1 || true
           rm -rf "$HOME/.pi/packages/lib/node_modules/$package_name"
           npm install -g --install-links --legacy-peer-deps "$install_spec" 2>&1
+
+          git_metadata="$(resolve_git_install_metadata "$install_spec")" || {
+            echo "Failed to resolve installed git metadata for $package_name ($install_spec)" >&2
+            exit 1
+          }
+          IFS=$'\t' read -r installed_commit requested_ref_type <<< "$git_metadata"
+
+          cat > "$local_metadata_path" <<EOF
+{
+  "schemaVersion": 1,
+  "installedCommit": "$installed_commit",
+  "requestedRefType": "$requested_ref_type"
+}
+EOF
         done
 
         ${pkgs.jq}/bin/jq --arg materialized_prefix "$HOME/.pi/packages/lib/node_modules/" '
@@ -631,9 +727,20 @@ in
                   packageId,
                   source: (
                     if .source.type == "local" then
-                      { type: .source.type, spec: .source.spec }
+                      {
+                        type: .source.type,
+                        spec: .source.spec,
+                        installSpec: (.source.installSpec // .source.spec),
+                        packageName: .source.packageName
+                      }
                     else
-                      { type: .source.type, spec: .source.spec, materializedPath: ($materialized_prefix + .source.packageName) }
+                      {
+                        type: .source.type,
+                        spec: .source.spec,
+                        installSpec: (.source.installSpec // .source.spec),
+                        packageName: .source.packageName,
+                        materializedPath: ($materialized_prefix + .source.packageName)
+                      }
                     end
                   )
                 } + if has("expose") then { expose: .expose } else {} end)
@@ -642,6 +749,7 @@ in
         ' "$MANAGED_PACKAGES_FILE" > "$DECLARATIONS_PATH"
 
         node "$COMPILER_HELPER" --declarations "$DECLARATIONS_PATH" --output-dir "$HOME/.pi/agent" > "$COMPILE_REPORT_PATH"
+        node "$INSTALL_STATE_HELPER" --declarations "$DECLARATIONS_PATH" > "$INSTALL_STATE_PATH"
 
         ${pkgs.jq}/bin/jq -r '.warnings[]? | "[\(.code)] \(.message)"' "$COMPILE_REPORT_PATH"
 

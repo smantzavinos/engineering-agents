@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-05-19T12:00:00.000Z",
+  "sources": [
+    {
+      "sourceKey": "src-bad",
+      "packageIds": "not-an-array",
+      "source": {
+        "type": "npm",
+        "spec": "broken@1.0.0",
+        "installSpec": "broken@1.0.0",
+        "packageName": "broken"
+      },
+      "installedVersion": "1.0.0"
+    }
+  ]
+}
