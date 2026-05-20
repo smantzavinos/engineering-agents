@@ -78,16 +78,29 @@ async function loadExtension(extensionPath) {
 }
 
 function findSessionStartHandler(extension) {
+  if (typeof extension === 'function') {
+    let registered = null;
+    const fakePi = {
+      on(eventName, handler) {
+        if (eventName === 'session_start') {
+          registered = handler;
+        }
+      },
+    };
+
+    extension(fakePi);
+
+    if (typeof registered === 'function') {
+      return registered;
+    }
+  }
+
   if (extension?.hooks && typeof extension.hooks.session_start === 'function') {
     return extension.hooks.session_start;
   }
 
   if (extension && typeof extension.session_start === 'function') {
     return extension.session_start;
-  }
-
-  if (typeof extension === 'function') {
-    return extension;
   }
 
   throw new Error('extension does not expose a session_start handler');
@@ -134,7 +147,7 @@ async function main() {
     },
   };
 
-  await sessionStart(ctx);
+  await sessionStart({ type: 'session_start' }, ctx);
 
   const snapshotPath = process.env.PI_MANAGED_PACKAGE_STARTUP_STATUS_PATH ?? null;
   const output = {

@@ -209,7 +209,7 @@ async function sessionStart(ctx) {
 
 // Pi extension factory: receives ExtensionAPI, registers session_start handler
 function startupStalenessWarning(pi) {
-  pi.on('session_start', sessionStart);
+  pi.on('session_start', async (_event, ctx) => sessionStart(ctx));
 }
 
 // Default export for Pi's extension loader
