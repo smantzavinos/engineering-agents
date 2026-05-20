@@ -192,12 +192,7 @@ async function sessionStart(ctx) {
   const statusText = buildStatusSummary(staleEntries, unknownEntries);
 
   if (ctx?.ui && typeof ctx.ui.notify === 'function') {
-    ctx.ui.notify({
-      level: 'warning',
-      title: 'Managed Pi packages/plugins need attention',
-      message,
-      id: STATUS_ID,
-    });
+    ctx.ui.notify(message, 'warning');
   }
 
   if (ctx?.ui && typeof ctx.ui.setStatus === 'function') {

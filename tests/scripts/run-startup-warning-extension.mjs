@@ -106,19 +106,15 @@ function findSessionStartHandler(extension) {
   throw new Error('extension does not expose a session_start handler');
 }
 
-function normalizeNotification(payload) {
-  if (typeof payload === 'string') {
-    return { level: 'info', title: null, message: payload };
-  }
-
-  if (!payload || typeof payload !== 'object') {
-    return { level: 'info', title: null, message: '' };
+function normalizeNotification(message, level) {
+  if (typeof message !== 'string') {
+    throw new Error(`ctx.ui.notify expected (message: string, level?: string); got ${typeof message}`);
   }
 
   return {
-    level: typeof payload.level === 'string' ? payload.level : 'info',
-    title: typeof payload.title === 'string' ? payload.title : null,
-    message: typeof payload.message === 'string' ? payload.message : '',
+    level: typeof level === 'string' ? level : 'info',
+    title: null,
+    message,
   };
 }
 
@@ -137,8 +133,8 @@ async function main() {
     env: process.env,
     now: options.now,
     ui: {
-      notify(payload) {
-        notifications.push(normalizeNotification(payload));
+      notify(message, level) {
+        notifications.push(normalizeNotification(message, level));
       },
       setStatus(id, text) {
         currentStatus = arguments.length > 1 ? (text ?? null) : (id ?? null);

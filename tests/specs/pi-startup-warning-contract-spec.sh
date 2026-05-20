@@ -110,7 +110,7 @@ assert_json \
   'startup warning output uses managed-scope wording and the documented inspection/apply workflow' \
   "$HARNESS_OUTPUT" \
   '(.notifications | length) == 1
-   and (.notifications[0].title == "Managed Pi packages/plugins need attention")
+   and (.notifications[0].level == "warning")
    and (.notifications[0].message | contains("Managed Pi packages/plugins need attention."))
    and (.notifications[0].message | contains("check-updates --dry-run"))
    and (.notifications[0].message | contains("home-manager switch --flake .#<hostname>"))'
