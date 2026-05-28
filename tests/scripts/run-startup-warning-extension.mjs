@@ -137,6 +137,10 @@ async function main() {
         notifications.push(normalizeNotification(message, level));
       },
       setStatus(id, text) {
+        if (arguments.length > 1 && text !== undefined && typeof text !== 'string') {
+          throw new Error(`ctx.ui.setStatus expected (id: string, text: string | undefined); got ${typeof text}`);
+        }
+
         currentStatus = arguments.length > 1 ? (text ?? null) : (id ?? null);
         statuses.push(currentStatus);
       },

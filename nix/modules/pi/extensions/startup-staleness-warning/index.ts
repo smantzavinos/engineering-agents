@@ -154,7 +154,7 @@ async function consumeSnapshot(snapshotPath) {
 
 function clearStatus(ctx) {
   if (ctx?.ui && typeof ctx.ui.setStatus === 'function') {
-    ctx.ui.setStatus(STATUS_ID, null);
+    ctx.ui.setStatus(STATUS_ID, undefined);
   }
 }
 
