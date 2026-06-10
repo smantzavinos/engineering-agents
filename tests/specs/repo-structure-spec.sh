@@ -103,7 +103,7 @@ assert_file_contains "$REPO_ROOT/README.md" "engineering-agents" "README mention
 assert_file_contains "$REPO_ROOT/README.md" "homeManagerModules" "README documents homeManagerModules"
 assert_file_contains "$REPO_ROOT/flake.nix" "homeManagerModules" "Flake exposes homeManagerModules"
 assert_file_contains "$REPO_ROOT/flake.nix" "llmAgents" "Flake references llmAgents input"
-assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references opencode input"
+assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references OpenCode module"
 
 # ============================================================
 printf '\n'

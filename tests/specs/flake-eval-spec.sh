@@ -133,10 +133,10 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "OpenCode module missing opencode.json"
   fi
 
-  if [[ -f "$OC_FILES/.config/opencode/oh-my-opencode.json" ]]; then
-    pass "OpenCode module produces oh-my-opencode.json"
+  if [[ -f "$OC_FILES/.config/opencode/oh-my-openagent.json" ]]; then
+    pass "OpenCode module produces oh-my-openagent.json"
   else
-    fail "OpenCode module missing oh-my-opencode.json"
+    fail "OpenCode module missing oh-my-openagent.json"
   fi
 
   # Verify opencode.json has expected structure
