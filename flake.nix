@@ -15,14 +15,9 @@
       url = "github:numtide/llm-agents.nix";
     };
 
-    # OpenCode CLI
-    opencode = {
-      url = "github:sst/opencode/v1.2.10";
-      inputs.nixpkgs.follows = "nixpkgs-unstable";
-    };
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents, opencode }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents }:
     let
       # System types to support
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -72,7 +67,7 @@
         pi = import ./nix/modules/pi { inherit self llmAgents; };
 
         # OpenCode CLI module
-        opencode = import ./nix/modules/opencode { inherit self opencode; };
+        opencode = import ./nix/modules/opencode { inherit self llmAgents; };
       };
 
       # ============================================================

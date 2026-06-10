@@ -7,7 +7,7 @@
 #   imports = [ engineering-agents.homeManagerModules.opencode ];
 #   engineering-agents.opencode.enable = true;
 #
-{ self, opencode }:
+{ self, llmAgents }:
 
 { config, lib, pkgs, ... }:
 
@@ -15,12 +15,11 @@ let
   cfg = config.engineering-agents.opencode;
 
   # Pin plugin versions for reproducibility
-  ohMyOpenCodeVersion = "3.7.4";
-  antigravityAuthVersion = "1.5.5";
+  ohMyOpenAgentVersion = "4.8.1";
   openaiCodexAuthVersion = "4.4.0";
   opencodeIgnoreVersion = "1.1.0";
   opencodeDirenvVersion = "2025.1211.9";
-  opencodeMdTableFormatterVersion = "0.0.3";
+  opencodeMdTableFormatterVersion = "0.0.6";
 
   repoRoot = "${self}";
 
@@ -51,7 +50,7 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages = [
-      opencode.packages.${pkgs.system}.default
+      llmAgents.packages.${pkgs.system}.opencode
     ];
 
     xdg.configFile = {
@@ -64,8 +63,7 @@ in
         };
 
         plugin = [
-          "oh-my-opencode@${ohMyOpenCodeVersion}"
-          "opencode-antigravity-auth@${antigravityAuthVersion}"
+          "oh-my-openagent@${ohMyOpenAgentVersion}"
           "opencode-openai-codex-auth@${openaiCodexAuthVersion}"
           "opencode-ignore@${opencodeIgnoreVersion}"
           "@simonwjackson/opencode-direnv@${opencodeDirenvVersion}"
@@ -76,22 +74,22 @@ in
           google = {
             models = {
               "gemini-3-pro-high" = {
-                name = "Gemini 3 Pro High (Antigravity)";
+                name = "Gemini 3 Pro High";
                 limit = { context = 1048576; output = 65535; };
                 modalities = { input = [ "text" "image" "pdf" ]; output = [ "text" ]; };
               };
               "gemini-3-pro-low" = {
-                name = "Gemini 3 Pro Low (Antigravity)";
+                name = "Gemini 3 Pro Low";
                 limit = { context = 1048576; output = 65535; };
                 modalities = { input = [ "text" "image" "pdf" ]; output = [ "text" ]; };
               };
               "gemini-3-flash" = {
-                name = "Gemini 3 Flash (Antigravity)";
+                name = "Gemini 3 Flash";
                 limit = { context = 1048576; output = 65536; };
                 modalities = { input = [ "text" "image" "pdf" ]; output = [ "text" ]; };
               };
               "claude-sonnet-4-5" = {
-                name = "Claude Sonnet 4.5 (Antigravity)";
+                name = "Claude Sonnet 4.5";
                 limit = { context = 200000; output = 64000; };
                 modalities = { input = [ "text" "image" "pdf" ]; output = [ "text" ]; };
               };
@@ -135,6 +133,26 @@ in
             };
             models = {
               "gpt-5.2" = {
+                variants = {
+                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+                };
+              };
+              "gpt-5.4" = {
+                variants = {
+                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+                };
+              };
+              "gpt-5.5" = {
                 variants = {
                   none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
                   minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
@@ -189,13 +207,9 @@ in
         };
       };
 
-      "opencode/antigravity.json".text = builtins.toJSON {
-        auto_update = false;
-      };
-
-      # oh-my-opencode configuration
-      "opencode/oh-my-opencode.json".text = builtins.toJSON {
-        "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json";
+      # oh-my-openagent configuration
+      "opencode/oh-my-openagent.json".text = builtins.toJSON {
+        "$schema" = "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json";
 
         tmux = {
           enabled = cfg.enableTmux;
@@ -203,6 +217,7 @@ in
           main_pane_size = 60;
           main_pane_min_width = 120;
           agent_pane_min_width = 40;
+          isolation = "inline";
         };
 
         disabled_mcps = [ "websearch" ];
@@ -224,6 +239,7 @@ in
         git_master = {
           commit_footer = false;
           include_co_authored_by = false;
+          git_env_prefix = "GIT_MASTER=1";
         };
 
         sisyphus_agent = {
@@ -235,51 +251,51 @@ in
 
         agents = {
           sisyphus = {
-            model = "zai-coding-plan/glm-5";
-            fallback_models = [ "openai/gpt-5.2-codex" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.4" ];
           };
           "sisyphus-junior" = {
-            model = "zai-coding-plan/glm-5";
-            fallback_models = [ "openai/gpt-5.2-codex" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.4" ];
           };
           atlas = {
             model = "zai-coding-plan/glm-4.7";
             fallback_models = [ "openai/gpt-5.2" ];
           };
           build = {
-            model = "openai/gpt-5.2-codex";
+            model = "openai/gpt-5.4";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           plan = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           oracle = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           prometheus = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           metis = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           momus = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           "OpenCode-Builder" = {
-            model = "openai/gpt-5.2-codex";
+            model = "openai/gpt-5.4";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           librarian = {
             model = "zai-coding-plan/glm-4.7";
@@ -297,8 +313,8 @@ in
 
         categories = {
           visual-engineering = { model = "zai-coding-plan/glm-4.7"; temperature = 0.7; };
-          ultrabrain = { model = "openai/gpt-5.2"; variant = "xhigh"; temperature = 0.1; };
-          deep = { model = "openai/gpt-5.2-codex"; variant = "medium"; temperature = 0.2; };
+          ultrabrain = { model = "openai/gpt-5.5"; variant = "xhigh"; temperature = 0.1; };
+          deep = { model = "openai/gpt-5.5"; variant = "medium"; temperature = 0.2; };
           artistry = { model = "zai-coding-plan/glm-4.7"; temperature = 0.9; };
           quick = { model = "zai-coding-plan/glm-4.7-flash"; temperature = 0.3; };
           writing = { model = "zai-coding-plan/glm-4.7"; temperature = 0.5; };
