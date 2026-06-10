@@ -151,6 +151,24 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
   else
     fail "opencode.json missing MCP servers"
   fi
+
+  if jq -e '.provider.openai.models | has("gpt-5.2") and has("gpt-5.2-codex")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json configures ChatGPT Pro OAuth OpenAI models"
+  else
+    fail "opencode.json missing ChatGPT Pro OAuth OpenAI models"
+  fi
+
+  if jq -e '.provider."openai-api".models | has("gpt-5.5") and has("gpt-5.4")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json configures separate OpenAI API models"
+  else
+    fail "opencode.json missing separate OpenAI API models"
+  fi
+
+  if jq -e '.team_mode.enabled == true and .team_mode.max_parallel_members == 4' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+    pass "oh-my-openagent enables team mode"
+  else
+    fail "oh-my-openagent team mode is not enabled"
+  fi
 else
   fail "OpenCode module activation package failed to build"
 fi

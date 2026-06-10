@@ -23,6 +23,70 @@ let
 
   repoRoot = "${self}";
 
+  openaiBaseOptions = {
+    include = [ "reasoning.encrypted_content" ];
+    store = false;
+  };
+
+  openaiReasoningVariants = {
+    none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+    xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+  };
+
+  openaiLegacyReasoningVariants = {
+    none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "low"; };
+    medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "high"; };
+  };
+
+  openaiCodexReasoningVariants = {
+    low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+    xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+  };
+
+  openaiCodexMiniReasoningVariants = {
+    medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+    high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+  };
+
+  openaiModel = name: variants: {
+    inherit name variants;
+    limit = { context = 272000; output = 128000; };
+    modalities = { input = [ "text" "image" ]; output = [ "text" ]; };
+  };
+
+  # ChatGPT Plus/Pro quota models provided by opencode-openai-codex-auth.
+  # Keep this aligned with that plugin's config/opencode-modern.json.
+  openaiOAuthModels = {
+    "gpt-5.2" = openaiModel "GPT 5.2 (ChatGPT Pro OAuth)" openaiReasoningVariants;
+    "gpt-5.2-codex" = openaiModel "GPT 5.2 Codex (ChatGPT Pro OAuth)" openaiCodexReasoningVariants;
+    "gpt-5.1-codex-max" = openaiModel "GPT 5.1 Codex Max (ChatGPT Pro OAuth)" openaiCodexReasoningVariants;
+    "gpt-5.1-codex" = openaiModel "GPT 5.1 Codex (ChatGPT Pro OAuth)" {
+      low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+      medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
+      high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
+    };
+    "gpt-5.1-codex-mini" = openaiModel "GPT 5.1 Codex Mini (ChatGPT Pro OAuth)" openaiCodexMiniReasoningVariants;
+    "gpt-5.1" = openaiModel "GPT 5.1 (ChatGPT Pro OAuth)" openaiLegacyReasoningVariants;
+  };
+
+  # OpenAI Platform API models are intentionally on a separate provider so users
+  # can select API billing without consuming ChatGPT Plus/Pro quota. Run
+  # `/connect`, choose `openai-api`, and enter an OpenAI Platform API key.
+  openaiApiModels = {
+    "gpt-5.5" = openaiModel "GPT 5.5 (OpenAI API)" openaiReasoningVariants;
+    "gpt-5.4" = openaiModel "GPT 5.4 (OpenAI API)" openaiReasoningVariants;
+    "gpt-5.3-codex" = openaiModel "GPT 5.3 Codex (OpenAI API)" openaiCodexReasoningVariants;
+    "gpt-5.2" = openaiModel "GPT 5.2 (OpenAI API)" openaiReasoningVariants;
+    "gpt-5.2-codex" = openaiModel "GPT 5.2 Codex (OpenAI API)" openaiCodexReasoningVariants;
+  };
+
 in
 {
   options.engineering-agents.opencode = {
@@ -126,53 +190,23 @@ in
             };
           };
 
+          # `openai` is reserved for ChatGPT Plus/Pro OAuth via
+          # opencode-openai-codex-auth. The plugin is hard-coded to this
+          # provider ID and skips itself when API-key auth is selected.
           openai = {
-            options = {
-              include = [ "reasoning.encrypted_content" ];
-              store = false;
+            options = openaiBaseOptions;
+            models = openaiOAuthModels;
+          };
+
+          # Separate OpenAI Platform API provider. OpenCode custom-provider
+          # credentials are stored with `/connect` under this provider ID.
+          "openai-api" = {
+            npm = "@ai-sdk/openai-compatible";
+            name = "OpenAI API";
+            options = openaiBaseOptions // {
+              baseURL = "https://api.openai.com/v1";
             };
-            models = {
-              "gpt-5.2" = {
-                variants = {
-                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                };
-              };
-              "gpt-5.4" = {
-                variants = {
-                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                };
-              };
-              "gpt-5.5" = {
-                variants = {
-                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                };
-              };
-              "gpt-5.2-codex" = {
-                variants = {
-                  none = { reasoningEffort = "none"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  minimal = { reasoningEffort = "minimal"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  low = { reasoningEffort = "low"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  medium = { reasoningEffort = "medium"; reasoningSummary = "auto"; textVerbosity = "medium"; };
-                  high = { reasoningEffort = "high"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                  xhigh = { reasoningEffort = "xhigh"; reasoningSummary = "detailed"; textVerbosity = "medium"; };
-                };
-              };
-            };
+            models = openaiApiModels;
           };
         };
 
@@ -249,53 +283,66 @@ in
           replace_plan = false;
         };
 
+        team_mode = {
+          enabled = true;
+          tmux_visualization = cfg.enableTmux;
+          max_parallel_members = 4;
+          max_members = 8;
+          max_messages_per_run = 10000;
+          max_wall_clock_minutes = 120;
+          max_member_turns = 500;
+          message_payload_max_bytes = 32768;
+          recipient_unread_max_bytes = 262144;
+          mailbox_poll_interval_ms = 3000;
+        };
+
         agents = {
           sisyphus = {
             model = "zai-coding-plan/glm-5.1";
-            fallback_models = [ "openai/gpt-5.4" ];
+            fallback_models = [ "openai/gpt-5.2-codex" "openai-api/gpt-5.4" ];
           };
           "sisyphus-junior" = {
             model = "zai-coding-plan/glm-5.1";
-            fallback_models = [ "openai/gpt-5.4" ];
+            fallback_models = [ "openai/gpt-5.2-codex" "openai-api/gpt-5.4" ];
           };
           atlas = {
             model = "zai-coding-plan/glm-4.7";
             fallback_models = [ "openai/gpt-5.2" ];
           };
           build = {
-            model = "openai/gpt-5.4";
+            model = "openai/gpt-5.2-codex";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.4" "zai-coding-plan/glm-5.1" ];
           };
           plan = {
-            model = "openai/gpt-5.5";
+            model = "openai/gpt-5.2";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
           };
           oracle = {
-            model = "openai/gpt-5.5";
+            model = "openai/gpt-5.2";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
           };
           prometheus = {
-            model = "openai/gpt-5.5";
+            model = "openai/gpt-5.2";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
           };
           metis = {
-            model = "openai/gpt-5.5";
+            model = "openai/gpt-5.2";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
           };
           momus = {
-            model = "openai/gpt-5.5";
+            model = "openai/gpt-5.2";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
           };
           "OpenCode-Builder" = {
-            model = "openai/gpt-5.4";
+            model = "openai/gpt-5.2-codex";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "openai-api/gpt-5.4" "zai-coding-plan/glm-5.1" ];
           };
           librarian = {
             model = "zai-coding-plan/glm-4.7";
@@ -313,8 +360,8 @@ in
 
         categories = {
           visual-engineering = { model = "zai-coding-plan/glm-4.7"; temperature = 0.7; };
-          ultrabrain = { model = "openai/gpt-5.5"; variant = "xhigh"; temperature = 0.1; };
-          deep = { model = "openai/gpt-5.5"; variant = "medium"; temperature = 0.2; };
+          ultrabrain = { model = "openai/gpt-5.2"; variant = "xhigh"; fallback_models = [ "openai-api/gpt-5.5" ]; temperature = 0.1; };
+          deep = { model = "openai/gpt-5.2-codex"; variant = "medium"; fallback_models = [ "openai-api/gpt-5.4" ]; temperature = 0.2; };
           artistry = { model = "zai-coding-plan/glm-4.7"; temperature = 0.9; };
           quick = { model = "zai-coding-plan/glm-4.7-flash"; temperature = 0.3; };
           writing = { model = "zai-coding-plan/glm-4.7"; temperature = 0.5; };
