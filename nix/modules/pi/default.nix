@@ -31,8 +31,8 @@ let
       source = {
         type = "git";
         packageName = "pi-hooks";
-        spec = "github:smantzavinos/pi-hooks";
-        installSpec = "github:smantzavinos/pi-hooks";
+        spec = "github:smantzavinos/pi-hooks#1c3ed591b393793cd025ff43fa61e16828872931";
+        installSpec = "github:smantzavinos/pi-hooks#1c3ed591b393793cd025ff43fa61e16828872931";
       };
     };
 
