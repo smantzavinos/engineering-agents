@@ -158,10 +158,10 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json missing ChatGPT Pro OAuth OpenAI models"
   fi
 
-  if jq -e 'has("provider") and (.provider | has("openai-api") | not)' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
-    pass "opencode.json does not configure OpenAI API billing provider"
+  if jq -e '.provider | has("openai-api") | not' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json has no separate openai-api provider"
   else
-    fail "opencode.json must not configure OpenAI API billing provider"
+    fail "opencode.json unexpectedly contains openai-api provider"
   fi
 
   if jq -e '.model == "zai-coding-plan/glm-5.1"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
@@ -170,10 +170,10 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json default model is not GLM 5.1"
   fi
 
-  if jq -e '.. | strings | select(contains("openai-api/"))' "$OC_FILES/.config/opencode/opencode.json" "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
-    fail "OpenCode generated config contains openai-api model references"
+  if jq -e '.agent.build.model == "openai/gpt-5.5" and .agent.plan.model == "openai/gpt-5.5"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json sets built-in build/plan agents to GPT 5.5"
   else
-    pass "OpenCode generated config has no openai-api model references"
+    fail "opencode.json built-in build/plan agents not set to GPT 5.5"
   fi
 
   if jq -e '.agents."multimodal-looker".model == "zai-coding-plan/glm-5v-turbo" and .agents."multimodal-looker".fallback_models == ["zai-coding-plan/glm-5.1"]' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then

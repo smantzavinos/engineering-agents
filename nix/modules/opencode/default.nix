@@ -219,6 +219,16 @@ in
             enabled = false;
           };
         };
+
+        # Override built-in agent models to GPT 5.5
+        agent = {
+          build = {
+            model = "openai/gpt-5.5";
+          };
+          plan = {
+            model = "openai/gpt-5.5";
+          };
+        };
       };
 
       # oh-my-openagent configuration
