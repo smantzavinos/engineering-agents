@@ -1,7 +1,7 @@
 ---
 description: Web and external research. Searches documentation, evaluates libraries, reads external sources.
 mode: subagent
-model: google/gemini-3-flash
+model: zai-coding-plan/glm-5.1
 permission:
   edit: allow
   bash: deny

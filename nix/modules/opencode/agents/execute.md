@@ -1,7 +1,7 @@
 ---
 description: Autonomous orchestrator that drives plan creation, review, implementation, and code review to completion.
 mode: primary
-model: openai-api/gpt-5.5
+model: openai/gpt-5.5
 reasoningEffort: medium
 permission:
   edit: allow

@@ -1,7 +1,7 @@
 ---
 description: Reviews approaches, epic decompositions, and plans for logic bugs, completeness, consistency, and execution readiness.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: openai/gpt-5.5
 permission:
   edit: deny
   bash: ask

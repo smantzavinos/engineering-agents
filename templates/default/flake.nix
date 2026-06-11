@@ -50,7 +50,7 @@
             # Enable OpenCode with engineering-agents configuration
             engineering-agents.opencode = {
               enable = true;
-              model = "zai-coding-plan/glm-4.7";
+              model = "zai-coding-plan/glm-5.1";
             };
           }
         ];

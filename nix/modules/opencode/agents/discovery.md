@@ -1,7 +1,7 @@
 ---
 description: Socratic dialogue that clarifies intent, challenges assumptions, identifies blind spots, and produces a clear engineering brief.
 mode: primary
-model: openai-api/gpt-5.5
+model: openai/gpt-5.5
 reasoningEffort: medium
 permission:
   edit: allow

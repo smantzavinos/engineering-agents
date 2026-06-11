@@ -152,16 +152,34 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json missing MCP servers"
   fi
 
-  if jq -e '.provider.openai.models | has("gpt-5.2") and has("gpt-5.2-codex")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+  if jq -e '.provider.openai.models | has("gpt-5.5") and has("gpt-5.2") and has("gpt-5.2-codex")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
     pass "opencode.json configures ChatGPT Pro OAuth OpenAI models"
   else
     fail "opencode.json missing ChatGPT Pro OAuth OpenAI models"
   fi
 
-  if jq -e '.provider."openai-api".models | has("gpt-5.5") and has("gpt-5.4")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
-    pass "opencode.json configures separate OpenAI API models"
+  if jq -e 'has("provider") and (.provider | has("openai-api") | not)' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json does not configure OpenAI API billing provider"
   else
-    fail "opencode.json missing separate OpenAI API models"
+    fail "opencode.json must not configure OpenAI API billing provider"
+  fi
+
+  if jq -e '.model == "zai-coding-plan/glm-5.1"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json defaults to GLM 5.1"
+  else
+    fail "opencode.json default model is not GLM 5.1"
+  fi
+
+  if jq -e '.. | strings | select(contains("openai-api/"))' "$OC_FILES/.config/opencode/opencode.json" "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+    fail "OpenCode generated config contains openai-api model references"
+  else
+    pass "OpenCode generated config has no openai-api model references"
+  fi
+
+  if jq -e '.agents."multimodal-looker".model == "zai-coding-plan/glm-5v-turbo" and .agents."multimodal-looker".fallback_models == ["zai-coding-plan/glm-5.1"]' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+    pass "oh-my-openagent routes multimodal tasks to GLM 5V turbo"
+  else
+    fail "oh-my-openagent multimodal model routing is incorrect"
   fi
 
   if jq -e '.team_mode.enabled == true and .team_mode.max_parallel_members == 4' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then

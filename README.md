@@ -148,7 +148,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable OpenCode with engineering-agents configuration |
-| `model` | `"zai-coding-plan/glm-4.7"` | Default model |
+| `model` | `openai/gpt-5.5` | Default model |
 | `enableTmux` | `true` | Enable tmux integration |
 | `enableServer` | `false` | Enable OpenCode server systemd service |
 | `serverPort` | `3124` | Server port |

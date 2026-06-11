@@ -64,6 +64,7 @@ let
   # ChatGPT Plus/Pro quota models provided by opencode-openai-codex-auth.
   # Keep this aligned with that plugin's config/opencode-modern.json.
   openaiOAuthModels = {
+    "gpt-5.5" = openaiModel "GPT 5.5 (ChatGPT Pro OAuth)" openaiReasoningVariants;
     "gpt-5.2" = openaiModel "GPT 5.2 (ChatGPT Pro OAuth)" openaiReasoningVariants;
     "gpt-5.2-codex" = openaiModel "GPT 5.2 Codex (ChatGPT Pro OAuth)" openaiCodexReasoningVariants;
     "gpt-5.1-codex-max" = openaiModel "GPT 5.1 Codex Max (ChatGPT Pro OAuth)" openaiCodexReasoningVariants;
@@ -76,17 +77,6 @@ let
     "gpt-5.1" = openaiModel "GPT 5.1 (ChatGPT Pro OAuth)" openaiLegacyReasoningVariants;
   };
 
-  # OpenAI Platform API models are intentionally on a separate provider so users
-  # can select API billing without consuming ChatGPT Plus/Pro quota. Run
-  # `/connect`, choose `openai-api`, and enter an OpenAI Platform API key.
-  openaiApiModels = {
-    "gpt-5.5" = openaiModel "GPT 5.5 (OpenAI API)" openaiReasoningVariants;
-    "gpt-5.4" = openaiModel "GPT 5.4 (OpenAI API)" openaiReasoningVariants;
-    "gpt-5.3-codex" = openaiModel "GPT 5.3 Codex (OpenAI API)" openaiCodexReasoningVariants;
-    "gpt-5.2" = openaiModel "GPT 5.2 (OpenAI API)" openaiReasoningVariants;
-    "gpt-5.2-codex" = openaiModel "GPT 5.2 Codex (OpenAI API)" openaiCodexReasoningVariants;
-  };
-
 in
 {
   options.engineering-agents.opencode = {
@@ -94,7 +84,7 @@ in
 
     model = lib.mkOption {
       type = lib.types.str;
-      default = "zai-coding-plan/glm-4.7";
+      default = "zai-coding-plan/glm-5.1";
       description = "Default OpenCode model";
     };
 
@@ -198,16 +188,6 @@ in
             models = openaiOAuthModels;
           };
 
-          # Separate OpenAI Platform API provider. OpenCode custom-provider
-          # credentials are stored with `/connect` under this provider ID.
-          "openai-api" = {
-            npm = "@ai-sdk/openai-compatible";
-            name = "OpenAI API";
-            options = openaiBaseOptions // {
-              baseURL = "https://api.openai.com/v1";
-            };
-            models = openaiApiModels;
-          };
         };
 
         mcp = {
@@ -299,74 +279,72 @@ in
         agents = {
           sisyphus = {
             model = "zai-coding-plan/glm-5.1";
-            fallback_models = [ "openai/gpt-5.2-codex" "openai-api/gpt-5.4" ];
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           "sisyphus-junior" = {
             model = "zai-coding-plan/glm-5.1";
-            fallback_models = [ "openai/gpt-5.2-codex" "openai-api/gpt-5.4" ];
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           atlas = {
-            model = "zai-coding-plan/glm-4.7";
-            fallback_models = [ "openai/gpt-5.2" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           build = {
-            model = "openai/gpt-5.2-codex";
-            variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.4" "zai-coding-plan/glm-5.1" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           plan = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           oracle = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           prometheus = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           metis = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           momus = {
-            model = "openai/gpt-5.2";
+            model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.5" "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
           "OpenCode-Builder" = {
-            model = "openai/gpt-5.2-codex";
-            variant = "xhigh";
-            fallback_models = [ "openai-api/gpt-5.4" "zai-coding-plan/glm-5.1" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           librarian = {
-            model = "zai-coding-plan/glm-4.7";
-            fallback_models = [ "openai/gpt-5.2" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           explore = {
-            model = "zai-coding-plan/glm-4.7-flash";
-            fallback_models = [ "zai-coding-plan/glm-4.7" ];
+            model = "zai-coding-plan/glm-5.1";
+            fallback_models = [ "openai/gpt-5.5" ];
           };
           "multimodal-looker" = {
-            model = "zai-coding-plan/glm-4.6v";
-            fallback_models = [ "zai-coding-plan/glm-4.7" ];
+            model = "zai-coding-plan/glm-5v-turbo";
+            fallback_models = [ "zai-coding-plan/glm-5.1" ];
           };
         };
 
         categories = {
-          visual-engineering = { model = "zai-coding-plan/glm-4.7"; temperature = 0.7; };
-          ultrabrain = { model = "openai/gpt-5.2"; variant = "xhigh"; fallback_models = [ "openai-api/gpt-5.5" ]; temperature = 0.1; };
-          deep = { model = "openai/gpt-5.2-codex"; variant = "medium"; fallback_models = [ "openai-api/gpt-5.4" ]; temperature = 0.2; };
-          artistry = { model = "zai-coding-plan/glm-4.7"; temperature = 0.9; };
-          quick = { model = "zai-coding-plan/glm-4.7-flash"; temperature = 0.3; };
-          writing = { model = "zai-coding-plan/glm-4.7"; temperature = 0.5; };
-          unspecified-low = { model = "zai-coding-plan/glm-4.5-flash"; temperature = 0.3; };
-          unspecified-high = { model = "zai-coding-plan/glm-4.7"; temperature = 0.3; };
+          visual-engineering = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.7; };
+          ultrabrain = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.1" ]; temperature = 0.1; };
+          deep = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.1" ]; temperature = 0.2; };
+          artistry = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.9; };
+          quick = { model = "zai-coding-plan/glm-5.1"; temperature = 0.3; };
+          writing = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.5; };
+          unspecified-low = { model = "zai-coding-plan/glm-5.1"; temperature = 0.3; };
+          unspecified-high = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.3; };
         };
       };
 

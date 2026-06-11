@@ -40,7 +40,7 @@
 
         # OpenCode model configuration
         opencode = {
-          model = "zai-coding-plan/glm-4.7";
+          model = "openai/gpt-5.5";
         };
       };
     in

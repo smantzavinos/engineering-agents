@@ -1,7 +1,7 @@
 ---
 description: Reviews code diffs against plan requirements for correctness, test adequacy, and coverage compliance.
 mode: subagent
-model: zai-coding-plan/glm-5
+model: openai/gpt-5.5
 permission:
   edit: deny
   bash: ask

@@ -1,7 +1,7 @@
 ---
 description: Creates detailed implementation plans from brief + approach + findings with dependency-ordered tasks and TDD checklists.
 mode: subagent
-model: openai-api/gpt-5.5
+model: openai/gpt-5.5
 reasoningEffort: high
 permission:
   edit: allow

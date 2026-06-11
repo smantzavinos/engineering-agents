@@ -1,7 +1,7 @@
 ---
 description: Moves from a brief through codebase research into a documented approach with design options and tradeoffs.
 mode: primary
-model: openai-api/gpt-5.5
+model: openai/gpt-5.5
 reasoningEffort: medium
 permission:
   edit: allow
