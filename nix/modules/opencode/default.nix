@@ -369,6 +369,43 @@ in
           unspecified-high = { model = "zai-coding-plan/glm-4.7"; temperature = 0.3; };
         };
       };
+
+      # ============================================================
+      # Engineering workflow agents
+      # ============================================================
+      "opencode/agents/discovery.md".source = ./agents/discovery.md;
+      "opencode/agents/design.md".source = ./agents/design.md;
+      "opencode/agents/execute.md".source = ./agents/execute.md;
+      "opencode/agents/planner.md".source = ./agents/planner.md;
+      "opencode/agents/plan-reviewer.md".source = ./agents/plan-reviewer.md;
+      "opencode/agents/code-reviewer.md".source = ./agents/code-reviewer.md;
+      "opencode/agents/worker.md".source = ./agents/worker.md;
+      "opencode/agents/ui-worker.md".source = ./agents/ui-worker.md;
+      "opencode/agents/researcher.md".source = ./agents/researcher.md;
+
+      # ============================================================
+      # Engineering workflow skills
+      # ============================================================
+
+      # Adapted skills (OpenCode-specific delegation syntax)
+      "opencode/skills/discovery/SKILL.md".source = ./skills/discovery/SKILL.md;
+      "opencode/skills/discovery/references".source = "${repoRoot}/skills/discovery/references";
+      "opencode/skills/design/SKILL.md".source = ./skills/design/SKILL.md;
+      "opencode/skills/design/references".source = "${repoRoot}/skills/design/references";
+      "opencode/skills/execution-orchestrator/SKILL.md".source = ./skills/execution-orchestrator/SKILL.md;
+
+      # Shared skills (unchanged, same files used by Pi)
+      "opencode/skills/research".source = "${repoRoot}/skills/research";
+      "opencode/skills/create-plan".source = "${repoRoot}/skills/create-plan";
+      "opencode/skills/create-worklog".source = "${repoRoot}/skills/create-worklog";
+      "opencode/skills/execute-task".source = "${repoRoot}/skills/execute-task";
+      "opencode/skills/review-plan".source = "${repoRoot}/skills/review-plan";
+      "opencode/skills/review-code".source = "${repoRoot}/skills/review-code";
+      "opencode/skills/review-approach".source = "${repoRoot}/skills/review-approach";
+      "opencode/skills/review-epic".source = "${repoRoot}/skills/review-epic";
+      "opencode/skills/assess-repo".source = "${repoRoot}/skills/assess-repo";
+      "opencode/skills/create-skills".source = "${repoRoot}/skills/create-skills";
+      "opencode/skills/create-new-repo-docs".source = "${repoRoot}/skills/create-new-repo-docs";
     };
   };
 }

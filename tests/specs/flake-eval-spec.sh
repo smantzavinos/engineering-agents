@@ -169,6 +169,48 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
   else
     fail "oh-my-openagent team mode is not enabled"
   fi
+
+  # Verify engineering workflow agents
+  for agent in discovery design execute planner plan-reviewer code-reviewer worker ui-worker researcher; do
+    if [[ -f "$OC_FILES/.config/opencode/agents/$agent.md" ]]; then
+      pass "OpenCode agent: $agent"
+    else
+      fail "OpenCode missing agent: $agent"
+    fi
+  done
+
+  # Verify engineering workflow skills (3 adapted + 11 shared)
+  for skill in discovery design execution-orchestrator research create-plan create-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs; do
+    if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
+      pass "OpenCode skill: $skill"
+    else
+      fail "OpenCode missing skill: $skill"
+    fi
+  done
+
+  # Verify adapted skills have opencode compatibility
+  for skill in discovery design execution-orchestrator; do
+    if grep -q 'compatibility: opencode' "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" 2>/dev/null; then
+      pass "Adapted skill $skill has opencode compatibility"
+    else
+      fail "Adapted skill $skill missing opencode compatibility"
+    fi
+  done
+
+  # Verify discovery agent references the Design agent (not Pi preset)
+  if grep -q 'press Tab' "$OC_FILES/.config/opencode/agents/discovery.md"; then
+    pass "Discovery agent uses Tab switching (not Pi presets)"
+  else
+    fail "Discovery agent has incorrect switching reference"
+  fi
+
+  # Verify execution orchestrator uses task tool (not subagent)
+  if grep -q 'task({' "$OC_FILES/.config/opencode/skills/execution-orchestrator/SKILL.md"; then
+    pass "Execution orchestrator uses task tool delegation"
+  else
+    fail "Execution orchestrator missing task tool delegation"
+  fi
+
 else
   fail "OpenCode module activation package failed to build"
 fi
