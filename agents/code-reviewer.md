@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews code diffs against plan requirements for correctness, test adequacy, and coverage compliance. Frontier code model for strong pattern recognition.
-model: zai-coding-plan/glm-5
+model: zai-coding-plan/glm-5.2
 fallbackModels: openai-codex/gpt-5.4
 thinking: high
 skill: review-code

@@ -84,7 +84,7 @@ in
 
     model = lib.mkOption {
       type = lib.types.str;
-      default = "zai-coding-plan/glm-5.1";
+      default = "zai-coding-plan/glm-5.2";
       description = "Default OpenCode model";
     };
 
@@ -288,73 +288,73 @@ in
 
         agents = {
           sisyphus = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           "sisyphus-junior" = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           atlas = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           build = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           plan = {
             model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
           oracle = {
             model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
           prometheus = {
             model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
           metis = {
             model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
           momus = {
             model = "openai/gpt-5.5";
             variant = "xhigh";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
           "OpenCode-Builder" = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           librarian = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           explore = {
-            model = "zai-coding-plan/glm-5.1";
+            model = "zai-coding-plan/glm-5.2";
             fallback_models = [ "openai/gpt-5.5" ];
           };
           "multimodal-looker" = {
             model = "zai-coding-plan/glm-5v-turbo";
-            fallback_models = [ "zai-coding-plan/glm-5.1" ];
+            fallback_models = [ "zai-coding-plan/glm-5.2" ];
           };
         };
 
         categories = {
-          visual-engineering = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.7; };
-          ultrabrain = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.1" ]; temperature = 0.1; };
-          deep = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.1" ]; temperature = 0.2; };
-          artistry = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.9; };
-          quick = { model = "zai-coding-plan/glm-5.1"; temperature = 0.3; };
-          writing = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.5; };
-          unspecified-low = { model = "zai-coding-plan/glm-5.1"; temperature = 0.3; };
-          unspecified-high = { model = "zai-coding-plan/glm-5.1"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.3; };
+          visual-engineering = { model = "zai-coding-plan/glm-5.2"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.7; };
+          ultrabrain = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.2" ]; temperature = 0.1; };
+          deep = { model = "openai/gpt-5.5"; variant = "xhigh"; fallback_models = [ "zai-coding-plan/glm-5.2" ]; temperature = 0.2; };
+          artistry = { model = "zai-coding-plan/glm-5.2"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.9; };
+          quick = { model = "zai-coding-plan/glm-5.2"; temperature = 0.3; };
+          writing = { model = "zai-coding-plan/glm-5.2"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.5; };
+          unspecified-low = { model = "zai-coding-plan/glm-5.2"; temperature = 0.3; };
+          unspecified-high = { model = "zai-coding-plan/glm-5.2"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.3; };
         };
       };
 

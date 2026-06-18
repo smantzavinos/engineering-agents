@@ -135,7 +135,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 |--------|---------|-------------|
 | `enable` | `false` | Enable Pi with all engineering-agents skills and agents |
 | `defaultProvider` | `"zai-coding-plan"` | Default model provider |
-| `defaultModel` | `"glm-5"` | Default model |
+| `defaultModel` | `"glm-5.2"` | Default model |
 | `defaultThinkingLevel` | `"medium"` | Default thinking level |
 | `theme` | `"catppuccin-mocha"` | Pi theme |
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |

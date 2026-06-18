@@ -164,10 +164,10 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json unexpectedly contains openai-api provider"
   fi
 
-  if jq -e '.model == "zai-coding-plan/glm-5.1"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
-    pass "opencode.json defaults to GLM 5.1"
+  if jq -e '.model == "zai-coding-plan/glm-5.2"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json defaults to GLM 5.2"
   else
-    fail "opencode.json default model is not GLM 5.1"
+    fail "opencode.json default model is not GLM 5.2"
   fi
 
   if jq -e '.agent.build.model == "openai/gpt-5.5" and .agent.plan.model == "openai/gpt-5.5"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
@@ -176,7 +176,7 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json built-in build/plan agents not set to GPT 5.5"
   fi
 
-  if jq -e '.agents."multimodal-looker".model == "zai-coding-plan/glm-5v-turbo" and .agents."multimodal-looker".fallback_models == ["zai-coding-plan/glm-5.1"]' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+  if jq -e '.agents."multimodal-looker".model == "zai-coding-plan/glm-5v-turbo" and .agents."multimodal-looker".fallback_models == ["zai-coding-plan/glm-5.2"]' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
     pass "oh-my-openagent routes multimodal tasks to GLM 5V turbo"
   else
     fail "oh-my-openagent multimodal model routing is incorrect"

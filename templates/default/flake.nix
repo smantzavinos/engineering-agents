@@ -42,15 +42,15 @@
             # Enable Pi with all skills, agents, and presets
             engineering-agents.pi = {
               enable = true;
-              defaultModel = "glm-5";
+              defaultModel = "glm-5.2";
               # Override models list if desired:
-              # enabledModels = [ "zai-coding-plan/glm-5" "openai-codex/gpt-5.4" ];
+              # enabledModels = [ "zai-coding-plan/glm-5.2" "openai-codex/gpt-5.4" ];
             };
 
             # Enable OpenCode with engineering-agents configuration
             engineering-agents.opencode = {
               enable = true;
-              model = "zai-coding-plan/glm-5.1";
+              model = "zai-coding-plan/glm-5.2";
             };
           }
         ];

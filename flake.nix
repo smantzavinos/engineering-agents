@@ -33,7 +33,7 @@
         # Pi model configuration
         pi = {
           defaultProvider = "zai-coding-plan";
-          defaultModel = "glm-5";
+          defaultModel = "glm-5.2";
           defaultThinkingLevel = "medium";
           theme = "catppuccin-mocha";
         };

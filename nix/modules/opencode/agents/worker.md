@@ -1,7 +1,7 @@
 ---
 description: Backend/logic implementation. Executes plan tasks, creates worklogs, performs codebase research, and fixes review findings.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: allow

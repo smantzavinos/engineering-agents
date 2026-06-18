@@ -1,7 +1,7 @@
 ---
 description: Web and external research. Searches documentation, evaluates libraries, reads external sources.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: deny

@@ -1,7 +1,7 @@
 ---
 name: plan-reviewer
 description: Reviews approaches, epic decompositions, and engineering plans for logic bugs, completeness, consistency, and execution readiness. Frontier reasoning model for deep cross-section analysis.
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 fallbackModels: openai-codex/gpt-5.5
 thinking: high
 skill: review-plan

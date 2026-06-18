@@ -1,7 +1,7 @@
 ---
 description: Frontend/UI implementation for components, styling, and accessibility.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: allow

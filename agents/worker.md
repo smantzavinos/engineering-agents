@@ -1,7 +1,7 @@
 ---
 name: worker
 description: Backend/logic implementation agent. Executes plan tasks, creates worklogs, performs codebase research, and fixes review findings. Use for non-UI work.
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 thinking: high
 defaultProgress: true
 ---

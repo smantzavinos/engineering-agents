@@ -289,7 +289,7 @@ in
 
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "glm-5";
+      default = "glm-5.2";
       description = "Default Pi model";
     };
 
@@ -311,8 +311,8 @@ in
         "openai-codex/gpt-5.5"
         "openai-codex/gpt-5.4"
         "openai-codex/gpt-5.3-codex"
+        "zai-coding-plan/glm-5.2"
         "zai-coding-plan/glm-5.1"
-        "zai-coding-plan/glm-5"
         "zai-coding-plan/glm-4.7"
         "fireworks/accounts/fireworks/models/deepseek-v4-pro"
         "fireworks/accounts/fireworks/models/kimi-k2p6"
@@ -457,6 +457,7 @@ in
             baseUrl = "https://api.z.ai/api/coding/paas/v4";
             api = "openai-completions";
             models = [
+              { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; }
               { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; }
               { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; }
               { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; }
