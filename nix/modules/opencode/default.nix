@@ -112,10 +112,6 @@ in
         "$schema" = "https://opencode.ai/config.json";
         model = cfg.model;
 
-        keybinds = {
-          app_exit = "ctrl+c,<leader>q";
-        };
-
         plugin = [
           "oh-my-openagent@${ohMyOpenAgentVersion}"
           "opencode-openai-codex-auth@${openaiCodexAuthVersion}"
@@ -229,6 +225,16 @@ in
             model = "openai/gpt-5.5";
           };
         };
+      };
+
+      # TUI configuration.
+      # opencode split TUI config into a separate tui.json; manage it here so
+      # opencode doesn't migrate it at runtime and the oh-my-openagent/tui
+      # plugin entry (required for the plugin's TUI features) is always present.
+      "opencode/tui.json".text = builtins.toJSON {
+        "$schema" = "https://opencode.ai/tui.json";
+        plugin = [ "oh-my-openagent/tui" ];
+        keybinds.app_exit = "ctrl+c,<leader>q";
       };
 
       # oh-my-openagent configuration
