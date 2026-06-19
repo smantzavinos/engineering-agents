@@ -15,7 +15,7 @@ let
   cfg = config.engineering-agents.opencode;
 
   # Pin plugin versions for reproducibility
-  ohMyOpenAgentVersion = "4.11.1";
+  ohMyOpenAgentVersion = "4.11.0";
   openaiCodexAuthVersion = "4.4.0";
   opencodeIgnoreVersion = "1.1.0";
   opencodeDirenvVersion = "2025.1211.9";
