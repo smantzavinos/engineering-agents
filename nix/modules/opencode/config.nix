@@ -288,6 +288,7 @@ let
     "research" "create-plan" "create-worklog" "execute-task"
     "review-plan" "review-code" "review-approach" "review-epic"
     "assess-repo" "create-skills" "create-new-repo-docs"
+    "configure-opencode"
   ];
 
 in

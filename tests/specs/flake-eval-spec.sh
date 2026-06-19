@@ -197,8 +197,8 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fi
   done
 
-  # Verify engineering workflow skills (3 adapted + 11 shared)
-  for skill in discovery design execution-orchestrator research create-plan create-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs; do
+  # Verify engineering workflow skills (3 adapted + 12 shared)
+  for skill in discovery design execution-orchestrator research create-plan create-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs configure-opencode; do
     if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
       pass "OpenCode skill: $skill"
     else
