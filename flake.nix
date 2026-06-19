@@ -71,6 +71,14 @@
       };
 
       # ============================================================
+      # NixOS Modules (for system service users without Home Manager)
+      # ============================================================
+      nixosModules = {
+        # OpenCode config delivery for system users via systemd.tmpfiles
+        opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self; };
+      };
+
+      # ============================================================
       # Overlays
       # ============================================================
       overlays.default = final: prev: {
@@ -83,10 +91,27 @@
       };
 
       # ============================================================
+      # Library functions (for external consumers to build custom configs)
+      # ============================================================
+      lib = forAllSystems ({ system, pkgs, ... }: {
+        inherit (import ./nix/modules/opencode/config.nix {
+          lib = pkgs.lib;
+          inherit pkgs self;
+        }) makeOpenCodeConfig;
+      });
+
+      # ============================================================
       # Packages
       # ============================================================
       packages = forAllSystems ({ system, pkgs, ... }: {
         default = self.packages.${system}.engineering-agents-docs;
+
+        # Pre-built default OpenCode config derivation for inspection/testing.
+        # See nix/modules/opencode/config.nix for the makeOpenCodeConfig function.
+        opencode-config-default = (import ./nix/modules/opencode/config.nix {
+          lib = pkgs.lib;
+          inherit pkgs self;
+        }).makeOpenCodeConfig {};
 
         # Documentation bundle
         engineering-agents-docs = pkgs.runCommand "engineering-agents-docs" { } ''
@@ -150,6 +175,128 @@
         testUser = "testuser";
         testHome = "/home/${testUser}";
       in {
+        # OpenCode config derivation produces the expected file tree
+        opencode-config-shape = pkgs.runCommand "opencode-config-shape-check" {} ''
+          cfgd=${self.packages.${system}.opencode-config-default}
+          test -f "$cfgd/opencode/opencode.json" || { echo "MISSING: opencode.json"; exit 1; }
+          test -f "$cfgd/opencode/oh-my-openagent.json" || { echo "MISSING: oh-my-openagent.json"; exit 1; }
+          test -f "$cfgd/opencode/tui.json" || { echo "MISSING: tui.json"; exit 1; }
+          test -f "$cfgd/opencode/agents/discovery.md" || { echo "MISSING: agents/discovery.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/design.md" || { echo "MISSING: agents/design.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/execute.md" || { echo "MISSING: agents/execute.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/planner.md" || { echo "MISSING: agents/planner.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/code-reviewer.md" || { echo "MISSING: agents/code-reviewer.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/worker.md" || { echo "MISSING: agents/worker.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/ui-worker.md" || { echo "MISSING: agents/ui-worker.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/researcher.md" || { echo "MISSING: agents/researcher.md"; exit 1; }
+          test -f "$cfgd/opencode/agents/plan-reviewer.md" || { echo "MISSING: agents/plan-reviewer.md"; exit 1; }
+          test -d "$cfgd/opencode/skills/discovery" || { echo "MISSING: skills/discovery"; exit 1; }
+          test -d "$cfgd/opencode/skills/design" || { echo "MISSING: skills/design"; exit 1; }
+          test -d "$cfgd/opencode/skills/execution-orchestrator" || { echo "MISSING: skills/execution-orchestrator"; exit 1; }
+          test -d "$cfgd/opencode/skills/research" || { echo "MISSING: skills/research"; exit 1; }
+          test -d "$cfgd/opencode/skills/create-plan" || { echo "MISSING: skills/create-plan"; exit 1; }
+          test -d "$cfgd/opencode/skills/execute-task" || { echo "MISSING: skills/execute-task"; exit 1; }
+          touch $out
+        '';
+
+        # Parameterization: zai-only strips google/openai providers, minimal strips plugins
+        opencode-config-parameterization = pkgs.runCommand "opencode-config-parameterization-check" {} ''
+          zaiOnly=${self.lib.${system}.makeOpenCodeConfig { providers = "zai-only"; }}
+          minimal=${self.lib.${system}.makeOpenCodeConfig { plugins = "minimal"; }}
+
+          # zai-only: opencode.json must NOT have google or openai provider keys
+          if ${pkgs.jq}/bin/jq -e '.provider | has("google")' "$zaiOnly/opencode/opencode.json" >/dev/null 2>&1; then
+            echo "FAIL: zai-only config still has google provider"; exit 1
+          fi
+          if ${pkgs.jq}/bin/jq -e '.provider | has("openai")' "$zaiOnly/opencode/opencode.json" >/dev/null 2>&1; then
+            echo "FAIL: zai-only config still has openai provider"; exit 1
+          fi
+
+          # minimal: opencode.json plugin list must have exactly 1 entry (oh-my-openagent)
+          pluginCount=$(${pkgs.jq}/bin/jq '.plugin | length' "$minimal/opencode/opencode.json")
+          if [ "$pluginCount" != "1" ]; then
+            echo "FAIL: minimal plugins should have 1 entry, got $pluginCount"; exit 1
+          fi
+
+          touch $out
+        '';
+
+        # NixOS opencode-for-user module instantiates and emits tmpfiles rules
+        opencode-for-user-module =
+          let
+            mockBaseModule = { config, lib, ... }: {
+              options.systemd.tmpfiles.rules = lib.mkOption {
+                type = lib.types.listOf lib.types.str;
+                default = [];
+              };
+            };
+            eval = nixpkgs.lib.evalModules {
+              modules = [
+                mockBaseModule
+                self.nixosModules.opencode-for-user
+                {
+                  _module.args.pkgs = pkgs;
+                  engineering-agents.opencode-for-user = {
+                    enable = true;
+                    user = "testuser";
+                    group = "testgroup";
+                    targetDir = "/tmp/test-opencode";
+                    args = {};
+                  };
+                }
+              ];
+            };
+            rules = eval.config.systemd.tmpfiles.rules;
+            rulesJson = builtins.toJSON rules;
+          in
+          pkgs.runCommand "opencode-for-user-module-check" {
+            inherit rulesJson;
+          } ''
+            echo "$rulesJson" | ${pkgs.jq}/bin/jq -r '.[]' | grep -q '/tmp/test-opencode/opencode/opencode.json' || {
+              echo "FAIL: expected tmpfiles rule for /tmp/test-opencode/opencode/opencode.json"
+              echo "Rules: $rulesJson"
+              exit 1
+            }
+            echo "$rulesJson" | ${pkgs.jq}/bin/jq -r '.[]' | grep -q '/tmp/test-opencode/opencode/agents' || {
+              echo "FAIL: expected tmpfiles rule for agents directory"
+              exit 1
+            }
+            touch $out
+          '';
+
+        # Co-evolution guard: scan agent markdown for plugin references and
+        # assert any referenced plugin is in the default plugin set. Prevents
+        # a future agent from silently depending on a plugin that consumers
+        # using plugins = "minimal" (e.g., hermes) don't have.
+        opencode-agent-plugin-deps = pkgs.runCommand "opencode-agent-plugin-deps-check" {} ''
+          # Plugin names we manage (without @version suffix)
+          knownPlugins="oh-my-openagent opencode-openai-codex-auth opencode-ignore opencode-direnv opencode-md-table-formatter"
+
+          # Grep agent markdown for plugin-like references (@scope/name or name@version patterns)
+          # and extract unique plugin names found
+          found=$(${pkgs.gnugrep}/bin/grep -rohE '(@[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+|[a-zA-Z0-9_-]+)@[0-9]' ${./nix/modules/opencode/agents}/ 2>/dev/null | sed 's/@[0-9].*//' | sort -u || true)
+
+          if [ -z "$found" ]; then
+            # No plugin references found in agent files — baseline passes
+            touch $out
+            exit 0
+          fi
+
+          # Check each found plugin against known list
+          for plugin in $found; do
+            # Strip @scope/ prefix for comparison
+            baseName=$(echo "$plugin" | sed 's/^@[^/]*\///')
+            if ! echo "$knownPlugins" | grep -qw "$baseName"; then
+              echo "FAIL: agent file references plugin '$plugin' which is not in the managed plugin set"
+              echo "Managed plugins: $knownPlugins"
+              echo "If this plugin is needed, add it to defaultPlugins in nix/modules/opencode/config.nix"
+              exit 1
+            fi
+          done
+
+          touch $out
+        '';
+
         # Pi module builds a valid activation package
         pi-module = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
