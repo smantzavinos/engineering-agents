@@ -75,7 +75,7 @@
       # ============================================================
       nixosModules = {
         # OpenCode config delivery for system users via systemd.tmpfiles
-        opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self; };
+        opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self llmAgents; };
       };
 
       # ============================================================

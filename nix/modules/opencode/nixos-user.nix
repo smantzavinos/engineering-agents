@@ -19,7 +19,7 @@
 #     };
 #   };
 #
-{ self }:
+{ self, llmAgents }:
 
 { config, lib, pkgs, ... }:
 
@@ -62,6 +62,23 @@ in
         Common keys: model, plugins ("default"|"minimal"|list), providers
         ("default"|"zai-only"|attrs), mcp, enableTmux, agentModelOverrides,
         categoryOverrides.
+      '';
+    };
+
+    package = lib.mkOption {
+      type = lib.types.package;
+      default = llmAgents.packages.${pkgs.system}.opencode;
+      description = ''
+        OpenCode package this config targets. Consumers (e.g. a service
+        wrapper) should exec this package's bin so the binary and the
+        generated config always come from the same source.
+
+        Not installed into any PATH by this module: the consumer's wrapper
+        execs the absolute store path, and a systemd service PATH is explicit
+        (it does not inherit user/system profiles). This intentionally
+        diverges from the Home Manager module's home.packages install (see
+        default.nix), because that mechanism does not apply to a system
+        service user.
       '';
     };
   };
