@@ -74,7 +74,7 @@
       # NixOS Modules (for system service users without Home Manager)
       # ============================================================
       nixosModules = {
-        # OpenCode config delivery for system users via systemd.tmpfiles
+        # OpenCode config delivery for system users via activation script
         opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self llmAgents; };
       };
 
@@ -221,13 +221,17 @@
           touch $out
         '';
 
-        # NixOS opencode-for-user module instantiates and emits tmpfiles rules
+        # NixOS opencode-for-user module instantiates and emits the activation
+        # script that materializes the config into targetDir.
         opencode-for-user-module =
           let
             mockBaseModule = { config, lib, ... }: {
-              options.systemd.tmpfiles.rules = lib.mkOption {
-                type = lib.types.listOf lib.types.str;
-                default = [];
+              options.system.activationScripts = lib.mkOption {
+                type = lib.types.attrsOf (lib.types.submodule {
+                  options.text = lib.mkOption { type = lib.types.str; default = ""; };
+                  options.deps = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+                });
+                default = {};
               };
             };
             eval = nixpkgs.lib.evalModules {
@@ -246,19 +250,31 @@
                 }
               ];
             };
-            rules = eval.config.systemd.tmpfiles.rules;
-            rulesJson = builtins.toJSON rules;
+            scriptText = eval.config.system.activationScripts."opencode-for-user".text;
           in
           pkgs.runCommand "opencode-for-user-module-check" {
-            inherit rulesJson;
+            inherit scriptText;
           } ''
-            echo "$rulesJson" | ${pkgs.jq}/bin/jq -r '.[]' | grep -q '/tmp/test-opencode/opencode/opencode.json' || {
-              echo "FAIL: expected tmpfiles rule for /tmp/test-opencode/opencode/opencode.json"
-              echo "Rules: $rulesJson"
+            # The script uses a shell `$target` var, so assert on invariants
+            # that actually appear in the text, not expanded paths.
+            echo "$scriptText" | grep -q 'ln -sfn' || {
+              echo "FAIL: activation script must use ln -sfn to materialize config"
+              echo "Script: $scriptText"
               exit 1
             }
-            echo "$rulesJson" | ${pkgs.jq}/bin/jq -r '.[]' | grep -q '/tmp/test-opencode/opencode/agents' || {
-              echo "FAIL: expected tmpfiles rule for agents directory"
+            echo "$scriptText" | grep -q 'target="/tmp/test-opencode/opencode"' || {
+              echo "FAIL: activation script must target the configured targetDir/opencode"
+              echo "Script: $scriptText"
+              exit 1
+            }
+            echo "$scriptText" | grep -q '/opencode.json' || {
+              echo "FAIL: activation script must symlink opencode.json"
+              echo "Script: $scriptText"
+              exit 1
+            }
+            echo "$scriptText" | grep -q '/agents' || {
+              echo "FAIL: activation script must symlink the agents directory"
+              echo "Script: $scriptText"
               exit 1
             }
             touch $out
