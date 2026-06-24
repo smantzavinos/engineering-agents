@@ -146,6 +146,12 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json missing plugin array"
   fi
 
+  if jq -e '.plugin | index("oh-my-openagent@4.13.0") != null' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json pins oh-my-openagent 4.13.0"
+  else
+    fail "opencode.json does not pin oh-my-openagent 4.13.0"
+  fi
+
   if jq -e '.mcp | has("web-search-prime")' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
     pass "opencode.json has MCP servers"
   else

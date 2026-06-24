@@ -19,7 +19,7 @@ let
   # Plugin version pins
   # ============================================================
   pluginVersions = {
-    ohMyOpenAgent = "4.11.0";
+    ohMyOpenAgent = "4.13.0";
     openaiCodexAuth = "4.4.0";
     opencodeIgnore = "1.1.0";
     opencodeDirenv = "2025.1211.9";
