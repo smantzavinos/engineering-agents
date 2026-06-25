@@ -1,7 +1,6 @@
 ---
 name: design
 description: Collaborative design agent that moves from a brief through research and into a documented approach. Suggests research topics, delegates to research sub-agents, presents design options with tradeoffs, and documents architectural decisions. Use after Discovery has produced a brief and plan level.
-compatibility: pi
 ---
 
 # Design
@@ -55,10 +54,9 @@ Ask the human to confirm before starting research.
 For each approved topic, call a research sub-agent:
 
 ```
-subagent call:
-  agent: worker
-  skill: research
-  task: "Research [topic]. Plan directory: [path]. Write findings to findings/[filename].md"
+{{delegate:research skill=research}}
+Research [topic]. Plan directory: [path]. Write findings to findings/[filename].md
+{{/delegate}}
 ```
 
 Each research call produces one focused findings file.
@@ -97,27 +95,23 @@ If `brief.md` says `Type: epic`, you MUST also create or update `epic.md` after 
 Do NOT stop after `approach.md` for epics. An epic is not ready for execution until `epic.md` exists.
 
 ### 6. Review the Approach
-After writing approach.md, call the plan-reviewer to review it:
+After writing approach.md, run the approach review:
 
 ```
-subagent({
-  agent: "plan-reviewer",
-  task: "Review the approach at [plan directory path]/approach.md for architectural soundness and brief alignment.",
-  skill: "review-approach"
-})
+{{delegate:approachReview skill=review-approach}}
+Review the approach at [plan directory path]/approach.md for architectural soundness and brief alignment.
+{{/delegate}}
 ```
 
 Iterate until status is COMPLETE (max 3 passes). Fix issues between passes.
 
 ### 6a. Review Epic Decomposition (required for `Type: epic`)
-After writing `epic.md`, call the plan-reviewer to review it:
+After writing `epic.md`, run the epic decomposition review:
 
 ```
-subagent({
-  agent: "plan-reviewer",
-  task: "Review the epic decomposition at [plan directory path]/epic.md for workstream completeness, sequencing, preparatory work, and child-plan readiness.",
-  skill: "review-epic"
-})
+{{delegate:epicReview skill=review-epic}}
+Review the epic decomposition at [plan directory path]/epic.md for workstream completeness, sequencing, preparatory work, and child-plan readiness.
+{{/delegate}}
 ```
 
 Iterate until status is COMPLETE (max 3 passes). Fix issues between passes.
@@ -163,28 +157,25 @@ If research or design reveals that durable requirements are missing, unclear, or
 4. Ask the human to approve the requirement change as part of approach acceptance.
 5. Leave canonical requirement edits to the approved execution plan unless the human explicitly asks for a separate requirements-doc update.
 
-## Sub-Agent Delegation
+## Subagent Delegation
 
-Use the `subagent` tool to delegate research:
+Delegate codebase research to a subagent:
 
-```typescript
-{
-  agent: "worker",
-  task: "Research [specific topic]. Read the brief at [path/brief.md] for context. Write findings to [path/findings/filename.md]. Use the research skill.",
-  skill: "research"
-}
+```
+{{delegate:research skill=research}}
+Research [specific topic]. Read the brief at [path/brief.md] for context. Write findings to [path/findings/filename.md].
+{{/delegate}}
 ```
 
-You can run multiple research tasks in parallel if they're independent:
+Delegate external/web research to a subagent:
 
-```typescript
-{
-  tasks: [
-    { agent: "worker", task: "Research current state...", skill: "research" },
-    { agent: "worker", task: "Research dependencies...", skill: "research" }
-  ]
-}
 ```
+{{delegate:researchExternal skill=research}}
+Research [specific topic] using web search and external sources. Write findings to [path/findings/filename.md].
+{{/delegate}}
+```
+
+You can delegate multiple independent research tasks before synthesizing findings.
 
 ## Human Interaction Points
 
@@ -206,5 +197,5 @@ You're done when:
 - The approach addresses all goals and constraints from the brief
 
 Tell the human:
-- For standard work: "The approach is ready. You can now start the Execution phase. Switch to: `/preset execute` and then say 'Execute the plan at [path]. Auto-continue.'"
-- For epic work: "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'"
+- For standard work: "{{note:design-execute-standard}}"
+- For epic work: "{{note:design-execute-epic}}"

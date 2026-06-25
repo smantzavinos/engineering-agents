@@ -1,7 +1,6 @@
 ---
 name: create-new-repo-docs
 description: "Bootstrap a new repository by creating a durable documentation foundation: README, architecture, requirements, testing strategy, ADRs, and user workflow docs. Use this for greenfield repos when you want to define the project through core documents instead of a speculative implementation plan."
-compatibility: opencode
 ---
 
 ## What I do

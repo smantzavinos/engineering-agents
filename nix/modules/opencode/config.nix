@@ -274,17 +274,19 @@ let
     unspecified-high = { model = "zai-coding-plan/glm-5.2"; fallback_models = [ "openai/gpt-5.5" ]; temperature = 0.3; };
   };
 
-  # Agent markdown files (adapted, live in ./agents/ relative to this file)
+  # OpenCode primary mode agents (live in ./agents/ relative to this file).
+  # All engineering sub-roles are delegated via task categories and built-in
+  # subagent types (see harnesses/opencode.json), so no custom engineering
+  # subagents (planner/worker/ui-worker/researcher/plan-reviewer/code-reviewer/
+  # oracle) are shipped for OpenCode.
   agentFiles = [
-    "discovery" "design" "execute" "planner" "plan-reviewer"
-    "code-reviewer" "worker" "ui-worker" "researcher"
+    "discovery" "design" "execute"
   ];
 
-  # Adapted skills (OpenCode-specific delegation syntax, in ./skills/ relative to this file)
-  adaptedSkills = [ "discovery" "design" "execution-orchestrator" ];
-
-  # Shared skills (same files used by Pi, in ${self}/skills/)
-  sharedSkills = [
+  # OpenCode skill set, rendered from canonical sources by tools/render-skills.mjs
+  # into dist/skills/opencode/. No hand-maintained OpenCode forks.
+  openCodeSkills = [
+    "discovery" "design" "execution-orchestrator"
     "research" "create-plan" "create-worklog" "execute-task"
     "review-plan" "review-code" "review-approach" "review-epic"
     "assess-repo" "create-skills" "create-new-repo-docs"
@@ -408,12 +410,8 @@ in
     ) agentFiles}
 
     ${lib.concatMapStringsSep "\n  " (name:
-      "ln -s ${./skills}/${name} $out/opencode/skills/${name}"
-    ) adaptedSkills}
-
-    ${lib.concatMapStringsSep "\n  " (name:
-      "ln -s ${self}/skills/${name} $out/opencode/skills/${name}"
-    ) sharedSkills}
+      "ln -s ${self}/dist/skills/opencode/${name} $out/opencode/skills/${name}"
+    ) openCodeSkills}
 
     ${lib.concatMapStringsSep "\n  " (name:
       "ln -s ${extraAgents.${name}} $out/opencode/agents/${name}.md"

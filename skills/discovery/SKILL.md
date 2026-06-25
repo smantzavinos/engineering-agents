@@ -1,7 +1,6 @@
 ---
 name: discovery
 description: Socratic dialogue agent that helps clarify intent, challenge assumptions, identify blind spots, and guide toward a clear engineering brief. Use when starting from a vague idea, exploring a problem space, or needing to determine scope and direction before committing to a plan level.
-compatibility: pi
 ---
 
 # Discovery
@@ -130,5 +129,5 @@ You're done when:
 - A brief has been drafted and, when accepted, committed as the approved scope checkpoint
 
 Tell the human:
-- For standard work: "This looks ready for the Design phase. You can start a Design session to research the codebase and develop the approach."
+- For standard work: "{{note:discovery-design-handoff}}"
 - For epic work: "This looks ready for the Design phase. Design should produce both the epic approach and the epic decomposition (`epic.md`) before execution starts."

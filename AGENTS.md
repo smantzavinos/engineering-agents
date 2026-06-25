@@ -15,6 +15,10 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Architecture
 - `docs/architecture.md` — repository purpose, primary surfaces, core flows, and boundaries.
 
+## Skill Rendering
+- `docs/skill-rendering.md` — how canonical `skills/` are rendered per harness into `dist/` via `harnesses/*.json` and `tools/render-skills.mjs`.
+- Canonical skills are harness-neutral; never hand-edit `dist/`. After changing a skill, run `node tools/render-skills.mjs --write` and commit `dist/`.
+
 ## Coding Rules
 - `docs/coding-rules.md` — repo-wide editing, shell, documentation, and verification rules.
 

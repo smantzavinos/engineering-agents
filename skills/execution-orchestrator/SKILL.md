@@ -1,7 +1,6 @@
 ---
 name: execution-orchestrator
 description: Autonomous orchestrator that drives plan creation, review, worklog, implementation, and code review to completion using sub-agent calls. Takes a brief+approach and produces verified implementation. Stops only for plan approval or critical decisions.
-compatibility: pi
 ---
 
 # Execution Orchestrator
@@ -23,11 +22,11 @@ You are the autonomous execution coordinator. You manage the full lifecycle by c
 - Repo task-tracking/backlog policy, if documented in AGENTS.md or repo docs
 - Repo requirements policy, if documented and relevant to the plan
 
-## Subagent Calling Convention
+## Delegation Calling Convention
 
-ALL subagent calls must be **synchronous**. Do NOT set `async: true`.
+ALL delegations must be **synchronous**. Wait for each result before proceeding.
 
-This process is a strict sequential pipeline: plan → review → worklog → T1 → T2 → … → code review → fixes. Every step depends on the output of the previous step. There is no independent work to do while a child runs. Calling async adds polling overhead with zero parallelism benefit. Just call `subagent({ agent: "...", task: "..." })` and wait for the result.
+This process is a strict sequential pipeline: plan → review → worklog → T1 → T2 → … → code review → fixes. Every step depends on the output of the previous step. There is no independent work to do while a child runs. Delegate one step and wait for the result before starting the next.
 
 ## Process Overview
 
@@ -73,11 +72,9 @@ If the target directory is an epic root:
 ### Step 1: Create Plan
 
 ```
-subagent({
-  agent: "planner",
-  task: "Create a detailed plan for the engineering work at [plan directory path]. Read brief.md, approach.md, and findings/ for context.",
-  skill: "create-plan"
-})
+{{delegate:planner skill=create-plan}}
+Create a detailed plan for the engineering work at [plan directory path]. Read brief.md, approach.md, and findings/ for context.
+{{/delegate}}
 ```
 
 ### Step 2: Review Plan (iterative)
@@ -85,11 +82,9 @@ subagent({
 Call the plan review sub-agent. Repeat until it reports COMPLETE:
 
 ```
-subagent({
-  agent: "plan-reviewer",
-  task: "Review the plan at [plan directory path]/plan.md for execution readiness.",
-  skill: "review-plan"
-})
+{{delegate:planReview skill=review-plan}}
+Review the plan at [plan directory path]/plan.md for execution readiness.
+{{/delegate}}
 ```
 
 Read the output summary. If status is `NEEDS_ANOTHER_PASS`, call again. Cap at 5 iterations.
@@ -121,11 +116,9 @@ Before creating the worklog, identify the repo task-tracking mechanism from AGEN
 If the plan cites or updates requirements, also identify the repo requirements mechanism from AGENTS.md or repo docs. If no mechanism is documented, ask before allowing canonical requirement edits.
 
 ```
-subagent({
-  agent: "worker",
-  task: "Create a worklog for the plan at [plan directory path]/plan.md. Include the repo backlog capture policy from AGENTS.md or task-tracking docs if available. If the plan cites or updates requirements, include the repo requirements policy and approved requirement updates.",
-  skill: "create-worklog"
-})
+{{delegate:worklog skill=create-worklog}}
+Create a worklog for the plan at [plan directory path]/plan.md. Include the repo backlog capture policy from AGENTS.md or task-tracking docs if available. If the plan cites or updates requirements, include the repo requirements policy and approved requirement updates.
+{{/delegate}}
 ```
 
 Commit the initialized worklog before starting T1:
@@ -139,35 +132,30 @@ Do not begin task execution with an uncommitted worklog.
 
 ### Step 5: Execute Tasks
 
-For each task in the plan, call one sub-agent. Choose `worker` or `ui-worker` based on the task domain:
-- Backend, logic, infrastructure, data → `worker`
-- Frontend, UI, components, styling, accessibility → `ui-worker`
+For each task in the plan, delegate one implementation, routing by task domain:
+- Backend, logic, infrastructure, data → the implementation delegation below
+- Frontend, UI, components, styling, accessibility → {{note:ui-implementation-target}} instead
 
 ```
-subagent({
-  agent: "worker",  // or "ui-worker" for frontend tasks
-  task: "Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, follow the worklog's backlog capture policy and record any created item IDs. If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.",
-  skill: "execute-task"
-})
+{{delegate:executeTask skill=execute-task}}
+Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, follow the worklog's backlog capture policy and record any created item IDs. If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.
+{{/delegate}}
 ```
 
 **Per-task review (optional but recommended):**
 After each task implementation, optionally review just that task's committed changes:
 
 ```
-subagent({
-  agent: "code-reviewer",
-  task: "Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggested backlog items. Check requirement alignment if the plan cites or updates requirements.",
-  skill: "review-code"
-})
+{{delegate:codeReview skill=review-code}}
+Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggested backlog items. Check requirement alignment if the plan cites or updates requirements.
+{{/delegate}}
 ```
 
 If per-task review finds issues, call a fix sub-agent before continuing:
 ```
-subagent({
-  agent: "worker",  // or "ui-worker" matching the original task domain
-  task: "Fix the issues found in the code review at [plan directory path]/code_review.md. Address only the open findings from the most recent review. Commit the fix as fix(T<N>): <short description>."
-})
+{{delegate:fix}}
+Fix the issues found in the code review at [plan directory path]/code_review.md. Address only the open findings from the most recent review. Commit the fix as fix(T<N>): <short description>.
+{{/delegate}}
 ```
 
 Cap per-task fix attempts at 2 per task. Each fix pass must leave no intended changes uncommitted before advancing.
@@ -179,11 +167,9 @@ If per-task review suggests non-blocking backlog items, ask the human whether to
 After all tasks complete:
 
 ```
-subagent({
-  agent: "code-reviewer",
-  task: "Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggested backlog items. Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.",
-  skill: "review-code"
-})
+{{delegate:codeReview skill=review-code}}
+Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggested backlog items. Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.
+{{/delegate}}
 ```
 
 ### Step 7: Fix and Re-Review (iterative)
@@ -195,10 +181,9 @@ If code review finds issues:
 4. Repeat until COMPLETE or cap (5 iterations)
 
 ```
-subagent({
-  agent: "worker",  // or "ui-worker" for UI-related findings
-  task: "Fix the issues found in [plan directory path]/code_review.md. Address all open Blocker, Critical, and Major findings."
-})
+{{delegate:fix}}
+Fix the issues found in [plan directory path]/code_review.md. Address all open Blocker, Critical, and Major findings.
+{{/delegate}}
 ```
 
 ### Step 8: Complete
@@ -245,5 +230,5 @@ When code review reports COMPLETE:
 - Do not let accepted follow-up work exist only in chat; record it in the repo backlog and source artifact
 - Do not treat optional backlog items as current-plan blockers unless they expose a significant correctness issue
 - Do not leave intended stage or task changes uncommitted before stopping, except when explicitly waiting for human review
-- Do not call subagents with `async: true` — every step depends on the previous step's output; use synchronous calls only
+- Do not run delegations asynchronously — every step depends on the previous step's output; use synchronous calls only
 - Do not push (all commits are local)

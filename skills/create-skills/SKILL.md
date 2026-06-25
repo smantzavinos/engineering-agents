@@ -1,7 +1,6 @@
 ---
 name: create-skills
 description: Create valid OpenCode SKILL.md skills (naming rules, frontmatter schema, discovery paths, templates) and optionally configure opencode.json skill permissions.
-compatibility: opencode
 metadata:
   audience: maintainers
   domain: opencode

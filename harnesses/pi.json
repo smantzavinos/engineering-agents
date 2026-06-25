@@ -1,0 +1,25 @@
+{
+  "id": "pi",
+  "compatibility": "pi",
+  "skillPathPrefix": "~/.pi/agent/skills/",
+  "delegationStyle": "pi-subagent",
+  "roles": {
+    "planner": { "kind": "agent", "agent": "planner" },
+    "planReview": { "kind": "agent", "agent": "plan-reviewer" },
+    "approachReview": { "kind": "agent", "agent": "plan-reviewer" },
+    "epicReview": { "kind": "agent", "agent": "plan-reviewer" },
+    "codeReview": { "kind": "agent", "agent": "code-reviewer" },
+    "worklog": { "kind": "agent", "agent": "worker" },
+    "executeTask": { "kind": "agent", "agent": "worker" },
+    "fix": { "kind": "agent", "agent": "worker" },
+    "research": { "kind": "agent", "agent": "worker" },
+    "researchExternal": { "kind": "agent", "agent": "researcher" },
+    "oracle": { "kind": "agent", "agent": "oracle" }
+  },
+  "notes": {
+    "ui-implementation-target": "`ui-worker`",
+    "discovery-design-handoff": "This looks ready for the Design phase. You can start a Design session to research the codebase and develop the approach.",
+    "design-execute-standard": "The approach is ready. You can now start the Execution phase. Switch to: `/preset execute` and then say 'Execute the plan at [path]. Auto-continue.'",
+    "design-execute-epic": "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'"
+  }
+}

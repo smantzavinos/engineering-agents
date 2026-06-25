@@ -529,19 +529,19 @@ in
       # ============================================================
       # Engineering workflow skills
       # ============================================================
-      ".pi/agent/skills/discovery".source = "${repoRoot}/skills/discovery";
-      ".pi/agent/skills/design".source = "${repoRoot}/skills/design";
-      ".pi/agent/skills/research".source = "${repoRoot}/skills/research";
-      ".pi/agent/skills/create-plan".source = "${repoRoot}/skills/create-plan";
-      ".pi/agent/skills/review-plan".source = "${repoRoot}/skills/review-plan";
-      ".pi/agent/skills/create-worklog".source = "${repoRoot}/skills/create-worklog";
-      ".pi/agent/skills/execute-task".source = "${repoRoot}/skills/execute-task";
-      ".pi/agent/skills/execution-orchestrator".source = "${repoRoot}/skills/execution-orchestrator";
-      ".pi/agent/skills/review-code".source = "${repoRoot}/skills/review-code";
-      ".pi/agent/skills/review-approach".source = "${repoRoot}/skills/review-approach";
-      ".pi/agent/skills/assess-repo".source = "${repoRoot}/skills/assess-repo";
-      ".pi/agent/skills/create-skills".source = "${repoRoot}/skills/create-skills";
-      ".pi/agent/skills/create-new-repo-docs".source = "${repoRoot}/skills/create-new-repo-docs";
+      ".pi/agent/skills/discovery".source = "${repoRoot}/dist/skills/pi/discovery";
+      ".pi/agent/skills/design".source = "${repoRoot}/dist/skills/pi/design";
+      ".pi/agent/skills/research".source = "${repoRoot}/dist/skills/pi/research";
+      ".pi/agent/skills/create-plan".source = "${repoRoot}/dist/skills/pi/create-plan";
+      ".pi/agent/skills/review-plan".source = "${repoRoot}/dist/skills/pi/review-plan";
+      ".pi/agent/skills/create-worklog".source = "${repoRoot}/dist/skills/pi/create-worklog";
+      ".pi/agent/skills/execute-task".source = "${repoRoot}/dist/skills/pi/execute-task";
+      ".pi/agent/skills/execution-orchestrator".source = "${repoRoot}/dist/skills/pi/execution-orchestrator";
+      ".pi/agent/skills/review-code".source = "${repoRoot}/dist/skills/pi/review-code";
+      ".pi/agent/skills/review-approach".source = "${repoRoot}/dist/skills/pi/review-approach";
+      ".pi/agent/skills/assess-repo".source = "${repoRoot}/dist/skills/pi/assess-repo";
+      ".pi/agent/skills/create-skills".source = "${repoRoot}/dist/skills/pi/create-skills";
+      ".pi/agent/skills/create-new-repo-docs".source = "${repoRoot}/dist/skills/pi/create-new-repo-docs";
 
       # ============================================================
       # Agent definitions

@@ -1,0 +1,25 @@
+{
+  "id": "opencode",
+  "compatibility": "opencode",
+  "skillPathPrefix": "~/.config/opencode/skills/",
+  "delegationStyle": "opencode-task",
+  "roles": {
+    "planner": { "kind": "category", "category": "ultrabrain" },
+    "worklog": { "kind": "category", "category": "unspecified-high" },
+    "executeTask": { "kind": "category", "category": "unspecified-high" },
+    "fix": { "kind": "category", "category": "unspecified-high" },
+    "research": { "kind": "subagent_type", "subagent_type": "explore" },
+    "researchExternal": { "kind": "subagent_type", "subagent_type": "librarian" },
+    "planReview": { "kind": "category", "category": "ultrabrain" },
+    "approachReview": { "kind": "category", "category": "ultrabrain" },
+    "epicReview": { "kind": "category", "category": "ultrabrain" },
+    "codeReview": { "kind": "category", "category": "ultrabrain" },
+    "oracle": { "kind": "category", "category": "ultrabrain" }
+  },
+  "notes": {
+    "ui-implementation-target": "the `visual-engineering` category",
+    "discovery-design-handoff": "This looks ready for the Design phase. Switch to the Design agent (press Tab) to research the codebase and develop the approach.",
+    "design-execute-standard": "The approach is ready. Switch to the Execute agent (press Tab) and say 'Execute the plan at [path]. Auto-continue.'",
+    "design-execute-epic": "The epic approach and decomposition are ready. Switch to the Execute agent (press Tab) and say 'Execute the epic at [path].'"
+  }
+}

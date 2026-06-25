@@ -1,7 +1,6 @@
 ---
 name: review-approach
 description: Review an approach.md for architectural soundness, completeness against the brief, boundary clarity, and risk coverage. Produces approach_review.md findings. Designed to be called iteratively until zero significant issues remain.
-compatibility: pi
 ---
 
 # Review Approach

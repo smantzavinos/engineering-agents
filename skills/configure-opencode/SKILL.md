@@ -1,7 +1,7 @@
 ---
 name: configure-opencode
 description: Create per-repo OpenCode overrides — a project-local .opencode/opencode.jsonc (model, plugins, providers, MCP enable/disable) and .opencode/oh-my-opencode.jsonc (per-agent and per-category model/variant/temperature overrides, disabled hooks/MCPs) for oh-my-openagent / engineering-agents agents. Use when a repo needs different models or agent behavior than the global ~/.config/opencode config, without editing global state or Nix.
-compatibility: opencode
+harnesses: [opencode]
 metadata:
   domain: opencode
 ---

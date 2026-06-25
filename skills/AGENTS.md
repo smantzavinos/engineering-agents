@@ -4,7 +4,14 @@ Read this file before creating or materially editing anything under `skills/`.
 
 ## Skill Structure
 - Each skill lives in `skills/<name>/` with a required `SKILL.md` entrypoint.
-- `SKILL.md` starts with YAML frontmatter. Keep `name`, `description`, and `compatibility` accurate; add other metadata only when it has a durable consumer.
+- `SKILL.md` files are **canonical, harness-neutral templates**. They are rendered per harness into `dist/skills/<harness>/` by `tools/render-skills.mjs`. See `docs/skill-rendering.md`.
+- `SKILL.md` starts with YAML frontmatter. Keep `name` and `description` accurate. Do **not** add a `compatibility:` line — the renderer injects it per harness. Add other metadata only when it has a durable consumer.
+- Use the `harnesses: [..]` frontmatter key only to restrict a skill to specific harnesses (default: all). Today only `configure-opencode` is restricted.
+- Express harness-specific delegation with macros, never with hardcoded `subagent(...)`/`task(...)` calls:
+  - `{{delegate:ROLE skill=NAME}}prompt text{{/delegate}}` (the `skill=` part is optional)
+  - `{{note:KEY}}` for harness-specific phrasing
+  - New roles/notes must be added to both `harnesses/pi.json` and `harnesses/opencode.json`.
+- After editing any skill, run `node tools/render-skills.mjs --write` and commit the regenerated `dist/`. Never hand-edit `dist/`.
 - Use `references/` for durable supporting artifacts such as templates, checklists, or example documents.
 - Use a local `templates/` directory only when the skill truly ships starter files that must stay next to the skill.
 - Keep the main skill file readable on its own; supporting files should reduce clutter, not hide the contract.

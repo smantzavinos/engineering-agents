@@ -369,6 +369,8 @@ Each sub-agent starts with **fresh context**. This is critical:
 | **`vision`** | Visual | Analyze screenshots, UI mockups, visual content | — |
 | **`oracle`** | Frontier (highest) | Read-only second opinion, architecture advice | — |
 
+> **Harness note:** The agent names in these tables describe the Pi roster, where every role is a named subagent. OpenCode ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool: reasoning-heavy roles (planning, all reviews, oracle) to `category="ultrabrain"`, implementation roles to `category="deep"` (UI to `visual-engineering`), and research to the built-in `explore` (codebase) and `librarian` (external) subagent types. The skill bodies are generated per harness from one canonical source — see [Skill Rendering](skill-rendering.md).
+
 ### Full Process with Agent Assignments
 
 | Stage | Invocation | Agent | Skill | Model Tier | Notes |

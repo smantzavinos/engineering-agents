@@ -179,11 +179,15 @@ pi
 
 ## Usage without Nix
 
-The `skills/`, `agents/`, and `docs/` directories are plain Markdown/JSON. You can copy them to any coding agent's configuration directory:
+Canonical skills in `skills/` are harness-neutral templates. The final per-harness skill files are generated into `dist/skills/<harness>/` by the renderer (`node tools/render-skills.mjs --write`). See [Skill Rendering](docs/skill-rendering.md) for the pipeline. The `agents/` and `docs/` directories are plain Markdown/JSON.
 
-- **Pi**: Copy skills to `~/.pi/agent/skills/`, agents to `~/.pi/agent/agents/`
-- **OpenCode**: Copy skills to `~/.config/opencode/skills/`
-- **Claude Code**: Reference skill files from `.claude/` configuration
+You can copy the generated trees to any coding agent's configuration directory:
+
+- **Pi**: Copy `dist/skills/pi/*` to `~/.pi/agent/skills/`, agents from `agents/` to `~/.pi/agent/agents/`
+- **OpenCode**: Copy `dist/skills/opencode/*` to `~/.config/opencode/skills/`
+- **Claude Code**: Reference rendered skill files from `.claude/` configuration
+
+> In OpenCode, the review and read-only-escalation roles are delegated via task categories rather than dedicated subagents — see [Skill Rendering](docs/skill-rendering.md).
 
 ## Core Principles
 

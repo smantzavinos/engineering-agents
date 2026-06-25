@@ -29,6 +29,7 @@ bash tests/specs/repo-structure-spec.sh
 bash tests/specs/repo-readiness-docs-spec.sh
 bash tests/specs/proof-set-runtime-spec.sh
 bash tests/specs/skill-content-spec.sh
+bash tests/specs/skill-render-spec.sh
 bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
@@ -56,6 +57,7 @@ New tests specific to this repo:
 - **`repo-readiness-docs-spec.sh`** — Root AGENTS routing and canonical contributor docs exist with required anchors
 - **`proof-set-runtime-spec.sh`** — Proof-set namespace resolution, deterministic ordering, and environment-failure propagation
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
+- **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`)
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
@@ -87,6 +89,7 @@ tests/
 │   ├── repo-readiness-docs-spec.sh  # Root routing and core contributor docs
 │   ├── proof-set-runtime-spec.sh    # Proof-set runtime contract regression checks
 │   ├── skill-content-spec.sh        # Skill quality checks
+│   ├── skill-render-spec.sh         # Skill render pipeline drift + delegation checks
 │   ├── pi-module-content-spec.sh    # Module content integrity
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation

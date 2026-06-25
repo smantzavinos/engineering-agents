@@ -194,12 +194,22 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "oh-my-openagent team mode is not enabled"
   fi
 
-  # Verify engineering workflow agents
-  for agent in discovery design execute planner plan-reviewer code-reviewer worker ui-worker researcher; do
+  # Verify OpenCode ships only the three primary mode agents
+  for agent in discovery design execute; do
     if [[ -f "$OC_FILES/.config/opencode/agents/$agent.md" ]]; then
       pass "OpenCode agent: $agent"
     else
       fail "OpenCode missing agent: $agent"
+    fi
+  done
+
+  # All engineering sub-roles are delegated via task categories or built-in
+  # subagent types in OpenCode, NOT shipped as custom subagents.
+  for agent in planner worker ui-worker researcher plan-reviewer code-reviewer oracle; do
+    if [[ -f "$OC_FILES/.config/opencode/agents/$agent.md" ]]; then
+      fail "OpenCode should not ship '$agent' as a subagent (category/subagent_type-delegated)"
+    else
+      pass "OpenCode does not ship '$agent' subagent (category/subagent_type-delegated)"
     fi
   done
 
@@ -228,8 +238,9 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "Discovery agent has incorrect switching reference"
   fi
 
-  # Verify execution orchestrator uses task tool (not subagent)
-  if grep -q 'task({' "$OC_FILES/.config/opencode/skills/execution-orchestrator/SKILL.md"; then
+  # Verify execution orchestrator uses the task tool (not Pi subagent calls)
+  if grep -q 'task(category=\|task(subagent_type=\|task({' "$OC_FILES/.config/opencode/skills/execution-orchestrator/SKILL.md" \
+     && ! grep -q 'subagent(' "$OC_FILES/.config/opencode/skills/execution-orchestrator/SKILL.md"; then
     pass "Execution orchestrator uses task tool delegation"
   else
     fail "Execution orchestrator missing task tool delegation"

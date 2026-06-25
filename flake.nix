@@ -184,12 +184,6 @@
           test -f "$cfgd/opencode/agents/discovery.md" || { echo "MISSING: agents/discovery.md"; exit 1; }
           test -f "$cfgd/opencode/agents/design.md" || { echo "MISSING: agents/design.md"; exit 1; }
           test -f "$cfgd/opencode/agents/execute.md" || { echo "MISSING: agents/execute.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/planner.md" || { echo "MISSING: agents/planner.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/code-reviewer.md" || { echo "MISSING: agents/code-reviewer.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/worker.md" || { echo "MISSING: agents/worker.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/ui-worker.md" || { echo "MISSING: agents/ui-worker.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/researcher.md" || { echo "MISSING: agents/researcher.md"; exit 1; }
-          test -f "$cfgd/opencode/agents/plan-reviewer.md" || { echo "MISSING: agents/plan-reviewer.md"; exit 1; }
           test -d "$cfgd/opencode/skills/discovery" || { echo "MISSING: skills/discovery"; exit 1; }
           test -d "$cfgd/opencode/skills/design" || { echo "MISSING: skills/design"; exit 1; }
           test -d "$cfgd/opencode/skills/execution-orchestrator" || { echo "MISSING: skills/execution-orchestrator"; exit 1; }

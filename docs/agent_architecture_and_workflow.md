@@ -2,6 +2,8 @@
 
 This document defines the three agent modes, how they interact, when sub-agents are spawned, and the complete flow from idea to implementation.
 
+> **Harness note:** The diagrams below show the Pi roster, where every role is a named sub-agent. OpenCode ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool: reasoning-heavy roles (planning, all reviews, oracle) to `category="ultrabrain"`, implementation roles to `category="deep"` (UI to `visual-engineering`), and research to the built-in `explore` (codebase) and `librarian` (external) sub-agent types. Skill bodies are generated per harness from one canonical source — see [Skill Rendering](skill-rendering.md).
+
 ---
 
 ## System Overview

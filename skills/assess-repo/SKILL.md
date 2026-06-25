@@ -1,7 +1,6 @@
 ---
 name: assess-repo
 description: Assess, set up, and update a repository for the autonomous engineering plan workflow. Checks documentation, test infrastructure, model configuration, and AGENTS.md hierarchy. Can diagnose gaps, create missing files, configure models, and update existing configuration when process requirements change.
-compatibility: pi
 ---
 
 # Assess & Configure Repo

@@ -6,7 +6,10 @@ This repository packages a reusable autonomous software-delivery process. It com
 ## Primary Surfaces
 - `docs/` — canonical process and reference documentation.
 - `agents/` — agent definitions and preset configuration.
-- `skills/` — reusable workflow skills used by the agents.
+- `skills/` — canonical, harness-neutral workflow skills (the single source edited by hand).
+- `harnesses/` — per-harness render profiles (`pi.json`, `opencode.json`) consumed by the skill renderer.
+- `tools/` — repo tooling, including `render-skills.mjs` (canonical skills × harness profiles → `dist/`).
+- `dist/` — generated per-harness skill trees (`dist/skills/<harness>/`), committed and drift-tested, never hand-edited. See `docs/skill-rendering.md`.
 - `nix/` and `flake.nix` — installation and packaging for Pi/OpenCode integration.
 - `templates/` — starter files for downstream repositories.
 - `tests/` — shell specs and contract checks for repo integrity and packaging behavior.
