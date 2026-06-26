@@ -199,10 +199,16 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fail "opencode.json default model is not GLM 5.2"
   fi
 
-  if jq -e '.agent.build.model == "openai/gpt-5.5" and .agent.plan.model == "openai/gpt-5.5"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
-    pass "opencode.json sets built-in build/plan agents to GPT 5.5"
+  if jq -e '.agent.build.model == "openai/gpt-5.5" and .agent.plan.model == "openai/gpt-5.5" and .agent.plan.mode == "primary"' "$OC_FILES/.config/opencode/opencode.json" >/dev/null 2>&1; then
+    pass "opencode.json keeps built-in plan primary on GPT 5.5"
   else
-    fail "opencode.json built-in build/plan agents not set to GPT 5.5"
+    fail "opencode.json does not keep built-in plan primary on GPT 5.5"
+  fi
+
+  if jq -e '.sisyphus_agent.planner_enabled == true and .sisyphus_agent.replace_plan == false' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+    pass "oh-my-openagent enables Prometheus without replacing plan"
+  else
+    fail "oh-my-openagent planner settings do not preserve plan visibility"
   fi
 
   if jq -e '.agents."multimodal-looker".model == "zai-coding-plan/glm-5v-turbo" and .agents."multimodal-looker".fallback_models == ["zai-coding-plan/glm-5.2"]' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then

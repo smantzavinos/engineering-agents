@@ -90,6 +90,8 @@ Each `harnesses/<id>.json` declares:
 - Implementation roles (worklog, task execution, fixes) → `category="unspecified-high"`. UI tasks use `category="visual-engineering"` (routed by the `ui-implementation-target` note, not a separate role).
 - Research roles → the built-in `explore` (codebase) and `librarian` (external/docs) subagent types, which are purpose-built for those jobs.
 
+> **Plan-agent visibility note:** OpenCode's native `plan` agent stays primary only when its OpenCode-native override keeps `mode: "primary"`. Under oh-my-openagent, overriding `agent.plan` without an explicit mode can cause the runtime loader to treat it as a subagent even if `sisyphus_agent.replace_plan = false`. Keep this in mind for generated config and repo-local `.opencode/opencode.jsonc` overrides.
+
 > **Model-tier note:** OpenCode implementation roles use `category="unspecified-high"` (glm-5.2 by default). To increase quality for heavier tasks, point `executeTask` at `deep` or `ultrabrain` in `harnesses/opencode.json`, or retune the category model in `nix/modules/opencode/config.nix`.
 
 ## Renderer commands

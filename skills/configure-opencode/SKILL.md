@@ -75,6 +75,20 @@ Key fields:
 - `mcp` — per-server config; set `"enabled": false` to silence a global MCP, or add a new local/remote server.
 - `share` — `"disabled"` to prevent session sharing.
 
+### Important: preserving the built-in `plan` agent
+If you override `agent.plan` in `.opencode/opencode.jsonc`, include `"mode": "primary"` unless you intentionally want `plan` to become a subagent. In current oh-my-openagent runtime behavior, config-defined agents with no explicit `mode` can be defaulted to `subagent`, even when `sisyphus_agent.replace_plan` is `false`.
+
+Safe pattern:
+
+```jsonc
+"agent": {
+  "plan": {
+    "model": "github-copilot/gpt-5.5",
+    "mode": "primary"
+  }
+}
+```
+
 ## File 2 — `.opencode/oh-my-opencode.jsonc` (agent + category model overrides)
 oh-my-openagent / engineering-agents config. Use it to route specific agents and delegation categories to specific models.
 
@@ -118,6 +132,8 @@ Lowercase except `OpenCode-Builder`. Verify against the schema for the plugin ve
 
 Per-agent fields: `model` (required to override), `variant` (e.g. `xhigh` for reasoning models), `prompt_append` (extra system text for that agent).
 
+`agents.plan` in `.opencode/oh-my-opencode.jsonc` only tunes the oh-my-openagent-side planner settings. It does **not** replace the need to keep OpenCode's native `agent.plan` primary when you override it in `.opencode/opencode.jsonc`.
+
 ### Valid category keys
 `quick`, `ultrabrain`, `writing`, `visual-engineering`, `artistry`, `unspecified-low`, `unspecified-high`, `deep`.
 
@@ -148,5 +164,6 @@ Per-category fields: `model`, `temperature`.
 
 ## Troubleshooting
 - **Keys ignored silently** — agent/category key does not match the schema. Use lowercase keys (except `OpenCode-Builder`) and check the schema for your pinned plugin version.
+- **`plan` disappeared from the agent picker** — if `.opencode/opencode.jsonc` overrides `agent.plan`, add `"mode": "primary"`. `sisyphus_agent.replace_plan = false` alone may not preserve visibility when the OpenCode-native `plan` override omits `mode`.
 - **"Configured model not found" / fallback** — the model ID is unavailable. Run `opencode models` and pick a valid ID, or authenticate the provider via `opencode auth login`.
 - **Override not applied** — confirm the file is at `.opencode/<name>.jsonc` in the repo OpenCode is running from, valid JSONC, and that OpenCode was restarted.

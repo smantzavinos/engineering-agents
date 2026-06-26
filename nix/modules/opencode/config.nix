@@ -199,6 +199,10 @@ let
     };
     plan = {
       model = "openai/gpt-5.5";
+      # Keep the native OpenCode plan agent visible. oh-my-openagent's
+      # runtime loader defaults config-defined agents to subagent mode when
+      # mode is omitted, even when sisyphus_agent.replace_plan = false.
+      mode = "primary";
     };
   };
 
