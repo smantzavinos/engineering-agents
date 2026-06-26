@@ -139,7 +139,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `defaultThinkingLevel` | `"medium"` | Default thinking level |
 | `theme` | `"catppuccin-mocha"` | Pi theme |
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
-| `enableGitNexus` | `true` | Install GitNexus knowledge graph CLI |
+| `enableGitNexus` | `false` | Enable the GitNexus CLI and `pi-gitnexus` managed package |
 | `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
 | `enableVisualExplainer` | `true` | Install visual-explainer skill |
 

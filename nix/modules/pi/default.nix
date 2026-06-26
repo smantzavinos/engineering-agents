@@ -219,9 +219,10 @@ let
     };
   };
 
-  piManagedPackageIds = builtins.attrNames piPackages;
-  piRuntimePackageIds = builtins.filter (packageId: piPackages.${packageId}.source.type != "local") piManagedPackageIds;
-  piManagedPackageList = map (packageId: (piPackages.${packageId} // { inherit packageId; })) piManagedPackageIds;
+  enabledPiPackages = lib.filterAttrs (packageId: _: cfg.enableGitNexus || packageId != "pi-gitnexus") piPackages;
+  piManagedPackageIds = builtins.attrNames enabledPiPackages;
+  piRuntimePackageIds = builtins.filter (packageId: enabledPiPackages.${packageId}.source.type != "local") piManagedPackageIds;
+  piManagedPackageList = map (packageId: (enabledPiPackages.${packageId} // { inherit packageId; })) piManagedPackageIds;
 
   visualExplainerRepo = "https://github.com/nicobailon/visual-explainer.git";
   agentKitRepo = "https://github.com/aldoborrero/agent-kit.git";
@@ -327,8 +328,8 @@ in
 
     enableGitNexus = lib.mkOption {
       type = lib.types.bool;
-      default = true;
-      description = "Install GitNexus knowledge graph CLI";
+      default = false;
+      description = "Enable GitNexus CLI and the pi-gitnexus managed package";
     };
 
     enableAgentKit = lib.mkOption {

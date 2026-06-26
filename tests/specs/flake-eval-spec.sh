@@ -19,6 +19,13 @@ PASS=0 FAIL=0
 pass() { PASS=$((PASS + 1)); printf '  PASS: %s\n' "$1"; }
 fail() { FAIL=$((FAIL + 1)); printf '  FAIL: %s\n' "$1" >&2; }
 
+store_file_from_activate() {
+  local activate_path="$1"
+  local suffix="$2"
+
+  grep -o "/nix/store/[^\" ]*-${suffix}" "$activate_path" | head -1 || true
+}
+
 # ============================================================
 printf 'Flake module instantiation verification\n'
 printf '========================================\n\n'
@@ -47,6 +54,22 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     pass "Pi module produces models.json"
   else
     fail "Pi module missing models.json in activation package"
+  fi
+
+  PI_MANAGED_PACKAGES_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages.json')"
+  if [[ -n "$PI_MANAGED_PACKAGES_JSON" ]] \
+    && jq -e 'all(.packages[]; .packageId != "pi-gitnexus")' "$PI_MANAGED_PACKAGES_JSON" >/dev/null 2>&1; then
+    pass "Pi module excludes pi-gitnexus from managed package declarations by default"
+  else
+    fail "Pi module still declares pi-gitnexus in managed package declarations by default"
+  fi
+
+  PI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-settings-nix.json')"
+  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e 'all(.packages[]; . != "./packages/pi-gitnexus")' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi module excludes pi-gitnexus from configured Pi packages by default"
+  else
+    fail "Pi module still configures ./packages/pi-gitnexus by default"
   fi
 
   if [[ -f "$PI_FILES/.pi/agent/mcp.json" ]]; then

@@ -317,7 +317,6 @@
               home.homeDirectory = testHome;
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
-              engineering-agents.pi.enableGitNexus = false;
               engineering-agents.pi.enableAgentKit = false;
               engineering-agents.pi.enableVisualExplainer = false;
             }
@@ -348,7 +347,6 @@
               home.homeDirectory = testHome;
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
-              engineering-agents.pi.enableGitNexus = false;
               engineering-agents.pi.enableAgentKit = false;
               engineering-agents.pi.enableVisualExplainer = false;
               engineering-agents.opencode.enable = true;
