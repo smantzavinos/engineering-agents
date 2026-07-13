@@ -251,6 +251,14 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fi
   done
 
+  # Verify the visual-explainer skill is installed by default (external
+  # pinned skill wired via the visualExplainer flake input + extraSkills).
+  if [[ -f "$OC_FILES/.config/opencode/skills/visual-explainer/SKILL.md" ]]; then
+    pass "OpenCode installs visual-explainer skill by default"
+  else
+    fail "OpenCode missing visual-explainer skill"
+  fi
+
   # Verify adapted skills have opencode compatibility
   for skill in discovery design execution-orchestrator; do
     if grep -q 'compatibility: opencode' "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" 2>/dev/null; then

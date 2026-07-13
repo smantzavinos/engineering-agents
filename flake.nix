@@ -15,9 +15,15 @@
       url = "github:numtide/llm-agents.nix";
     };
 
+    # Visual Explainer skill (external, non-flake source)
+    visualExplainer = {
+      url = "github:nicobailon/visual-explainer";
+      flake = false;
+    };
+
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents, visualExplainer }:
     let
       # System types to support
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -67,7 +73,7 @@
         pi = import ./nix/modules/pi { inherit self llmAgents; };
 
         # OpenCode CLI module
-        opencode = import ./nix/modules/opencode { inherit self llmAgents; };
+        opencode = import ./nix/modules/opencode { inherit self llmAgents visualExplainer; };
       };
 
       # ============================================================
@@ -75,7 +81,7 @@
       # ============================================================
       nixosModules = {
         # OpenCode config delivery for system users via activation script
-        opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self llmAgents; };
+        opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self llmAgents visualExplainer; };
       };
 
       # ============================================================

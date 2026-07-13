@@ -18,7 +18,7 @@
 #   imports = [ engineering-agents.homeManagerModules.opencode ];
 #   engineering-agents.opencode.enable = true;
 #
-{ self, llmAgents }:
+{ self, llmAgents, visualExplainer }:
 
 { config, lib, pkgs, ... }:
 
@@ -42,6 +42,12 @@ in
       description = "Enable tmux integration for background subagents";
     };
 
+    enableVisualExplainer = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the visual-explainer skill";
+    };
+
     enableServer = lib.mkEnableOption "OpenCode server systemd service";
     serverPort = lib.mkOption {
       type = lib.types.port;
@@ -61,6 +67,9 @@ in
     xdg.configFile = let
       cfgd = makeOpenCodeConfig {
         inherit (cfg) model enableTmux;
+        extraSkills = lib.optionalAttrs cfg.enableVisualExplainer {
+          visual-explainer = "${visualExplainer}/plugins/visual-explainer";
+        };
       };
     in {
       "opencode/opencode.json".source        = "${cfgd}/opencode/opencode.json";

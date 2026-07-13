@@ -141,7 +141,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
 | `enableGitNexus` | `false` | Enable the GitNexus CLI and `pi-gitnexus` managed package |
 | `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
-| `enableVisualExplainer` | `true` | Install visual-explainer skill |
+| `enableVisualExplainer` | `true` | Install visual-explainer skill (external cloned skill; Pi flavor) |
 
 ### OpenCode Module (`engineering-agents.opencode`)
 
@@ -150,6 +150,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `enable` | `false` | Enable OpenCode with engineering-agents configuration |
 | `model` | `openai/gpt-5.5` | Default model |
 | `enableTmux` | `true` | Enable tmux integration |
+| `enableVisualExplainer` | `true` | Install the visual-explainer skill (pinned via the `visualExplainer` flake input) |
 | `enableServer` | `false` | Enable OpenCode server systemd service |
 | `serverPort` | `3124` | Server port |
 

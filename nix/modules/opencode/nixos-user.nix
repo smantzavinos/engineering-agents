@@ -19,7 +19,7 @@
 #     };
 #   };
 #
-{ self, llmAgents }:
+{ self, llmAgents, visualExplainer }:
 
 { config, lib, pkgs, ... }:
 
@@ -65,6 +65,12 @@ in
       '';
     };
 
+    enableVisualExplainer = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the visual-explainer skill.";
+    };
+
     package = lib.mkOption {
       type = lib.types.package;
       default = llmAgents.packages.${pkgs.system}.opencode;
@@ -83,7 +89,14 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (let cfgd = makeOpenCodeConfig cfg.args; in {
+  config = lib.mkIf cfg.enable (let
+    forwardedArgs = cfg.args // {
+      extraSkills = (cfg.args.extraSkills or {}) // lib.optionalAttrs cfg.enableVisualExplainer {
+        visual-explainer = "${visualExplainer}/plugins/visual-explainer";
+      };
+    };
+    cfgd = makeOpenCodeConfig forwardedArgs;
+  in {
     # Delivered via system.activationScripts, NOT systemd.tmpfiles.rules.
     # tmpfiles runs as root and refuses to write into any path that passes
     # through a non-root-owned directory ("unsafe path transition" —

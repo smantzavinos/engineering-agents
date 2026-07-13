@@ -176,7 +176,8 @@
         "home-manager": "home-manager",
         "llmAgents": "llmAgents",
         "nixpkgs": "nixpkgs_2",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "visualExplainer": "visualExplainer"
       }
     },
     "systems": {
@@ -212,6 +213,22 @@
       "original": {
         "owner": "numtide",
         "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "visualExplainer": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782373596,
+        "narHash": "sha256-LBqLqz7Irc8nSHuUUB25Nqn5qQa/ItgpojR/U+RVimc=",
+        "owner": "nicobailon",
+        "repo": "visual-explainer",
+        "rev": "528b71feb85dab5d92b82c3554880826f50a75da",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nicobailon",
+        "repo": "visual-explainer",
         "type": "github"
       }
     }
