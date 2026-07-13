@@ -107,6 +107,24 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fi
   done
 
+  # Verify visual-explainer is installed from the pinned flake input (not a
+  # runtime git clone) and that slash-command prompts come from commands/.
+  if grep -q 'cp -r /nix/store/[^ ]*/plugins/visual-explainer' "$PI_OUT/activate"; then
+    pass "Pi module installs visual-explainer from pinned store source"
+  else
+    fail "Pi module does not install visual-explainer from pinned store source"
+  fi
+  if ! grep -q 'git clone .*visual-explainer' "$PI_OUT/activate"; then
+    pass "Pi module no longer clones visual-explainer at activation"
+  else
+    fail "Pi module still clones visual-explainer at activation"
+  fi
+  if grep -q 'VISUAL_EXPLAINER_DIR/commands/' "$PI_OUT/activate"; then
+    pass "Pi module installs visual-explainer prompts from commands/"
+  else
+    fail "Pi module does not install visual-explainer prompts from commands/"
+  fi
+
   # Verify agents are linked
   for agent in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle; do
     if [[ -f "$PI_FILES/.pi/agent/agents/$agent.md" ]]; then

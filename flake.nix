@@ -70,7 +70,7 @@
         };
 
         # Pi coding agent module
-        pi = import ./nix/modules/pi { inherit self llmAgents; };
+        pi = import ./nix/modules/pi { inherit self llmAgents visualExplainer; };
 
         # OpenCode CLI module
         opencode = import ./nix/modules/opencode { inherit self llmAgents visualExplainer; };
@@ -324,7 +324,7 @@
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
               engineering-agents.pi.enableAgentKit = false;
-              engineering-agents.pi.enableVisualExplainer = false;
+              engineering-agents.pi.enableVisualExplainer = true;
             }
           ];
         };
@@ -354,7 +354,7 @@
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
               engineering-agents.pi.enableAgentKit = false;
-              engineering-agents.pi.enableVisualExplainer = false;
+              engineering-agents.pi.enableVisualExplainer = true;
               engineering-agents.opencode.enable = true;
             }
           ];

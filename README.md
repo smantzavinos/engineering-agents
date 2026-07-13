@@ -141,7 +141,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
 | `enableGitNexus` | `false` | Enable the GitNexus CLI and `pi-gitnexus` managed package |
 | `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
-| `enableVisualExplainer` | `true` | Install visual-explainer skill (external cloned skill; Pi flavor) |
+| `enableVisualExplainer` | `true` | Install visual-explainer skill (pinned via the `visualExplainer` flake input) |
 
 ### OpenCode Module (`engineering-agents.opencode`)
 

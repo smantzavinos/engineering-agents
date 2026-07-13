@@ -9,7 +9,7 @@
 #
 # Then: home-manager switch --flake .#<hostname>
 #
-{ self, llmAgents }:
+{ self, llmAgents, visualExplainer }:
 
 { config, lib, pkgs, ... }:
 
@@ -224,7 +224,7 @@ let
   piRuntimePackageIds = builtins.filter (packageId: enabledPiPackages.${packageId}.source.type != "local") piManagedPackageIds;
   piManagedPackageList = map (packageId: (enabledPiPackages.${packageId} // { inherit packageId; })) piManagedPackageIds;
 
-  visualExplainerRepo = "https://github.com/nicobailon/visual-explainer.git";
+  visualExplainerSkill = "${visualExplainer}/plugins/visual-explainer";
   agentKitRepo = "https://github.com/aldoborrero/agent-kit.git";
   agentKitRev = "16b100a70195852b291720e7213eed51c714d230";
 
@@ -771,17 +771,16 @@ EOF
       installVisualExplainer = lib.mkIf cfg.enableVisualExplainer (lib.hm.dag.entryAfter [ "writeBoundary" "installPiExtensions" ] ''
         VISUAL_EXPLAINER_DIR="$HOME/.pi/agent/skills/visual-explainer"
 
-        if [ ! -d "$VISUAL_EXPLAINER_DIR" ]; then
-          echo "Cloning visual-explainer skill..."
-          ${pkgs.git}/bin/git clone ${visualExplainerRepo} "$VISUAL_EXPLAINER_DIR"
-        else
-          echo "Updating visual-explainer skill..."
-          (cd "$VISUAL_EXPLAINER_DIR" && ${pkgs.git}/bin/git pull --rebase) || echo "Warning: visual-explainer update failed"
-        fi
+        echo "Installing visual-explainer skill from pinned source..."
+        rm -rf "$VISUAL_EXPLAINER_DIR"
+        mkdir -p "$(dirname "$VISUAL_EXPLAINER_DIR")"
+        cp -r ${visualExplainerSkill} "$VISUAL_EXPLAINER_DIR"
+        chmod -R u+w "$VISUAL_EXPLAINER_DIR"
 
-        if [ -d "$VISUAL_EXPLAINER_DIR/prompts" ]; then
+        # Slash-command prompts ship under commands/ in the upstream skill.
+        if [ -d "$VISUAL_EXPLAINER_DIR/commands" ]; then
           mkdir -p "$HOME/.pi/agent/prompts"
-          cp -r "$VISUAL_EXPLAINER_DIR/prompts/"*.md "$HOME/.pi/agent/prompts/" 2>/dev/null || true
+          cp "$VISUAL_EXPLAINER_DIR/commands/"*.md "$HOME/.pi/agent/prompts/" 2>/dev/null || true
         fi
 
         echo "visual-explainer installed"
