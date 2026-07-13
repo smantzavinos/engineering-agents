@@ -398,6 +398,10 @@ in
         mailbox_poll_interval_ms = 3000;
       };
 
+      ralph_loop = {
+        enabled = true;
+      };
+
       agents = resolvedAgents;
       categories = resolvedCategories;
     };
