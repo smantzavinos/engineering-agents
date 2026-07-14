@@ -9,7 +9,7 @@
 #
 # Then: home-manager switch --flake .#<hostname>
 #
-{ self, llmAgents, visualExplainer }:
+{ self, llmAgents, visualExplainer, agentKit }:
 
 { config, lib, pkgs, ... }:
 
@@ -225,8 +225,7 @@ let
   piManagedPackageList = map (packageId: (enabledPiPackages.${packageId} // { inherit packageId; })) piManagedPackageIds;
 
   visualExplainerSkill = "${visualExplainer}/plugins/visual-explainer";
-  agentKitRepo = "https://github.com/aldoborrero/agent-kit.git";
-  agentKitRev = "16b100a70195852b291720e7213eed51c714d230";
+  agentKitSrc = agentKit;
 
   piPkg = llmAgents.packages.${pkgs.system}.pi;
   checkUpdatesPkg = self.packages.${pkgs.system}.check-updates;
@@ -801,36 +800,23 @@ EOF
       '');
 
       installAgentKit = lib.mkIf cfg.enableAgentKit (lib.hm.dag.entryAfter [ "writeBoundary" "installPiExtensions" ] ''
-        AGENT_KIT_DIR="$HOME/.pi/agent/repos/agent-kit"
         DIRENV_EXT="$HOME/.pi/agent/extensions/direnv"
         AST_GREP_EXT="$HOME/.pi/agent/extensions/ast-grep"
+        AST_GREP_SKILL="$HOME/.pi/agent/skills/ast-grep"
 
-        if [ ! -d "$AGENT_KIT_DIR" ]; then
-          echo "Cloning agent-kit repository..."
-          ${pkgs.git}/bin/git clone ${agentKitRepo} "$AGENT_KIT_DIR"
-          (cd "$AGENT_KIT_DIR" && ${pkgs.git}/bin/git checkout ${agentKitRev})
-        else
-          CURRENT_REV=$(cd "$AGENT_KIT_DIR" && ${pkgs.git}/bin/git rev-parse HEAD)
-          if [ "$CURRENT_REV" != "${agentKitRev}" ]; then
-            echo "Updating agent-kit to pinned commit ${agentKitRev}..."
-            (cd "$AGENT_KIT_DIR" && ${pkgs.git}/bin/git fetch origin && ${pkgs.git}/bin/git checkout ${agentKitRev})
-          else
-            echo "agent-kit already at pinned commit ${agentKitRev}"
-          fi
-        fi
-
+        echo "Installing agent-kit extensions and skills from pinned source..."
         mkdir -p "$HOME/.pi/agent/extensions"
+
         rm -rf "$DIRENV_EXT"
         mkdir -p "$DIRENV_EXT"
-        ln -sf "$AGENT_KIT_DIR/pi/extensions/direnv/direnv.ts" "$DIRENV_EXT/index.ts"
+        ln -sf ${agentKitSrc}/extensions/direnv/direnv.ts "$DIRENV_EXT/index.ts"
 
         rm -rf "$AST_GREP_EXT"
         mkdir -p "$AST_GREP_EXT"
-        ln -sf "$AGENT_KIT_DIR/pi/extensions/ast-grep/ast-grep.ts" "$AST_GREP_EXT/index.ts"
+        ln -sf ${agentKitSrc}/extensions/ast-grep/ast-grep.ts "$AST_GREP_EXT/index.ts"
 
-        AST_GREP_SKILL="$HOME/.pi/agent/skills/ast-grep"
         rm -rf "$AST_GREP_SKILL"
-        ln -sf "$AGENT_KIT_DIR/skills/ast-grep" "$AST_GREP_SKILL"
+        ln -sf ${agentKitSrc}/skills/ast-grep "$AST_GREP_SKILL"
 
         echo "agent-kit extensions and skills installed"
       '');

@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "agentKit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1775038208,
+        "narHash": "sha256-x8GJYqBNnVBIoG8T4HoITySZgvE94OKXNnwF8ZJN/Dc=",
+        "owner": "aldoborrero",
+        "repo": "agent-kit",
+        "rev": "16b100a70195852b291720e7213eed51c714d230",
+        "type": "github"
+      },
+      "original": {
+        "owner": "aldoborrero",
+        "repo": "agent-kit",
+        "rev": "16b100a70195852b291720e7213eed51c714d230",
+        "type": "github"
+      }
+    },
     "blueprint": {
       "inputs": {
         "nixpkgs": [
@@ -173,6 +190,7 @@
     },
     "root": {
       "inputs": {
+        "agentKit": "agentKit",
         "home-manager": "home-manager",
         "llmAgents": "llmAgents",
         "nixpkgs": "nixpkgs_2",

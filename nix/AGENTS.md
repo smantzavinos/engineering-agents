@@ -10,6 +10,7 @@ Read this file before editing modules, generated-package helpers, or checked-in 
 ## Managed Package Sources
 - Every `git`-source managed package in `nix/modules/pi/default.nix` must pin an immutable 40-hex commit (not a branch/tag ref). This keeps no-change home-manager rebuilds offline and fast: the activation script resolves the commit purely and skips the uninstall/reinstall when the installed `installedCommit` already matches. Mutable refs force a `git ls-remote` and defeat the skip.
 - To update a git-source package, bump its `spec`/`installSpec` commit (nixpkgs-style) and update `tests/fixtures/proof-set.json` in the same change. The `startup-staleness-warning` extension surfaces when an upstream branch has moved past the pin.
+- External skills/extensions that are not npm managed packages (`visual-explainer`, `agent-kit`) come from pinned non-flake flake inputs (`visualExplainer`, `agentKit`) and are wired via store-path symlinks/copies in the activation script — never runtime `git clone`. Update them with `nix flake update <input>`. When wiring paths, verify the target exists in the pinned tree: agent-kit's Pi extensions live at `extensions/<name>/<name>.ts` (a stale `pi/extensions/...` path silently produces dangling symlinks).
 
 ## Compile Helper Behavior
 - `nix/modules/pi/compile-managed-packages.mjs` is a contract helper, not a scratch script.

@@ -21,9 +21,15 @@
       flake = false;
     };
 
+    # agent-kit: Pi extensions (direnv, ast-grep) + ast-grep skill (external, non-flake source)
+    agentKit = {
+      url = "github:aldoborrero/agent-kit/16b100a70195852b291720e7213eed51c714d230";
+      flake = false;
+    };
+
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents, visualExplainer }:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, llmAgents, visualExplainer, agentKit }:
     let
       # System types to support
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
@@ -70,7 +76,7 @@
         };
 
         # Pi coding agent module
-        pi = import ./nix/modules/pi { inherit self llmAgents visualExplainer; };
+        pi = import ./nix/modules/pi { inherit self llmAgents visualExplainer agentKit; };
 
         # OpenCode CLI module
         opencode = import ./nix/modules/opencode { inherit self llmAgents visualExplainer; };
@@ -323,7 +329,7 @@
               home.homeDirectory = testHome;
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
-              engineering-agents.pi.enableAgentKit = false;
+              engineering-agents.pi.enableAgentKit = true;
               engineering-agents.pi.enableVisualExplainer = true;
             }
           ];
@@ -353,7 +359,7 @@
               home.homeDirectory = testHome;
               home.stateVersion = "25.05";
               engineering-agents.pi.enable = true;
-              engineering-agents.pi.enableAgentKit = false;
+              engineering-agents.pi.enableAgentKit = true;
               engineering-agents.pi.enableVisualExplainer = true;
               engineering-agents.opencode.enable = true;
             }

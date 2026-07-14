@@ -144,6 +144,28 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module has a git-source package using a mutable ref (branch/tag)"
   fi
 
+  # Verify agent-kit installs from the pinned flake input (no runtime clone)
+  # and that its extension symlink targets resolve to real files in the store
+  # (guards against the historical pi/extensions/ dangling-symlink bug).
+  if ! grep -q 'git clone\|git fetch' "$PI_OUT/activate"; then
+    pass "Pi module no longer clones agent-kit at activation"
+  else
+    fail "Pi module still clones/fetches agent-kit at activation"
+  fi
+  AK_OK=1
+  for target in $(grep -oE 'ln -sf /nix/store/[^ ]*(extensions/(direnv/direnv|ast-grep/ast-grep)\.ts|skills/ast-grep)' "$PI_OUT/activate" | awk '{print $3}'); do
+    if [[ ! -e "$target" ]]; then
+      AK_OK=0
+      printf '    dangling agent-kit target: %s\n' "$target" >&2
+    fi
+  done
+  AK_COUNT=$(grep -cE 'ln -sf /nix/store/[^ ]*(extensions/(direnv/direnv|ast-grep/ast-grep)\.ts|skills/ast-grep)' "$PI_OUT/activate" || true)
+  if [[ "$AK_OK" == "1" && "$AK_COUNT" == "3" ]]; then
+    pass "Pi module links agent-kit extensions/skill from pinned store source (no dangling targets)"
+  else
+    fail "Pi module agent-kit symlinks are missing or dangling (found $AK_COUNT/3 valid)"
+  fi
+
   # Verify agents are linked
   for agent in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle; do
     if [[ -f "$PI_FILES/.pi/agent/agents/$agent.md" ]]; then
