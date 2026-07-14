@@ -22,8 +22,8 @@ let
       source = {
         type = "git";
         packageName = "pi-subagents";
-        spec = "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources";
-        installSpec = "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources";
+        spec = "github:smantzavinos/pi-subagents#7fd616409b032fb942b311765578a3adb9b79586";
+        installSpec = "github:smantzavinos/pi-subagents#7fd616409b032fb942b311765578a3adb9b79586";
       };
     };
 
@@ -213,8 +213,8 @@ let
       source = {
         type = "git";
         packageName = "pi-gitnexus";
-        spec = "github:smantzavinos/pi-gitnexus#fix/session-shutdown-cleanup";
-        installSpec = "github:smantzavinos/pi-gitnexus#fix/session-shutdown-cleanup";
+        spec = "github:smantzavinos/pi-gitnexus#fa63bd3f6156cec943e42411ec0fc1909181dd2c";
+        installSpec = "github:smantzavinos/pi-gitnexus#fa63bd3f6156cec943e42411ec0fc1909181dd2c";
       };
     };
   };
@@ -699,23 +699,37 @@ in
           | @tsv
         ' "$MANAGED_PACKAGES_FILE" |
         while IFS=$'\t' read -r package_name install_spec; do
-          local_metadata_path="$HOME/.pi/packages/lib/node_modules/$package_name/.pi-managed-install.json"
+          package_dir="$HOME/.pi/packages/lib/node_modules/$package_name"
+          local_metadata_path="$package_dir/.pi-managed-install.json"
+
+          # Resolve the commit this spec should install to. For a 40-hex commit
+          # spec this is a pure comparison (no network); for a branch/tag/semver
+          # ref it performs a single `git ls-remote` to find the current target.
+          git_metadata="$(resolve_git_install_metadata "$install_spec")" || {
+            echo "Failed to resolve git metadata for $package_name ($install_spec)" >&2
+            exit 1
+          }
+          IFS=$'\t' read -r target_commit requested_ref_type <<< "$git_metadata"
+
+          # Skip the expensive uninstall/reinstall when the resolved commit
+          # already matches what is installed (mirrors the npm version gate).
+          if [ -d "$package_dir" ] && [ -f "$local_metadata_path" ]; then
+            current_commit="$(${pkgs.jq}/bin/jq -r '.installedCommit // ""' "$local_metadata_path" 2>/dev/null || echo "")"
+            if [ "$current_commit" = "$target_commit" ]; then
+              echo "Skipping $package_name (already at $target_commit)"
+              continue
+            fi
+          fi
 
           echo "Installing $package_name from $install_spec (git source)..."
           npm uninstall -g "$package_name" >/dev/null 2>&1 || true
-          rm -rf "$HOME/.pi/packages/lib/node_modules/$package_name"
+          rm -rf "$package_dir"
           npm install -g --install-links --legacy-peer-deps "$install_spec" 2>&1
-
-          git_metadata="$(resolve_git_install_metadata "$install_spec")" || {
-            echo "Failed to resolve installed git metadata for $package_name ($install_spec)" >&2
-            exit 1
-          }
-          IFS=$'\t' read -r installed_commit requested_ref_type <<< "$git_metadata"
 
           cat > "$local_metadata_path" <<EOF
 {
   "schemaVersion": 1,
-  "installedCommit": "$installed_commit",
+  "installedCommit": "$target_commit",
   "requestedRefType": "$requested_ref_type"
 }
 EOF

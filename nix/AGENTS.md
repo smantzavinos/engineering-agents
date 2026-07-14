@@ -7,6 +7,10 @@ Read this file before editing modules, generated-package helpers, or checked-in 
 - Keep `nix/modules/opencode/` focused on OpenCode configuration and plugin wiring.
 - Do not move repo-process policy into Nix unless it materially affects generated configuration or installation behavior.
 
+## Managed Package Sources
+- Every `git`-source managed package in `nix/modules/pi/default.nix` must pin an immutable 40-hex commit (not a branch/tag ref). This keeps no-change home-manager rebuilds offline and fast: the activation script resolves the commit purely and skips the uninstall/reinstall when the installed `installedCommit` already matches. Mutable refs force a `git ls-remote` and defeat the skip.
+- To update a git-source package, bump its `spec`/`installSpec` commit (nixpkgs-style) and update `tests/fixtures/proof-set.json` in the same change. The `startup-staleness-warning` extension surfaces when an upstream branch has moved past the pin.
+
 ## Compile Helper Behavior
 - `nix/modules/pi/compile-managed-packages.mjs` is a contract helper, not a scratch script.
 - Preserve its documented CLI surface, exit codes, deterministic ordering, and generated output shape when changing it.

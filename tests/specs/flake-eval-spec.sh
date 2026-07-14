@@ -125,6 +125,25 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module does not install visual-explainer prompts from commands/"
   fi
 
+  # Verify git-source packages are only reinstalled when their resolved commit
+  # changes (idempotent rebuilds), not unconditionally on every activation.
+  if grep -q 'Skipping \$package_name (already at \$target_commit)' "$PI_OUT/activate" \
+     && grep -q 'if \[ "\$current_commit" = "\$target_commit" \]; then' "$PI_OUT/activate"; then
+    pass "Pi module skips git reinstall when installed commit already matches"
+  else
+    fail "Pi module unconditionally reinstalls git-source packages"
+  fi
+
+  # Verify every managed git source is pinned to an immutable 40-hex commit so
+  # no-change rebuilds resolve offline (no git ls-remote / npm install).
+  PI_MANAGED_PACKAGES_ALL="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages.json')"
+  if [[ -n "$PI_MANAGED_PACKAGES_ALL" ]] \
+    && jq -e 'all(.packages[] | select(.source.type == "git") | .source.installSpec; test("#[0-9a-fA-F]{40}$"))' "$PI_MANAGED_PACKAGES_ALL" >/dev/null 2>&1; then
+    pass "Pi module pins every git-source package to an immutable commit"
+  else
+    fail "Pi module has a git-source package using a mutable ref (branch/tag)"
+  fi
+
   # Verify agents are linked
   for agent in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle; do
     if [[ -f "$PI_FILES/.pi/agent/agents/$agent.md" ]]; then

@@ -16,7 +16,7 @@
     {
       "packageId": "pi-subagents",
       "sourceManifestName": "pi-subagents",
-      "sourceSpec": "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources",
+      "sourceSpec": "github:smantzavinos/pi-subagents#7fd616409b032fb942b311765578a3adb9b79586",
       "resourceExpectations": {
         "extensions": [
           "./src/extension/index.ts"
