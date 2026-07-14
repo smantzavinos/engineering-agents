@@ -28,18 +28,6 @@
       }
     },
     {
-      "packageId": "catppuccin-mocha",
-      "sourceManifestName": "@ujjwalgrover/pi-catppuccin",
-      "sourceSpec": "@ujjwalgrover/pi-catppuccin@1.0.0",
-      "resourceExpectations": {
-        "extensions": [],
-        "skills": [],
-        "themes": [
-          "catppuccin-mocha"
-        ]
-      }
-    },
-    {
       "packageId": "pi-ext-leader-key",
       "sourceManifestName": "pi-ext",
       "sourceSpec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",

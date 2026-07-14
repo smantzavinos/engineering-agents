@@ -142,7 +142,7 @@ run_cli_smoke() {
     return "$EXIT_SPEC"
   fi
 
-  if grep -Eq 'User packages:|Local packages:|pi-subagents|pi-hooks|pi-catppuccin' "$tmp_dir/list.out" "$tmp_dir/list.err"; then
+  if grep -Eq 'User packages:|Local packages:|pi-subagents|pi-hooks' "$tmp_dir/list.out" "$tmp_dir/list.err"; then
     printf '  PASS: pi list shows managed packages\n'
   else
     printf '  FAILED: pi list output unexpected\n' >&2

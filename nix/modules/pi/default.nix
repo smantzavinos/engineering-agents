@@ -126,19 +126,6 @@ let
       };
     };
 
-    catppuccin-mocha = {
-      source = {
-        type = "npm";
-        packageName = "@ujjwalgrover/pi-catppuccin";
-        spec = "@ujjwalgrover/pi-catppuccin@1.0.0";
-        installSpec = "@ujjwalgrover/pi-catppuccin@1.0.0";
-        version = "1.0.0";
-      };
-      expose = {
-        themes = [ "catppuccin-mocha" ];
-      };
-    };
-
     pi-ext-leader-key = {
       source = {
         type = "git";
