@@ -48,7 +48,21 @@ _No items yet._
 
 ## Ready
 
-_No items yet._
+### TASK-0001 — Upgrade @aliou/pi-guardrails 0.9.5 → 0.15.0
+- Status: Ready
+- Summary: Bump the held pi-guardrails managed package. Requires handling breaking changes: v0.12.0 split guardrails into three extensions (policy / path-access / permission-gate) and renamed public event-bus events; v0.14.0 migrated `pathAccess.allowedPaths` config from `string[]` to `{ kind, path }[]` (auto-migration `010`). v0.13.1 loosened Pi peer deps (compatible with our 0.80.x runtime).
+- Source: Package-update review session (commits 822f83d..80a8d19); changelog https://github.com/aliou/pi-guardrails/releases
+- Notes: Verify how `nix/modules/pi/default.nix` loads guardrails (single extension vs the new three-extension layout) and confirm our out-of-store `guardrails.json` (guardrailsConfigPath) auto-migrates cleanly on first launch. Update proof-set.json / version fields; run `./tests/run-tests.sh all`.
+
+### TASK-0002 — Fork-currency audit: retire out-of-date forks where upstream has the fix
+- Status: Ready
+- Summary: Three managed git packages point at personal (`smantzavinos/*`) forks that are now well behind their true upstreams. For each, confirm which customizations the fork carries, check whether upstream has since incorporated an equivalent, and either (a) drop the fork and pin the real upstream, or (b) rebase the fork onto current upstream if the customization is still unique.
+- Source: Package-update review session; fork/upstream compares via GitHub API (2026-07-13).
+- Notes:
+  - **pi-subagents** → upstream `nicobailon/pi-subagents` (fork 2 ahead / 232 behind). Custom commits: `feat: apply agentOverrides to user agents (not just builtins)`, `fix: disableBuiltins takes priority over agentOverrides for builtins`. NOTE: the staleness warning comparing our pin to the fork's own `main` is a false positive — evaluate against `nicobailon` upstream instead.
+  - **pi-hooks** → upstream `prateekmedia/pi-hooks` (5 ahead / 8 behind). Custom commits: ralph-loop escape-sequence RPC-stdout fix, `execute()` parameter-order fix, auto-detect project-local agents when `agentScope` omitted, `processClosed` vs `proc.killed` SIGKILL fallback, `vscode-languageserver-protocol` import path for v3.18+.
+  - **pi-gitnexus** → upstream `tintinweb/pi-gitnexus` (1 ahead / 18 behind; disabled by default). Custom commit: `fix: stop MCP child process on session_shutdown to prevent hang`.
+  - Any fork we drop must keep the pinned-commit + idempotent-install contract (see `nix/AGENTS.md`) and update `tests/fixtures/proof-set.json`.
 
 ## Inbox
 
