@@ -1,4 +1,8 @@
 {
+  // Disabled: pi-preset's default cycle shortcut (ctrl+shift+u) collided with
+  // pi-powerline-footer's jumpPreviousUserMessage. Use the /preset command to
+  // switch presets instead.
+  "cycleShortcut": false,
   "presets": {
     "discovery": {
       "provider": "openai-codex",
