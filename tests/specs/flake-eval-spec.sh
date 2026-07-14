@@ -134,6 +134,18 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module unconditionally reinstalls git-source packages"
   fi
 
+  # Regression guard: the skip path must still refresh .pi-managed-install.json
+  # so a ref-type change at the same commit (branch -> pinned commit) is
+  # reflected in install-state/staleness. The loop flips a `needs_install` flag
+  # instead of `continue`, so the metadata write is always reached.
+  git_loop="$(awk '/git source\)/{f=1} f{print} /requestedRefType.*requested_ref_type/{if(f)exit}' "$PI_OUT/activate")"
+  if grep -q 'needs_install=0' "$PI_OUT/activate" \
+     && ! printf '%s' "$git_loop" | grep -q 'continue'; then
+    pass "Pi module refreshes git install metadata even when reinstall is skipped"
+  else
+    fail "Pi module skip path bypasses install-metadata refresh"
+  fi
+
   # Verify every managed git source is pinned to an immutable 40-hex commit so
   # no-change rebuilds resolve offline (no git ls-remote / npm install).
   PI_MANAGED_PACKAGES_ALL="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages.json')"

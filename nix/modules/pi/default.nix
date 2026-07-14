@@ -712,26 +712,35 @@ in
 
           # Skip the expensive uninstall/reinstall when the resolved commit
           # already matches what is installed (mirrors the npm version gate).
+          needs_install=1
           if [ -d "$package_dir" ] && [ -f "$local_metadata_path" ]; then
             current_commit="$(${pkgs.jq}/bin/jq -r '.installedCommit // ""' "$local_metadata_path" 2>/dev/null || echo "")"
             if [ "$current_commit" = "$target_commit" ]; then
               echo "Skipping $package_name (already at $target_commit)"
-              continue
+              needs_install=0
             fi
           fi
 
-          echo "Installing $package_name from $install_spec (git source)..."
-          npm uninstall -g "$package_name" >/dev/null 2>&1 || true
-          rm -rf "$package_dir"
-          npm install -g --install-links --legacy-peer-deps "$install_spec" 2>&1
+          if [ "$needs_install" = "1" ]; then
+            echo "Installing $package_name from $install_spec (git source)..."
+            npm uninstall -g "$package_name" >/dev/null 2>&1 || true
+            rm -rf "$package_dir"
+            npm install -g --install-links --legacy-peer-deps "$install_spec" 2>&1
+          fi
 
-          cat > "$local_metadata_path" <<EOF
+          # Always refresh the install metadata (even on the skip path) so a
+          # changed ref *type* at the same commit (e.g. branch -> pinned commit)
+          # is reflected in the install-state and staleness reporting. Guarded
+          # on the package dir so a failed install does not leave orphan metadata.
+          if [ -d "$package_dir" ]; then
+            cat > "$local_metadata_path" <<EOF
 {
   "schemaVersion": 1,
   "installedCommit": "$target_commit",
   "requestedRefType": "$requested_ref_type"
 }
 EOF
+          fi
         done
 
         ${pkgs.jq}/bin/jq --arg materialized_prefix "$HOME/.pi/packages/lib/node_modules/" '
