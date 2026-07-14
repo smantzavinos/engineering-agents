@@ -50,9 +50,9 @@ let
       source = {
         type = "npm";
         packageName = "pi-mcp-adapter";
-        spec = "pi-mcp-adapter@2.2.2";
-        installSpec = "pi-mcp-adapter@2.2.2";
-        version = "2.2.2";
+        spec = "pi-mcp-adapter@2.11.0";
+        installSpec = "pi-mcp-adapter@2.11.0";
+        version = "2.11.0";
       };
     };
 
@@ -130,8 +130,8 @@ let
       source = {
         type = "git";
         packageName = "pi-ext";
-        spec = "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822";
-        installSpec = "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822";
+        spec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
+        installSpec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
       };
       expose = {
         extensions = [ "./extensions/leader-key/index.ts" ];
@@ -145,8 +145,8 @@ let
       source = {
         type = "git";
         packageName = "pi-ext";
-        spec = "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822";
-        installSpec = "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822";
+        spec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
+        installSpec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
       };
       expose = {
         extensions = [ "./extensions/review/review.ts" ];
@@ -190,9 +190,9 @@ let
       source = {
         type = "npm";
         packageName = "pi-btw";
-        spec = "pi-btw@0.2.1";
-        installSpec = "pi-btw@0.2.1";
-        version = "0.2.1";
+        spec = "pi-btw@0.4.1";
+        installSpec = "pi-btw@0.4.1";
+        version = "0.4.1";
       };
     };
 

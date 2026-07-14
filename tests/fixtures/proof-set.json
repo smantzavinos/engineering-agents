@@ -30,8 +30,8 @@
     {
       "packageId": "pi-ext-leader-key",
       "sourceManifestName": "pi-ext",
-      "sourceSpec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
-      "sharedSourceKey": "src-814e2d65bd08a81f",
+      "sourceSpec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
+      "sharedSourceKey": "src-6dae48d0004d3335",
       "resourceExpectations": {
         "extensions": [
           "./extensions/leader-key/index.ts"
@@ -43,8 +43,8 @@
     {
       "packageId": "pi-ext-review",
       "sourceManifestName": "pi-ext",
-      "sourceSpec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
-      "sharedSourceKey": "src-814e2d65bd08a81f",
+      "sourceSpec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
+      "sharedSourceKey": "src-6dae48d0004d3335",
       "resourceExpectations": {
         "extensions": [
           "./extensions/review/review.ts"
