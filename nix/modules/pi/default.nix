@@ -41,8 +41,8 @@ let
         type = "npm";
         packageName = "@tmustier/pi-agent-guidance";
         spec = "@tmustier/pi-agent-guidance@0.1.3";
-        installSpec = "@tmustier/pi-agent-guidance@0.1.3";
-        version = "0.1.3";
+        installSpec = "@tmustier/pi-agent-guidance@0.1.5";
+        version = "0.1.5";
       };
     };
 
@@ -61,8 +61,8 @@ let
         type = "npm";
         packageName = "pi-web-access";
         spec = "pi-web-access@0.10.6";
-        installSpec = "pi-web-access@0.10.6";
-        version = "0.10.6";
+        installSpec = "pi-web-access@0.13.0";
+        version = "0.13.0";
       };
     };
 
@@ -71,8 +71,8 @@ let
         type = "npm";
         packageName = "pi-powerline-footer";
         spec = "pi-powerline-footer@0.4.9";
-        installSpec = "pi-powerline-footer@0.4.9";
-        version = "0.4.9";
+        installSpec = "pi-powerline-footer@0.6.1";
+        version = "0.6.1";
       };
     };
 
@@ -81,8 +81,8 @@ let
         type = "npm";
         packageName = "pi-interactive-shell";
         spec = "pi-interactive-shell@0.10.7";
-        installSpec = "pi-interactive-shell@0.10.7";
-        version = "0.10.7";
+        installSpec = "pi-interactive-shell@0.13.0";
+        version = "0.13.0";
       };
     };
 
@@ -91,8 +91,8 @@ let
         type = "npm";
         packageName = "pi-subdir-context";
         spec = "pi-subdir-context@1.1.2";
-        installSpec = "pi-subdir-context@1.1.2";
-        version = "1.1.2";
+        installSpec = "pi-subdir-context@1.1.7";
+        version = "1.1.7";
       };
     };
 
@@ -111,8 +111,8 @@ let
         type = "npm";
         packageName = "pi-notify";
         spec = "pi-notify@1.3.0";
-        installSpec = "pi-notify@1.3.0";
-        version = "1.3.0";
+        installSpec = "pi-notify@1.4.0";
+        version = "1.4.0";
       };
     };
 
@@ -184,8 +184,8 @@ let
         type = "npm";
         packageName = "@richardgill/pi-preset";
         spec = "@richardgill/pi-preset@0.0.4";
-        installSpec = "@richardgill/pi-preset@0.0.4";
-        version = "0.0.4";
+        installSpec = "@richardgill/pi-preset@0.0.8";
+        version = "0.0.8";
       };
     };
 
@@ -194,8 +194,8 @@ let
         type = "npm";
         packageName = "pi-prompt-template-model";
         spec = "pi-prompt-template-model@0.7.2";
-        installSpec = "pi-prompt-template-model@0.7.2";
-        version = "0.7.2";
+        installSpec = "pi-prompt-template-model@0.10.0";
+        version = "0.10.0";
       };
     };
 
