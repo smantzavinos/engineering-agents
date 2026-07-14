@@ -22,8 +22,8 @@ let
       source = {
         type = "git";
         packageName = "pi-subagents";
-        spec = "github:smantzavinos/pi-subagents#7fd616409b032fb942b311765578a3adb9b79586";
-        installSpec = "github:smantzavinos/pi-subagents#7fd616409b032fb942b311765578a3adb9b79586";
+        spec = "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206";
+        installSpec = "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206";
       };
     };
 

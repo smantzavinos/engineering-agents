@@ -112,7 +112,7 @@
         "packageId": "pi-subagents",
         "source": {
           "type": "git",
-          "spec": "github:smantzavinos/pi-subagents#feat/agent-overrides-all-sources",
+          "spec": "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206",
           "materializedKey": "src-pi-subagents"
         },
         "sourceManifestName": "pi-subagents",
@@ -206,18 +206,18 @@
       "packageId": "pi-ext-leader-key",
       "configuredPackagePath": "./packages/pi-ext-leader-key",
       "facadePath": "/fixture/.pi/agent/packages/pi-ext-leader-key",
-      "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-6dae48d0004d3335",
       "sourceManifestName": "pi-ext",
       "sourceProvenance": {
         "schemaVersion": 1,
         "packageId": "pi-ext-leader-key",
         "source": {
           "type": "git",
-          "spec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
-          "materializedKey": "src-814e2d65bd08a81f"
+          "spec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
+          "materializedKey": "src-6dae48d0004d3335"
         },
         "sourceManifestName": "pi-ext",
-        "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-6dae48d0004d3335",
         "selectedResources": {
           "extensions": [
             "./extensions/leader-key/index.ts"
@@ -252,18 +252,18 @@
       "packageId": "pi-ext-review",
       "configuredPackagePath": "./packages/pi-ext-review",
       "facadePath": "/fixture/.pi/agent/packages/pi-ext-review",
-      "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-6dae48d0004d3335",
       "sourceManifestName": "pi-ext",
       "sourceProvenance": {
         "schemaVersion": 1,
         "packageId": "pi-ext-review",
         "source": {
           "type": "git",
-          "spec": "github:tomsej/pi-ext#515352c80bc1ee7e22ed08add915efa220c4c822",
-          "materializedKey": "src-814e2d65bd08a81f"
+          "spec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
+          "materializedKey": "src-6dae48d0004d3335"
         },
         "sourceManifestName": "pi-ext",
-        "sourceRoot": "/fixture/.pi/agent/sources/src-814e2d65bd08a81f",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-6dae48d0004d3335",
         "selectedResources": {
           "extensions": [
             "./extensions/review/review.ts"
