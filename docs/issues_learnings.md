@@ -27,4 +27,12 @@ _No entries yet._
 
 ## Confirmed Learnings
 
-_No entries yet._
+### Team contracts must start before implementation completion
+- Date: 2026-07-15
+- Type: learning
+- Source: Atlas layout dropdown team-mode trial
+- Requirement refs: FR-007, FR-008, OPR-003
+- Summary: Blocking the verifier until implementation completed delayed the acceptance
+  contract and caused repeated task-board polling. Contract packets should start immediately,
+  blocked members should stop until messaged, and final review should use fresh strong context.
+- Follow-up: ADR 0002 and `docs/team-mode-execution.md`

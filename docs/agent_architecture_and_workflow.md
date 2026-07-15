@@ -2,7 +2,11 @@
 
 This document defines the three agent modes, how they interact, when sub-agents are spawned, and the complete flow from idea to implementation.
 
-> **Harness note:** The diagrams below show the Pi roster, where every role is a named sub-agent. OpenCode ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool: reasoning-heavy roles (planning, all reviews, oracle) to `category="ultrabrain"`, implementation roles to `category="deep"` (UI to `visual-engineering`), and research to the built-in `explore` (codebase) and `librarian` (external) sub-agent types. Skill bodies are generated per harness from one canonical source — see [Skill Rendering](skill-rendering.md).
+> **Harness note:** The diagrams below show the Pi roster for sequential execution. OpenCode
+> also provides a separate role-based team pipeline after approach review. Category-backed
+> team members run through Sisyphus-Junior with category-specific models; direct team members
+> may use `sisyphus`, `atlas`, `sisyphus-junior`, or `hephaestus`. See
+> [Team-Mode Execution](team-mode-execution.md) and [Skill Rendering](skill-rendering.md).
 
 ---
 
@@ -83,8 +87,8 @@ flowchart TD
         DE1 --> DE2 --> DE3 --> DE4 --> DE5 --> DE6 --> DE7
     end
 
-    %% Execution Phase
-    subgraph EXECUTION["⚡ EXECUTION — /preset execute"]
+    %% Sequential Execution Phase
+    subgraph EXECUTION["⚡ SEQUENTIAL EXECUTION — /preset execute"]
         direction TB
 
         %% Plan Creation
@@ -131,9 +135,21 @@ flowchart TD
         E6check -->|Yes| E7
     end
 
+    subgraph TEAM["⚡ TEAM EXECUTION — OpenCode"]
+        direction TB
+        T1[Create team_plan.md from reviewed approach]
+        T2[Review team_plan.md]
+        T3[Contracts + fast implementers]
+        T4[Live review + remediation + rescue]
+        T5[Lead gates + integration commits]
+        T6[Close team + fresh strong final review]
+        T1 --> T2 --> T3 --> T4 --> T5 --> T6
+    end
+
     %% Connections between phases
     DISCOVERY -->|"brief.md written<br/>Human starts Design"| DESIGN
     DESIGN -->|"standard: approach.md written<br/>Human switches to Execute"| EXECUTION
+    DESIGN -->|"team mode selected after reviewed approach"| TEAM
     DESIGN -->|"epic: approach.md + epic.md + epic_review.md written<br/>Human switches to Execute child plans"| EXECUTION
 ```
 
@@ -197,12 +213,18 @@ graph LR
         A[approach.md]
     end
 
-    subgraph "Execution"
+    subgraph "Sequential Execution"
         P[plan.md]
         PR2[plan_review.md]
         W[worklog.md]
         CR[code_review.md]
         S[state.json]
+    end
+
+    subgraph "Team Execution"
+        TP[team_plan.md]
+        TPR[team_plan_review.md]
+        TW[team-worklog.md]
     end
 
     subgraph "Implementation"
@@ -214,6 +236,10 @@ graph LR
     B --> A
     F --> A
     A --> P
+    A --> TP
+    TP --> TPR
+    TPR --> TW
+    TW --> CODE
     P --> PR2
     PR2 -->|fixes| P
     P --> W

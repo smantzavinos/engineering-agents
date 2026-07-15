@@ -5,7 +5,9 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Rules
 - Keep this file short and routing-oriented; put detailed policy in the linked docs.
 - Prefer small, focused changes that preserve the existing command surface.
-- Follow strict TDD for non-trivial work: failing test first, minimal fix, break-it check, then verification.
+- Follow the selected execution contract: strict Red → Green → Break-it → Verify for
+  sequential plans; contract-first tests, minimal implementer checks, independent
+  verification, and fresh final review for team plans.
 
 ## Tech Stack
 - Markdown docs define the process and contributor contract.
@@ -43,6 +45,7 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 
 ## Planning Artifacts
 - `plans/README.md` — repo-specific planning guidance, canonical verification sources, and plan/worklog constraints for this repo.
+- `docs/team-mode-execution.md` — separate post-approach team planning pipeline, role contracts, model routing, escalation, and event-driven execution.
 - Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
 
 ## Operational Memory

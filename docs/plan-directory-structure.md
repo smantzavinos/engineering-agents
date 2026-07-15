@@ -67,9 +67,8 @@ plans/2026_05_01_add_user_notifications/
 │   └── dependencies.md
 ├── approach.md
 ├── approach_review.md
-├── plan.md
-├── plan_review.md
-├── worklog.md
+├── sequential: plan.md + plan_review.md + worklog.md
+│   or team: team_plan.md + team_plan_review.md + team-worklog.md
 ├── code_review.md
 └── state.json
 ```
@@ -238,7 +237,7 @@ Conceptual model and structural decisions:
 - UI component follows existing panel pattern
 ```
 
-### plan.md
+### plan.md (sequential planning)
 
 Detailed implementation plan (see the create-plan skill for full template). Contains:
 - Execution contract (strict TDD)
@@ -249,7 +248,23 @@ Detailed implementation plan (see the create-plan skill for full template). Cont
 - Verification plan
 - Coverage matrix
 
-The `Touched files` field is optional for sequential execution. It is required to enable team-mode (parallel) execution, where tasks are grouped into file-disjoint waves.
+This artifact belongs to the sequential strict-TDD pipeline.
+
+### team_plan.md (team planning)
+
+Created directly from the reviewed approach instead of from `plan.md`. Contains:
+
+- acceptance contracts and early contract-test packets
+- file-owned implementation packets
+- readiness events, role/domain, risk/model tier, and minimal checks
+- live-review checklists and reviewer-created remediation protocol
+- one-retry escalation to a dormant Strong rescue implementer
+- active-slot schedule (maximum four), targeted verification, and integration groups
+
+### team_plan_review.md
+
+Reviews contract completeness, packet ownership, actionable parallel work, role/model cost,
+no-polling wake events, active slots, remediation, escalation, and independent final review.
 
 ### plan_review.md
 
@@ -275,13 +290,12 @@ Execution tracking document (see the create-worklog skill for full template). Co
 
 ### team-worklog.md (team-mode execution only)
 
-Wave-oriented execution record for OpenCode team-mode (parallel) runs (see the create-team-worklog skill). Used instead of `worklog.md` when team-mode execution is selected. Contains:
-- Entry-point contract (the execution unit is the wave)
-- Wave manifest (tasks per wave, per-task `Touched files`, cross-wave dependencies)
-- Current-wave pointer (the live cursor is the OpenCode team task list)
-- Git model (shared tree, single committer, per-wave commits)
-- Per-wave execution log (assignments, live/end-of-wave review, gate result, wave commit)
-- Backlog/requirement capture (routed through the lead)
+Lead-owned execution ledger compiled from reviewed `team_plan.md`. Contains:
+- roster and active-slot schedule
+- explicit assignments and wake events (no polling)
+- contract, implementation, remediation, and verification queues
+- evidence and integration-group gates/commits
+- rescue escalations, fresh final review, closure, backlog, and requirement records
 
 ### code_review.md
 
@@ -537,7 +551,8 @@ Minimal state tracking for continuation enforcement:
 {
   "level": "standard",
   "phase": "executing",
-  "status": "active"
+  "status": "active",
+  "mode": "sequential | team"
 }
 ```
 
@@ -568,6 +583,9 @@ Minimal state tracking for continuation enforcement:
 | `paused` | Interrupted, can be resumed |
 | `complete` | This phase/plan is done |
 | `blocked` | Needs human intervention |
+
+Team plans reuse the normal phase values and set `"mode": "team"`; they do not add
+team-specific phases.
 
 ### Epic State
 

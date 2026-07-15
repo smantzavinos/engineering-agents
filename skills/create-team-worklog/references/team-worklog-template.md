@@ -1,120 +1,102 @@
-# Team Worklog Template
+# Team Execution Worklog Template
 
 # <Title> — Team Execution Worklog
 
 ## Entry-Point Contract
 
-- **Read this file first** every time you resume this team-mode run.
-- The execution unit is the **wave**, not the individual task. Execute one wave at a time.
-- The live coordination cursor is the OpenCode `team_task_list`; this file is the durable record.
-- Only the **lead** runs git and writes this file, `state.json`, and any backlog/requirement docs.
-- After a wave completes review + gate: the lead commits the wave, updates this file, advances `Current Wave`, and starts the next wave.
-
-## Mode & Rigor Notes
-
-- This is the **fast lane**. It deliberately trades some rigor for speed. For maximum rigor use sequential execution instead.
-- **Break-it check is dropped by default** in this mode. The in-team reviewer's test-adequacy gate is the backstop.
-- Commit granularity is **per wave**, not per task.
+- Read this file first when resuming.
+- `team_plan.md` is the canonical execution design; this file records live state and evidence.
+- Primary chat is lead and sole scheduler, committer, broad-gate runner, and durable-doc writer.
+- Team members work only from explicit assignments sent by the lead.
+- Do not poll. If no actionable assignment exists, report idle once and stop.
 
 ## References
 
-- Plan: `<relative path to plan.md>`
-- Approach: `<relative path to approach.md>`
-- Orchestrator skill: `execution-orchestrator-team`
+- Team plan: `team_plan.md`
+- Team plan review: `team_plan_review.md`
+- Team protocol: `docs/team-mode-execution.md`
 
 ## Completion Criteria
 
-- [ ] All waves below are complete
-- [ ] Final cross-wave review is clean
-- [ ] Final verification gate passes
-- [ ] Team is closed (Closure Sequence run)
+- [ ] All contract, implementation, remediation, and verification packets are terminal
+- [ ] All integration groups are reviewed, gated, and committed
+- [ ] Implementation team is closed
+- [ ] Fresh final review is clean
+- [ ] Final gate passes or only approved baseline failures remain
 
-## Prerequisites
+## Team Roster and Routing
 
-### Environment Setup
-- Required services: <list with start commands>
-- Required env vars: <names only>
-- Runtime: <versions>
-- Team mode enabled: `team_mode.enabled = true` (OpenCode)
+| Member | Role | Routing | Start state | Current assignment |
+|---|---|---|---|---|
+| impl-1..3 | implementation slots | cheap/domain category; one may be `visual-engineering` | idle/active | <packet/none> |
+| rescue | Strong rescue implementer | direct `hephaestus` | idle | none |
+| verifier | contract/verifier | domain category | active/idle | <packet/none> |
+| live-reviewer | live review | `unspecified-high` | idle | none |
+| lead | orchestration | primary chat | active | scheduling |
+
+When UI/UX/a11y/visual packets exist, record which implementation slot was replaced by the
+`visual-engineering` member.
+
+## Active Slot Schedule
+
+Maximum active members: 4.
+
+| Stage | Active members | Capacity check | Notes |
+|---|---|---|---|
+| Contract | <members> | <=4 | <idle roles> |
+| Build/review | <members> | <=4 | <handoff flow> |
+| Remediation | <members> | <=4 | rescue replaces a fast slot |
+| Verification | <members> | <=4 | verifier wakes on explicit signal |
 
 ## Baseline Gate Audit
 
-| Command | Scope | Baseline status | Notes |
-|---------|-------|-----------------|-------|
-| `<gate command>` | package-wide | pass/fail | pre-existing failures documented |
+| Command | Scope | Status | Approved unrelated failures | Policy |
+|---|---|---|---|---|
+| `<command>` | package/repo | pass/fail | <none/list> | block/allow/split |
 
-## Testing & Verification
+## Assignment Board
 
-| Command | Scope | When to run | What it checks |
-|---------|-------|-------------|----------------|
-| `<fast command>` | touched-files | By each worker during TDD (Red→Green→Verify) | scoped fast feedback |
-| `<gate command>` | package-wide | Once by the lead at each wave end | cross-module drift |
-| `<final command>` | repo-wide | Before plan completion | full repo integrity |
+| Packet | Owner | State | Readiness/wake event | Minimal check/evidence | Handoff received |
+|---|---|---|---|---|---|
+| C1 | verifier | pending | immediate | `<command>` | no |
+| I1 | impl-1 | blocked | lead wakes after <event> | `<minimal check>` | no |
 
-### Gate Policy
-- Policy: `<block-on-global-gate | allow-scoped-completion | split-follow-up>`
-- Workers run only scoped/fast tests; the authoritative package/repo gate runs once, by the lead, at wave end.
+States: pending, assigned, in-progress, review, remediation, verified, completed, failed.
 
-## Git Model
+## Remediation Queue
 
-- Shared working tree, single committer (the lead). Members never run git.
-- Per-wave commit: `wave(N): <summary>` including the wave's code, tests, and this worklog update.
-- Conflicts are avoided by file-disjoint wave construction and resolved live via `team_send_message` when unavoidable.
+| ID | Parent | Finding | Severity | Owner | Retry | Escalates to | Status |
+|---|---|---|---|---|---|---|---|
+| R1 | I1 | <defect> | Major | impl-1 | 1/1 | rescue | pending |
 
-## Backlog Capture Policy
+## Evidence Ledger
 
-- Repo backlog: `<location/system>`
-- Create item procedure: `<how>`
-- Stable ID/reference format: `<TASK-XXXX | #123>`
-- Routed through the lead only (never concurrent members).
+| Contract/packet | Evidence | Command/result | Reviewer verdict |
+|---|---|---|---|
+| AC1/C1 | <path/output> | <result> | pending/pass/fail |
 
-## Requirement Changes (if relevant)
+## Integration Groups
 
-- Repo requirements: `<location>`
-- Approved updates from plan: `<none | IDs>`
-- Applied through the lead only.
+| Group | Packets | Review | Gate | Commit | Status |
+|---|---|---|---|---|---|
+| G1 | C1, I1, V1 | pending | `<command>` | pending | pending |
 
-## Wave Manifest
+## Event Log
 
-| Wave | Tasks | Depends on waves | Touched files (per task) | Domain(s) |
-|-----:|-------|------------------|--------------------------|-----------|
-| 1 | T1 | — | T1: `<paths>` | backend/ui |
-| 2 | T2, T3 | 1 | T2: `<paths>`; T3: `<paths>` | backend |
-| 3 | T4 | 2 | T4: `<paths>` | ui |
+- YYYY-MM-DD HH:MM — lead assigned <packet> to <member> because <readiness event>.
+- YYYY-MM-DD HH:MM — reviewer created remediation <ID>; <owner> retry 1/1.
+- YYYY-MM-DD HH:MM — lead escalated <ID> to Strong rescue implementer.
 
-- Parallelism score (tasks ÷ waves): `<n>` — recommendation: `<team | sequential>`.
+## Final Review and Closure
 
-## Current Wave
+- **Team closure:** <pending/complete>
+- **Fresh final reviewer:** external `ultrabrain`
+- **Final findings:** <artifact/status>
+- **Final remediation:** <none/owner/team>
+- **Final gate:** `<command>` → <result>
+- **Completion commit/state:** <sha/status>
 
-**Current Wave:** 1
+## Backlog and Requirement Changes
 
-Intra-wave board is the live `team_task_list`. Claim unblocked tasks lowest-ID first.
-
-After a wave completes:
-1. Reviewer completes end-of-wave review; lead resolves any open Blocker/Critical/Major.
-2. Lead runs the wave gate once.
-3. Lead commits: `wave(N): <summary>`.
-4. Lead records the wave entry in the Execution Log below and advances Current Wave.
-5. Capture accepted backlog/requirement items (lead only).
-
-## Wave Status
-
-- [ ] Wave 1: <tasks>
-- [ ] Wave 2: <tasks>
-- [ ] Wave 3: <tasks>
-
-## Decisions / Constraints Discovered (append-only)
-
-- <decision or constraint learned during execution>
-
-## Execution Log
-
-### Wave 1 — YYYY-MM-DD
-- **Tasks:** <T1 …>
-- **Workers:** <member → task>
-- **Live review notes:** <per-task findings + fixes>
-- **End-of-wave review:** <outcome>
-- **Gate:** `<command>` → pass/fail
-- **Commit:** `<sha>` — `wave(1): <message>`
-- **Backlog/requirement items:** <none | IDs>
-- **Notes:** <conflicts resolved, rebalancing, anything notable>
+- Lead-only accepted follow-ups: <none/IDs>
+- Lead-only approved requirement updates: <none/IDs>

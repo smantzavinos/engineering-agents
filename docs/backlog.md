@@ -70,7 +70,11 @@ _No items yet._
 
 ## Inbox
 
-_No items yet._
+### TASK-0003 — Fix resource-snapshot.mjs Pi module path resolution through the startup wrapper
+- Status: Inbox
+- Summary: `tests/scripts/resource-snapshot.mjs` (`buildPiModulePath()`) locates the real `pi-coding-agent` package by resolving `which pi` and walking two directories up to find `lib/node_modules/{@earendil-works,@mariozechner}/pi-coding-agent/dist/index.js`. On hosts where the repo's own `pi` startup wrapper is on `PATH` (see `pi-startup-wrapper-spec.sh` / `pi-launch-wrapper.sh`), `which pi` resolves to the wrapper's Nix store package (which only contains `bin/pi`, no `lib/node_modules`), not the real `pi-coding-agent` package — so the entrypoint lookup fails with "Unable to locate Pi module entrypoint" and `./tests/run-tests.sh all` / the Pi proof-set step cannot run.
+- Source: Chat discussion during team-mode wave execution follow-up (2026-07-15); observed running `./tests/run-tests.sh all` after deploying `plans/2026_07_14_team_mode_wave_execution/`. Same root cause independently noted in TASK-0002's pi-subagents entry ("the repo's `test-fast` runtime snapshot step is environmentally broken here — bin-only pi package").
+- Notes: Root cause confirmed locally: `which pi` → `/home/spiros/.nix-profile/bin/pi` → realpath → `/nix/store/<hash>-pi/bin/pi`, a wrapper script that `export`s `PI_WRAPPER_REAL_PI_BIN=/nix/store/<hash>-pi-0.80.6/bin/pi` and execs `pi-launch-wrapper.sh`. The real package (with the expected `lib/node_modules/@earendil-works/pi-coding-agent/` layout) lives under that `PI_WRAPPER_REAL_PI_BIN` path, one level further down. Fix should make `buildPiModulePath()` detect and unwrap the startup wrapper (e.g. read `PI_WRAPPER_REAL_PI_BIN` out of the wrapper script, or exec `pi` with an env-dump escape hatch) before falling back to the current two-levels-up heuristic, so proof-set verification works both with and without the wrapper enabled. Not caused by and unrelated to the team-mode wave execution work; that feature's own verification (fast suite + flake eval, including explicit "skill installed" checks for the new skills) is fully green.
 
 ## Clarification needed
 

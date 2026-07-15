@@ -70,9 +70,14 @@ plans/
       dependencies.md
     approach.md
     approach_review.md
-    plan.md
-    plan_review.md
-    worklog.md
+    sequential:
+      plan.md
+      plan_review.md
+      worklog.md
+    or team:
+      team_plan.md
+      team_plan_review.md
+      team-worklog.md
     code_review.md
     state.json
 ```
@@ -84,20 +89,20 @@ plans/
 | Brief | ✅ | Full intent documentation |
 | Research | ✅ | Codebase exploration, dependency mapping |
 | Approach | ✅ | Conceptual model, structural decisions |
-| Plan | ✅ | Detailed TDD implementation plan |
-| Plan Review | ✅ | Iterative until zero significant issues |
-| Worklog | ✅ | Execution tracking with verification gates |
-| Execute | ✅ | One task per iteration, strict TDD |
-| Code Review | ✅ | Iterative until zero significant issues |
+| Planning pipeline | ✅ | Sequential strict-TDD plan or role-based team plan |
+| Planning review | ✅ | Mode-specific review until zero significant issues |
+| Execution log | ✅ | Sequential worklog or lead-owned team worklog |
+| Execute | ✅ | Sequential strict TDD or team role pipeline |
+| Code Review | ✅ | Sequential review or fresh strong final team review |
 
 ### Stage Transitions
 
 Each stage produces its artifact and transitions the state. The orchestrator advances stages in order and does not skip.
 
 ```
-brief (draft) → research (researching → researched) → approach (designing) → 
-plan (planning) → plan_review (reviewing) → worklog (ready) → 
-execute (executing) → code_review (reviewing_code) → complete
+brief → research → approach → approach_review
+  ├─ plan → plan_review → worklog → sequential execute → code_review
+  └─ team_plan → team_plan_review → team-worklog → team execute → fresh final review
 ```
 
 ---
@@ -268,6 +273,9 @@ When uncertain about the level, **start at Standard**. The brief and research st
 | `plan.md` | Detailed implementation tasks, TDD checklists, verification gates | Plan Review, Worklog, Execute, Code Review |
 | `plan_review.md` | Review findings, issues, resolutions | Plan (updates based on review) |
 | `worklog.md` | Execution tracking, task status, loop log | Execute (read/write each iteration) |
+| `team_plan.md` | Acceptance contracts, role packets, ownership, risk/model tiers, escalation, integration groups | Team Plan Review, Team Worklog, Team Execute, Final Review |
+| `team_plan_review.md` | Review findings for contract, concurrency, role, cost, and escalation readiness | Team Plan updates, team execution approval |
+| `team-worklog.md` | Lead-owned assignments, wake events, remediation, evidence, integration groups, closure | Team Execute |
 | `code_review.md` | Post-implementation findings, fix verification | Execute (fix pass), orchestrator (completion decision) |
 | `epic.md` | Workstream index, sequencing, execution record | Child plan orchestration |
 | `epic_review.md` | Review findings and decisions for epic decomposition | Epic decomposition updates, child-plan readiness |
@@ -283,7 +291,8 @@ When uncertain about the level, **start at Standard**. The brief and research st
 {
   "level": "simple | standard | epic",
   "phase": "draft | researching | researched | designing | planning | reviewing | ready | executing | reviewing_code | complete | blocked",
-  "status": "active | paused | complete | blocked"
+  "status": "active | paused | complete | blocked",
+  "mode": "sequential | team"
 }
 ```
 
@@ -293,3 +302,6 @@ The extension uses this only for:
 - Reporting current status
 
 All workflow intelligence lives in the skills and orchestrator, not in the extension.
+
+`mode` is optional for legacy/sequential state. Team planning reuses `planned`, `reviewed`,
+`ready`, `executing`, and `reviewing_code`; it does not introduce a second phase vocabulary.

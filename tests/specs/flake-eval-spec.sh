@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Verify flake checks pass: modules instantiate and produce valid activation packages
+# Requirement: FR-007
+# Requirement: FR-008
+# Requirement: OPR-003
 #
 # This is the critical gate: it proves that home-manager can actually import
 # and build with these modules. `nix flake check` builds the activation
@@ -314,13 +317,20 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
   done
 
   # Verify engineering workflow skills (OpenCode-rendered set)
-  for skill in discovery design execution-orchestrator execution-orchestrator-team research create-plan create-worklog create-team-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs configure-opencode; do
+  for skill in discovery design execution-orchestrator execution-orchestrator-team research create-plan create-team-plan create-worklog create-team-worklog execute-task review-plan review-team-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs configure-opencode; do
     if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
       pass "OpenCode skill: $skill"
     else
       fail "OpenCode missing skill: $skill"
     fi
   done
+
+
+  if jq -e '.categories.quick.model == "zai-coding-plan/glm-5.2" and .categories.deep.model == "openai/gpt-5.5" and .categories.ultrabrain.model == "openai/gpt-5.5" and .agents.hephaestus.model == "openai/gpt-5.5"' "$OC_FILES/.config/opencode/oh-my-openagent.json" >/dev/null 2>&1; then
+    pass "oh-my-openagent exposes cheap implementation, strong rescue, and strong review tiers"
+  else
+    fail "oh-my-openagent team role model tiers are incorrect"
+  fi
 
   # Verify the visual-explainer skill is installed by default (external
   # pinned skill wired via the visualExplainer flake input + extraSkills).

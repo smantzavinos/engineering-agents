@@ -25,3 +25,4 @@ When a decision becomes stale, add a superseding ADR instead of deleting the old
 
 ## Index
 - `0001-repo-operational-contracts.md` — adopt repo-local operational contracts, readiness checks, and centralized `agentOverrides` guidance.
+- `0002-split-team-planning-pipeline.md` — branch after approach review into sequential and role-based team planning pipelines.

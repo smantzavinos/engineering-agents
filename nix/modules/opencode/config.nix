@@ -220,6 +220,11 @@ let
       model = "zai-coding-plan/glm-5.2";
       fallback_models = [ "openai/gpt-5.5" ];
     };
+    hephaestus = {
+      model = "openai/gpt-5.5";
+      variant = "xhigh";
+      fallback_models = [ "zai-coding-plan/glm-5.2" ];
+    };
     build = {
       model = "zai-coding-plan/glm-5.2";
       fallback_models = [ "openai/gpt-5.5" ];
@@ -291,8 +296,8 @@ let
   # into dist/skills/opencode/. No hand-maintained OpenCode forks.
   openCodeSkills = [
     "discovery" "design" "execution-orchestrator" "execution-orchestrator-team"
-    "research" "create-plan" "create-worklog" "create-team-worklog" "execute-task"
-    "review-plan" "review-code" "review-approach" "review-epic"
+    "research" "create-plan" "create-team-plan" "create-worklog" "create-team-worklog" "execute-task"
+    "review-plan" "review-team-plan" "review-code" "review-approach" "review-epic"
     "assess-repo" "create-skills" "create-new-repo-docs"
     "configure-opencode"
   ];

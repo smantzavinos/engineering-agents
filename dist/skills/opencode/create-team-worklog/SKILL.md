@@ -1,6 +1,6 @@
 ---
 name: create-team-worklog
-description: Create a wave-oriented team worklog from a reviewed plan for OpenCode team-mode (parallel) execution. The team worklog is the durable execution record whose live coordination cursor is the team task list, replacing the sequential worklog's single NEXT STEP. Use after plan review passes and team-mode execution is selected.
+description: Create the lead-owned execution ledger from a reviewed team_plan.md for role-based OpenCode team-mode execution. Records stages, active slots, assignments, remediation, wake events, evidence, integration groups, and closure.
 compatibility: opencode
 metadata:
   domain: opencode
@@ -8,57 +8,55 @@ metadata:
 
 # Create Team Worklog
 
-Create a wave-oriented execution worklog for team-mode (parallel) execution.
+Create the durable execution ledger for an approved team plan.
 
 ## Role
 
-You produce the durable execution record for a team-mode run. Unlike the sequential worklog (a single `NEXT STEP` cursor), the team worklog is organized around **waves** — batches of tasks that execute in parallel. The live coordination cursor is the OpenCode `team_task_list`; this document is the durable record of wave composition and outcomes.
-
-Use this only for OpenCode team-mode execution. For sequential execution, use `create-worklog` instead.
+Translate `team_plan.md` into a self-sufficient lead control document. Do not redesign the
+team plan or convert sequential tasks into waves.
 
 ## Inputs
 
-- Plan directory path
-- Read: `plan.md` (task graph with `Depends on` and `Touched files`, verification commands, gate policy)
-- Read: repo test architecture docs for exact verification commands
-- Read: repo task-tracking/backlog docs (follow-up capture policy)
-- Read: repo requirements docs if the plan cites or updates requirements
+- `team_plan.md` and clean `team_plan_review.md`
+- Repo verification, backlog, requirements, and directory guidance
+- Baseline gate results, if already available
 
 ## Process
 
-1. **Read plan.md** — extract the task graph, each task's `Depends on` and `Touched files`, verification commands, and gate policy.
-2. **Slice waves** — apply the wave-slicing procedure (see the `execution-orchestrator-team` skill) to produce an ordered list of waves. Record the wave manifest.
-3. **Read repo verification commands** — copy exact fast/gate/final commands; do not invent them.
-4. **Read backlog + requirement policy** — as for the sequential worklog.
-5. **Baseline gate audit** — carry the plan's baseline results in, or instruct running all gates before Wave 1.
-6. **Write team-worklog.md** — using [references/team-worklog-template.md](references/team-worklog-template.md).
-7. **Update state.json** — set `{ "phase": "ready", "status": "active", "mode": "team" }`.
+1. Validate the team plan review is complete.
+2. Extract roster, contract/implementation/verification packets, readiness events, active
+   slot schedule, integration groups, checks, gates, retry limits, and escalation targets.
+3. Record baseline gates or require them before the first integration group.
+4. Build an event-driven assignment board. Pre-assign immediately ready packets; leave
+   blocked roles idle until the lead wakes them.
+5. Write `team-worklog.md` using
+   [references/team-worklog-template.md](references/team-worklog-template.md).
+6. Update `state.json` to `{ "phase": "ready", "status": "active", "mode": "team" }`.
 
 ## Quality Rules
 
-### The wave manifest must be complete and file-disjoint
-Every plan task must appear in exactly one wave. Within a wave, no two tasks may share a declared `Touched files` path. A task with an undeclared write-set runs alone in its own wave. No task may depend on another task in the same wave.
-
-### Verification commands must be exact
-Copy fast/gate/final commands from plan.md or repo docs verbatim.
-
-### The team worklog must be self-sufficient
-A lead resuming a run should be able to read only this file and know: which wave is current, which tasks are in it, each task's declared files, the per-wave gate, and how per-wave commits are recorded.
-
-### The cursor is the current wave, not a single task
-Track a `Current Wave` pointer plus the intra-wave task board. Do not reintroduce a single `NEXT STEP` task cursor.
-
-### Backlog + requirement policy must be explicit
-Same rules as the sequential worklog: state where the backlog lives, how to capture accepted follow-ups, and how approved requirement edits are applied. Route all such durable-doc writes through the lead, never concurrent members.
+- The worklog is an execution ledger, not a second plan.
+- The lead is sole scheduler, committer, broad-gate runner, and durable-doc writer.
+- No active schedule exceeds four concurrent members.
+- Every blocked assignment names its wake event and sender.
+- Do not poll. Idle members stop and wait for `team_send_message` with an actionable task.
+- Contract packets start before or alongside implementation where the team plan permits.
+- Implementers run only minimal packet checks.
+- Live reviewer creates remediation tasks and controls integration readiness.
+- Original implementer gets one local retry; Strong rescue implementer receives failed
+  retries and high-risk/cross-cutting work.
+- Contract/verifier owns targeted evidence; lead owns broad gates.
+- Fresh final reviewer runs after the implementation team closes.
+- Backlog, requirements, `state.json`, and this worklog remain lead-only writes.
 
 ## Output
 
-Write `team-worklog.md` in the plan directory. It is designed for wave-at-a-time execution driven by the `execution-orchestrator-team` skill.
+Write `team-worklog.md`. Do not modify source files or create a sequential `worklog.md`.
 
 ## What You MUST NOT Do
 
-- Do not implement code or modify source files
-- Do not invent verification commands
-- Do not reorder or reinterpret plan tasks
-- Do not place two file-overlapping or dependency-linked tasks in the same wave
-- Do not reintroduce a single-task `NEXT STEP` cursor
+- Do not read `plan.md` as the team execution source.
+- Do not re-slice packets into dependency waves.
+- Do not create a `NEXT STEP` task cursor.
+- Do not instruct members to periodically inspect the task board.
+- Do not let members run git or broad gates.

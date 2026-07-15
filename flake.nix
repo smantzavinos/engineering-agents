@@ -199,8 +199,12 @@
           test -d "$cfgd/opencode/skills/discovery" || { echo "MISSING: skills/discovery"; exit 1; }
           test -d "$cfgd/opencode/skills/design" || { echo "MISSING: skills/design"; exit 1; }
           test -d "$cfgd/opencode/skills/execution-orchestrator" || { echo "MISSING: skills/execution-orchestrator"; exit 1; }
+          test -d "$cfgd/opencode/skills/execution-orchestrator-team" || { echo "MISSING: skills/execution-orchestrator-team"; exit 1; }
           test -d "$cfgd/opencode/skills/research" || { echo "MISSING: skills/research"; exit 1; }
           test -d "$cfgd/opencode/skills/create-plan" || { echo "MISSING: skills/create-plan"; exit 1; }
+          test -d "$cfgd/opencode/skills/create-team-plan" || { echo "MISSING: skills/create-team-plan"; exit 1; }
+          test -d "$cfgd/opencode/skills/review-team-plan" || { echo "MISSING: skills/review-team-plan"; exit 1; }
+          test -d "$cfgd/opencode/skills/create-team-worklog" || { echo "MISSING: skills/create-team-worklog"; exit 1; }
           test -d "$cfgd/opencode/skills/execute-task" || { echo "MISSING: skills/execute-task"; exit 1; }
           touch $out
         '';

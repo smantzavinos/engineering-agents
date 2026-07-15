@@ -17,13 +17,19 @@ Use the commands documented there instead of inventing new top-level verificatio
 - When a plan introduces or changes repo-operating docs, update the touched readiness spec, the canonical doc, and the root `AGENTS.md` route together.
 - Keep non-critical follow-up work out of the active task list; capture accepted follow-ups in `docs/backlog.md` with `TASK-XXXX` IDs.
 - Cite requirement IDs from `docs/requirements.md` when tasks implement or verify durable repo behavior, and keep test citations in the documented `Requirement: <ID>` format.
-- Keep worklogs operational: exact commands, clear gate policy, and a single current `NEXT STEP`.
+- Keep execution logs operational: sequential `worklog.md` uses one current `NEXT STEP`;
+  team `team-worklog.md` uses lead-scheduled assignments, wake events, remediation, and
+  integration-group evidence.
 
 ## Artifact Expectations for This Repo
 - `brief.md` records goals, non-goals, constraints, and any requirement context that matters for the work.
 - `approach.md` explains structural decisions and cross-links the findings that justify them.
-- `plan.md` must include dependency-ordered tasks, explicit TDD checklists, exact verification commands, and requirement refs where relevant.
+- `plan.md` is the sequential planning artifact and must include dependency-ordered tasks, explicit TDD checklists, exact verification commands, and requirement refs where relevant.
+- `team_plan.md` is the separate team planning artifact created directly from the reviewed approach; it defines acceptance contracts, role packets, file ownership, minimal checks, model/risk tiers, remediation, escalation, and integration groups.
+- `team_plan_review.md` records team-plan readiness review and must be clean before team execution.
 - `worklog.md` is the execution entry point. It should copy the task gate and final gate from the canonical docs, record backlog IDs created during execution, and note approved requirement changes.
+- `team-worklog.md` is the lead-owned team execution ledger. It records active slots,
+  assignments, wake events, remediation, evidence, integration groups, and closure.
 - `plan_review.md` and `code_review.md` remain the durable records for review findings; do not hide review-only decisions in chat.
 - `state.json` should stay minimal and resumable.
 

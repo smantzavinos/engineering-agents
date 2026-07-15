@@ -61,6 +61,13 @@
 - **Final plan gate:** `./tests/run-tests.sh all`
 - **Optional release smoke:** `./tests/run-tests.sh full`
 
+### Team-mode ownership
+- **Implementer:** packet-defined formatter, diagnostics, or one targeted smoke check only.
+- **Contract/verifier:** early acceptance contracts plus targeted verification evidence.
+- **Live reviewer:** adds risk-based remediation or verification tasks; does not run broad gates.
+- **Lead:** package/repo integration gates, final gate, commits, and baseline-failure comparison.
+- **Final reviewer:** fresh full-diff review after implementation-team closure.
+
 ## Related Docs
 - `plans/README.md` — tells plans and worklogs where to source these commands and gate roles.
 - `tests/README.md` — suite inventory, file layout, and individual spec entry points.

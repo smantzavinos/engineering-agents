@@ -59,7 +59,8 @@ A skill may restrict itself to specific harnesses:
 harnesses: [opencode]
 ```
 
-Absent ⇒ the skill renders for every harness. Only `configure-opencode` is harness-restricted (OpenCode-only).
+Absent ⇒ the skill renders for every harness. OpenCode-only skills include
+`configure-opencode` and the team planning/execution skills.
 
 ## Harness profiles
 
@@ -93,6 +94,24 @@ Each `harnesses/<id>.json` declares:
 > **Plan-agent visibility note:** OpenCode's native `plan` agent stays primary only when its OpenCode-native override keeps `mode: "primary"`. Under oh-my-openagent, overriding `agent.plan` without an explicit mode can cause the runtime loader to treat it as a subagent even if `sisyphus_agent.replace_plan = false`. Keep this in mind for generated config and repo-local `.opencode/opencode.jsonc` overrides.
 
 > **Model-tier note:** OpenCode implementation roles use `category="unspecified-high"` (glm-5.2 by default). To increase quality for heavier tasks, point `executeTask` at `deep` or `ultrabrain` in `harnesses/opencode.json`, or retune the category model in `nix/modules/opencode/config.nix`.
+
+### Team member routing
+
+OpenCode team mode accepts category-backed members and eligible direct subagent types.
+
+- Category members run through the Sisyphus-Junior runtime; the category still controls
+  model, variant, temperature, and fallbacks.
+- Eligible direct team types are `sisyphus`, `atlas`, `sisyphus-junior`, and `hephaestus`.
+- Oracle, Prometheus, and other unlisted types remain external consultations.
+
+| Role | Routing | Default model |
+|---|---|---|
+| mechanical implementer | `quick` | `zai-coding-plan/glm-5.2` |
+| standard implementer / contract verifier / live reviewer | `unspecified-high` | `zai-coding-plan/glm-5.2`, GPT-5.5 fallback |
+| UI implementer | `visual-engineering` | `zai-coding-plan/glm-5.2`, GPT-5.5 fallback |
+| planned complex implementation | `deep` | `openai/gpt-5.5` xhigh |
+| Strong rescue implementer | direct `hephaestus` | `openai/gpt-5.5` xhigh |
+| fresh final reviewer | external `ultrabrain` | `openai/gpt-5.5` xhigh |
 
 ## Renderer commands
 

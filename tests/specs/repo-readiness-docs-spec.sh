@@ -5,8 +5,12 @@
 # Requirement: FR-003
 # Requirement: FR-004
 # Requirement: FR-005
+# Requirement: FR-007
+# Requirement: FR-008
 # Requirement: NFR-002
+# Requirement: NFR-003
 # Requirement: OPR-001
+# Requirement: OPR-003
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,6 +54,8 @@ assert_file_exists "$REPO_ROOT/plans/README.md" "Plans guidance doc exists"
 assert_file_exists "$REPO_ROOT/docs/issues_learnings.md" "Issues and learnings log exists"
 assert_file_exists "$REPO_ROOT/docs/adr/README.md" "ADR index exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Initial ADR exists"
+assert_file_exists "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Team planning ADR exists"
+assert_file_exists "$REPO_ROOT/docs/team-mode-execution.md" "Team-mode execution doc exists"
 assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
 assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
 assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
@@ -75,6 +81,7 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "## Requirements" "AGENTS routes req
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/requirements.md" "AGENTS points to the canonical requirements doc"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Planning Artifacts" "AGENTS routes planning artifacts section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "plans/README.md" "AGENTS points to the plans guidance doc"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/team-mode-execution.md" "AGENTS routes to team-mode execution"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Operational Memory" "AGENTS routes operational memory section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/issues_learnings.md" "AGENTS points to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/adr/README.md" "AGENTS points to the ADR index"
@@ -124,6 +131,7 @@ assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "## Scope, Timing, an
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "task completion gate" "Testing strategy doc identifies the task gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "final plan gate" "Testing strategy doc identifies the final gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "bash tests/specs/proof-set-runtime-spec.sh" "Testing strategy doc lists targeted proof-set feedback"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Team-mode ownership" "Testing strategy assigns team verification roles"
 
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "# Backlog" "Backlog doc has title"
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "## System" "Backlog doc explains the system"
@@ -185,6 +193,10 @@ assert_file_contains "$REPO_ROOT/docs/requirements.md" "## Non-Functional Requir
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "NFR-001" "Requirements doc defines a non-functional requirement"
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "## Operational Requirements" "Requirements doc has operational requirements section"
 assert_file_contains "$REPO_ROOT/docs/requirements.md" "OPR-001" "Requirements doc defines an operational requirement"
+assert_file_contains "$REPO_ROOT/docs/requirements.md" "FR-007" "Requirements doc defines split planning"
+assert_file_contains "$REPO_ROOT/docs/requirements.md" "FR-008" "Requirements doc defines role-based team execution"
+assert_file_contains "$REPO_ROOT/docs/requirements.md" "NFR-003" "Requirements doc prohibits team polling"
+assert_file_contains "$REPO_ROOT/docs/requirements.md" "OPR-003" "Requirements doc defines team verification ownership"
 
 assert_file_contains "$REPO_ROOT/plans/README.md" "# Plans Directory Guide" "Plans guidance doc has title"
 assert_file_contains "$REPO_ROOT/plans/README.md" "## Canonical Verification Sources" "Plans guidance doc points to verification sources"
@@ -205,6 +217,7 @@ assert_file_contains "$REPO_ROOT/docs/adr/README.md" "# Architecture Decision Re
 assert_file_contains "$REPO_ROOT/docs/adr/README.md" "## ADR File Format" "ADR index explains the file format"
 assert_file_contains "$REPO_ROOT/docs/adr/README.md" "## Lifecycle" "ADR index explains ADR lifecycle"
 assert_file_contains "$REPO_ROOT/docs/adr/README.md" "0001-repo-operational-contracts.md" "ADR index lists the first ADR"
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "0002-split-team-planning-pipeline.md" "ADR index lists the team planning ADR"
 
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "# ADR 0001" "Initial ADR has title"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Status: Accepted" "Initial ADR records accepted status"
@@ -212,6 +225,8 @@ assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "#
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Decision" "Initial ADR documents the decision"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Consequences" "Initial ADR documents consequences"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "FR-001" "Initial ADR cites relevant requirement IDs"
+assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Status: Accepted" "Team planning ADR is accepted"
+assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "team_plan.md" "Team planning ADR records the separate artifact"
 
 assert_file_contains "$REPO_ROOT/README.md" "docs/architecture.md" "README links to the architecture doc"
 assert_file_contains "$REPO_ROOT/README.md" "docs/coding-rules.md" "README links to the coding rules doc"
@@ -219,6 +234,8 @@ assert_file_contains "$REPO_ROOT/README.md" "docs/development-environment.md" "R
 assert_file_contains "$REPO_ROOT/README.md" "plans/README.md" "README links to the plans guidance doc"
 assert_file_contains "$REPO_ROOT/README.md" "docs/issues_learnings.md" "README links to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/README.md" "docs/adr/README.md" "README links to the ADR index"
+assert_file_contains "$REPO_ROOT/README.md" '`zai-coding-plan/glm-5.2` | Default model' "README documents the OpenCode default model"
+assert_file_contains "$REPO_ROOT/README.md" "sequential or team planning" "README routes bug fixes through the selected planning pipeline"
 
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "# Agents Directory Guide" "Agents guide has title"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Agent Frontmatter Conventions" "Agents guide covers frontmatter conventions"

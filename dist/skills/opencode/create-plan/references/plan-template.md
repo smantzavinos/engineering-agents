@@ -91,7 +91,8 @@ Approved requirement changes to apply during execution:
 | T1 | <task> | — | <paths/globs this task writes; `(none)` if it writes no files; omit only if unknown> | <artifact/outcome> | <how to verify> | ⬜ |
 | T2 | <task> | T1 | <paths/globs> | <artifact/outcome> | <how to verify> | ⬜ |
 
-> **Touched files** is the write-set each task declares. It is optional for sequential execution but required to enable parallel (team-mode) execution, where tasks are grouped into waves that must be file-disjoint. Prefer explicit paths; globs are allowed. Use `(none)` for a task that writes no files. An undeclared/unknown write-set is treated conservatively (the task runs alone in its own wave).
+> **Touched files** records the expected write-set for sequential review and impact analysis.
+> Team mode uses a separate `team_plan.md` with required file ownership and role packets.
 
 ### Task Details
 

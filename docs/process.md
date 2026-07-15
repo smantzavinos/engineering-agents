@@ -4,7 +4,10 @@ This document defines the full lifecycle for each workflow type. The orchestrato
 
 ## Commit Discipline
 
-Agents should not accumulate large uncommitted work. Human-reviewed planning artifacts are committed at approval boundaries, while implementation work is committed after every completed task. A completed task commit must include code, tests, and the matching `worklog.md` update atomically.
+Agents should not accumulate large uncommitted work. Human-reviewed planning artifacts are
+committed at approval boundaries. Sequential implementation commits every completed task
+with its tests and `worklog.md` update; team implementation commits each reviewed, verified
+integration group with its `team-worklog.md` update.
 
 ## Task Tracking and Backlog Capture
 
@@ -41,7 +44,9 @@ The standard workflow for implementing new capabilities, enhancements, refactors
 ### Stages
 
 ```
-brief → research → approach → plan → plan review → worklog → execute → code review
+brief → research → approach → approach review
+                              ├─ sequential: plan → plan review → worklog → execute → code review
+                              └─ team: team plan → team plan review → team worklog → team execute → fresh final review
 ```
 
 #### 1. Brief
@@ -119,7 +124,7 @@ brief → research → approach → plan → plan review → worklog → execute
 
 ---
 
-#### 4. Plan
+#### 4A. Sequential Plan
 
 **Purpose:** Create a detailed, executable implementation plan with dependency-ordered tasks and TDD checklists.
 
@@ -139,7 +144,7 @@ brief → research → approach → plan → plan review → worklog → execute
 
 ---
 
-#### 5. Plan Review
+#### 5A. Sequential Plan Review
 
 **Purpose:** Catch issues before implementation begins. Find missing details, inconsistencies, logic bugs, and gaps that would cause rework.
 
@@ -162,7 +167,7 @@ brief → research → approach → plan → plan review → worklog → execute
 
 ---
 
-#### 6. Worklog
+#### 6A. Sequential Worklog
 
 **Purpose:** Create the execution tracking document that supports task-by-task implementation with resume capability.
 
@@ -181,7 +186,7 @@ brief → research → approach → plan → plan review → worklog → execute
 
 ---
 
-#### 7. Execute
+#### 7A. Sequential Execute
 
 **Purpose:** Implement the plan one task at a time using strict TDD.
 
@@ -240,7 +245,7 @@ This does NOT replace the final code review — it supplements it. The final rev
 
 ---
 
-#### 8. Code Review
+#### 8A. Sequential Code Review
 
 **Purpose:** Post-implementation quality gate. Verify that the code actually delivers what the plan specified.
 
@@ -262,6 +267,31 @@ This does NOT replace the final code review — it supplements it. The final rev
 
 ---
 
+#### 4B–8B. Team Planning and Execution
+
+Team mode is a parallel pipeline after the reviewed approach, not a transformation of the
+sequential plan:
+
+```text
+team_plan.md → team_plan_review.md → team-worklog.md
+→ contract-first role execution → close team → fresh final review
+```
+
+- `create-team-plan` creates `team_plan.md` directly from the reviewed approach.
+- `review-team-plan` validates acceptance contracts, file ownership, active slots, role/model
+  routing, no-polling wake events, remediation, and escalation.
+- Contract/verifier writes tests before or alongside implementation.
+- Up to three fast implementers speed-run file-owned packets with minimal checks.
+- A cost-controlled live reviewer creates remediation tasks.
+- The original implementer receives one local retry; failed retries and high-risk work route
+  to the idle Strong rescue implementer.
+- Lead runs broad gates and commits integration groups.
+- After team closure, a fresh strong reviewer performs the authoritative final review.
+
+See [Team-Mode Execution](team-mode-execution.md) for the full operating contract.
+
+---
+
 ## Bug Fix
 
 The workflow for fixing defects, regressions, and incorrect behavior. Similar to feature development but with debugging replacing pure research.
@@ -269,7 +299,7 @@ The workflow for fixing defects, regressions, and incorrect behavior. Similar to
 ### Stages
 
 ```
-brief → debug/research → approach → plan → plan review → worklog → execute → code review
+brief → debug/research → approach → approach review → sequential or team planning pipeline
 ```
 
 #### 1. Brief
@@ -329,7 +359,7 @@ Same as feature development. Document the bug: what's happening, what should hap
 
 ---
 
-#### 4–8. Plan → Plan Review → Worklog → Execute → Code Review
+#### 4–8. Sequential or Team Planning → Execute → Review
 
 Same as feature development. The plan for a bug fix always includes:
 - A regression test that reproduces the bug (must fail before fix, pass after)

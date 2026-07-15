@@ -91,21 +91,23 @@ This repository also documents its own operating contract so contributors can us
 
 ### Skills (`skills/`)
 
-17 skills covering the full development lifecycle:
+19 skills covering the full development lifecycle:
 
 | Skill | Stage | Purpose |
 |-------|-------|---------|
 | `discovery` | Discovery | Socratic dialogue to clarify intent |
 | `design` | Design | Collaborative research and approach development |
 | `research` | Design | Investigate a specific topic in a codebase |
-| `create-plan` | Planning | Create detailed implementation plans |
-| `review-plan` | Planning | Review plans for completeness and consistency |
+| `create-plan` | Planning | Create strict-TDD sequential implementation plans |
+| `review-plan` | Planning | Review sequential plans for completeness and consistency |
+| `create-team-plan` | Planning | Create role-oriented team plans directly from reviewed approaches (OpenCode-only) |
+| `review-team-plan` | Planning | Review team plans for contracts, concurrency, roles, and escalation readiness (OpenCode-only) |
 | `review-approach` | Planning | Review approaches for architectural soundness |
 | `create-worklog` | Execution | Create execution log from approved plan |
-| `create-team-worklog` | Execution | Create wave-oriented team worklog for team-mode execution (OpenCode-only) |
+| `create-team-worklog` | Execution | Create the role/stage execution ledger from a reviewed team plan (OpenCode-only) |
 | `execute-task` | Execution | Execute one plan task using strict TDD |
 | `execution-orchestrator` | Execution | Autonomous orchestrator driving plan to completion |
-| `execution-orchestrator-team` | Execution | Fast-lane orchestrator running tasks in parallel via team mode (OpenCode-only) |
+| `execution-orchestrator-team` | Execution | Role-based fast lane with early contracts, fast implementers, rescue escalation, and fresh final review (OpenCode-only) |
 | `review-code` | Review | Post-implementation code review |
 | `review-epic` | Review | Epic-level review across child plans |
 | `assess-repo` | Setup | Assess and set up a repo for the workflow |
@@ -151,7 +153,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable OpenCode with engineering-agents configuration |
-| `model` | `openai/gpt-5.5` | Default model |
+| `model` | `zai-coding-plan/glm-5.2` | Default model |
 | `enableTmux` | `true` | Enable tmux integration |
 | `enableVisualExplainer` | `true` | Install the visual-explainer skill (pinned via the `visualExplainer` flake input) |
 | `enableServer` | `false` | Enable OpenCode server systemd service |
@@ -161,8 +163,9 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 
 | Workflow | When to use | Process |
 |----------|-------------|---------|
-| Feature Development | New capabilities, enhancements | brief → research → approach → plan → review → execute → code review |
-| Bug Fix | Defects, regressions | brief → debug/research → approach → plan → execute → code review |
+| Feature Development (sequential) | New capabilities, maximum rigor | brief → research → approach → plan → review → execute → code review |
+| Feature Development (team) | New capabilities, high-speed role separation | brief → research → approach → team plan → team plan review → team execute → fresh final review |
+| Bug Fix | Defects, regressions | brief → debug/research → approach → sequential or team planning → execute → review |
 | Epic | Large initiatives | brief → findings → approach → epic decomposition → child plans |
 | Simple Change | Trivial fixes, config | brief → implement → verify |
 
@@ -199,8 +202,10 @@ You can copy the generated trees to any coding agent's configuration directory:
 - **Skills define process, repos define specifics** — Skills know *what* to do; repos define *how*
 - **Documentation drives discovery** — AGENTS.md files enable progressive information discovery
 - **Everything in one directory** — One plan directory = one unit of work
-- **Commits are process checkpoints** — Implementation committed after every completed task
-- **TDD is non-negotiable** — Every change requires a failing test first
+- **Commits are process checkpoints** — Sequential mode commits per task; team mode commits
+  reviewed and verified integration groups
+- **Tests define contracts early** — Sequential mode uses strict TDD; team mode writes
+  acceptance contracts before or alongside implementation and verifies independently
 
 ## License
 

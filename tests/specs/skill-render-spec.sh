@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Verify the skill render pipeline: dist/ is up to date with canonical sources,
 # and each harness tree uses the correct harness-specific delegation syntax.
+# Requirement: FR-007
+# Requirement: FR-008
+# Requirement: NFR-003
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -156,7 +159,7 @@ else
 fi
 
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
-for oc_only in execution-orchestrator-team create-team-worklog; do
+for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
   if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
     fail "${oc_only} (opencode-only) leaked into the Pi tree"
   else
@@ -168,6 +171,14 @@ for oc_only in execution-orchestrator-team create-team-worklog; do
     fail "${oc_only} is missing from the OpenCode tree"
   fi
 done
+
+if grep -Fq 'team_plan.md' "$REPO_ROOT/dist/skills/opencode/create-team-plan/SKILL.md" \
+  && grep -Fq 'team_plan_review.md' "$REPO_ROOT/dist/skills/opencode/review-team-plan/SKILL.md" \
+  && grep -Fq 'Do not poll' "$REPO_ROOT/dist/skills/opencode/execution-orchestrator-team/SKILL.md"; then
+  pass "OpenCode team pipeline renders separate planning artifacts and no-polling execution"
+else
+  fail "OpenCode team pipeline rendering is incomplete"
+fi
 
 # Every rendered SKILL.md must carry the harness-correct compatibility value
 for harness in pi opencode; do

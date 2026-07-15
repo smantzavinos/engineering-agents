@@ -343,44 +343,106 @@ Each sub-agent starts with **fresh context**. This is critical:
 
 ---
 
-## Team-Mode Wave Execution (Fast Lane)
+## Team-Mode Role Execution (Fast Lane)
 
-The Execution Orchestrator above is deliberately sequential: one sub-agent per task, a single worklog cursor, one atomic commit per task. **Team-mode wave execution** is an opt-in peer that trades some of that rigor for wall-clock speed by running independent tasks in parallel via OpenCode team mode. It is implemented by the `execution-orchestrator-team` skill (OpenCode-only) and the `create-team-worklog` skill.
+The Execution Orchestrator above is deliberately sequential. Team mode is a separate
+post-approach planning pipeline optimized for role separation and wall-clock speed.
 
-Use the sequential orchestrator when you want maximum rigor; use team-mode when the plan's task graph is wide and its tasks are mostly file-disjoint.
-
-### What stays sequential vs. what parallelizes
-
-Only implementation parallelizes. Plan creation, plan review, worklog creation, the final cross-wave review, and every commit remain sequential and lead-driven:
-
-```
-create plan -> review plan -> approval gate -> commit          (sequential, unchanged)
-create team worklog -> commit                                  (sequential)
-for each wave: parallel workers + in-team reviewer -> gate -> commit wave   (TEAM PHASE)
-final cross-wave review -> complete                            (sequential)
+```text
+reviewed approach
+  ├─ create-plan → review-plan → sequential execution
+  └─ create-team-plan → review-team-plan → role-based team execution
 ```
 
-### The wave is the execution unit
+The team plan is created directly from the reviewed approach. It is not compiled from the
+sequential plan.
 
-The plan task graph is sliced into ordered **waves**. A wave is a set of tasks that are dependency-satisfied by earlier waves, **file-disjoint** within the wave (from each task's `Touched files`), and within the 4-worker cap. This is why the plan template carries a per-task `Touched files` field: it is the input that lets the orchestrator group tasks safely. Conflicts are detected at slicing time, not at commit time.
+### What stays lead-driven vs. what parallelizes
 
-### Git model: shared tree, single committer
+Team planning/review, team-worklog creation, broad gates, commits, lifecycle, and fresh final
+review remain lead-driven. Acceptance contracts, implementation, live review, remediation,
+and targeted verification overlap by readiness event:
 
-All members work in one shared working tree; only the lead runs git. This eliminates index races. Commits are per wave (`wave(N): …`), not per task — the deliberate history-granularity tradeoff. Unavoidable same-file work is resolved live between workers via team messages, or serialized into different waves.
+```
+create team plan -> review -> approval -> team worklog
+contract/verifier + fast implementers -> live review/remediation
+lead integration gate/commit -> close team -> fresh strong review -> complete
+```
+
+### Roles and active slots
+
+The default roster is three implementation slots, one idle Strong rescue implementer, one
+contract/verifier, one cost-controlled live reviewer, and the primary-chat lead. If the team
+plan contains UI, styling, accessibility, interaction, or visual-validation packets, a
+`visual-engineering` member replaces one of the three general implementation slots. Declared
+membership may exceed four, but no more than four members work concurrently.
+
+#### Team execution roles
+
+| Role | Responsibilities |
+|---|---|
+| Lead | Select roster, create tasks, enforce ownership/readiness, wake idle members, run broad gates, commit, close/recreate teams, and commission final review. |
+| Mechanical implementer | Speed-run small isolated packets; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks. |
+| Standard implementer | Implement normal backend/tooling packets with the same bounded ownership and minimal-check contract. |
+| Visual implementer | Replace one general implementation slot when UI work exists; own frontend/UI, styling, interaction, accessibility, responsive, and visual-validation packets. |
+| Strong rescue implementer | Stay idle until assigned high-risk work or escalation; diagnose/fix failed retries and cross-cutting defects. |
+| Contract/verifier | Read acceptance contracts before implementation; author executable tests early; confirm baseline/red evidence; later run targeted evidence, classify failures, and report remediation needs without fixing production code. |
+| Live reviewer | Review each implementation handoff; create remediation tasks; authorize integration readiness; give one local retry before escalation. |
+| Final reviewer | Start fresh after team closure; independently review the complete diff against `team_plan.md` and evidence. |
+
+#### Role-to-runtime mapping
+
+| Role | Agent type/category | Team membership |
+|---|---|---|
+| Lead | primary Execute agent/chat | team lead |
+| Mechanical implementer | category `quick` | category member (Sisyphus-Junior runtime) |
+| Standard implementer | category `unspecified-high` | category member (Sisyphus-Junior runtime) |
+| Visual implementer | category `visual-engineering` | category member replacing one implementer slot |
+| Planned complex implementer | category `deep` | category member for explicitly high-complexity packets |
+| Strong rescue implementer | direct `subagent_type="hephaestus"` | declared team member, initially idle |
+| Contract/verifier | category `unspecified-high` or packet domain category | category member |
+| Live reviewer | category `unspecified-high` | category member |
+| Final reviewer | external category `ultrabrain` with `review-code` | not retained in implementation team |
+
+#### Suggested model mapping
+
+These are recommendations, not hard requirements. Repository/user category overrides remain
+the source of truth.
+
+| Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
+|---|---|---|---|
+| Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/gpt-5.6-sol` |
+| `quick` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/gpt-5.4-mini` |
+| `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
+| `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
+| `deep` | planned complex implementation | GPT-5.5 or Claude Opus-class coding model | `github-copilot/gpt-5.6-sol` |
+| direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/gpt-5.6-sol` |
+| `ultrabrain` | fresh authoritative final review | GPT-5.5/5.6 or Claude Opus-class review model | `github-copilot/gpt-5.6-sol` |
+
+### Packets, remediation, and verification
+
+Acceptance contracts start before or alongside implementation. Fast implementers own coherent
+write-sets and run only minimal checks. The live reviewer creates remediation tasks; the
+original implementer receives one local retry, then failed/high-risk work routes to the
+Strong rescue implementer. The verifier owns targeted evidence; the lead owns broad gates
+and integration-group commits.
 
 ### Rigor tradeoffs (explicit)
 
 | Guarantee | Sequential | Team-mode |
 |-----------|------------|-----------|
 | Per-task break-it check | yes | dropped by default (reviewer test-adequacy gate compensates) |
-| Commit granularity | per task | per wave |
-| Review context | fresh per pass | persistent in-team reviewer + final fresh pass |
+| Commit granularity | per task | per integration group |
+| Review context | fresh per pass | cost-controlled live review + fresh strong final review |
 
-### Reviewer and team shape
+### Event-driven coordination
 
-The team is a lead (sole committer), up to four implementation workers (`deep`, or `visual-engineering` for UI), and one reviewer (`ultrabrain`, same tier as the sequential reviews). The reviewer reviews each task live and the combined wave diff at wave end. Because team members cannot load skills, their prompts point them at the canonical `execute-task` / `review-code` skill files. When all waves are terminal the lead runs the team Closure Sequence, then the sequential final review runs.
+Blocked members do not poll the board. They report idle once and stop. The lead wakes them via
+team messages with an actionable packet. Team recreation between major stages is the
+supported context reset when sessions grow long or the role/model mix changes.
 
-See the `execution-orchestrator-team` skill for the full wave-slicing procedure, team spec, convergence caps, and the mode-selection gate.
+See [Team-Mode Execution](team-mode-execution.md) and the
+`execution-orchestrator-team` skill for the full protocol.
 
 ---
 

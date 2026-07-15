@@ -66,6 +66,13 @@ Contributors need a canonical place to record approved non-critical discoveries 
 
 Maintainers need a lightweight canonical system for the repo's accepted requirements so changes can be proposed, approved, cited, and queried consistently.
 
+### UC-005 — Execute reviewed approaches through team mode
+**Actors:** ACT-001, ACT-002
+
+Contributors need a high-speed execution path that separates contracts, implementation,
+review, remediation, and verification while retaining explicit ownership and final quality
+gates.
+
 ## Workflows
 
 ### WF-001 — Execute task-level verification
@@ -87,6 +94,13 @@ When non-critical work is accepted but out of scope, record it in `docs/backlog.
 **Use case:** UC-004
 
 Keep draft requirement changes in plan artifacts until approval, then update `docs/requirements.md`, cite the relevant IDs in touched artifacts, and record the change in the worklog.
+
+### WF-005 — Plan and execute with a role-based team
+**Use case:** UC-005
+
+After approach review, create and review `team_plan.md`, initialize `team-worklog.md`, write
+acceptance contracts before or alongside implementation, run live review/remediation with
+bounded escalation, close the implementation team, and run a fresh strong final review.
 
 ## Functional Requirements
 
@@ -120,6 +134,20 @@ Materially edited readiness-related tests shall cite the requirements they verif
 
 The proof-set verification path shall support the current `@earendil-works/pi-coding-agent` namespace and the legacy `@mariozechner/pi-coding-agent` namespace, while reporting missing entrypoints as explicit non-zero environment failures.
 
+### FR-007 — Separate post-approach planning pipelines
+**Use case:** UC-005
+
+The repo shall provide separate sequential and team planning pipelines after approach review.
+Team planning shall create `team_plan.md` directly from the reviewed approach rather than
+deriving it from `plan.md`.
+
+### FR-008 — Role-based team execution
+**Use case:** UC-005
+
+Team execution shall define early acceptance contracts, file-owned implementation packets,
+cost-aware live review, reviewer-created remediation, a dormant strong rescue role, targeted
+verification ownership, lead-owned broad gates, and fresh strong final review.
+
 ## Non-Functional Requirements
 
 ### NFR-001 — Lightweight and local
@@ -132,6 +160,12 @@ The backlog and requirements systems shall remain lightweight, Markdown-based, a
 
 Repo-operating docs shall stay concise, routing-oriented where appropriate, and specific enough to be checked by durable shell-based readiness specs.
 
+### NFR-003 — Event-driven team coordination
+**Scope:** UC-005, WF-005
+
+Blocked team members shall not poll. The lead shall wake idle members with actionable tasks,
+and no more than four members shall work concurrently.
+
 ## Operational Requirements
 
 ### OPR-001 — Verification gate roles
@@ -143,6 +177,13 @@ Repo-operating docs shall stay concise, routing-oriented where appropriate, and 
 **Scope:** UC-004, WF-004
 
 Approved requirement changes shall be applied during normal task execution, and the affected requirement IDs shall be recorded in the matching worklog update.
+
+### OPR-003 — Team-mode verification ownership
+**Scope:** UC-005, WF-005
+
+Implementers shall run only packet-defined minimal checks; the contract/verifier shall own
+targeted acceptance evidence; the lead shall run integration and final gates; and a fresh
+strong reviewer shall perform the final independent review after team closure.
 
 ## Related Docs
 - `plans/README.md` — repo-specific rules for citing and applying these IDs in plans and worklogs.

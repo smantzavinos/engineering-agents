@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Verify repo structure: required files exist, valid SKILL.md frontmatter, etc.
+# Requirement: FR-007
+# Requirement: FR-008
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,10 +71,11 @@ assert_file_exists "$REPO_ROOT/docs/references/requirements.md" "references/requ
 assert_file_exists "$REPO_ROOT/docs/references/standard-test-levels.md" "references/standard-test-levels.md exists"
 assert_file_exists "$REPO_ROOT/docs/references/task-tracking.md" "references/task-tracking.md exists"
 
-# Skills (17 total)
+# Skills (19 total)
 SKILLS=(
   discovery design research
-  create-plan review-plan create-worklog create-team-worklog
+  create-plan review-plan create-team-plan review-team-plan
+  create-worklog create-team-worklog
   execute-task execution-orchestrator execution-orchestrator-team
   review-code review-approach review-epic
   assess-repo create-skills create-new-repo-docs
@@ -105,6 +108,8 @@ assert_file_contains "$REPO_ROOT/README.md" "homeManagerModules" "README documen
 assert_file_contains "$REPO_ROOT/flake.nix" "homeManagerModules" "Flake exposes homeManagerModules"
 assert_file_contains "$REPO_ROOT/flake.nix" "llmAgents" "Flake references llmAgents input"
 assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references OpenCode module"
+assert_file_contains "$REPO_ROOT/docs/process.md" "team_plan.md" "Process documents the team planning branch"
+assert_file_contains "$REPO_ROOT/docs/team-mode-execution.md" "Strong rescue implementer" "Team-mode doc defines the rescue role"
 
 # ============================================================
 printf '\n'

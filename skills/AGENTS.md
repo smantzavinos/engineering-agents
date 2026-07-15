@@ -6,7 +6,9 @@ Read this file before creating or materially editing anything under `skills/`.
 - Each skill lives in `skills/<name>/` with a required `SKILL.md` entrypoint.
 - `SKILL.md` files are **canonical, harness-neutral templates**. They are rendered per harness into `dist/skills/<harness>/` by `tools/render-skills.mjs`. See `docs/skill-rendering.md`.
 - `SKILL.md` starts with YAML frontmatter. Keep `name` and `description` accurate. Do **not** add a `compatibility:` line — the renderer injects it per harness. Add other metadata only when it has a durable consumer.
-- Use the `harnesses: [..]` frontmatter key only to restrict a skill to specific harnesses (default: all). Today only `configure-opencode` is restricted.
+- Use the `harnesses: [..]` frontmatter key only to restrict a skill to specific harnesses
+  (default: all). OpenCode-only skills currently include `configure-opencode` and the team
+  planning/execution skills.
 - Express harness-specific delegation with macros, never with hardcoded `subagent(...)`/`task(...)` calls:
   - `{{delegate:ROLE skill=NAME}}prompt text{{/delegate}}` (the `skill=` part is optional)
   - `{{note:KEY}}` for harness-specific phrasing
