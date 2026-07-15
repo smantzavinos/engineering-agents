@@ -106,7 +106,7 @@ OpenCode team mode accepts category-backed members and eligible direct subagent 
 
 | Role | Routing | Default model |
 |---|---|---|
-| mechanical implementer | `quick` | `zai-coding-plan/glm-5.2` |
+| mechanical implementer | `unspecified-low` | `zai-coding-plan/glm-5.2` |
 | standard implementer / contract verifier / live reviewer | `unspecified-high` | `zai-coding-plan/glm-5.2`, GPT-5.5 fallback |
 | UI implementer | `visual-engineering` | `zai-coding-plan/glm-5.2`, GPT-5.5 fallback |
 | planned complex implementation | `deep` | `openai/gpt-5.5` xhigh |

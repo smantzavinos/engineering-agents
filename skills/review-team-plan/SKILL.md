@@ -56,7 +56,7 @@ Review a team-mode plan before a team worklog or implementation team is created.
 - The live reviewer is cost-controlled; the fresh final reviewer defaults to `deep`, with
   `ultrabrain` reserved for unusually hard or unique final reviews.
 - Category/direct-agent routing matches packet risk, domain, and implementer class
-  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`).
+  (mechanical→`unspecified-low`, standard→`unspecified-high`, complex→`deep`).
 
 ### Event-driven coordination
 

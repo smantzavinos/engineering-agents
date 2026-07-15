@@ -22,7 +22,7 @@ brief → findings → approach → approach review
 | Role | Default routing | Responsibility |
 |---|---|---|
 | Lead | primary chat | schedule, wake members, gates, commits, lifecycle |
-| Implementation slots (up to 3) | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | speed-run file-owned packets; minimal checks |
+| Implementation slots (up to 3) | `unspecified-low` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | speed-run file-owned packets; minimal checks |
 | Visual implementer (optional) | `visual-engineering` | replaces one implementation slot when UI/UX/a11y/visual packets exist |
 | Strong rescue implementer | direct `hephaestus` | high-risk packets and escalations; starts idle |
 | Contract/verifier | `unspecified-high` or domain category | write contracts early; run targeted evidence |
@@ -34,7 +34,7 @@ variant, temperature, and fallbacks. Direct team subagent types may be `sisyphus
 `sisyphus-junior`, or `hephaestus`. Oracle and Prometheus remain external consultations.
 
 The lead selects the three implementation slots from the team plan and routes each packet
-strictly by its declared implementer class: mechanical packets to `quick`, standard packets
+strictly by its declared implementer class: mechanical packets to `unspecified-low`, standard packets
 to `unspecified-high`, and complex packets to `deep`. Members never self-select; a
 mechanically-routed member receives only mechanically-classified packets. Use one
 `visual-engineering` slot whenever any packet owns frontend components, styling,
@@ -61,7 +61,7 @@ Every implementation packet declares:
 - acceptance contracts
 - readiness and dependencies
 - exclusive files owned
-- role/domain, risk tier, and implementer class (mechanical → `quick`, standard →
+- role/domain, risk tier, and implementer class (mechanical → `unspecified-low`, standard →
   `unspecified-high`, complex → `deep`)
 - minimal implementer check
 - reviewer checklist and handoff format
@@ -127,7 +127,7 @@ durable handoffs, idle sessions, and team recreation are the supported context c
 
 | Condition | Route |
 |---|---|
-| mechanical isolated work | `quick` |
+| mechanical isolated work | `unspecified-low` |
 | normal implementation or live review | `unspecified-high` |
 | UI work | `visual-engineering` |
 | planned complex implementation | `deep` |

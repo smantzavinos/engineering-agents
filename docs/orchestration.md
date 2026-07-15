@@ -396,7 +396,7 @@ membership may exceed four, but no more than four members work concurrently.
 | Role | Agent type/category | Team membership |
 |---|---|---|
 | Lead | primary Execute agent/chat | team lead |
-| Mechanical implementer | category `quick` | category member (Sisyphus-Junior runtime) |
+| Mechanical implementer | category `unspecified-low` | category member (Sisyphus-Junior runtime) |
 | Standard implementer | category `unspecified-high` | category member (Sisyphus-Junior runtime) |
 | Visual implementer | category `visual-engineering` | category member replacing one implementer slot |
 | Planned complex implementer | category `deep` | category member for explicitly high-complexity packets |
@@ -417,7 +417,7 @@ the source of truth.
 | Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
 |---|---|---|---|
 | Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/gpt-5.6-sol` |
-| `quick` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/gpt-5.4-mini` |
+| `unspecified-low` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/gpt-5.4-mini` |
 | `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
 | `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |

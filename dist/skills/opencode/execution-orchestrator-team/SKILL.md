@@ -50,7 +50,7 @@ Resume from the first missing stage artifact:
 
 | Role | Routing | Default state |
 |---|---|---|
-| Up to 3 implementation slots | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | active as packets allow |
+| Up to 3 implementation slots | `unspecified-low` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | active as packets allow |
 | Visual implementer (optional) | `visual-engineering` | replaces one fast implementer slot when UI work exists |
 | Strong rescue implementer | direct `subagent_type="hephaestus"` | idle |
 | Contract/verifier | `unspecified-high` or domain category | active during contracts |
@@ -74,7 +74,7 @@ Do not add it as a fourth implementation slot.
 | Role | Required behavior |
 |---|---|
 | Lead | Build the roster from packet domains; write self-contained member prompts; pre-assign work; wake idle roles; enforce four active slots; run broad gates; commit; close/recreate teams. |
-| Mechanical implementer | Handle small isolated packets classified mechanical through `quick`; edit owned files only; minimal check; concise handoff; no git/broad gates/polling. |
+| Mechanical implementer | Handle small isolated packets classified mechanical through `unspecified-low`; edit owned files only; minimal check; concise handoff; no git/broad gates/polling. |
 | Standard implementer | Handle normal implementation packets classified standard through `unspecified-high`; same ownership/check/handoff boundaries. |
 | Complex implementer | Handle packets classified complex (cross-module, non-trivial design, subtle correctness) through `deep`; same ownership/check/handoff boundaries. |
 | Visual implementer | Handle UI/UX/CSS/interaction/a11y/responsive/visual packets through `visual-engineering`; replace one implementation slot. |
@@ -151,7 +151,7 @@ Do not poll. Never instruct blocked members to check `team_task_list` periodical
 
 - Lead pre-assigns ready tasks.
 - The lead routes each packet strictly by its declared implementer class
-  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`); a mechanically-routed
+  (mechanical→`unspecified-low`, standard→`unspecified-high`, complex→`deep`); a mechanically-routed
   member receives only mechanically-classified packets. Members never self-select work.
 - A member without actionable work reports idle once and stops.
 - `team_send_message` wakes the member with a task ID, readiness evidence, file ownership,
@@ -225,7 +225,7 @@ After all implementation packets are terminal:
 | Role | Agent type/category | Membership |
 |---|---|---|
 | Lead | primary Execute agent/chat | team lead |
-| Mechanical implementer | category `quick` | category member |
+| Mechanical implementer | category `unspecified-low` | category member |
 | Standard implementer | category `unspecified-high` | category member |
 | Visual implementer | category `visual-engineering` | category member replacing one implementation slot |
 | Planned complex implementer | category `deep` | category member |
@@ -241,7 +241,7 @@ These are recommendations. User/repository category overrides remain authoritati
 | Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
 |---|---|---|---|
 | Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/gpt-5.6-sol` |
-| `quick` | mechanical isolated edits | GLM-5.2 or fast coding model | `github-copilot/gpt-5.4-mini` |
+| `unspecified-low` | mechanical isolated edits | GLM-5.2 or fast coding model | `github-copilot/gpt-5.4-mini` |
 | `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
 | `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |

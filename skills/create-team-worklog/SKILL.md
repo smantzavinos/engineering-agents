@@ -38,7 +38,7 @@ team plan or convert sequential tasks into waves.
 - The worklog is an execution ledger, not a second plan.
 - The lead is sole scheduler, committer, broad-gate runner, and durable-doc writer.
 - The lead routes each packet strictly by its declared implementer class
-  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`); mechanically-routed
+  (mechanical→`unspecified-low`, standard→`unspecified-high`, complex→`deep`); mechanically-routed
   members receive only mechanically-classified packets. Members never self-select.
 - No active schedule exceeds four concurrent members.
 - Every blocked assignment names its wake event and sender.

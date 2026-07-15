@@ -53,7 +53,7 @@ visual verification.
 
 | Role | Default routing | Start state | Responsibilities |
 |---|---|---|---|
-| Implementation slots (up to 3) | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) | active as packets allow | speed-run owned files by packet class; minimal checks only |
+| Implementation slots (up to 3) | `unspecified-low` (mechanical), `unspecified-high` (standard), or `deep` (complex) | active as packets allow | speed-run owned files by packet class; minimal checks only |
 | Visual implementer (optional) | `visual-engineering` | active when UI packets exist | replaces one general slot; UI/UX/a11y/visual work |
 | Strong rescue implementer | direct `hephaestus` | idle | high-risk packets and escalations |
 | Contract/verifier | `unspecified-high` or domain category | active for contract stage | read acceptance context; own test files; author early behavioral tests; record baseline/red and targeted evidence; classify failures; never fix production code |

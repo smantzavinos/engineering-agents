@@ -28,7 +28,7 @@
 
 | Member | Role | Routing | Start state | Current assignment |
 |---|---|---|---|---|
-| impl-1..3 | implementation slots | by packet class: `quick` (mechanical), `unspecified-high` (standard), `deep` (complex); one may be `visual-engineering` | idle/active | <packet/none> |
+| impl-1..3 | implementation slots | by packet class: `unspecified-low` (mechanical), `unspecified-high` (standard), `deep` (complex); one may be `visual-engineering` | idle/active | <packet/none> |
 | rescue | Strong rescue implementer | direct `hephaestus` | idle | none |
 | verifier | contract/verifier | domain category | active/idle | <packet/none> |
 | live-reviewer | live review | `unspecified-high` | idle | none |
@@ -59,7 +59,7 @@ Maximum active members: 4.
 | Packet | Owner | State | Readiness/wake event | Minimal check/evidence | Handoff received |
 |---|---|---|---|---|---|
 | C1 | verifier | pending | immediate | `<command>` | no |
-| I1 | impl-1 (mechanical/`quick`) | blocked | lead wakes after <event> | `<minimal check>` | no |
+| I1 | impl-1 (mechanical/`unspecified-low`) | blocked | lead wakes after <event> | `<minimal check>` | no |
 
 States: pending, assigned, in-progress, review, remediation, verified, completed, failed.
 

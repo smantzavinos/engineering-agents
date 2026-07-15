@@ -85,7 +85,7 @@ mechanism that keeps a mechanical implementer from picking up work beyond its in
 
 | Class | Category route | Assign when the packet is... |
 |---|---|---|
-| mechanical | `quick` | simple, isolated, low-risk; localized/single-file; no design judgment (renames, config, string/constant edits, boilerplate, mechanical refactors) |
+| mechanical | `unspecified-low` | simple, isolated, low-risk; localized/single-file; no design judgment (renames, config, string/constant edits, boilerplate, mechanical refactors) |
 | standard | `unspecified-high` | normal backend/tooling/logic implementation with bounded ownership |
 | complex | `deep` | planned high-complexity: cross-module coordination, non-trivial design or algorithms, or subtle correctness/state concerns |
 
@@ -100,7 +100,7 @@ Rules:
 
 ### Default team topology
 
-- Up to three implementation slots routed by packet class: mechanical (`quick`),
+- Up to three implementation slots routed by packet class: mechanical (`unspecified-low`),
   standard (`unspecified-high`), and complex (`deep`), active when file ownership allows.
 - One Strong rescue implementer: direct `hephaestus`, idle until escalation or a planned
   high-risk packet.
