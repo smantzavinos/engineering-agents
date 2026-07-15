@@ -382,8 +382,9 @@ membership may exceed four, but no more than four members work concurrently.
 | Role | Responsibilities |
 |---|---|
 | Lead | Select roster, create tasks, enforce ownership/readiness, wake idle members, run broad gates, commit, close/recreate teams, and commission final review. |
-| Mechanical implementer | Speed-run small isolated packets; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks. |
-| Standard implementer | Implement normal backend/tooling packets with the same bounded ownership and minimal-check contract. |
+| Mechanical implementer | Speed-run small isolated packets classified mechanical; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks. |
+| Standard implementer | Implement normal backend/tooling packets classified standard with the same bounded ownership and minimal-check contract. |
+| Complex implementer | Implement packets classified complex (cross-module, non-trivial design, subtle correctness) with the same bounded ownership and minimal-check contract. |
 | Visual implementer | Replace one general implementation slot when UI work exists; own frontend/UI, styling, interaction, accessibility, responsive, and visual-validation packets. |
 | Strong rescue implementer | Stay idle until assigned high-risk work or escalation; diagnose/fix failed retries and cross-cutting defects. |
 | Contract/verifier | Read acceptance contracts before implementation; author executable tests early; confirm baseline/red evidence; later run targeted evidence, classify failures, and report remediation needs without fixing production code. |
@@ -402,7 +403,11 @@ membership may exceed four, but no more than four members work concurrently.
 | Strong rescue implementer | direct `subagent_type="hephaestus"` | declared team member, initially idle |
 | Contract/verifier | category `unspecified-high` or packet domain category | category member |
 | Live reviewer | category `unspecified-high` | category member |
-| Final reviewer | external category `ultrabrain` with `review-code` | not retained in implementation team |
+| Final reviewer | external category `deep` with `review-code` (escalate to `ultrabrain` for unusually hard/unique reviews) | not retained in implementation team |
+
+Each implementation packet declares its implementer class at plan time (mechanical, standard,
+or complex). The lead routes strictly by that class and members never self-select, so a
+mechanically-routed member only ever receives mechanically-classified packets.
 
 #### Suggested model mapping
 
@@ -415,9 +420,9 @@ the source of truth.
 | `quick` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/gpt-5.4-mini` |
 | `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
-| `deep` | planned complex implementation | GPT-5.5 or Claude Opus-class coding model | `github-copilot/gpt-5.6-sol` |
+| `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |
 | direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/gpt-5.6-sol` |
-| `ultrabrain` | fresh authoritative final review | GPT-5.5/5.6 or Claude Opus-class review model | `github-copilot/gpt-5.6-sol` |
+| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/gpt-5.6-sol` |
 
 ### Packets, remediation, and verification
 
@@ -472,7 +477,7 @@ See [Team-Mode Execution](team-mode-execution.md) and the
 | **`vision`** | Visual | Analyze screenshots, UI mockups, visual content | — |
 | **`oracle`** | Frontier (highest) | Read-only second opinion, architecture advice | — |
 
-> **Harness note:** The agent names in these tables describe the Pi roster, where every role is a named subagent. OpenCode ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool: reasoning-heavy roles (planning, all reviews, oracle) to `category="ultrabrain"`, implementation roles to `category="deep"` (UI to `visual-engineering`), and research to the built-in `explore` (codebase) and `librarian` (external) subagent types. The skill bodies are generated per harness from one canonical source — see [Skill Rendering](skill-rendering.md).
+> **Harness note:** The agent names in these tables describe the Pi roster, where every role is a named subagent. OpenCode ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool: planning and all reviews default to `category="deep"` (escalate to `category="ultrabrain"` only for unusually hard or unique cases), the oracle read-only second opinion uses `category="ultrabrain"`, implementation roles use `category="deep"` (UI to `visual-engineering`), and research uses the built-in `explore` (codebase) and `librarian` (external) subagent types. The skill bodies are generated per harness from one canonical source — see [Skill Rendering](skill-rendering.md).
 
 ### Full Process with Agent Assignments
 

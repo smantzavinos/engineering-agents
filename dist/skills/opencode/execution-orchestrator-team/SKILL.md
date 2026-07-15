@@ -50,7 +50,7 @@ Resume from the first missing stage artifact:
 
 | Role | Routing | Default state |
 |---|---|---|
-| Up to 3 implementation slots | `quick`, `unspecified-high`, or packet domain category | active as packets allow |
+| Up to 3 implementation slots | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | active as packets allow |
 | Visual implementer (optional) | `visual-engineering` | replaces one fast implementer slot when UI work exists |
 | Strong rescue implementer | direct `subagent_type="hephaestus"` | idle |
 | Contract/verifier | `unspecified-high` or domain category | active during contracts |
@@ -58,7 +58,8 @@ Resume from the first missing stage artifact:
 | Lead | primary chat | active |
 
 The final reviewer is not a long-running team member. After implementation-team closure,
-delegate a fresh full-diff review to `category="ultrabrain"` with `review-code`.
+delegate a fresh full-diff review to `category="deep"` with `review-code`. Escalate to
+`category="ultrabrain"` only for unusually hard or unique final reviews.
 
 Category members use the Sisyphus-Junior runtime with the category's configured model.
 Direct team subagent types may be `sisyphus`, `atlas`, `sisyphus-junior`, or `hephaestus`.
@@ -73,13 +74,14 @@ Do not add it as a fourth implementation slot.
 | Role | Required behavior |
 |---|---|
 | Lead | Build the roster from packet domains; write self-contained member prompts; pre-assign work; wake idle roles; enforce four active slots; run broad gates; commit; close/recreate teams. |
-| Mechanical implementer | Handle small isolated packets through `quick`; edit owned files only; minimal check; concise handoff; no git/broad gates/polling. |
-| Standard implementer | Handle normal implementation through `unspecified-high`; same ownership/check/handoff boundaries. |
+| Mechanical implementer | Handle small isolated packets classified mechanical through `quick`; edit owned files only; minimal check; concise handoff; no git/broad gates/polling. |
+| Standard implementer | Handle normal implementation packets classified standard through `unspecified-high`; same ownership/check/handoff boundaries. |
+| Complex implementer | Handle packets classified complex (cross-module, non-trivial design, subtle correctness) through `deep`; same ownership/check/handoff boundaries. |
 | Visual implementer | Handle UI/UX/CSS/interaction/a11y/responsive/visual packets through `visual-engineering`; replace one implementation slot. |
 | Strong rescue implementer | Stay idle; accept only explicit escalation/high-risk assignments; diagnose root cause, implement fix, run targeted check, report risk. |
 | Contract/verifier | Define executable evidence before implementation, own declared test files, confirm baseline/red evidence, later run targeted verification, classify failures, and report remediation; never fix production code. |
 | Live reviewer | Inspect each handoff, create remediation tasks, allow one local retry, escalate when required, and mark integration readiness; never edit source. |
-| Final reviewer | Run outside the implementation team with fresh `ultrabrain` context and `review-code`. |
+| Final reviewer | Run outside the implementation team with fresh `deep` context and `review-code`; escalate to `ultrabrain` only for unusually hard or unique final reviews. |
 
 ## Member Prompt Contracts
 
@@ -89,9 +91,9 @@ behavior directly in each member prompt. Never use a shorthand such as “same a
 
 ### Implementer prompt contract
 
-Include: role/domain, exact packet IDs, exclusive files, readiness evidence, deliverable,
-minimal check, acceptance contracts, handoff recipients/format, one-retry rule, no git,
-no broad gates, no polling, and stop-after-handoff behavior.
+Include: role/domain, packet implementer class, exact packet IDs, exclusive files, readiness
+evidence, deliverable, minimal check, acceptance contracts, handoff recipients/format,
+one-retry rule, no git, no broad gates, no polling, and stop-after-handoff behavior.
 
 ### Visual implementer prompt contract
 
@@ -148,6 +150,9 @@ Typical schedule:
 Do not poll. Never instruct blocked members to check `team_task_list` periodically.
 
 - Lead pre-assigns ready tasks.
+- The lead routes each packet strictly by its declared implementer class
+  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`); a mechanically-routed
+  member receives only mechanically-classified packets. Members never self-select work.
 - A member without actionable work reports idle once and stops.
 - `team_send_message` wakes the member with a task ID, readiness evidence, file ownership,
   and expected handoff.
@@ -209,8 +214,8 @@ the lead runs its package/repo gate once, updates the worklog, and commits the g
 After all implementation packets are terminal:
 
 1. Close the implementation team using the Closure Sequence.
-2. Delegate a fresh full-branch review against `team_plan.md` to external `ultrabrain` with
-   `review-code`.
+2. Delegate a fresh full-branch review against `team_plan.md` to external `deep` with
+   `review-code`. Escalate to `ultrabrain` only for unusually hard or unique final reviews.
 3. Route findings to the Strong rescue implementer or a fresh remediation team.
 4. Repeat fresh review up to five passes.
 5. Run the final broad gate and mark state complete.
@@ -227,7 +232,7 @@ After all implementation packets are terminal:
 | Strong rescue implementer | direct `subagent_type="hephaestus"` | declared member, initially idle |
 | Contract/verifier | category `unspecified-high` or packet domain category | category member |
 | Live reviewer | category `unspecified-high` | category member |
-| Final reviewer | external category `ultrabrain` with `review-code` | outside implementation team |
+| Final reviewer | external category `deep` with `review-code` (escalate to `ultrabrain` for unusually hard/unique reviews) | outside implementation team |
 
 ## Suggested Models
 
@@ -239,9 +244,9 @@ These are recommendations. User/repository category overrides remain authoritati
 | `quick` | mechanical isolated edits | GLM-5.2 or fast coding model | `github-copilot/gpt-5.4-mini` |
 | `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
-| `deep` | planned complex implementation | GPT-5.5 or Claude Opus-class coding model | `github-copilot/gpt-5.6-sol` |
+| `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |
 | direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/gpt-5.6-sol` |
-| `ultrabrain` | fresh authoritative final review | GPT-5.5/5.6 or Claude Opus-class review model | `github-copilot/gpt-5.6-sol` |
+| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/gpt-5.6-sol` |
 
 ## Convergence Caps
 

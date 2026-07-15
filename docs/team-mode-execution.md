@@ -22,18 +22,21 @@ brief → findings → approach → approach review
 | Role | Default routing | Responsibility |
 |---|---|---|
 | Lead | primary chat | schedule, wake members, gates, commits, lifecycle |
-| Implementation slots (up to 3) | `quick`, `unspecified-high`, or packet domain category | speed-run file-owned packets; minimal checks |
+| Implementation slots (up to 3) | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | speed-run file-owned packets; minimal checks |
 | Visual implementer (optional) | `visual-engineering` | replaces one implementation slot when UI/UX/a11y/visual packets exist |
 | Strong rescue implementer | direct `hephaestus` | high-risk packets and escalations; starts idle |
 | Contract/verifier | `unspecified-high` or domain category | write contracts early; run targeted evidence |
 | Live reviewer | `unspecified-high` | review handoffs; create remediation tasks |
-| Final reviewer | fresh external `ultrabrain` | authoritative full-diff review after team closure |
+| Final reviewer | fresh external `deep` (escalate to `ultrabrain`) | authoritative full-diff review after team closure |
 
 Category-backed members use the Sisyphus-Junior runtime but retain the category's model,
 variant, temperature, and fallbacks. Direct team subagent types may be `sisyphus`, `atlas`,
 `sisyphus-junior`, or `hephaestus`. Oracle and Prometheus remain external consultations.
 
-The lead selects the three implementation slots from the team plan. Use one
+The lead selects the three implementation slots from the team plan and routes each packet
+strictly by its declared implementer class: mechanical packets to `quick`, standard packets
+to `unspecified-high`, and complex packets to `deep`. Members never self-select; a
+mechanically-routed member receives only mechanically-classified packets. Use one
 `visual-engineering` slot whenever any packet owns frontend components, styling,
 interaction, accessibility, responsive behavior, or visual verification.
 
@@ -58,7 +61,8 @@ Every implementation packet declares:
 - acceptance contracts
 - readiness and dependencies
 - exclusive files owned
-- role/domain, risk tier, and model tier
+- role/domain, risk tier, and implementer class (mechanical → `quick`, standard →
+  `unspecified-high`, complex → `deep`)
 - minimal implementer check
 - reviewer checklist and handoff format
 - retry limit and escalation target
@@ -99,8 +103,9 @@ updates the worklog, and commits.
 
 ### Final review
 
-The lead closes the implementation team, then starts a fresh external `ultrabrain` review
-against the complete diff and `team_plan.md`. Final findings route to the Strong rescue
+The lead closes the implementation team, then starts a fresh external `deep` review
+against the complete diff and `team_plan.md`. Escalate to `ultrabrain` only for unusually
+hard or unique final reviews. Final findings route to the Strong rescue
 implementer or a fresh remediation team. The live reviewer is not the final reviewer.
 
 ## Event-Driven Coordination
@@ -127,7 +132,8 @@ durable handoffs, idle sessions, and team recreation are the supported context c
 | UI work | `visual-engineering` |
 | planned complex implementation | `deep` |
 | failed retry or critical implementation | direct `hephaestus` |
-| final independent review | external `ultrabrain` |
+| final independent review | external `deep` |
+| unusually hard or unique final review or difficult debugging | external `ultrabrain` |
 
 The original implementer gets one local retry. Strong rescue receives at most two attempts
 before the lead pauses for a human decision.

@@ -39,7 +39,8 @@ a sequential plan; it is the canonical plan for this execution mode.
 2. Extract measurable acceptance contracts before decomposing implementation work.
 3. Create Acceptance Contract Packets that can start before or alongside implementation.
 4. Create file-owned implementation packets sized for fast, bounded workers.
-5. Assign domain, risk tier, model tier, minimal check, retry limit, and escalation target.
+5. Assign domain, risk tier, implementer class, minimal check, retry limit, and escalation
+   target.
 6. Define live-review readiness events, remediation routing, verification packets, and
    integration groups.
 7. Confirm the active-slot schedule never exceeds four concurrent members.
@@ -67,7 +68,7 @@ separation. Do not reproduce sequential TDD tasks as team packets.
 - readiness condition and dependencies
 - role and domain
 - risk tier: low, medium, high, or critical
-- model tier: cheap, domain, or strong
+- implementer class: mechanical, standard, or complex
 - files owned
 - deliverable and acceptance contracts satisfied
 - minimal implementer check
@@ -75,15 +76,39 @@ separation. Do not reproduce sequential TDD tasks as team packets.
 - retry limit and escalation target
 - integration group
 
+### Implementer classification
+
+Every implementation packet is classified at plan time into exactly one implementer class.
+The class is a plan-time decision, recorded on the packet, verified during team-plan review,
+and used by the lead to route the packet. Workers never self-select, so the class is the
+mechanism that keeps a mechanical implementer from picking up work beyond its intended scope.
+
+| Class | Category route | Assign when the packet is... |
+|---|---|---|
+| mechanical | `quick` | simple, isolated, low-risk; localized/single-file; no design judgment (renames, config, string/constant edits, boilerplate, mechanical refactors) |
+| standard | `unspecified-high` | normal backend/tooling/logic implementation with bounded ownership |
+| complex | `deep` | planned high-complexity: cross-module coordination, non-trivial design or algorithms, or subtle correctness/state concerns |
+
+Rules:
+
+- Classify by intrinsic packet difficulty, not by who happens to be idle.
+- A packet that owns multiple files, crosses modules, or carries design ambiguity must not be
+  mechanical; classify it standard or complex.
+- UI/UX/a11y/visual packets route to the `visual-engineering` implementer regardless of class.
+- `deep` (complex) is a distinct routable class, not the Strong rescue implementer; rescue
+  (`hephaestus`) is reserved for failed retries and cross-cutting escalations.
+
 ### Default team topology
 
-- Three fast implementers: cheap or domain categories, active when file ownership allows.
+- Up to three implementation slots routed by packet class: mechanical (`quick`),
+  standard (`unspecified-high`), and complex (`deep`), active when file ownership allows.
 - One Strong rescue implementer: direct `hephaestus`, idle until escalation or a planned
   high-risk packet.
 - One contract/verifier: authors contracts early, later wakes for targeted verification.
 - One live reviewer: cost-controlled streaming review and remediation-task creation.
 - Primary chat: lead, sole scheduler, broad-gate runner, committer, and lifecycle owner.
-- Final reviewer: fresh external `ultrabrain` review after the implementation team closes.
+- Final reviewer: fresh external `deep` review after the implementation team closes;
+  escalate to `ultrabrain` only for unusually hard or unique review situations.
 
 Declared membership may exceed four; the Active Slot Schedule must keep no more than four
 members working concurrently.

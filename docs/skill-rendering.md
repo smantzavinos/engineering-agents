@@ -111,7 +111,7 @@ OpenCode team mode accepts category-backed members and eligible direct subagent 
 | UI implementer | `visual-engineering` | `zai-coding-plan/glm-5.2`, GPT-5.5 fallback |
 | planned complex implementation | `deep` | `openai/gpt-5.5` xhigh |
 | Strong rescue implementer | direct `hephaestus` | `openai/gpt-5.5` xhigh |
-| fresh final reviewer | external `ultrabrain` | `openai/gpt-5.5` xhigh |
+| fresh final reviewer | external `deep` (escalate to `ultrabrain`) | `openai/gpt-5.5` xhigh |
 
 ## Renderer commands
 

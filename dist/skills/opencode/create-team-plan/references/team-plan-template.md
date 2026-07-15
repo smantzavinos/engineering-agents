@@ -53,13 +53,13 @@ visual verification.
 
 | Role | Default routing | Start state | Responsibilities |
 |---|---|---|---|
-| Implementation slots (up to 3) | `quick`, `unspecified-high`, or domain category | active as packets allow | speed-run owned files; minimal checks only |
+| Implementation slots (up to 3) | `quick` (mechanical), `unspecified-high` (standard), or `deep` (complex) | active as packets allow | speed-run owned files by packet class; minimal checks only |
 | Visual implementer (optional) | `visual-engineering` | active when UI packets exist | replaces one general slot; UI/UX/a11y/visual work |
 | Strong rescue implementer | direct `hephaestus` | idle | high-risk packets and escalations |
 | Contract/verifier | `unspecified-high` or domain category | active for contract stage | read acceptance context; own test files; author early behavioral tests; record baseline/red and targeted evidence; classify failures; never fix production code |
 | Live reviewer | `unspecified-high` | idle until first handoff | review handoffs; create remediation packets |
 | Lead | primary chat | active | schedule, wake roles, gates, commits, lifecycle |
-| Final reviewer | fresh external `ultrabrain` | not spawned yet | full independent final review |
+| Final reviewer | fresh external `deep` (escalate to `ultrabrain`) | not spawned yet | full independent final review |
 
 ## Acceptance Contract Packets
 
@@ -69,9 +69,9 @@ visual verification.
 
 ## Implementation Packets
 
-| ID | Deliverable | Depends on | Role/domain | Risk | Model tier | Files owned | Minimal check | Contracts | Integration group | Status |
+| ID | Deliverable | Depends on | Role/domain | Risk | Implementer class | Files owned | Minimal check | Contracts | Integration group | Status |
 |---|---|---|---|---|---|---|---|---|---|---|
-| I1 | <coherent change> | C1 | fast/backend | low | cheap | `<paths>` | `<format/LSP/targeted smoke>` | AC1 | G1 | ⬜ |
+| I1 | <coherent change> | C1 | fast/backend | low | mechanical | `<paths>` | `<format/LSP/targeted smoke>` | AC1 | G1 | ⬜ |
 
 ### Packet I1
 
@@ -123,7 +123,7 @@ visual verification.
 ## Final Verification and Review
 
 - **Lead final gate:** `<command>`
-- **Fresh final reviewer:** external `ultrabrain`, full diff vs `team_plan.md`
+- **Fresh final reviewer:** external `deep`, full diff vs `team_plan.md` (escalate to `ultrabrain` only for unusually hard or unique reviews)
 - **Final remediation owner:** Strong rescue implementer or fresh remediation team
 - **Completion:** zero open Blocker/Critical/Major findings and final gate satisfied
 

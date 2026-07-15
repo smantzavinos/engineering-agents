@@ -4,16 +4,16 @@
   "skillPathPrefix": "~/.config/opencode/skills/",
   "delegationStyle": "opencode-task",
   "roles": {
-    "planner": { "kind": "category", "category": "ultrabrain" },
+    "planner": { "kind": "category", "category": "deep" },
     "worklog": { "kind": "category", "category": "unspecified-high" },
     "executeTask": { "kind": "category", "category": "unspecified-high" },
     "fix": { "kind": "category", "category": "unspecified-high" },
     "research": { "kind": "subagent_type", "subagent_type": "explore" },
     "researchExternal": { "kind": "subagent_type", "subagent_type": "librarian" },
-    "planReview": { "kind": "category", "category": "ultrabrain" },
-    "approachReview": { "kind": "category", "category": "ultrabrain" },
-    "epicReview": { "kind": "category", "category": "ultrabrain" },
-    "codeReview": { "kind": "category", "category": "ultrabrain" },
+    "planReview": { "kind": "category", "category": "deep" },
+    "approachReview": { "kind": "category", "category": "deep" },
+    "epicReview": { "kind": "category", "category": "deep" },
+    "codeReview": { "kind": "category", "category": "deep" },
     "oracle": { "kind": "category", "category": "ultrabrain" }
   },
   "notes": {

@@ -256,7 +256,7 @@ Created directly from the reviewed approach instead of from `plan.md`. Contains:
 
 - acceptance contracts and early contract-test packets
 - file-owned implementation packets
-- readiness events, role/domain, risk/model tier, and minimal checks
+- readiness events, role/domain, risk tier and implementer class, and minimal checks
 - live-review checklists and reviewer-created remediation protocol
 - one-retry escalation to a dormant Strong rescue implementer
 - active-slot schedule (maximum four), targeted verification, and integration groups

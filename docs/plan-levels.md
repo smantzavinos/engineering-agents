@@ -273,7 +273,7 @@ When uncertain about the level, **start at Standard**. The brief and research st
 | `plan.md` | Detailed implementation tasks, TDD checklists, verification gates | Plan Review, Worklog, Execute, Code Review |
 | `plan_review.md` | Review findings, issues, resolutions | Plan (updates based on review) |
 | `worklog.md` | Execution tracking, task status, loop log | Execute (read/write each iteration) |
-| `team_plan.md` | Acceptance contracts, role packets, ownership, risk/model tiers, escalation, integration groups | Team Plan Review, Team Worklog, Team Execute, Final Review |
+| `team_plan.md` | Acceptance contracts, role packets, ownership, risk tier/implementer class, escalation, integration groups | Team Plan Review, Team Worklog, Team Execute, Final Review |
 | `team_plan_review.md` | Review findings for contract, concurrency, role, cost, and escalation readiness | Team Plan updates, team execution approval |
 | `team-worklog.md` | Lead-owned assignments, wake events, remediation, evidence, integration groups, closure | Team Execute |
 | `code_review.md` | Post-implementation findings, fix verification | Execute (fix pass), orchestrator (completion decision) |

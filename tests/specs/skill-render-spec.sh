@@ -103,7 +103,7 @@ for skill_check in \
   "design:review-approach"; do
   skill="${skill_check%%:*}"
   loadskill="${skill_check##*:}"
-  if grep -q "task(category=\"ultrabrain\", load_skills=\[\"${loadskill}\"\]" \
+  if grep -q "task(category=\"deep\", load_skills=\[\"${loadskill}\"\]" \
       "$REPO_ROOT/dist/skills/opencode/${skill}/SKILL.md"; then
     pass "OpenCode ${skill} delegates ${loadskill} via category"
   else
@@ -112,7 +112,7 @@ for skill_check in \
 done
 
 # OpenCode plan creation and implementation roles delegate via task categories
-if grep -q 'task(category="ultrabrain", load_skills=\["create-plan"\]' \
+if grep -q 'task(category="deep", load_skills=\["create-plan"\]' \
     "$REPO_ROOT/dist/skills/opencode/execution-orchestrator/SKILL.md"; then
   pass "OpenCode execution-orchestrator delegates planning via category"
 else

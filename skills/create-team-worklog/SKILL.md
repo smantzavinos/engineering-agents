@@ -37,6 +37,9 @@ team plan or convert sequential tasks into waves.
 
 - The worklog is an execution ledger, not a second plan.
 - The lead is sole scheduler, committer, broad-gate runner, and durable-doc writer.
+- The lead routes each packet strictly by its declared implementer class
+  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`); mechanically-routed
+  members receive only mechanically-classified packets. Members never self-select.
 - No active schedule exceeds four concurrent members.
 - Every blocked assignment names its wake event and sender.
 - Do not poll. Idle members stop and wait for `team_send_message` with an actionable task.
@@ -46,7 +49,8 @@ team plan or convert sequential tasks into waves.
 - Original implementer gets one local retry; Strong rescue implementer receives failed
   retries and high-risk/cross-cutting work.
 - Contract/verifier owns targeted evidence; lead owns broad gates.
-- Fresh final reviewer runs after the implementation team closes.
+- Fresh final reviewer (default `deep`, escalate to `ultrabrain` for unusually hard/unique
+  reviews) runs after the implementation team closes.
 - Backlog, requirements, `state.json`, and this worklog remain lead-only writes.
 
 ## Output

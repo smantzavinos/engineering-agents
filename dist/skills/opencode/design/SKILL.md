@@ -97,7 +97,7 @@ Do NOT stop after `approach.md` for epics. An epic is not ready for execution un
 After writing approach.md, run the approach review:
 
 ```
-task(category="ultrabrain", load_skills=["review-approach"], prompt="Review the approach at [plan directory path]/approach.md for architectural soundness and brief alignment.")
+task(category="deep", load_skills=["review-approach"], prompt="Review the approach at [plan directory path]/approach.md for architectural soundness and brief alignment.")
 ```
 
 Iterate until status is COMPLETE (max 3 passes). Fix issues between passes.
@@ -106,7 +106,7 @@ Iterate until status is COMPLETE (max 3 passes). Fix issues between passes.
 After writing `epic.md`, run the epic decomposition review:
 
 ```
-task(category="ultrabrain", load_skills=["review-epic"], prompt="Review the epic decomposition at [plan directory path]/epic.md for workstream completeness, sequencing, preparatory work, and child-plan readiness.")
+task(category="deep", load_skills=["review-epic"], prompt="Review the epic decomposition at [plan directory path]/epic.md for workstream completeness, sequencing, preparatory work, and child-plan readiness.")
 ```
 
 Iterate until status is COMPLETE (max 3 passes). Fix issues between passes.

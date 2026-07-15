@@ -73,7 +73,7 @@ If the target directory is an epic root:
 ### Step 1: Create Plan
 
 ```
-task(category="ultrabrain", load_skills=["create-plan"], prompt="Create a detailed plan for the engineering work at [plan directory path]. Read brief.md, approach.md, and findings/ for context.")
+task(category="deep", load_skills=["create-plan"], prompt="Create a detailed plan for the engineering work at [plan directory path]. Read brief.md, approach.md, and findings/ for context.")
 ```
 
 ### Step 2: Review Plan (iterative)
@@ -81,7 +81,7 @@ task(category="ultrabrain", load_skills=["create-plan"], prompt="Create a detail
 Call the plan review sub-agent. Repeat until it reports COMPLETE:
 
 ```
-task(category="ultrabrain", load_skills=["review-plan"], prompt="Review the plan at [plan directory path]/plan.md for execution readiness.")
+task(category="deep", load_skills=["review-plan"], prompt="Review the plan at [plan directory path]/plan.md for execution readiness.")
 ```
 
 Read the output summary. If status is `NEEDS_ANOTHER_PASS`, call again. Cap at 5 iterations.
@@ -139,7 +139,7 @@ task(category="unspecified-high", load_skills=["execute-task"], prompt="Execute 
 After each task implementation, optionally review just that task's committed changes:
 
 ```
-task(category="ultrabrain", load_skills=["review-code"], prompt="Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggested backlog items. Check requirement alignment if the plan cites or updates requirements.")
+task(category="deep", load_skills=["review-code"], prompt="Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggested backlog items. Check requirement alignment if the plan cites or updates requirements.")
 ```
 
 If per-task review finds issues, call a fix sub-agent before continuing:
@@ -156,7 +156,7 @@ If per-task review suggests non-blocking backlog items, ask the human whether to
 After all tasks complete:
 
 ```
-task(category="ultrabrain", load_skills=["review-code"], prompt="Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggested backlog items. Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.")
+task(category="deep", load_skills=["review-code"], prompt="Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggested backlog items. Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.")
 ```
 
 ### Step 7: Fix and Re-Review (iterative)

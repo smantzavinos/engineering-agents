@@ -43,14 +43,20 @@ Review a team-mode plan before a team worklog or implementation team is created.
 - Same-file edits are combined unless a real readiness boundary requires separation.
 - Every packet has readiness, deliverable, minimal check, handoff, reviewer checklist,
   retry limit, escalation target, and integration group.
+- Every packet declares a valid implementer class (mechanical, standard, or complex) that
+  matches its intrinsic difficulty and risk. A mechanical packet must be simple, isolated,
+  low-risk, and localized; cross-file, cross-module, or design-ambiguous work is standard or
+  complex. Mis-classification is a finding because the lead routes strictly by class.
 
 ### Role and cost discipline
 
 - Up to three fast implementers have useful independent work.
 - A Strong rescue implementer is declared and initially idle unless risk requires it.
 - Contract/verifier and live-review responsibilities are distinct.
-- The live reviewer is cost-controlled; the fresh final reviewer is strong.
-- Category/direct-agent routing matches packet risk and domain.
+- The live reviewer is cost-controlled; the fresh final reviewer defaults to `deep`, with
+  `ultrabrain` reserved for unusually hard or unique final reviews.
+- Category/direct-agent routing matches packet risk, domain, and implementer class
+  (mechanical→`quick`, standard→`unspecified-high`, complex→`deep`).
 
 ### Event-driven coordination
 
@@ -71,21 +77,23 @@ Review a team-mode plan before a team worklog or implementation team is created.
 - Implementers run minimal checks only.
 - Contract/verifier owns targeted acceptance evidence.
 - Lead owns broad integration/final gates.
-- Fresh final review runs after the implementation team closes.
+- Fresh final review (default `deep`) runs after the implementation team closes.
 
 ### Logic bug hunt
 
 Flag contradictions such as dependent packets scheduled concurrently, overlapping files,
 contracts that cannot be written until after implementation, rescue capacity counted as an
-active fifth slot, reviewer bottlenecks, verification without an owner, or integration groups
-that can commit before their evidence exists.
+active fifth slot, reviewer bottlenecks, verification without an owner, integration groups
+that can commit before their evidence exists, or a mechanical class assigned to a packet with
+cross-file ownership, cross-module scope, or design ambiguity.
 
 ## Severity
 
 - **Blocker:** unsafe or impossible execution graph
 - **Critical:** missing acceptance contract, rescue/escalation path, or final review
 - **Major:** polling worker, >4 active slots, ambiguous ownership, late-only tests, missing
-  minimal check, or live reviewer serving as sole final reviewer
+  minimal check, implementer-class mismatch or missing class, or live reviewer serving as
+  sole final reviewer
 - **Minor/Nit:** clarity or formatting improvements
 
 ## Completion Criteria
