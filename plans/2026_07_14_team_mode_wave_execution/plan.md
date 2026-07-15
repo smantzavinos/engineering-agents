@@ -272,16 +272,20 @@ The new skills are versioned process artifacts consumed by the Nix modules throu
 
 ### Progress Log
 - 2026-07-14: Plan created from approach + wave-slicing spec.
+- 2026-07-14: Implemented directly (T1–T4) in one context. Sub-agent delegation was unavailable (two 30-min stalls), and per user direction the files were authored directly for full context. `./tests/run-tests.sh fast` passes.
 
 ### Evidence Ledger
-- (to be filled during execution)
+- 2026-07-14: `node tools/render-skills.mjs --write` → wrote 82 files; new skills render to `dist/skills/opencode/{execution-orchestrator-team,create-team-worklog}` and are absent from `dist/skills/pi/`.
+- 2026-07-14: `./tests/run-tests.sh fast` → "All fast tests passed" (includes skill-render drift `--check`, repo-structure skills list, skill-content references, readiness docs).
 
 ### Deviations
-- (none yet)
+- **Testing approach streamlined per user direction.** The original plan used strict spec-first TDD with per-task content-keyword assertions. Those keyword greps add little value and are brittle. Instead, the implementation kept only the meaningful "loads/renders correctly" checks: the two new skills added to the `repo-structure-spec.sh` SKILLS list (existence + frontmatter), OpenCode-only exclusion assertions in `skill-render-spec.sh` (mirroring `configure-opencode`), the automatic render-drift gate, `create-team-worklog` added to `skill-content-spec.sh` `SKILLS_WITH_REFS` (reference non-empty), and the Nix `openCodeSkills` install wiring. No arbitrary content-grep assertions were added; no new readiness-doc anchor grep was added.
+- **Executed directly rather than via the team/worklog sub-agent handoff.** Because delegation was unavailable and a single executor held full context, no separate `worklog.md`/`team-worklog.md` was created for this plan's own execution. Commits are coherent per logical unit rather than strictly per plan task.
+- **README table also added the pre-existing missing `configure-opencode` row** so the skill count (17) matches `repo-structure-spec.sh`.
 
 ### Issues Encountered
-- (none yet)
+- Sub-agent delegation (create-plan, review-plan) stalled twice with 30-min inactivity timeouts and produced no output; worked around by authoring plan, review, and implementation directly.
 
 ### Follow-ups
 Do not add new executable tasks here. Capture accepted follow-ups in `docs/backlog.md` and reference their stable IDs.
-- (none yet)
+- Run `./tests/run-tests.sh all` on a Nix/Pi host to exercise flake evaluation + proof-set with the new `openCodeSkills` entries (deferred per gate policy; no Nix host in this environment).

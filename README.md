@@ -91,7 +91,7 @@ This repository also documents its own operating contract so contributors can us
 
 ### Skills (`skills/`)
 
-14 skills covering the full development lifecycle:
+17 skills covering the full development lifecycle:
 
 | Skill | Stage | Purpose |
 |-------|-------|---------|
@@ -102,13 +102,16 @@ This repository also documents its own operating contract so contributors can us
 | `review-plan` | Planning | Review plans for completeness and consistency |
 | `review-approach` | Planning | Review approaches for architectural soundness |
 | `create-worklog` | Execution | Create execution log from approved plan |
+| `create-team-worklog` | Execution | Create wave-oriented team worklog for team-mode execution (OpenCode-only) |
 | `execute-task` | Execution | Execute one plan task using strict TDD |
 | `execution-orchestrator` | Execution | Autonomous orchestrator driving plan to completion |
+| `execution-orchestrator-team` | Execution | Fast-lane orchestrator running tasks in parallel via team mode (OpenCode-only) |
 | `review-code` | Review | Post-implementation code review |
 | `review-epic` | Review | Epic-level review across child plans |
 | `assess-repo` | Setup | Assess and set up a repo for the workflow |
 | `create-skills` | Utility | Create valid SKILL.md skills |
 | `create-new-repo-docs` | Utility | Bootstrap repo documentation foundation |
+| `configure-opencode` | Utility | Create/update repo-local OpenCode config overrides (OpenCode-only) |
 
 ### Agent Definitions (`agents/`)
 

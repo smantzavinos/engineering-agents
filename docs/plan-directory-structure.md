@@ -244,10 +244,12 @@ Detailed implementation plan (see the create-plan skill for full template). Cont
 - Execution contract (strict TDD)
 - Change summary
 - Goals/non-goals
-- Task graph with dependencies
+- Task graph with dependencies and an optional per-task `Touched files` (write-set) field
 - Task details with TDD checklists
 - Verification plan
 - Coverage matrix
+
+The `Touched files` field is optional for sequential execution. It is required to enable team-mode (parallel) execution, where tasks are grouped into file-disjoint waves.
 
 ### plan_review.md
 
@@ -270,6 +272,16 @@ Execution tracking document (see the create-worklog skill for full template). Co
 - Requirement changes applied during execution, when relevant
 - Next step pointer
 - Loop log entries
+
+### team-worklog.md (team-mode execution only)
+
+Wave-oriented execution record for OpenCode team-mode (parallel) runs (see the create-team-worklog skill). Used instead of `worklog.md` when team-mode execution is selected. Contains:
+- Entry-point contract (the execution unit is the wave)
+- Wave manifest (tasks per wave, per-task `Touched files`, cross-wave dependencies)
+- Current-wave pointer (the live cursor is the OpenCode team task list)
+- Git model (shared tree, single committer, per-wave commits)
+- Per-wave execution log (assignments, live/end-of-wave review, gate result, wave commit)
+- Backlog/requirement capture (routed through the lead)
 
 ### code_review.md
 

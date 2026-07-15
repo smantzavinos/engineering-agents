@@ -343,6 +343,47 @@ Each sub-agent starts with **fresh context**. This is critical:
 
 ---
 
+## Team-Mode Wave Execution (Fast Lane)
+
+The Execution Orchestrator above is deliberately sequential: one sub-agent per task, a single worklog cursor, one atomic commit per task. **Team-mode wave execution** is an opt-in peer that trades some of that rigor for wall-clock speed by running independent tasks in parallel via OpenCode team mode. It is implemented by the `execution-orchestrator-team` skill (OpenCode-only) and the `create-team-worklog` skill.
+
+Use the sequential orchestrator when you want maximum rigor; use team-mode when the plan's task graph is wide and its tasks are mostly file-disjoint.
+
+### What stays sequential vs. what parallelizes
+
+Only implementation parallelizes. Plan creation, plan review, worklog creation, the final cross-wave review, and every commit remain sequential and lead-driven:
+
+```
+create plan -> review plan -> approval gate -> commit          (sequential, unchanged)
+create team worklog -> commit                                  (sequential)
+for each wave: parallel workers + in-team reviewer -> gate -> commit wave   (TEAM PHASE)
+final cross-wave review -> complete                            (sequential)
+```
+
+### The wave is the execution unit
+
+The plan task graph is sliced into ordered **waves**. A wave is a set of tasks that are dependency-satisfied by earlier waves, **file-disjoint** within the wave (from each task's `Touched files`), and within the 4-worker cap. This is why the plan template carries a per-task `Touched files` field: it is the input that lets the orchestrator group tasks safely. Conflicts are detected at slicing time, not at commit time.
+
+### Git model: shared tree, single committer
+
+All members work in one shared working tree; only the lead runs git. This eliminates index races. Commits are per wave (`wave(N): …`), not per task — the deliberate history-granularity tradeoff. Unavoidable same-file work is resolved live between workers via team messages, or serialized into different waves.
+
+### Rigor tradeoffs (explicit)
+
+| Guarantee | Sequential | Team-mode |
+|-----------|------------|-----------|
+| Per-task break-it check | yes | dropped by default (reviewer test-adequacy gate compensates) |
+| Commit granularity | per task | per wave |
+| Review context | fresh per pass | persistent in-team reviewer + final fresh pass |
+
+### Reviewer and team shape
+
+The team is a lead (sole committer), up to four implementation workers (`deep`, or `visual-engineering` for UI), and one reviewer (`ultrabrain`, same tier as the sequential reviews). The reviewer reviews each task live and the combined wave diff at wave end. Because team members cannot load skills, their prompts point them at the canonical `execute-task` / `review-code` skill files. When all waves are terminal the lead runs the team Closure Sequence, then the sequential final review runs.
+
+See the `execution-orchestrator-team` skill for the full wave-slicing procedure, team spec, convergence caps, and the mode-selection gate.
+
+---
+
 ## Agents & Model Tiers
 
 ### Model Tiers

@@ -46,7 +46,7 @@ printf 'Skill content verification\n'
 printf '==========================\n\n'
 
 # Skills that should have references
-SKILLS_WITH_REFS=(discovery design create-plan create-worklog review-plan review-approach review-code assess-repo)
+SKILLS_WITH_REFS=(discovery design create-plan create-worklog create-team-worklog review-plan review-approach review-code assess-repo)
 for skill in "${SKILLS_WITH_REFS[@]}"; do
   assert_references_valid "$REPO_ROOT/skills/$skill" "$skill"
 done

@@ -155,6 +155,20 @@ else
   fail "configure-opencode is missing from the OpenCode tree"
 fi
 
+# The team-mode execution skills are OpenCode-only and must not leak into Pi
+for oc_only in execution-orchestrator-team create-team-worklog; do
+  if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
+    fail "${oc_only} (opencode-only) leaked into the Pi tree"
+  else
+    pass "${oc_only} is excluded from the Pi tree"
+  fi
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${oc_only}/SKILL.md" ]]; then
+    pass "${oc_only} is present in the OpenCode tree"
+  else
+    fail "${oc_only} is missing from the OpenCode tree"
+  fi
+done
+
 # Every rendered SKILL.md must carry the harness-correct compatibility value
 for harness in pi opencode; do
   bad=0

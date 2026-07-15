@@ -69,11 +69,11 @@ assert_file_exists "$REPO_ROOT/docs/references/requirements.md" "references/requ
 assert_file_exists "$REPO_ROOT/docs/references/standard-test-levels.md" "references/standard-test-levels.md exists"
 assert_file_exists "$REPO_ROOT/docs/references/task-tracking.md" "references/task-tracking.md exists"
 
-# Skills (15 total)
+# Skills (17 total)
 SKILLS=(
   discovery design research
-  create-plan review-plan create-worklog
-  execute-task execution-orchestrator
+  create-plan review-plan create-worklog create-team-worklog
+  execute-task execution-orchestrator execution-orchestrator-team
   review-code review-approach review-epic
   assess-repo create-skills create-new-repo-docs
   configure-opencode
