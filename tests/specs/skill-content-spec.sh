@@ -159,11 +159,17 @@ fi
 
 if grep -Fq 'Visual implementer replaces one fast implementer' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
   && grep -Fq 'Member Prompt Contracts' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'Contract/verifier prompt contract' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
+  && grep -Fq 'Contract/verifier prompt contract' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
   pass "Team orchestrator defines adaptive UI staffing and self-contained member prompts"
 else
   fail "Team orchestrator is missing adaptive UI staffing or member prompt contracts"
+fi
+
+if ! grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
+  && ! grep -Fq 'Suggested Models' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
+  pass "Team orchestrator does not duplicate model recommendations that live in orchestration docs"
+else
+  fail "Team orchestrator should not duplicate docs/orchestration.md's model suggestion table"
 fi
 
 if grep -Fq 'General model suggestion' "$REPO_ROOT/docs/orchestration.md" \

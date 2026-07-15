@@ -234,20 +234,6 @@ After all implementation packets are terminal:
 | Live reviewer | category `unspecified-high` | category member |
 | Final reviewer | external category `deep` with `review-code` (escalate to `ultrabrain` for unusually hard/unique reviews) | outside implementation team |
 
-## Suggested Models
-
-These are recommendations. User/repository category overrides remain authoritative.
-
-| Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
-|---|---|---|---|
-| Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/gpt-5.6-sol` |
-| `unspecified-low` | mechanical isolated edits | GLM-5.2 or fast coding model | `github-copilot/gpt-5.4-mini` |
-| `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
-| `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
-| `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |
-| direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/gpt-5.6-sol` |
-| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/gpt-5.6-sol` |
-
 ## Convergence Caps
 
 - Original implementer remediation retry: 1

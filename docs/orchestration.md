@@ -416,13 +416,16 @@ the source of truth.
 
 | Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
 |---|---|---|---|
-| Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/gpt-5.6-sol` |
-| `unspecified-low` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/gpt-5.4-mini` |
-| `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 4.6 or GLM-5.2 | `github-copilot/claude-sonnet-4.6` |
-| `visual-engineering` | UI, accessibility, interaction, visual work | Claude Sonnet 4.6 | `github-copilot/claude-sonnet-4.6` |
-| `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/gpt-5.6-sol` |
-| direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/gpt-5.6-sol` |
-| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/gpt-5.6-sol` |
+| Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/claude-opus-4.8` |
+| `unspecified-low` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
+| `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
+| `visual-engineering` | UI, accessibility, interaction, visual work | Gemini 3.5 Flash | `github-copilot/gemini-3.5-flash` |
+| `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/claude-opus-4.8` |
+| direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/claude-opus-4.8` |
+| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/claude-opus-4.8` |
+
+`ultrabrain` and direct `hephaestus` are escalation-only/low-volume by design, so `github-copilot/claude-fable-5`
+(priciest, smartest) is a reasonable per-repo swap-in for either when cost is not the binding constraint.
 
 ### Packets, remediation, and verification
 

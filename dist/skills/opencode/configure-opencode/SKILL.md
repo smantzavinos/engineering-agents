@@ -105,7 +105,7 @@ If the user explicitly wants them disabled, use the mechanism appropriate to the
 The two files hold different agent sets, and some overlap is normal.
 
 - **`opencode.jsonc` `agent`** — OpenCode-native agents: `build`, `plan`, `planner`, `plan-reviewer`, `code-reviewer`, `worker`, `ui-worker`, and any repo-defined custom agents.
-- **`.opencode/oh-my-openagent.jsonc` `agents`** — oh-my-openagent built-ins: `sisyphus`, `sisyphus-junior`, `oracle`, `explore`, `librarian`, `atlas`, `prometheus`, `metis`, `momus`, `multimodal-looker`, `deep`, plus `OpenCode-Builder`.
+- **`.opencode/oh-my-openagent.jsonc` `agents`** — oh-my-openagent built-ins: `sisyphus`, `sisyphus-junior`, `oracle`, `explore`, `librarian`, `atlas`, `prometheus`, `metis`, `momus`, `multimodal-looker`, `deep`, `hephaestus`, plus `OpenCode-Builder`. `hephaestus` is the direct-subagent Strong rescue implementer used by team-mode escalations — see [Team-Mode Execution](../../docs/team-mode-execution.md).
 
 Overlap (e.g. `plan`, `build`, `worker` appearing in both) is intentional and sometimes required: the OpenCode-native side controls the agent as OpenCode sees it, and the plugin side controls oh-my-openagent routing/behavior. When an agent exists in both, keep the model choices consistent unless you have a specific reason to diverge. If you only need to change plugin-driven behavior, edit only `oh-my-openagent.jsonc`.
 
@@ -129,15 +129,20 @@ Use this as the default example for repos that want the user's established defau
 
   "agent": {
     "build": { "model": "github-copilot/gpt-5.3-codex" },
-    "plan": { "model": "github-copilot/gpt-5.4", "mode": "primary" },
-    "planner": { "model": "github-copilot/gpt-5.4" },
-    "plan-reviewer": { "model": "github-copilot/gpt-5.4" },
-    "code-reviewer": { "model": "github-copilot/gpt-5.4" },
+    "plan": { "model": "github-copilot/claude-opus-4.8", "mode": "primary" },
+    "planner": { "model": "github-copilot/claude-opus-4.8" },
+    "plan-reviewer": { "model": "github-copilot/claude-opus-4.8" },
+    "code-reviewer": { "model": "github-copilot/claude-opus-4.8" },
     "worker": { "model": "github-copilot/gpt-5.3-codex" },
-    "ui-worker": { "model": "google/gemini-3.5-flash" }
+    "ui-worker": { "model": "github-copilot/gemini-3.5-flash" }
   }
 }
 ```
+
+`planner`/`plan-reviewer`/`code-reviewer` are low-volume, high-stakes reasoning roles (they map to
+the `deep` category in team-mode routing), so a Powerful-tier model is worth the cost here even
+though the repo defaults to `gpt-5.4` elsewhere. `ui-worker` must use a `github-copilot/` model in a
+Copilot-only repo — bare `google/gemini-3.5-flash` would fail once `gemini` is in `disabled_providers`.
 
 ### Important: preserving the built-in `plan` agent
 If you override `agent.plan` in `.opencode/opencode.jsonc`, include `"mode": "primary"` unless you intentionally want `plan` to become a subagent. In current runtime behavior, config-defined agents with no explicit `mode` can be treated as `subagent`, even when `replace_plan`-style plugin settings suggest otherwise.
@@ -216,43 +221,59 @@ Use plugin config for:
 
   // Repo-local override: use the established default model-routing pattern in this workspace.
   "agents": {
-    "sisyphus": { "model": "github-copilot/gpt-5.4" },
-    "sisyphus-junior": { "model": "github-copilot/gpt-5.4" },
-    "atlas": { "model": "github-copilot/gpt-5.4" },
+    "sisyphus": { "model": "github-copilot/claude-opus-4.8" },
+    "sisyphus-junior": { "model": "github-copilot/claude-opus-4.8" },
+    "atlas": { "model": "github-copilot/claude-opus-4.8" },
+    "hephaestus": { "model": "github-copilot/claude-opus-4.8" },
 
     "build": { "model": "github-copilot/gpt-5.3-codex" },
-    "plan": { "model": "github-copilot/gpt-5.4" },
+    "plan": { "model": "github-copilot/claude-opus-4.8" },
     "OpenCode-Builder": { "model": "github-copilot/gpt-5.3-codex" },
 
-    "oracle": { "model": "github-copilot/gpt-5.4" },
-    "prometheus": { "model": "github-copilot/gpt-5.4" },
-    "metis": { "model": "github-copilot/gpt-5.4" },
-    "momus": { "model": "github-copilot/gpt-5.4" },
-    "planner": { "model": "github-copilot/gpt-5.4" },
-    "plan-reviewer": { "model": "github-copilot/gpt-5.4" },
-    "code-reviewer": { "model": "github-copilot/gpt-5.4" },
+    "oracle": { "model": "github-copilot/claude-opus-4.8" },
+    "prometheus": { "model": "github-copilot/claude-opus-4.8" },
+    "metis": { "model": "github-copilot/claude-opus-4.8" },
+    "momus": { "model": "github-copilot/claude-opus-4.8" },
+    "planner": { "model": "github-copilot/claude-opus-4.8" },
+    "plan-reviewer": { "model": "github-copilot/claude-opus-4.8" },
+    "code-reviewer": { "model": "github-copilot/claude-opus-4.8" },
     "worker": { "model": "github-copilot/gpt-5.3-codex" },
-    "ui-worker": { "model": "google/gemini-3.5-flash" },
+    "ui-worker": { "model": "github-copilot/gemini-3.5-flash" },
 
-    "librarian": { "model": "github-copilot/gpt-5.4" },
+    "librarian": { "model": "github-copilot/gpt-5.6-terra" },
     "explore": { "model": "github-copilot/gpt-5.4-mini" }
   },
 
   "categories": {
-    "visual-engineering": { "model": "github-copilot/gpt-5.4", "temperature": 0.7 },
-    "ultrabrain": { "model": "github-copilot/gpt-5.4", "temperature": 0.1 },
-    "artistry": { "model": "github-copilot/gpt-5.4", "temperature": 0.9 },
+    "visual-engineering": { "model": "github-copilot/gemini-3.5-flash", "temperature": 0.7 },
+    "ultrabrain": { "model": "github-copilot/claude-opus-4.8", "temperature": 0.1 },
+    "deep": { "model": "github-copilot/claude-opus-4.8", "temperature": 0.2 },
+    "artistry": { "model": "github-copilot/gpt-5.6-terra", "temperature": 0.9 },
     "quick": { "model": "github-copilot/gpt-5.4-mini", "temperature": 0.3 },
-    "writing": { "model": "github-copilot/gpt-5.4", "temperature": 0.5 },
-    "unspecified-low": { "model": "github-copilot/gpt-5.4-mini", "temperature": 0.3 },
-    "unspecified-high": { "model": "github-copilot/gpt-5.4", "temperature": 0.3 }
+    "writing": { "model": "github-copilot/gpt-5.6-terra", "temperature": 0.5 },
+    "unspecified-low": { "model": "github-copilot/kimi-k2.7-code", "temperature": 0.3 },
+    "unspecified-high": { "model": "github-copilot/claude-sonnet-5", "temperature": 0.3 }
   }
 }
 ```
 
+`oracle`/`prometheus`/`metis`/`momus`/`planner`/`plan-reviewer`/`code-reviewer`/`sisyphus`/`atlas`/
+`hephaestus` are the low-volume reasoning/lead/rescue roles — team-mode's `deep`/`ultrabrain`/primary-lead
+tiers all suggest a Powerful-class model (`claude-opus-4.8`) for these. `unspecified-low` (team-mode's
+mechanical-implementer category, formerly routed through `quick`) uses `kimi-k2.7-code` as a
+low-cost coding-specialized alternative to a generic lightweight model. `quick` itself remains a
+separate, general-purpose trivial-task category outside team-mode packet routing and keeps the
+cheaper `gpt-5.4-mini`. `unspecified-high` uses `claude-sonnet-5` — newer and cheaper than the
+Claude Sonnet 4.6 generation it replaces. `visual-engineering` (and `ui-worker`) uses
+`gemini-3.5-flash` instead — Gemini's strong multimodal/visual grounding is a better fit for
+UI work than a general reasoning model, at a lower price than `claude-sonnet-5`. `ultrabrain` and
+`hephaestus` are
+escalation-only/low-volume by construction, so `github-copilot/claude-fable-5` (priciest, smartest)
+is a reasonable swap-in for either when a repo values maximum reasoning quality over cost.
+
 ### Valid agent keys
 Common built-in keys include:
-`sisyphus`, `sisyphus-junior`, `prometheus`, `metis`, `momus`, `atlas`, `OpenCode-Builder`, `build`, `plan`, `oracle`, `librarian`, `explore`, `multimodal-looker`, `deep`.
+`sisyphus`, `sisyphus-junior`, `prometheus`, `metis`, `momus`, `atlas`, `hephaestus`, `OpenCode-Builder`, `build`, `plan`, `oracle`, `librarian`, `explore`, `multimodal-looker`, `deep`.
 
 Per-agent fields commonly include:
 - `model`
@@ -264,6 +285,10 @@ Per-agent fields commonly include:
 ### Valid category keys
 Common category keys include:
 `quick`, `ultrabrain`, `writing`, `visual-engineering`, `artistry`, `unspecified-low`, `unspecified-high`, `deep`.
+
+`unspecified-low` is also the team-mode mechanical-implementer category (see
+[Team-Mode Execution](../../docs/team-mode-execution.md)); `quick` remains a distinct
+general-purpose category and is not used by team-mode packet routing.
 
 Per-category fields commonly include:
 - `model`
