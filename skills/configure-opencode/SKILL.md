@@ -105,7 +105,7 @@ If the user explicitly wants them disabled, use the mechanism appropriate to the
 The two files hold different agent sets, and some overlap is normal.
 
 - **`opencode.jsonc` `agent`** — OpenCode-native agents: `build`, `plan`, `planner`, `plan-reviewer`, `code-reviewer`, `worker`, `ui-worker`, and any repo-defined custom agents.
-- **`.opencode/oh-my-openagent.jsonc` `agents`** — oh-my-openagent built-ins: `sisyphus`, `sisyphus-junior`, `oracle`, `explore`, `librarian`, `atlas`, `prometheus`, `metis`, `momus`, `multimodal-looker`, `deep`, `hephaestus`, plus `OpenCode-Builder`. `hephaestus` is the direct-subagent Strong rescue implementer used by team-mode escalations — see [Team-Mode Execution](../../docs/team-mode-execution.md).
+- **`.opencode/oh-my-openagent.jsonc` `agents`** — oh-my-openagent built-ins: `sisyphus`, `sisyphus-junior`, `oracle`, `explore`, `librarian`, `atlas`, `prometheus`, `metis`, `momus`, `multimodal-looker`, `hephaestus`, plus `OpenCode-Builder`. `hephaestus` is the direct-subagent Strong rescue implementer used by team-mode escalations — see [Team-Mode Execution](../../docs/team-mode-execution.md). Note: `deep` is a **category**, not an agent — see the categories list below.
 
 Overlap (e.g. `plan`, `build`, `worker` appearing in both) is intentional and sometimes required: the OpenCode-native side controls the agent as OpenCode sees it, and the plugin side controls oh-my-openagent routing/behavior. When an agent exists in both, keep the model choices consistent unless you have a specific reason to diverge. If you only need to change plugin-driven behavior, edit only `oh-my-openagent.jsonc`.
 
@@ -273,7 +273,7 @@ is a reasonable swap-in for either when a repo values maximum reasoning quality 
 
 ### Valid agent keys
 Common built-in keys include:
-`sisyphus`, `sisyphus-junior`, `prometheus`, `metis`, `momus`, `atlas`, `hephaestus`, `OpenCode-Builder`, `build`, `plan`, `oracle`, `librarian`, `explore`, `multimodal-looker`, `deep`.
+`sisyphus`, `sisyphus-junior`, `prometheus`, `metis`, `momus`, `atlas`, `hephaestus`, `OpenCode-Builder`, `build`, `plan`, `oracle`, `librarian`, `explore`, `multimodal-looker`.
 
 Per-agent fields commonly include:
 - `model`
