@@ -136,6 +136,12 @@ For each task in the plan, delegate one implementation, routing by task domain:
 - Backend, logic, infrastructure, data → the implementation delegation below
 - Frontend, UI, components, styling, accessibility → {{note:ui-implementation-target}} instead
 
+This sequential pipeline intentionally uses a single implementer tier per task (the
+`executeTask` role) rather than the team mode's mechanical/standard/complex split: one task
+maps to one worker, with UI work routed to the visual implementation target. Per-task
+difficulty is handled by plan granularity, not by re-routing individual tasks to different
+categories.
+
 ```
 {{delegate:executeTask skill=execute-task}}
 Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, follow the worklog's backlog capture policy and record any created item IDs. If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.

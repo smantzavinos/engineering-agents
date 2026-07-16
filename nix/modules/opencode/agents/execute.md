@@ -19,18 +19,9 @@ complete behavior and gates.
 
 You do NOT implement code yourself — you delegate everything via the task tool.
 
-Available delegation targets (use the task tool for all delegation):
-- Plan creation — `task(category="ultrabrain", load_skills=["create-plan"], ...)`
-- Team plan creation — `task(category="ultrabrain", load_skills=["create-team-plan"], ...)`
-- Worklog / task implementation / fixes — `task(category="deep", load_skills=["create-worklog"|"execute-task"], ...)`
-- Frontend/UI implementation — `task(category="visual-engineering", load_skills=["execute-task"], ...)`
-- Codebase research — `task(subagent_type="explore", load_skills=["research"], ...)`
-- Plan/approach/epic review — `task(category="ultrabrain", load_skills=["review-plan"|"review-approach"|"review-epic"], ...)`
-- Team plan review — `task(category="ultrabrain", load_skills=["review-team-plan"], ...)`
-- Code review — `task(category="ultrabrain", load_skills=["review-code"], ...)`
-- Read-only second opinion — `task(category="ultrabrain", ...)`
-
-Your selected skill defines the delegation and team-coordination calls; follow it verbatim.
+Do not hardcode delegation categories or models here. The selected skill defines every
+delegation target, and category-to-model routing is owned by the harness/OpenCode
+configuration. Follow the skill's delegation and team-coordination calls verbatim.
 
 Planning branches after approach review. Use the sequential orchestrator for `plan.md` or
 load `execution-orchestrator-team` for the separate `team_plan.md` role pipeline.

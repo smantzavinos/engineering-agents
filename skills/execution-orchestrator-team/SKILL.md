@@ -162,9 +162,11 @@ Do not poll. Never instruct blocked members to check `team_task_list` periodical
 
 ## Stage 1 — Team Plan
 
-Create `team_plan.md` directly from the reviewed approach with `create-team-plan`. Review it
-with `review-team-plan` until a clean pass, then stop for approval unless auto-continue was
-explicitly requested. Commit the approved team planning checkpoint.
+Create `team_plan.md` directly from the reviewed approach with `create-team-plan`, delegated to
+`category="deep"`. Review it with `review-team-plan`, also at `category="deep"`, until a clean
+pass, then stop for approval unless auto-continue was explicitly requested. Escalate either
+delegation to `category="ultrabrain"` only for unusually hard or unique planning. Commit the
+approved team planning checkpoint.
 
 ## Stage 2 — Team Worklog and Baseline
 
@@ -225,6 +227,8 @@ After all implementation packets are terminal:
 | Role | Agent type/category | Membership |
 |---|---|---|
 | Lead | primary Execute agent/chat | team lead |
+| Team planner | external category `deep` with `create-team-plan` (escalate to `ultrabrain` for unusually hard/unique planning) | outside implementation team |
+| Team plan reviewer | external category `deep` with `review-team-plan` (escalate to `ultrabrain` for unusually hard/unique reviews) | outside implementation team |
 | Mechanical implementer | category `unspecified-low` | category member |
 | Standard implementer | category `unspecified-high` | category member |
 | Visual implementer | category `visual-engineering` | category member replacing one implementation slot |
