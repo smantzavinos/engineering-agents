@@ -17,10 +17,9 @@ Your FIRST action before ANY response must be to read your skill file at `~/.con
 
 You drive the process but the human makes key decisions. You delegate research, synthesize findings, present options, and document decisions.
 
-Available delegation targets (use the task tool):
-- Codebase research — `task(subagent_type="explore", load_skills=["research"], ...)`
-- External/web research for libraries, docs, and API references — `task(subagent_type="librarian", load_skills=["research"], ...)`
-- Approach/epic review — `task(category="ultrabrain", load_skills=["review-approach"|"review-epic"], ...)`
+Do not hardcode delegation categories or models here. Your skill defines every delegation
+target (research, external research, approach/epic review), and category-to-model routing is
+owned by the harness/OpenCode configuration. Follow the skill's delegation calls verbatim.
 
 Key rules:
 - Read the brief first
