@@ -528,6 +528,7 @@ in
       ".pi/agent/skills/review-approach".source = "${repoRoot}/dist/skills/pi/review-approach";
       ".pi/agent/skills/assess-repo".source = "${repoRoot}/dist/skills/pi/assess-repo";
       ".pi/agent/skills/create-skills".source = "${repoRoot}/dist/skills/pi/create-skills";
+      ".pi/agent/skills/configure-pi".source = "${repoRoot}/dist/skills/pi/configure-pi";
       ".pi/agent/skills/create-new-repo-docs".source = "${repoRoot}/dist/skills/pi/create-new-repo-docs";
 
       # ============================================================

@@ -158,6 +158,22 @@ else
   fail "configure-opencode is missing from the OpenCode tree"
 fi
 
+# configure-pi is Pi-only, project-scoped, and preserves the spawn-limit boundary.
+if [[ -f "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" ]] \
+  && grep -Fq '`.pi/settings.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'maxSubagentSpawnsPerSession' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'PI_SUBAGENT_MAX_SPAWNS_PER_SESSION=100 pi' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'outside this project-scoped skill' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md"; then
+  pass "configure-pi is present in Pi with project-scope and spawn-limit boundaries"
+else
+  fail "configure-pi is missing from Pi or lacks its project-scope boundary"
+fi
+if [[ -e "$REPO_ROOT/dist/skills/opencode/configure-pi" ]]; then
+  fail "configure-pi (pi-only) leaked into the OpenCode tree"
+else
+  pass "configure-pi is excluded from the OpenCode tree"
+fi
+
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
 for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
   if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
