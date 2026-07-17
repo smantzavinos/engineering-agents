@@ -43,26 +43,57 @@ Review a team-mode plan before a team worklog or implementation team is created.
 - Same-file edits are combined unless a real readiness boundary requires separation.
 - Every packet has readiness, deliverable, minimal check, handoff, reviewer checklist,
   retry limit, escalation target, and integration group.
-- Every packet declares a valid implementer class (mechanical, standard, or complex) that
-  matches its intrinsic difficulty and risk. A mechanical packet must be simple, isolated,
-  low-risk, and localized; cross-file, cross-module, or design-ambiguous work is standard or
-  complex. Mis-classification is a finding because the lead routes strictly by class.
+- Every packet declares a valid implementer class (mechanical, bounded-cheap, standard, or
+  complex) that matches its residual ambiguity and risk, not its file count. A mechanical
+  packet must be simple, isolated, low-risk, and localized. A bounded-cheap packet must be
+  decision-complete: frozen design in the packet text, explicit write set, existing acceptance
+  tests or precise evidence, named negative cases, and no security/migration/authorization/
+  distributed-state judgment. Any cheap-lane packet containing an unresolved design decision
+  is a Blocker. Mis-classification is a finding because routing follows class lanes.
+
+### Throughput and scheduling
+
+- Recompute ready width from the DAG task table; a roster count is not evidence of useful
+  concurrency. Fewer than two runnable implementation lanes during the main build frontier is
+  a Major finding unless the DAG genuinely forbids more.
+- Scheduled simultaneous assignments must not exceed the declared instances of any role
+  (Blocker: one member scheduled to run two packets concurrently).
+- Any packet whose `blockedBy` is satisfiable earlier than its scheduled stage/wave is a
+  missed pull-forward finding unless a named dependency or resource lock justifies the hold.
+- Verify the Frozen Decisions section resolves or assigns every decision the approach
+  deferred, and that planned file locations respect framework import boundaries (client code
+  must not import server-only modules).
+- Verify the projected cheap-lane share meets the plan's stated target or each exception is
+  justified by named ambiguity/risk.
+- Commands sharing generated build output, ports, or a local test harness must not be
+  scheduled concurrently without a declared resource lock.
+- Broad gates duplicated across baseline, integration groups, and final completion without a
+  risk justification are a finding; profiles should be referenced, not restated.
+- A single verifier owning unrelated contract lanes when test files could be split into
+  disjoint lanes is a finding when it serializes the first implementation frontier.
+- Review queue width exceeding review capacity (more than two concurrent handoffs feeding one
+  reviewer with no overflow rule) is a finding.
+- A worklog design that duplicates the plan rather than serving as a wave ledger is a finding.
 
 ### Role and cost discipline
 
-- Up to three fast implementers have useful independent work.
-- A Strong rescue implementer is declared and initially idle unless risk requires it.
+- Up to three fast implementers have useful independent work, with two or more cheap-lane
+  implementers busy through the main build frontier when the DAG permits.
+- The Strong rescue implementer is created on escalation, not declared as a dormant default
+  member.
 - Contract/verifier and live-review responsibilities are distinct.
 - The live reviewer is cost-controlled; the fresh final reviewer defaults to `deep`, with
   `ultrabrain` reserved for unusually hard or unique final reviews.
 - Category/direct-agent routing matches packet risk, domain, and implementer class
-  (mechanical→`unspecified-low`, standard→`unspecified-high`, complex→`deep`).
+  (mechanical/bounded-cheap→`unspecified-low`, standard→`unspecified-high`, complex→`deep`).
 
 ### Event-driven coordination
 
 - No member starts with only blocked work and instructions to keep checking.
-- Every blocked role has a wake event and sender.
-- Do not poll instructions are explicit.
+- Timer-based polling is prohibited; event-triggered post-completion board checks and
+  lane-scoped claims are required and must be described.
+- Every packet names its relay-dispatch successors; every blocked role the claim mechanism
+  cannot reach has a wake event and sender.
 - Active Slot Schedule never exceeds four concurrent members.
 
 ### Remediation and escalation
@@ -84,16 +115,22 @@ Review a team-mode plan before a team worklog or implementation team is created.
 Flag contradictions such as dependent packets scheduled concurrently, overlapping files,
 contracts that cannot be written until after implementation, rescue capacity counted as an
 active fifth slot, reviewer bottlenecks, verification without an owner, integration groups
-that can commit before their evidence exists, or a mechanical class assigned to a packet with
-cross-file ownership, cross-module scope, or design ambiguity.
+that can commit before their evidence exists, a mechanical class assigned to a packet with
+design ambiguity, a bounded-cheap class assigned to a packet with an unfrozen decision, one
+role scheduled in two places at once, or a client-side contract file planned under a
+server-only module path.
 
 ## Severity
 
-- **Blocker:** unsafe or impossible execution graph
-- **Critical:** missing acceptance contract, rescue/escalation path, or final review
-- **Major:** polling worker, >4 active slots, ambiguous ownership, late-only tests, missing
-  minimal check, implementer-class mismatch or missing class, or live reviewer serving as
-  sole final reviewer
+- **Blocker:** unsafe or impossible execution graph; role scheduled beyond its declared
+  multiplicity; cheap-lane packet with an unresolved design decision; invalid client/server
+  import boundary
+- **Critical:** missing acceptance contract, rescue/escalation path, Frozen Decisions
+  coverage, or final review
+- **Major:** timer-polling worker, >4 active slots, ambiguous ownership, late-only tests,
+  missing minimal check, implementer-class mismatch or missing class, fewer than two runnable
+  implementation lanes without DAG justification, missed pull-forward, unlocked shared
+  resource, duplicated broad gates, or live reviewer serving as sole final reviewer
 - **Minor/Nit:** clarity or formatting improvements
 
 ## Completion Criteria

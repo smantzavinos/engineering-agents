@@ -5,10 +5,13 @@
 ## Entry-Point Contract
 
 - Read this file first when resuming.
-- `team_plan.md` is the canonical execution design; this file records live state and evidence.
-- Primary chat is lead and sole scheduler, committer, broad-gate runner, and durable-doc writer.
-- Team members work only from explicit assignments sent by the lead.
-- Do not poll. If no actionable assignment exists, report idle once and stop.
+- `team_plan.md` is the canonical execution design; the live team task board (created from
+  the plan's DAG table with `blockedBy` and lane tags) is the source of per-task transient
+  state. This file records only wave-boundary facts, deviations, and evidence references.
+- Primary chat is lead, sole committer, broad-gate runner, and durable-doc writer, and the
+  dispatcher of last resort under the Turn-Exit Contract.
+- Update this file only at wave commits, deviations, remediations, and closure — never per
+  task transition.
 
 ## References
 
@@ -18,82 +21,51 @@
 
 ## Completion Criteria
 
-- [ ] All contract, implementation, remediation, and verification packets are terminal
-- [ ] All integration groups are reviewed, gated, and committed
+- [ ] All tasks on the team board are terminal
+- [ ] All wave gates are run and committed
 - [ ] Implementation team is closed
 - [ ] Fresh final review is clean
 - [ ] Final gate passes or only approved baseline failures remain
 
-## Team Roster and Routing
+## Baseline Gate Evidence
 
-| Member | Role | Routing | Start state | Current assignment |
-|---|---|---|---|---|
-| impl-1..3 | implementation slots | by packet class: `unspecified-low` (mechanical), `unspecified-high` (standard), `deep` (complex); one may be `visual-engineering` | idle/active | <packet/none> |
-| rescue | Strong rescue implementer | direct `hephaestus` | idle | none |
-| verifier | contract/verifier | domain category | active/idle | <packet/none> |
-| live-reviewer | live review | `unspecified-high` | idle | none |
-| lead | orchestration | primary chat | active | scheduling |
-
-When UI/UX/a11y/visual packets exist, record which implementation slot was replaced by the
-`visual-engineering` member.
-
-## Active Slot Schedule
-
-Maximum active members: 4.
-
-| Stage | Active members | Capacity check | Notes |
+| Profile | Status | Approved unrelated failures | Policy |
 |---|---|---|---|
-| Contract | <members> | <=4 | <idle roles> |
-| Build/review | <members> | <=4 | <handoff flow> |
-| Remediation | <members> | <=4 | rescue replaces a fast slot |
-| Verification | <members> | <=4 | verifier wakes on explicit signal |
+| broad-gate | pass/fail | <none/list> | block/allow/split |
 
-## Baseline Gate Audit
+## Wave Ledger
 
-| Command | Scope | Status | Approved unrelated failures | Policy |
+One row per committed wave. Task IDs and lanes come from the plan's DAG table.
+
+| Wave | Tasks included | Gate profile | Result | Commit |
 |---|---|---|---|---|
-| `<command>` | package/repo | pass/fail | <none/list> | block/allow/split |
+| 1 | C1, I1, I2 | broad-gate | <pass/fail> | <sha> |
 
-## Assignment Board
+## Deviations and Critical Decisions
 
-| Packet | Owner | State | Readiness/wake event | Minimal check/evidence | Handoff received |
-|---|---|---|---|---|---|
-| C1 | verifier | pending | immediate | `<command>` | no |
-| I1 | impl-1 (mechanical/`unspecified-low`) | blocked | lead wakes after <event> | `<minimal check>` | no |
+One line each: what changed versus the plan and why.
 
-States: pending, assigned, in-progress, review, remediation, verified, completed, failed.
+- YYYY-MM-DD — <deviation/decision>
 
-## Remediation Queue
+## Remediation Summary
 
-| ID | Parent | Finding | Severity | Owner | Retry | Escalates to | Status |
-|---|---|---|---|---|---|---|---|
-| R1 | I1 | <defect> | Major | impl-1 | 1/1 | rescue | pending |
-
-## Evidence Ledger
-
-| Contract/packet | Evidence | Command/result | Reviewer verdict |
+| Task | Defect | Resolution | Route |
 |---|---|---|---|
-| AC1/C1 | <path/output> | <result> | pending/pass/fail |
+| I1 | <finding> | <fix summary> | retry / rescue |
 
-## Integration Groups
+## Evidence References
 
-| Group | Packets | Review | Gate | Commit | Status |
-|---|---|---|---|---|---|
-| G1 | C1, I1, V1 | pending | `<command>` | pending | pending |
+Paths and commands only; no output dumps.
 
-## Event Log
-
-- YYYY-MM-DD HH:MM — lead assigned <packet> to <member> because <readiness event>.
-- YYYY-MM-DD HH:MM — reviewer created remediation <ID>; <owner> retry 1/1.
-- YYYY-MM-DD HH:MM — lead escalated <ID> to Strong rescue implementer.
+- AC1 — `<test path>` via `<profile>` — pass/fail
 
 ## Final Review and Closure
 
 - **Team closure:** <pending/complete>
 - **Fresh final reviewer:** external `deep` (escalate to `ultrabrain` for unusually hard/unique reviews)
-- **Final findings:** <artifact/status>
+- **Final review passes:** <n>/5 — <findings artifact/status>
 - **Final remediation:** <none/owner/team>
-- **Final gate:** `<command>` → <result>
+- **Final gate:** <profile> → <result>
 - **Completion commit/state:** <sha/status>
 
 ## Backlog and Requirement Changes

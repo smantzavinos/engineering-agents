@@ -31,9 +31,9 @@ reviewed approach and is not derived from `plan.md`.
 
 ## Requirement Updates
 
-| Change | Implementation packet | Lead-owned canonical update |
+| Change | Task | Lead-owned canonical update |
 |---|---|---|
-| <none or approved change> | <I1> | <requirements file + lead application point> |
+| <none or approved change> | <T1> | <requirements file + lead application point> |
 
 ## Context and Constraints
 
@@ -45,86 +45,113 @@ reviewed approach and is not derived from `plan.md`.
 |---|---|---|---|---|
 | AC1 | <observable behavior> | <test/assertion> | <cases> | yes/no |
 
+## Frozen Decisions
+
+Every decision the approach deferred is resolved here or assigned to a named `complex`
+decision task that blocks its dependents. Verify file locations respect framework import
+boundaries (client code must not import server-only modules).
+
+| ID | Decision | Resolution or owning complex task |
+|---|---|---|
+| D1 | <interface/mechanism/location choice> | <frozen answer, or Tn> |
+
+## Verification Profiles
+
+Exact commands copied from canonical repo docs, named once and referenced everywhere.
+
+| Profile | Commands | Scope | Shared resources |
+|---|---|---|---|
+| backend-targeted | `<command>` | touched files | none |
+| broad-gate | `<commands>` | package/repo | `web-build-output` |
+
+## Resource Locks
+
+| Lock | Resource | Holders |
+|---|---|---|
+| web-build-output | commands mutating generated build output | broad gates, build |
+| local-e2e-harness | shared backend/ports/preview server | E2E tasks |
+| shared-route-page | `<path>` serialized ownership | <tasks> |
+| git-index | commits | lead only |
+
+## DAG Task Table
+
+The lead feeds this table directly into `team_task_create` with `blockedBy` and lane tags.
+Waves are commit checkpoints only; any ready, file-disjoint task may be pulled forward.
+
+| Wave | ID | Lane | Deliverable | Write set | BlockedBy | Contracts | Check profile | Relay successors | Risk |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 | C1 | [verify] | AC1 contract tests | `<test paths>` | none | AC1 | backend-targeted | I1 | low |
+| 1 | I1 | [cheap] | <decision-complete change> | `<paths>` | C1 | AC1 | backend-targeted | I3, reviewer | low |
+| 1 | I2 | [complex] | <design-bearing change> | `<paths>` | D1 | AC2 | web-client | I4 | high |
+
+Lanes: `[cheap]` mechanical/bounded-cheap → `unspecified-low`; `[std]` standard →
+`unspecified-high`; `[complex]` → `deep`; `[visual]` → `visual-engineering`;
+`[verify]` → contract/verifier.
+
+### Complex task details
+
+Detailed prose is required only for `[complex]` (and high-risk `[visual]`/`[std]`) tasks.
+Cheap-lane tasks must be fully executable from their table row plus referenced frozen
+decisions and contracts.
+
+#### Task I2
+
+- **Frozen decisions consumed:** D1
+- **Design notes:** <subtle correctness/state/security concerns>
+- **Reviewer checklist:** <contract, scope, quality checks>
+- **Retry limit:** 1 local remediation retry
+- **Escalation target:** Strong rescue implementer (created on demand)
+
 ## Team Roster
 
-Use one `visual-engineering` member in place of a general implementation slot whenever any
-packet owns UI components, styling, interaction, accessibility, responsive behavior, or
-visual verification.
-
-| Role | Default routing | Start state | Responsibilities |
+| Role | Instances | Routing | Start state |
 |---|---|---|---|
-| Implementation slots (up to 3) | `unspecified-low` (mechanical), `unspecified-high` (standard), or `deep` (complex) | active as packets allow | speed-run owned files by packet class; minimal checks only |
-| Visual implementer (optional) | `visual-engineering` | active when UI packets exist | replaces one general slot; UI/UX/a11y/visual work |
-| Strong rescue implementer | direct `hephaestus` | idle | high-risk packets and escalations |
-| Contract/verifier | `unspecified-high` or domain category | active for contract stage | read acceptance context; own test files; author early behavioral tests; record baseline/red and targeted evidence; classify failures; never fix production code |
-| Live reviewer | `unspecified-high` | idle until first handoff | review handoffs; create remediation packets |
-| Lead | primary chat | active | schedule, wake roles, gates, commits, lifecycle |
-| Final reviewer | fresh external `deep` (escalate to `ultrabrain`) | not spawned yet | full independent final review |
+| Cheap implementers | <n> | `unspecified-low` | active as tasks allow |
+| Standard/complex implementers | <n> | `unspecified-high` / `deep` | active as tasks allow |
+| Visual implementer (optional) | 0–1 | `visual-engineering` | replaces one slot when UI work exists |
+| Contract/verifier lanes | 1–2 (disjoint test files) | `unspecified-high` or domain | active during contracts |
+| Live reviewer | 1 | `unspecified-high` | idle until first handoff |
+| Strong rescue implementer | on demand | direct `hephaestus` | created only on escalation |
+| Lead | 1 | primary chat | active |
+| Final reviewer | 1 | fresh external `deep` (escalate `ultrabrain`) | after team closure |
 
-## Acceptance Contract Packets
+Instances must cover the maximum simultaneous assignments per role in the DAG table.
+No more than four members work concurrently.
 
-| ID | Contracts | Files owned | Readiness | Minimal command | Expected initial evidence | Status |
-|---|---|---|---|---|---|---|
-| C1 | AC1 | `<test paths>` | immediate | `<targeted command>` | red/pass baseline | ⬜ |
+## Throughput Summary
 
-## Implementation Packets
-
-| ID | Deliverable | Depends on | Role/domain | Risk | Implementer class | Files owned | Minimal check | Contracts | Integration group | Status |
-|---|---|---|---|---|---|---|---|---|---|---|
-| I1 | <coherent change> | C1 | fast/backend | low | mechanical | `<paths>` | `<format/LSP/targeted smoke>` | AC1 | G1 | ⬜ |
-
-### Packet I1
-
-- **Readiness event:** <what wakes the implementer>
-- **Files owned:** <exclusive write-set>
-- **Deliverable:** <observable artifact>
-- **Minimal check:** <one cheap command or explicit none-with-rationale>
-- **Handoff:** changed files, assumptions, command result, known risks
-- **Live reviewer checklist:** <contract, scope, quality checks>
-- **Retry limit:** 1 local remediation retry
-- **Escalation target:** Strong rescue implementer
-
-## Verification Packets
-
-| ID | Trigger | Evidence | Command | Owner | Blocks |
-|---|---|---|---|---|---|
-| V1 | I1 reviewed | AC1 | `<targeted command>` | contract/verifier | G1 |
+- **Critical path:** <task chain>
+- **Max ready width per wave:** <wave: width>
+- **Role multiplicity check:** <max simultaneous assignments per role vs declared instances>
+- **Cheap-lane share:** <n>% of implementation tasks (justify each non-cheap task below 50%)
 
 ## Live Review and Remediation Protocol
 
-1. Lead wakes live reviewer when a handoff arrives.
-2. Reviewer checks the packet diff against its contracts and checklist.
-3. Reviewer creates a remediation packet for each significant defect.
-4. Original implementer receives one local retry.
-5. Failed retry or high-risk/cross-cutting finding routes to Strong rescue implementer.
-6. Reviewer marks the packet integration-ready only when significant findings are closed.
+1. Handoffs go to the live reviewer immediately and are reviewed in arrival order.
+2. Reviewer creates a remediation task for each significant defect.
+3. Original implementer receives one local retry.
+4. Failed retry or high-risk/cross-cutting finding routes to a rescue member created on
+   demand.
+5. Reviewer marks tasks integration-ready only when significant findings are closed.
+6. Review queue cap: 2; overflow shifts an idle verifier (own domain) or a slot to review.
 
-## Active Slot Schedule
+## Wave Commit Gates
 
-| Stage | Active slots (max 4) | Idle/wake behavior |
-|---|---|---|
-| Contract | verifier + up to 3 ready implementers | reviewer/rescue idle until messaged |
-| Build/review | up to 3 implementers + live reviewer | verifier sleeps after contracts |
-| Remediation | selected implementers + reviewer; rescue replaces one fast slot | lead wakes only assigned roles |
-| Verification | verifier + reviewer/needed implementers | unassigned roles idle |
-
-## Integration Groups
-
-| Group | Packets | Readiness | Lead gate | Commit |
-|---|---|---|---|---|
-| G1 | C1, I1, V1 | reviewed + verified | `<package/repo command>` | `team(G1): <summary>` |
+| Wave | Tasks | Gate profile | Commit |
+|---|---|---|---|
+| 1 | C1, I1, I2 | broad-gate | `team(W1): <summary>` |
 
 ## Baseline Gate Audit
 
-| Command | Scope | Baseline | Related failures? | Policy |
-|---|---|---|---|---|
-| `<command>` | package/repo | pass/fail | yes/no | block/allow/split |
+| Profile | Baseline | Related failures? | Policy |
+|---|---|---|---|
+| broad-gate | pass/fail | yes/no | block/allow/split |
 
 ## Final Verification and Review
 
-- **Lead final gate:** `<command>`
+- **Lead final gate:** <profile>
 - **Fresh final reviewer:** external `deep`, full diff vs `team_plan.md` (escalate to `ultrabrain` only for unusually hard or unique reviews)
-- **Final remediation owner:** Strong rescue implementer or fresh remediation team
+- **Final remediation owner:** rescue member or fresh remediation team
 - **Completion:** zero open Blocker/Critical/Major findings and final gate satisfied
 
 ## Risks and Escalation Triggers
@@ -132,14 +159,10 @@ visual verification.
 | Trigger | Route |
 |---|---|
 | first local defect | original implementer, one retry |
-| failed retry | Strong rescue implementer |
+| failed retry | Strong rescue implementer (create on demand) |
 | ambiguity or architecture/security/migration risk | lead clarification or strong implementation immediately |
-| repeated defect class | escalate remaining related packets |
+| repeated defect class | escalate remaining related tasks |
 
 ## Compatibility and Rollback
 
 - <compatibility and rollback rules>
-
-## Execution Notes
-
-- <lead-owned deviations, evidence, and decisions>

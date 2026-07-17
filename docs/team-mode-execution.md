@@ -21,22 +21,23 @@ brief → findings → approach → approach review
 
 | Role | Default routing | Responsibility |
 |---|---|---|
-| Lead | primary chat | schedule, wake members, gates, commits, lifecycle |
-| Implementation slots (up to 3) | `unspecified-low` (mechanical), `unspecified-high` (standard), or `deep` (complex) by packet class | speed-run file-owned packets; minimal checks |
+| Lead | primary chat | dispatcher of last resort, gates, commits, lifecycle |
+| Implementation slots (up to 3) | `unspecified-low` (mechanical/bounded-cheap), `unspecified-high` (standard), or `deep` (complex) by packet class | speed-run file-owned packets; minimal checks; lane-scoped claims |
 | Visual implementer (optional) | `visual-engineering` | replaces one implementation slot when UI/UX/a11y/visual packets exist |
-| Strong rescue implementer | direct `hephaestus` | high-risk packets and escalations; starts idle |
-| Contract/verifier | `unspecified-high` or domain category | write contracts early; run targeted evidence |
-| Live reviewer | `unspecified-high` | review handoffs; create remediation tasks |
+| Strong rescue implementer | direct `hephaestus` | created only when escalation fires or a planned high-risk packet is ready |
+| Contract/verifier (1–2 lanes) | `unspecified-high` or domain category | write contracts early on disjoint test files; publish each family immediately; run targeted evidence |
+| Live reviewer | `unspecified-high` | review handoffs immediately in arrival order; create remediation tasks |
 | Final reviewer | fresh external `deep` (escalate to `ultrabrain`) | authoritative full-diff review after team closure |
 
 Category-backed members use the Sisyphus-Junior runtime but retain the category's model,
 variant, temperature, and fallbacks. Direct team subagent types may be `sisyphus`, `atlas`,
 `sisyphus-junior`, or `hephaestus`. Oracle and Prometheus remain external consultations.
 
-The lead selects the three implementation slots from the team plan and routes each packet
-strictly by its declared implementer class: mechanical packets to `unspecified-low`, standard packets
-to `unspecified-high`, and complex packets to `deep`. Members never self-select; a
-mechanically-routed member receives only mechanically-classified packets. Use one
+The lead creates the full task DAG on the team board at creation time (`team_task_create`
+with `blockedBy`) with a lane tag in each subject: `[cheap]`, `[std]`, `[complex]`,
+`[visual]`, `[verify]`. Routing follows lanes: mechanical/bounded-cheap packets to
+`unspecified-low`, standard to `unspecified-high`, complex to `deep`. Members claim only
+ready, file-disjoint tasks within their own lane; they never claim outside it. Use one
 `visual-engineering` slot whenever any packet owns frontend components, styling,
 interaction, accessibility, responsive behavior, or visual verification.
 
@@ -47,9 +48,10 @@ at once.
 
 Typical allocation:
 
-1. Contract/verifier plus up to three ready implementers.
-2. Verifier sleeps after contract handoff; live reviewer wakes as implementation handoffs arrive.
-3. Strong rescue stays idle until escalation and replaces an active fast slot.
+1. Contract/verifier lanes plus up to three ready implementers.
+2. Verifiers sleep after publishing contracts; live reviewer wakes as implementation handoffs
+   arrive; an idle verifier may serve as a second reviewer within its own domain.
+3. Strong rescue is created on escalation and replaces an active fast slot.
 4. Targeted verification wakes only the verifier and roles needed to repair failures.
 
 ## Team Plan Structure
@@ -110,24 +112,30 @@ implementer or a fresh remediation team. The live reviewer is not the final revi
 
 ## Event-Driven Coordination
 
-Do not poll.
+Do not poll on a timer. An event-triggered board check — once, immediately after completing a
+task — is required and is not polling.
 
-- The lead pre-assigns ready work.
-- A member without an actionable assignment reports idle once and stops.
-- The lead wakes members through `team_send_message` with a task ID, readiness evidence,
-  write-set, and handoff expectation.
-- The lead tracks blocked queues and readiness transitions.
-- Recreate teams between major stages when a fresh context or changed role mix is cheaper
-  than keeping long-running sessions.
+- The lead pre-creates the full task DAG with `blockedBy` and lane tags.
+- After a completion, the member checks the board once and claims the oldest ready,
+  file-disjoint task in its own lane; relay-dispatch successors named in each packet are
+  messaged directly by the completing member.
+- A member with no ready lane work reports idle once and stops.
+- Turn-Exit Contract: the lead never ends a turn while a ready task is undispatched, nudges a
+  member silent across two turns, and restarts (not the team — the member) after a third.
+- Members never use `todowrite`; the team board is the sole task system.
+- Prefer per-member restart over team recreation; recreate teams only at wave-commit
+  boundaries when a fresh context or changed role mix is cheaper than keeping long-running
+  sessions.
 
 There is no documented manual early-compaction control for team members. Short packets,
-durable handoffs, idle sessions, and team recreation are the supported context controls.
+durable handoffs, idle sessions, and member restarts are the supported context controls.
 
 ## Model Escalation
 
 | Condition | Route |
 |---|---|
 | mechanical isolated work | `unspecified-low` |
+| bounded-cheap decision-complete work (frozen design, explicit write set, existing tests) | `unspecified-low` |
 | normal implementation or live review | `unspecified-high` |
 | UI work | `visual-engineering` |
 | planned complex implementation | `deep` |

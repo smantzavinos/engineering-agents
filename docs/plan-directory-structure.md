@@ -254,17 +254,21 @@ This artifact belongs to the sequential strict-TDD pipeline.
 
 Created directly from the reviewed approach instead of from `plan.md`. Contains:
 
-- acceptance contracts and early contract-test packets
-- file-owned implementation packets
-- readiness events, role/domain, risk tier and implementer class, and minimal checks
+- acceptance contracts and early contract-test packets (one or two verifier lanes)
+- frozen design decisions and framework boundary checks
+- a DAG task table with lane tags, write sets, dependencies, and relay successors
+- resource locks and named verification profiles
+- risk tier and implementer class (mechanical, bounded-cheap, standard, complex)
 - live-review checklists and reviewer-created remediation protocol
-- one-retry escalation to a dormant Strong rescue implementer
-- active-slot schedule (maximum four), targeted verification, and integration groups
+- one-retry escalation to a Strong rescue implementer created on demand
+- a throughput summary (critical path, ready width, role multiplicity, cheap-lane share)
+- wave commit gates (maximum four concurrent members)
 
 ### team_plan_review.md
 
-Reviews contract completeness, packet ownership, actionable parallel work, role/model cost,
-no-polling wake events, active slots, remediation, escalation, and independent final review.
+Reviews contract completeness, packet ownership and decision-completeness, DAG ready width
+and role multiplicity, resource locks, role/model cost, lane-claim coordination, active
+slots, remediation, escalation, and independent final review.
 
 ### plan_review.md
 
@@ -290,11 +294,12 @@ Execution tracking document (see the create-worklog skill for full template). Co
 
 ### team-worklog.md (team-mode execution only)
 
-Lead-owned execution ledger compiled from reviewed `team_plan.md`. Contains:
-- roster and active-slot schedule
-- explicit assignments and wake events (no polling)
-- contract, implementation, remediation, and verification queues
-- evidence and integration-group gates/commits
+Lead-owned compact wave ledger created from reviewed `team_plan.md`. Per-task transient
+state lives on the live team task board, not here. Contains:
+- baseline gate evidence
+- per-wave commit entries (tasks included, gate profile, result, commit hash)
+- deviations and critical decisions
+- remediation summaries and evidence references
 - rescue escalations, fresh final review, closure, backlog, and requirement records
 
 ### code_review.md

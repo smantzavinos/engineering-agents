@@ -7,7 +7,7 @@ This document defines the full lifecycle for each workflow type. The orchestrato
 Agents should not accumulate large uncommitted work. Human-reviewed planning artifacts are
 committed at approval boundaries. Sequential implementation commits every completed task
 with its tests and `worklog.md` update; team implementation commits each reviewed, verified
-integration group with its `team-worklog.md` update.
+wave checkpoint with its `team-worklog.md` ledger entry.
 
 ## Task Tracking and Backlog Capture
 
@@ -277,15 +277,21 @@ team_plan.md → team_plan_review.md → team-worklog.md
 → contract-first role execution → close team → fresh final review
 ```
 
-- `create-team-plan` creates `team_plan.md` directly from the reviewed approach.
-- `review-team-plan` validates acceptance contracts, file ownership, active slots, role/model
-  routing, no-polling wake events, remediation, and escalation.
-- Contract/verifier writes tests before or alongside implementation.
-- Up to three fast implementers speed-run file-owned packets with minimal checks.
+- `create-team-plan` creates `team_plan.md` directly from the reviewed approach, including
+  frozen design decisions, a DAG task table with lanes and dependencies, resource locks, and
+  named verification profiles.
+- `review-team-plan` validates acceptance contracts, decision-completeness of cheap packets,
+  file ownership and resource locks, DAG ready width and role multiplicity, active slots,
+  role/model routing, remediation, and escalation.
+- One or two contract/verifier lanes write tests before or alongside implementation and
+  publish each contract family immediately.
+- Up to three implementers speed-run file-owned packets with minimal checks, claiming ready
+  work within their lane; the lead dispatches anything the claims miss under the Turn-Exit
+  Contract.
 - A cost-controlled live reviewer creates remediation tasks.
 - The original implementer receives one local retry; failed retries and high-risk work route
-  to the idle Strong rescue implementer.
-- Lead runs broad gates and commits integration groups.
+  to a Strong rescue implementer created on demand.
+- Lead runs broad gates and commits wave checkpoints.
 - After team closure, a fresh strong reviewer performs the authoritative final review.
 
 See [Team-Mode Execution](team-mode-execution.md) for the full operating contract.

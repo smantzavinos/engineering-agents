@@ -144,9 +144,11 @@ deriving it from `plan.md`.
 ### FR-008 — Role-based team execution
 **Use case:** UC-005
 
-Team execution shall define early acceptance contracts, file-owned implementation packets,
-cost-aware live review, reviewer-created remediation, a dormant strong rescue role, targeted
-verification ownership, lead-owned broad gates, and fresh strong final review.
+Team execution shall define early acceptance contracts, file-owned implementation packets
+with plan-time implementer classes (mechanical, bounded-cheap, standard, complex), a
+lead-created dependency task graph with lane-scoped claims, cost-aware live review,
+reviewer-created remediation, an on-demand strong rescue role, targeted verification
+ownership, lead-owned broad gates, and fresh strong final review.
 
 ## Non-Functional Requirements
 
@@ -163,8 +165,10 @@ Repo-operating docs shall stay concise, routing-oriented where appropriate, and 
 ### NFR-003 — Event-driven team coordination
 **Scope:** UC-005, WF-005
 
-Blocked team members shall not poll. The lead shall wake idle members with actionable tasks,
-and no more than four members shall work concurrently.
+Blocked team members shall not poll on a timer. Members shall check the task board once
+after completing a task and claim only ready, file-disjoint work in their own lane. The lead
+shall not end a turn while a ready task is undispatched, and no more than four members shall
+work concurrently.
 
 ## Operational Requirements
 

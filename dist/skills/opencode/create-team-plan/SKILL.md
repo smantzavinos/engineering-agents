@@ -80,33 +80,83 @@ separation. Do not reproduce sequential TDD tasks as team packets.
 
 Every implementation packet is classified at plan time into exactly one implementer class.
 The class is a plan-time decision, recorded on the packet, verified during team-plan review,
-and used by the lead to route the packet. Workers never self-select, so the class is the
-mechanism that keeps a mechanical implementer from picking up work beyond its intended scope.
+and used to route the packet by lane tag. Members claim only within their lane, so the class
+is the mechanism that keeps a cheap implementer from picking up work beyond its intended
+scope.
 
 | Class | Category route | Assign when the packet is... |
 |---|---|---|
 | mechanical | `unspecified-low` | simple, isolated, low-risk; localized/single-file; no design judgment (renames, config, string/constant edits, boilerplate, mechanical refactors) |
-| standard | `unspecified-high` | normal backend/tooling/logic implementation with bounded ownership |
-| complex | `deep` | planned high-complexity: cross-module coordination, non-trivial design or algorithms, or subtle correctness/state concerns |
+| bounded-cheap | `unspecified-low` | decision-complete: all design decisions frozen in the packet text, explicit write set, acceptance tests or precise evidence already exist, negative cases named; may span multiple tightly related files |
+| standard | `unspecified-high` | normal backend/tooling/logic implementation with bounded ownership and local judgment |
+| complex | `deep` | planned high-complexity: cross-module coordination, non-trivial design or algorithms, subtle correctness/state concerns, or security/authorization/migration judgment |
 
 Rules:
 
 - Classify by intrinsic packet difficulty, not by who happens to be idle.
-- A packet that owns multiple files, crosses modules, or carries design ambiguity must not be
-  mechanical; classify it standard or complex.
+- Classify by residual ambiguity, not file count. Multi-file work with a frozen design is
+  bounded-cheap; single-file work with an open design decision is standard or complex.
+- Bounded-cheap qualification test: could a competent implementer execute this packet from its
+  text alone, without reading the approach and without making a single design decision? If
+  not, it is not bounded-cheap. Never delegate security, migration, authorization, or
+  distributed-state judgment to a cheap lane.
+- Deferring a design decision into a mechanical or bounded-cheap packet is forbidden. Resolve
+  it in the Frozen Decisions section or assign it to a named `complex` packet that must
+  complete before the dependent cheap packets.
 - UI/UX/a11y/visual packets route to the `visual-engineering` implementer regardless of class.
 - `deep` (complex) is a distinct routable class, not the Strong rescue implementer; rescue
   (`hephaestus`) is reserved for failed retries and cross-cutting escalations.
 
+### Frozen Decisions
+
+The plan must contain a Frozen Decisions section. Every decision the approach deferred —
+interface shapes, data-loading mechanisms, discriminators, file/module locations, naming —
+is either resolved there or assigned to a `complex` decision packet scheduled before its
+dependents. Verify that planned file locations respect framework import boundaries (for
+example, client code must not import server-only modules).
+
+### DAG task table
+
+The plan must contain one table with a row per task: id, lane
+(`[cheap]`/`[std]`/`[complex]`/`[visual]`/`[verify]`), write set, `blockedBy` dependencies,
+acceptance contracts, and targeted check profile. This table is what the lead feeds directly
+into `team_task_create`. Waves, where used, are commit checkpoints only — never hold a
+dependency-satisfied packet behind a stage or wave boundary without a named dependency or
+resource lock.
+
+### Resource locks
+
+Declare non-file resources that cannot safely overlap, and which tasks hold them: build
+output directories, test harnesses/ports/preview servers, shared route files with serialized
+ownership, and the git index (lead only).
+
+### Verification profiles
+
+Name each verification command set once (for example `backend-targeted`, `web-client`,
+`e2e-local`, `broad-gate`) with exact commands copied from canonical repo docs. Packets and
+gates reference profiles by name instead of restating commands.
+
+### Throughput summary
+
+The plan must state: the critical path, the maximum ready width per wave, declared role
+multiplicity (simultaneous instances required per role), and the projected share of
+implementation packets on cheap routes. If the cheap share is below 50%, justify each
+non-cheap packet by naming its residual ambiguity or risk.
+
 ### Default team topology
 
-- Up to three implementation slots routed by packet class: mechanical (`unspecified-low`),
-  standard (`unspecified-high`), and complex (`deep`), active when file ownership allows.
-- One Strong rescue implementer: direct `hephaestus`, idle until escalation or a planned
-  high-risk packet.
-- One contract/verifier: authors contracts early, later wakes for targeted verification.
-- One live reviewer: cost-controlled streaming review and remediation-task creation.
-- Primary chat: lead, sole scheduler, broad-gate runner, committer, and lifecycle owner.
+- Up to three implementation slots routed by packet class lane: mechanical/bounded-cheap
+  (`unspecified-low`), standard (`unspecified-high`), and complex (`deep`), active when file
+  ownership allows. Prefer plans where two or more cheap-lane implementers stay busy through
+  the main build frontier.
+- Strong rescue implementer: direct `hephaestus`, created only when escalation fires or a
+  planned high-risk packet becomes ready. Not a default dormant member.
+- One or two contract/verifier lanes with disjoint test files: author contracts early, publish
+  each contract family immediately when ready, later wake for targeted verification.
+- One live reviewer: cost-controlled streaming review and remediation-task creation; an idle
+  verifier may serve as a second reviewer within its own domain.
+- Primary chat: lead, dispatcher of last resort under the Turn-Exit Contract, broad-gate
+  runner, committer, and lifecycle owner.
 - Final reviewer: fresh external `deep` review after the implementation team closes;
   escalate to `ultrabrain` only for unusually hard or unique review situations.
 
@@ -123,9 +173,11 @@ failures.
 
 ### Event-driven readiness
 
-Blocked members must not poll. The plan names the readiness event and who wakes each role.
-Idle roles stop after reporting idle; the lead uses team messages to wake them with an
-actionable packet.
+Blocked members must not poll on a timer. An event-triggered board check — once, after
+completing a task — is required, and members may claim ready, file-disjoint tasks within
+their own lane. The plan names each packet's relay-dispatch successors (who is notified when
+it completes) and the wake event for any role the lane-claim mechanism cannot reach. Idle
+roles stop after reporting idle; the lead dispatches anything relay and lane claims miss.
 
 ### Verification ownership
 
@@ -145,5 +197,10 @@ changes.
 - Do not require every implementer to own Red → Green → Break-it → Verify.
 - Do not assign a member only blocked work with instructions to keep checking.
 - Do not exceed four active members.
+- Do not hold a dependency-satisfied packet behind a stage/wave boundary without a named
+  dependency or resource lock.
+- Do not defer a design decision into a mechanical or bounded-cheap packet.
+- Do not schedule more simultaneous instances of a role than the roster declares.
+- Do not restate verification commands per packet instead of referencing named profiles.
 - Do not make the live reviewer the final authoritative reviewer.
 - Do not implement code, run tests, or modify source files.

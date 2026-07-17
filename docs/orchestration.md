@@ -371,8 +371,9 @@ lead integration gate/commit -> close team -> fresh strong review -> complete
 
 ### Roles and active slots
 
-The default roster is three implementation slots, one idle Strong rescue implementer, one
-contract/verifier, one cost-controlled live reviewer, and the primary-chat lead. If the team
+The default roster is three implementation slots, one or two contract/verifier lanes, one
+cost-controlled live reviewer, and the primary-chat lead. The Strong rescue implementer is
+created only when escalation fires or a planned high-risk packet becomes ready. If the team
 plan contains UI, styling, accessibility, interaction, or visual-validation packets, a
 `visual-engineering` member replaces one of the three general implementation slots. Declared
 membership may exceed four, but no more than four members work concurrently.
@@ -381,14 +382,14 @@ membership may exceed four, but no more than four members work concurrently.
 
 | Role | Responsibilities |
 |---|---|
-| Lead | Select roster, create tasks, enforce ownership/readiness, wake idle members, run broad gates, commit, close/recreate teams, and commission final review. |
-| Mechanical implementer | Speed-run small isolated packets classified mechanical; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks. |
-| Standard implementer | Implement normal backend/tooling packets classified standard with the same bounded ownership and minimal-check contract. |
-| Complex implementer | Implement packets classified complex (cross-module, non-trivial design, subtle correctness) with the same bounded ownership and minimal-check contract. |
+| Lead | Select roster, pre-create the full task DAG with `blockedBy` and lane tags, enforce the Turn-Exit Contract, run broad gates, commit, restart failed members, and commission final review. |
+| Cheap implementer | Speed-run packets classified mechanical or bounded-cheap; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks; claim the next ready task in its lane. |
+| Standard implementer | Implement normal backend/tooling packets classified standard with the same bounded ownership, minimal-check, and lane-claim contract. |
+| Complex implementer | Implement packets classified complex (cross-module, non-trivial design, subtle correctness) with the same bounded ownership, minimal-check, and lane-claim contract. |
 | Visual implementer | Replace one general implementation slot when UI work exists; own frontend/UI, styling, interaction, accessibility, responsive, and visual-validation packets. |
-| Strong rescue implementer | Stay idle until assigned high-risk work or escalation; diagnose/fix failed retries and cross-cutting defects. |
-| Contract/verifier | Read acceptance contracts before implementation; author executable tests early; confirm baseline/red evidence; later run targeted evidence, classify failures, and report remediation needs without fixing production code. |
-| Live reviewer | Review each implementation handoff; create remediation tasks; authorize integration readiness; give one local retry before escalation. |
+| Strong rescue implementer | Created on escalation; diagnose/fix failed retries and cross-cutting defects. |
+| Contract/verifier (1–2 lanes) | Read acceptance contracts before implementation; author executable tests early on disjoint test files; publish each contract family immediately; later run targeted evidence, classify failures, and report remediation needs without fixing production code; may serve as a second reviewer within its domain when idle. |
+| Live reviewer | Review each implementation handoff immediately in arrival order; create remediation tasks; authorize integration readiness; give one local retry before escalation. |
 | Final reviewer | Start fresh after team closure; independently review the complete diff against `team_plan.md` and evidence. |
 
 #### Role-to-runtime mapping
@@ -396,18 +397,21 @@ membership may exceed four, but no more than four members work concurrently.
 | Role | Agent type/category | Team membership |
 |---|---|---|
 | Lead | primary Execute agent/chat | team lead |
-| Mechanical implementer | category `unspecified-low` | category member (Sisyphus-Junior runtime) |
+| Cheap implementer (mechanical/bounded-cheap) | category `unspecified-low` | category member (Sisyphus-Junior runtime) |
 | Standard implementer | category `unspecified-high` | category member (Sisyphus-Junior runtime) |
 | Visual implementer | category `visual-engineering` | category member replacing one implementer slot |
 | Planned complex implementer | category `deep` | category member for explicitly high-complexity packets |
-| Strong rescue implementer | direct `subagent_type="hephaestus"` | declared team member, initially idle |
+| Strong rescue implementer | direct `subagent_type="hephaestus"` | created only when escalation fires |
 | Contract/verifier | category `unspecified-high` or packet domain category | category member |
 | Live reviewer | category `unspecified-high` | category member |
 | Final reviewer | external category `deep` with `review-code` (escalate to `ultrabrain` for unusually hard/unique reviews) | not retained in implementation team |
 
-Each implementation packet declares its implementer class at plan time (mechanical, standard,
-or complex). The lead routes strictly by that class and members never self-select, so a
-mechanically-routed member only ever receives mechanically-classified packets.
+Each implementation packet declares its implementer class at plan time (mechanical,
+bounded-cheap, standard, or complex) and carries a matching lane tag on the task board.
+Routing follows lanes: members claim only ready, file-disjoint tasks within their own lane
+and never claim outside it, so a cheap-lane member only ever receives cheap-classified
+packets. Bounded-cheap packets must be decision-complete — frozen design, explicit write set,
+existing acceptance evidence — and may span multiple tightly related files.
 
 #### Suggested model mapping
 
@@ -417,7 +421,7 @@ the source of truth.
 | Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
 |---|---|---|---|
 | Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/claude-opus-4.8` |
-| `unspecified-low` | mechanical isolated edits | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
+| `unspecified-low` | mechanical isolated edits and bounded-cheap decision-complete packets | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
 | `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Gemini 3.5 Flash | `github-copilot/gemini-3.5-flash` |
 | `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/claude-opus-4.8` |
@@ -445,9 +449,14 @@ and integration-group commits.
 
 ### Event-driven coordination
 
-Blocked members do not poll the board. They report idle once and stop. The lead wakes them via
-team messages with an actionable packet. Team recreation between major stages is the
-supported context reset when sessions grow long or the role/model mix changes.
+Timer polling is prohibited; an event-triggered board check once after completing a task is
+required. The lead pre-creates the full task DAG with `blockedBy` and lane tags, members
+claim ready file-disjoint tasks within their own lane, and completing members message their
+relay-dispatch successors directly. The Turn-Exit Contract makes the lead the dispatcher of
+last resort: never end a turn with a ready task undispatched, nudge a member silent across
+two turns, and restart the member (not the team) on a third. Per-member restart is the
+supported recovery; team recreation is reserved for wave-commit boundaries when a fresh
+context or changed role/model mix is cheaper.
 
 See [Team-Mode Execution](team-mode-execution.md) and the
 `execution-orchestrator-team` skill for the full protocol.
