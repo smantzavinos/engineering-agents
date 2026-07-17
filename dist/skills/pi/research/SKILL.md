@@ -26,7 +26,6 @@ You will receive:
 2. **Explore the codebase** using available tools:
    - `read` — examine specific files
    - `bash` — run `find`, `rg`, `grep`, `ls` for discovery
-   - `gitnexus_query` / `gitnexus_context` — if available, for understanding code relationships
    - `web_search` / `fetch_content` — for external library documentation
 3. **Document findings** in the specified output file
 
