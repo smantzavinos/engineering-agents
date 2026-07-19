@@ -295,19 +295,18 @@ in
     enabledModels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
+        "openai-codex/gpt-5.6-terra"
+        "openai-codex/gpt-5.6-sol"
         "openai-codex/gpt-5.5"
-        "openai-codex/gpt-5.4"
         "openai-codex/gpt-5.3-codex"
         "zai-coding-plan/glm-5.2"
-        "zai-coding-plan/glm-5.1"
-        "zai-coding-plan/glm-4.7"
+        "xai/grok-4.5"
         "fireworks/accounts/fireworks/models/deepseek-v4-pro"
-        "fireworks/accounts/fireworks/models/kimi-k2p6"
-        "fireworks/accounts/fireworks/models/minimax-m2p7"
-        "fireworks/accounts/fireworks/models/qwen3p6-plus"
-        "fireworks/accounts/fireworks/models/gemma-4-26b-a4b-it"
-        "google-gemini-cli/gemini-3-flash-preview"
-        "google-gemini-cli/gemini-3.1-pro-preview"
+        "fireworks/accounts/fireworks/models/kimi-k2p7-code"
+        "fireworks/accounts/fireworks/models/minimax-m3"
+        "fireworks/accounts/fireworks/models/qwen3p7-plus"
+        "fireworks/accounts/fireworks/models/glm-5p2"
+        "google-gemini-cli/gemini-3.5-flash-preview"
       ];
       description = "Models available for Ctrl+P cycling";
     };
@@ -440,7 +439,7 @@ in
       ".pi/agent/models.json".text = builtins.toJSON {
         providers = {
           zai-coding-plan = {
-            apiKey = "ZAI_API_KEY";
+            apiKey = "$ZAI_API_KEY";
             baseUrl = "https://api.z.ai/api/coding/paas/v4";
             api = "openai-completions";
             models = [
@@ -458,7 +457,7 @@ in
             ];
           };
           fireworks = {
-            apiKey = "FIREWORKS_API_KEY";
+            apiKey = "$FIREWORKS_API_KEY";
             baseUrl = "https://api.fireworks.ai/inference/v1";
             api = "openai-completions";
             models = [
