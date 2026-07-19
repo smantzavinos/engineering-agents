@@ -205,9 +205,9 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   if jq -e '.providers | has("fireworks")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
-    pass "models.json contains fireworks provider"
+    fail "models.json must not define fireworks provider (use built-in + FIREWORKS_API_KEY)"
   else
-    fail "models.json missing fireworks provider"
+    pass "models.json omits fireworks (built-in provider)"
   fi
 else
   fail "Pi module activation package failed to build"

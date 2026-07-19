@@ -456,18 +456,6 @@ in
               { id = "glm-4.5-flash"; name = "GLM 4.5 Flash"; contextWindow = 131072; maxTokens = 8192; }
             ];
           };
-          fireworks = {
-            apiKey = "$FIREWORKS_API_KEY";
-            baseUrl = "https://api.fireworks.ai/inference/v1";
-            api = "openai-completions";
-            models = [
-              { id = "accounts/fireworks/models/kimi-k2p6"; name = "Kimi K2.6"; contextWindow = 262144; maxTokens = 32768; input = [ "text" "image" ]; }
-              { id = "accounts/fireworks/models/deepseek-v4-pro"; name = "DeepSeek V4 Pro"; contextWindow = 1048576; maxTokens = 131072; }
-              { id = "accounts/fireworks/models/minimax-m2p7"; name = "MiniMax M2.7"; contextWindow = 196608; maxTokens = 24576; }
-              { id = "accounts/fireworks/models/qwen3p6-plus"; name = "Qwen 3.6 Plus"; contextWindow = 262144; maxTokens = 4000; input = [ "text" "image" ]; }
-              { id = "accounts/fireworks/models/gemma-4-26b-a4b-it"; name = "Gemma 4 26B"; contextWindow = 262144; maxTokens = 8192; input = [ "text" "image" ]; }
-            ];
-          };
         };
       };
 
