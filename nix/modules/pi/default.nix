@@ -317,12 +317,6 @@ in
       description = "Enable GitNexus CLI and the pi-gitnexus managed package";
     };
 
-    enableClaudeCode = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Install Claude Code CLI from llm-agents.nix";
-    };
-
     enableAgentKit = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -342,8 +336,7 @@ in
       piWrapperPkg
       piPkg
       pkgs.ast-grep
-    ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus
-      ++ lib.optional cfg.enableClaudeCode llmAgents.packages.${pkgs.system}.claude-code;
+    ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;
 
     home.file = {
       # Keybindings

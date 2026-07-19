@@ -67,11 +67,12 @@
       #   imports = [ engineering-agents.homeManagerModules.default ];
       # ============================================================
       homeManagerModules = {
-        # Unified module that imports both Pi and OpenCode
+        # Unified module that imports Pi, OpenCode, and Claude Code
         default = { config, lib, pkgs, ... }: {
           imports = [
             self.homeManagerModules.pi
             self.homeManagerModules.opencode
+            self.homeManagerModules.claude-code
           ];
         };
 
@@ -80,6 +81,9 @@
 
         # OpenCode CLI module
         opencode = import ./nix/modules/opencode { inherit self llmAgents visualExplainer; };
+
+        # Claude Code CLI module
+        claude-code = import ./nix/modules/claude-code { inherit self llmAgents; };
       };
 
       # ============================================================
@@ -353,6 +357,20 @@
           ];
         };
 
+        # Claude Code module builds a valid activation package
+        claude-code-module = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.claude-code
+            {
+              home.username = testUser;
+              home.homeDirectory = testHome;
+              home.stateVersion = "25.05";
+              engineering-agents.claude-code.enable = true;
+            }
+          ];
+        };
+
         # Both modules together
         both-modules = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
@@ -366,6 +384,7 @@
               engineering-agents.pi.enableAgentKit = true;
               engineering-agents.pi.enableVisualExplainer = true;
               engineering-agents.opencode.enable = true;
+              engineering-agents.claude-code.enable = true;
             }
           ];
         };
