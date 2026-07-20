@@ -51,6 +51,13 @@
         "scope": "user",
         "filtered": false,
         "installedPath": "/fixture/.pi/agent/packages/pi-subagents"
+      },
+      {
+        "packageId": "pi-powerline-footer",
+        "source": "./packages/pi-powerline-footer",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-powerline-footer"
       }
     ]
   },
@@ -151,6 +158,54 @@
             "path": "/fixture/.pi/agent/packages/pi-subagents/_source/skills/pi-subagents/SKILL.md"
           }
         ],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-powerline-footer",
+      "configuredPackagePath": "./packages/pi-powerline-footer",
+      "facadePath": "/fixture/.pi/agent/packages/pi-powerline-footer",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-pi-powerline-footer",
+      "sourceManifestName": "pi-powerline-footer",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-powerline-footer",
+        "source": {
+          "type": "git",
+          "spec": "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784",
+          "materializedKey": "src-pi-powerline-footer"
+        },
+        "sourceManifestName": "pi-powerline-footer",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-pi-powerline-footer",
+        "selectedResources": {
+          "extensions": [
+            "./index.ts"
+          ],
+          "skills": [],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/index.ts",
+            "sourceRelativePath": "./index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-powerline-footer/_source/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-powerline-footer/index.ts",
+            "tools": [],
+            "commands": [
+              "powerline"
+            ],
+            "flags": []
+          }
+        ],
+        "skills": [],
         "themes": []
       },
       "diagnostics": {

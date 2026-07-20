@@ -50,7 +50,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 - **`resource-snapshot.mjs`** — Live Pi state snapshot using Pi's `DefaultResourceLoader`
 - **`assert-contract.sh`** — Proof-set contract assertions (facade, provenance, resources)
 - **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests
-- **`proof-set.json`** — Representative proof-set expectations (pi-ding, pi-subagents, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
+- **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
 
 New tests specific to this repo:

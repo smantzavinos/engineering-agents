@@ -159,6 +159,30 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module has a git-source package using a mutable ref (branch/tag)"
   fi
 
+  if [[ -n "$PI_MANAGED_PACKAGES_ALL" ]] \
+    && jq -e 'any(.packages[]; .packageId == "pi-powerline-footer" and .source.type == "git" and .source.packageName == "pi-powerline-footer" and (.source.installSpec | test("^github:nicobailon/pi-powerline-footer#[0-9a-fA-F]{40}$"))) and any(.packages[]; .packageId == "pi-zentui" and .source.type == "git" and .source.packageName == "pi-zentui" and (.source.installSpec | test("^github:lmilojevicc/pi-zentui#[0-9a-fA-F]{40}$")))' "$PI_MANAGED_PACKAGES_ALL" >/dev/null 2>&1; then
+    pass "Pi module manages pinned Powerline and Zentui sources"
+  else
+    fail "Pi module must manage pinned Powerline and Zentui sources"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.packages | index("./packages/pi-powerline-footer") != null and index("./packages/pi-zentui") == null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi module defaults to the Powerline footer profile"
+  else
+    fail "Pi module must load only Powerline by default"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.powerline | .preset == "nerd" and .fixedEditor == true and .mouseScroll == true and .welcome == true and .cost.subscriptionDisplay == "reported-cost" and .path.mode == "abbreviated" and .path.maxLength == 36' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && jq -e '.powerlineShortcuts.scrollChatUp == "ctrl+alt+u" and .powerlineShortcuts.scrollChatDown == "ctrl+alt+d"' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && grep -q 'POWERLINE_THEME_PATH=.*pi-powerline-footer/theme.json' "$PI_OUT/activate" \
+    && grep -q 'export POWERLINE_NERD_FONTS="1"' "$PI_OUT/home-path/etc/profile.d/hm-session-vars.sh"; then
+    pass "Powerline profile applies the declarative visual configuration"
+  else
+    fail "Powerline profile must apply its declarative visual configuration"
+  fi
+
   # Verify agent-kit installs from the pinned flake input (no runtime clone)
   # and that its extension symlink targets resolve to real files in the store
   # (guards against the historical pi/extensions/ dangling-symlink bug).
@@ -212,6 +236,26 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 else
   fail "Pi module activation package failed to build"
   printf '  Output: %s\n' "$PI_OUT" >&2
+fi
+
+# The alternate footer profile must build independently and configure only
+# Zentui. This prevents two UI-owning extensions from loading together.
+printf '\nBuilding Zentui footer-profile activation package...\n'
+PI_ZENTUI_OUT=$(nix build "$REPO_ROOT#checks.x86_64-linux.pi-zentui-module.activationPackage" \
+  --no-link --print-out-paths 2>&1) || true
+PI_ZENTUI_OUT=$(echo "$PI_ZENTUI_OUT" | grep '^/nix/store' | head -1 || true)
+PI_ZENTUI_SETTINGS_STORE_JSON=""
+if [[ -n "$PI_ZENTUI_OUT" && -x "$PI_ZENTUI_OUT/activate" ]]; then
+  pass "Zentui footer-profile activation package builds"
+  PI_ZENTUI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_ZENTUI_OUT/activate" 'pi-settings-nix.json')"
+  if [[ -n "$PI_ZENTUI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.packages | index("./packages/pi-zentui") != null and index("./packages/pi-powerline-footer") == null' "$PI_ZENTUI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Zentui footer profile loads only Zentui"
+  else
+    fail "Zentui footer profile must not load Powerline"
+  fi
+else
+  fail "Zentui footer-profile activation package is missing or has no activation script"
 fi
 
 # The repo-local Pi development script activates this dedicated package with an

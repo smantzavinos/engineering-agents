@@ -68,11 +68,20 @@ let
 
     pi-powerline-footer = {
       source = {
-        type = "npm";
+        type = "git";
         packageName = "pi-powerline-footer";
-        spec = "pi-powerline-footer@0.4.9";
-        installSpec = "pi-powerline-footer@0.6.1";
-        version = "0.6.1";
+        # v0.7.0 supports Pi >=0.74.0 <0.81.0, including this flake's Pi 0.80.7 pin.
+        spec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
+        installSpec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
+      };
+    };
+
+    pi-zentui = {
+      source = {
+        type = "git";
+        packageName = "pi-zentui";
+        spec = "github:lmilojevicc/pi-zentui#d22f4f302f19682a7adc8d6cedd55e1f0d38149a";
+        installSpec = "github:lmilojevicc/pi-zentui#d22f4f302f19682a7adc8d6cedd55e1f0d38149a";
       };
     };
 
@@ -206,9 +215,14 @@ let
     };
   };
 
+  footerPackageIds = [ "pi-powerline-footer" "pi-zentui" ];
+  selectedFooterPackageId = if cfg.footer == "powerline" then "pi-powerline-footer" else "pi-zentui";
   enabledPiPackages = lib.filterAttrs (packageId: _: cfg.enableGitNexus || packageId != "pi-gitnexus") piPackages;
   piManagedPackageIds = builtins.attrNames enabledPiPackages;
-  piRuntimePackageIds = builtins.filter (packageId: enabledPiPackages.${packageId}.source.type != "local") piManagedPackageIds;
+  piRuntimePackageIds = builtins.filter (packageId:
+    enabledPiPackages.${packageId}.source.type != "local"
+    && (!lib.elem packageId footerPackageIds || packageId == selectedFooterPackageId)
+  ) piManagedPackageIds;
   piManagedPackageList = map (packageId: (enabledPiPackages.${packageId} // { inherit packageId; })) piManagedPackageIds;
 
   visualExplainerSkill = "${visualExplainer}/plugins/visual-explainer";
@@ -222,6 +236,8 @@ let
 
   # Repository root path for referencing skills and agents
   repoRoot = "${self}";
+
+  powerlineThemeFile = pkgs.writeText "pi-powerline-footer-theme.json" (builtins.toJSON cfg.powerline.theme);
 
   piSettings = {
     defaultProvider = cfg.defaultProvider;
@@ -256,6 +272,9 @@ let
     subagents = {
       disableBuiltins = true;
     };
+  } // lib.optionalAttrs (cfg.footer == "powerline") {
+    powerline = cfg.powerline.config;
+    powerlineShortcuts = cfg.powerline.shortcuts;
   };
 
   piSettingsFile = pkgs.writeText "pi-settings-nix.json" (builtins.toJSON piSettings);
@@ -290,6 +309,72 @@ in
       type = lib.types.str;
       default = "catppuccin-mocha";
       description = "Pi theme";
+    };
+
+    footer = lib.mkOption {
+      type = lib.types.enum [ "powerline" "zentui" ];
+      default = "powerline";
+      description = "Footer/editor profile to load. Both profiles are managed, but only the selected profile is loaded by Pi.";
+    };
+
+    powerline = {
+      config = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = {
+          preset = "nerd";
+          fixedEditor = true;
+          mouseScroll = true;
+          placement = "above";
+          welcome = true;
+          cost.subscriptionDisplay = "reported-cost";
+          path = {
+            mode = "abbreviated";
+            maxLength = 36;
+          };
+        };
+        description = "pi-powerline-footer settings written to Pi settings.json when the Powerline profile is selected.";
+      };
+
+      shortcuts = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = {
+          scrollChatUp = "ctrl+alt+u";
+          scrollChatDown = "ctrl+alt+d";
+        };
+        description = "Powerline shortcut settings written to Pi settings.json when the Powerline profile is selected.";
+      };
+
+      nerdFonts = lib.mkOption {
+        type = lib.types.enum [ "auto" "force" "disable" ];
+        default = "force";
+        description = "Nerd Font detection mode for Powerline. Force is the default because tmux cannot reliably report the outer terminal font.";
+      };
+
+      theme = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = {
+          colors = {
+            model = "#cba6f7";
+            shellMode = "success";
+            path = "#94e2d5";
+            gitClean = "success";
+            gitDirty = "warning";
+            thinking = "thinkingOff";
+            thinkingMinimal = "thinkingMinimal";
+            thinkingLow = "thinkingLow";
+            thinkingMedium = "thinkingMedium";
+            context = "dim";
+            contextWarn = "warning";
+            contextError = "error";
+            cost = "text";
+            tokens = "muted";
+            separator = "dim";
+            border = "borderMuted";
+          };
+          icons = { };
+        };
+        description = "pi-powerline-footer theme.json override applied after the managed package is installed.";
+      };
     };
 
     enabledModels = lib.mkOption {
@@ -765,6 +850,14 @@ EOF
         echo "managed Pi package installation complete"
       '';
 
+      installPowerlineTheme = lib.mkIf (cfg.footer == "powerline") (lib.hm.dag.entryAfter [ "installPiExtensions" ] ''
+        # Powerline intentionally resolves theme.json relative to its extension
+        # module. Reapply the declarative override after managed-package
+        # installation, which may otherwise replace the package directory.
+        POWERLINE_THEME_PATH="$HOME/.pi/packages/lib/node_modules/pi-powerline-footer/theme.json"
+        install -Dm644 ${powerlineThemeFile} "$POWERLINE_THEME_PATH"
+      '');
+
       installVisualExplainer = lib.mkIf cfg.enableVisualExplainer (lib.hm.dag.entryAfter [ "writeBoundary" "installPiExtensions" ] ''
         VISUAL_EXPLAINER_DIR="$HOME/.pi/agent/skills/visual-explainer"
 
@@ -808,6 +901,10 @@ EOF
 
     home.sessionVariables = {
       NPM_CONFIG_PREFIX = "$HOME/.pi/packages";
+    } // lib.optionalAttrs (cfg.footer == "powerline" && cfg.powerline.nerdFonts == "force") {
+      POWERLINE_NERD_FONTS = "1";
+    } // lib.optionalAttrs (cfg.footer == "powerline" && cfg.powerline.nerdFonts == "disable") {
+      POWERLINE_NERD_FONTS = "0";
     };
   };
 }

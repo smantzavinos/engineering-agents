@@ -72,15 +72,20 @@ cat >"$FAKE_ACTIVATION" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf 'activation HOME=%s XDG_STATE_HOME=%s XDG_CACHE_HOME=%s\n' "$HOME" "$XDG_STATE_HOME" "$XDG_CACHE_HOME" >>"$PI_DEV_TEST_LOG"
-mkdir -p "$HOME/.pi/agent"
+mkdir -p "$HOME/.pi/agent" "$HOME/.nix-profile/etc/profile.d"
 printf '{}\n' >"$HOME/.pi/agent/settings.json"
+cat >"$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh" <<'SESSION_VARS'
+if [ -n "${__HM_SESS_VARS_SOURCED:-}" ]; then return; fi
+export __HM_SESS_VARS_SOURCED=1
+export POWERLINE_NERD_FONTS=1
+SESSION_VARS
 EOF
 chmod +x "$FAKE_ACTIVATION"
 
 cat >"$FAKE_WRAPPER_ROOT/bin/pi" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf 'pi HOME=%s PI_CODING_AGENT_DIR=%s args=%s\n' "$HOME" "${PI_CODING_AGENT_DIR:-}" "$*" >>"$PI_DEV_TEST_LOG"
+printf 'pi HOME=%s PI_CODING_AGENT_DIR=%s POWERLINE_NERD_FONTS=%s args=%s\n' "$HOME" "${PI_CODING_AGENT_DIR:-}" "${POWERLINE_NERD_FONTS:-}" "$*" >>"$PI_DEV_TEST_LOG"
 EOF
 chmod +x "$FAKE_WRAPPER_ROOT/bin/pi"
 
@@ -90,6 +95,7 @@ PI_DEV_ALLOW_CUSTOM_ROOT=1 \
 PI_DEV_ACTIVATION_PATH="$FAKE_ACTIVATION" \
 PI_DEV_WRAPPER_PATH="$FAKE_WRAPPER_ROOT" \
 PI_DEV_TEST_LOG="$LOG_PATH" \
+__HM_SESS_VARS_SOURCED=1 \
 "$PI_DEV_SCRIPT" --copy-auth -- --version
 
 assert_file_equals \
@@ -103,7 +109,7 @@ assert_file_contains \
 assert_file_contains \
   'Pi runs with the sandbox home and agent directory' \
   "$LOG_PATH" \
-  "pi HOME=$DEV_ROOT/home PI_CODING_AGENT_DIR=$DEV_ROOT/home/.pi/agent args=--version"
+  "pi HOME=$DEV_ROOT/home PI_CODING_AGENT_DIR=$DEV_ROOT/home/.pi/agent POWERLINE_NERD_FONTS=1 args=--version"
 
 HOME="$SOURCE_HOME" \
 PI_DEV_ROOT="$NO_AUTH_DEV_ROOT" \

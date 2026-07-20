@@ -16,6 +16,44 @@ home-manager switch --flake .#<hostname>
 
 4. Authenticate the installed tools when needed (`/login` inside `pi`, `opencode auth login` for OpenCode).
 
+## Pi Footer Profile
+The Pi module manages Powerline and Zentui sources but loads exactly one footer/editor extension. Set the profile in the Home Manager configuration and apply it; do not load both extensions in one Pi process.
+
+```nix
+engineering-agents.pi = {
+  enable = true;
+  footer = "powerline"; # default; use "zentui" to select Zentui instead
+};
+```
+
+Powerline is the default profile. Its `powerline.config`, `powerline.shortcuts`, `powerline.nerdFonts`, and `powerline.theme` module options provide declarative visual configuration. The defaults use the detailed `nerd` preset, fixed editor, startup welcome overlay, Catppuccin-aligned colors, `Ctrl+Alt+U`/`Ctrl+Alt+D` fixed-editor scrolling, forced Nerd Font glyphs for tmux sessions, and Pi's reported token-cost estimate even for subscription models. Override only the values you need:
+
+```nix
+engineering-agents.pi.powerline = {
+  config = {
+    preset = "full";
+    fixedEditor = true;
+    mouseScroll = true;
+    cost.subscriptionDisplay = "reported-cost";
+    path = {
+      mode = "abbreviated";
+      maxLength = 36;
+    };
+  };
+  shortcuts = {
+    scrollChatUp = "ctrl+alt+u";
+    scrollChatDown = "ctrl+alt+d";
+  };
+  nerdFonts = "force"; # use "auto" or "disable" when appropriate
+  theme.colors = {
+    model = "#cba6f7";
+    path = "#94e2d5";
+  };
+};
+```
+
+Use the sandbox before applying a profile or visual change to the active Home Manager generation.
+
 ## Repo-local Pi Development Sandbox
 Use the sandbox to test the current checkout's Pi module, including uncommitted changes, without pushing or switching the active Home Manager generation:
 

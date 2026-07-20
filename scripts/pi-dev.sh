@@ -103,6 +103,24 @@ copy_auth_into_sandbox() {
   printf 'Copied Pi credentials into %s\n' "$DEV_HOME/.pi/agent/auth.json"
 }
 
+load_sandbox_session_variables() {
+  local session_vars_path="$DEV_HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+
+  if [[ -r "$session_vars_path" ]]; then
+    # Home Manager guards this file against a second source in a host shell.
+    # Clear that host-only guard after replacing HOME so the sandbox's own
+    # variables, including POWERLINE_NERD_FONTS, take effect.
+    unset __HM_SESS_VARS_SOURCED
+    # Home Manager's generated guard may reference the variable directly, so
+    # allow its normal unset check while sourcing under this script's nounset
+    # policy.
+    set +u
+    # shellcheck source=/dev/null
+    source "$session_vars_path"
+    set -u
+  fi
+}
+
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     --copy-auth)
@@ -151,21 +169,17 @@ if [[ "$copy_auth" == true ]]; then
   copy_auth_into_sandbox
 fi
 
+export HOME="$DEV_HOME"
+export XDG_STATE_HOME="$DEV_STATE_HOME"
+export XDG_CACHE_HOME="$DEV_CACHE_HOME"
+export PI_CODING_AGENT_DIR="$DEV_HOME/.pi/agent"
+export PATH="$wrapper_root/bin:$PATH"
+load_sandbox_session_variables
+
 if [[ "$mode" == "verify" ]]; then
-  HOME="$DEV_HOME" \
-  XDG_STATE_HOME="$DEV_STATE_HOME" \
-  XDG_CACHE_HOME="$DEV_CACHE_HOME" \
-  PI_CODING_AGENT_DIR="$DEV_HOME/.pi/agent" \
-  PI_SETTINGS_PATH="$DEV_HOME/.pi/agent/settings.json" \
-  PATH="$wrapper_root/bin:$PATH" \
+  export PI_SETTINGS_PATH="$DEV_HOME/.pi/agent/settings.json"
   bash "$REPO_ROOT/tests/test-fast.sh"
   exit $?
 fi
 
-exec env \
-  HOME="$DEV_HOME" \
-  XDG_STATE_HOME="$DEV_STATE_HOME" \
-  XDG_CACHE_HOME="$DEV_CACHE_HOME" \
-  PI_CODING_AGENT_DIR="$DEV_HOME/.pi/agent" \
-  PATH="$wrapper_root/bin:$PATH" \
-  "$wrapper_bin" "${pi_args[@]}"
+exec "$wrapper_bin" "${pi_args[@]}"

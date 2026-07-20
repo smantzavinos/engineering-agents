@@ -377,6 +377,24 @@
           ];
         };
 
+        # Alternate Pi footer profile builds independently and must load only
+        # Zentui, never the mutually exclusive Powerline UI extension.
+        pi-zentui-module = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.pi
+            {
+              home.username = testUser;
+              home.homeDirectory = testHome;
+              home.stateVersion = "25.05";
+              engineering-agents.pi.enable = true;
+              engineering-agents.pi.footer = "zentui";
+              engineering-agents.pi.enableAgentKit = true;
+              engineering-agents.pi.enableVisualExplainer = true;
+            }
+          ];
+        };
+
         # OpenCode module builds a valid activation package
         opencode-module = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
