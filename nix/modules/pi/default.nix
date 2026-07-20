@@ -443,10 +443,10 @@ in
             baseUrl = "https://api.z.ai/api/coding/paas/v4";
             api = "openai-completions";
             models = [
-              { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; }
-              { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; }
-              { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; }
-              { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; }
+              { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; reasoning = true; }
+              { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
+              { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
+              { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
               { id = "glm-4.7-flash"; name = "GLM 4.7 Flash"; contextWindow = 131072; maxTokens = 8192; }
               { id = "glm-4.6v"; name = "GLM 4.6 Vision"; contextWindow = 131072; maxTokens = 16384; input = [ "text" "image" ]; }
               { id = "glm-4.5v"; name = "GLM 4.5 Vision"; contextWindow = 131072; maxTokens = 16384; input = [ "text" "image" ]; }
