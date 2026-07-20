@@ -295,19 +295,18 @@ in
     enabledModels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [
+        "openai-codex/gpt-5.6-terra"
+        "openai-codex/gpt-5.6-sol"
         "openai-codex/gpt-5.5"
-        "openai-codex/gpt-5.4"
         "openai-codex/gpt-5.3-codex"
         "zai-coding-plan/glm-5.2"
-        "zai-coding-plan/glm-5.1"
-        "zai-coding-plan/glm-4.7"
+        "xai/grok-4.5"
         "fireworks/accounts/fireworks/models/deepseek-v4-pro"
-        "fireworks/accounts/fireworks/models/kimi-k2p6"
-        "fireworks/accounts/fireworks/models/minimax-m2p7"
-        "fireworks/accounts/fireworks/models/qwen3p6-plus"
-        "fireworks/accounts/fireworks/models/gemma-4-26b-a4b-it"
-        "google-gemini-cli/gemini-3-flash-preview"
-        "google-gemini-cli/gemini-3.1-pro-preview"
+        "fireworks/accounts/fireworks/models/kimi-k2p7-code"
+        "fireworks/accounts/fireworks/models/minimax-m3"
+        "fireworks/accounts/fireworks/models/qwen3p7-plus"
+        "fireworks/accounts/fireworks/models/glm-5p2"
+        "google-gemini-cli/gemini-3.5-flash-preview"
       ];
       description = "Models available for Ctrl+P cycling";
     };
@@ -440,14 +439,14 @@ in
       ".pi/agent/models.json".text = builtins.toJSON {
         providers = {
           zai-coding-plan = {
-            apiKey = "ZAI_API_KEY";
+            apiKey = "$ZAI_API_KEY";
             baseUrl = "https://api.z.ai/api/coding/paas/v4";
             api = "openai-completions";
             models = [
-              { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; }
-              { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; }
-              { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; }
-              { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; }
+              { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; reasoning = true; }
+              { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
+              { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
+              { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
               { id = "glm-4.7-flash"; name = "GLM 4.7 Flash"; contextWindow = 131072; maxTokens = 8192; }
               { id = "glm-4.6v"; name = "GLM 4.6 Vision"; contextWindow = 131072; maxTokens = 16384; input = [ "text" "image" ]; }
               { id = "glm-4.5v"; name = "GLM 4.5 Vision"; contextWindow = 131072; maxTokens = 16384; input = [ "text" "image" ]; }
@@ -455,18 +454,6 @@ in
               { id = "glm-4.5"; name = "GLM 4.5"; contextWindow = 131072; maxTokens = 16384; }
               { id = "glm-4.5-air"; name = "GLM 4.5 Air"; contextWindow = 131072; maxTokens = 8192; }
               { id = "glm-4.5-flash"; name = "GLM 4.5 Flash"; contextWindow = 131072; maxTokens = 8192; }
-            ];
-          };
-          fireworks = {
-            apiKey = "FIREWORKS_API_KEY";
-            baseUrl = "https://api.fireworks.ai/inference/v1";
-            api = "openai-completions";
-            models = [
-              { id = "accounts/fireworks/models/kimi-k2p6"; name = "Kimi K2.6"; contextWindow = 262144; maxTokens = 32768; input = [ "text" "image" ]; }
-              { id = "accounts/fireworks/models/deepseek-v4-pro"; name = "DeepSeek V4 Pro"; contextWindow = 1048576; maxTokens = 131072; }
-              { id = "accounts/fireworks/models/minimax-m2p7"; name = "MiniMax M2.7"; contextWindow = 196608; maxTokens = 24576; }
-              { id = "accounts/fireworks/models/qwen3p6-plus"; name = "Qwen 3.6 Plus"; contextWindow = 262144; maxTokens = 4000; input = [ "text" "image" ]; }
-              { id = "accounts/fireworks/models/gemma-4-26b-a4b-it"; name = "Gemma 4 26B"; contextWindow = 262144; maxTokens = 8192; input = [ "text" "image" ]; }
             ];
           };
         };
