@@ -171,6 +171,24 @@
           export PI_WRAPPER_GIT_BIN="${pkgs.git}/bin/git"
           exec ${self}/scripts/pi-launch-wrapper.sh "$@"
         '';
+
+        # A disposable Home Manager activation package for scripts/pi-dev.sh.
+        # The script overrides HOME and skips the generated fixed-home sanity
+        # check, so the activation materializes into repo-local .pi-dev/.
+        pi-dev-activation = (home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            self.homeManagerModules.pi
+            {
+              home.username = "pi-dev";
+              home.homeDirectory = "/pi-dev";
+              home.stateVersion = "25.05";
+              engineering-agents.pi.enable = true;
+              engineering-agents.pi.enableAgentKit = true;
+              engineering-agents.pi.enableVisualExplainer = true;
+            }
+          ];
+        }).activationPackage;
       });
 
       # ============================================================

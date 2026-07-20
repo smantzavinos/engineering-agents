@@ -61,6 +61,26 @@ If Pi warns that managed packages/plugins need attention, run `check-updates --d
 
 Direct cloned installs such as `agent-kit` and `visual-explainer` are outside this startup-warning scope.
 
+### 6. Test Pi changes from this checkout
+
+Use the repo-local development sandbox to test uncommitted Pi module, package, skill, and extension changes without pushing or switching your active Home Manager generation:
+
+```bash
+# Build/activate into .pi-dev/ and launch Pi.
+./scripts/pi-dev.sh
+
+# Copy existing Pi credentials into the sandbox, then launch.
+./scripts/pi-dev.sh --copy-auth
+
+# Activate the sandbox and run the live proof-set against it.
+./scripts/pi-dev.sh --verify
+
+# Delete the sandbox, including its copied credentials and sessions.
+./scripts/pi-dev.sh --reset
+```
+
+The sandbox uses `.pi-dev/home` as `HOME` and never modifies `~/.pi`. `--copy-auth` copies `~/.pi/agent/auth.json`; it does not symlink or modify the source credential file. `.pi-dev/` is ignored by Git.
+
 ## What's Included
 
 ### Process Documentation (`docs/`)

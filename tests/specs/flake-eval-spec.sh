@@ -214,6 +214,18 @@ else
   printf '  Output: %s\n' "$PI_OUT" >&2
 fi
 
+# The repo-local Pi development script activates this dedicated package with an
+# isolated HOME. Keep it independently buildable so contributors can test the
+# checkout without changing their active Home Manager generation.
+printf '\nBuilding Pi development activation package...\n'
+PI_DEV_OUT=$(nix build "$REPO_ROOT#pi-dev-activation" --no-link --print-out-paths 2>&1) || true
+PI_DEV_OUT=$(echo "$PI_DEV_OUT" | grep '^/nix/store' | head -1 || true)
+if [[ -n "$PI_DEV_OUT" && -x "$PI_DEV_OUT/activate" ]]; then
+  pass "Pi development activation package builds"
+else
+  fail "Pi development activation package is missing or has no activation script"
+fi
+
 # 2. Build the OpenCode module check
 printf '\nBuilding OpenCode module activation package...\n'
 OC_OUT=$(nix build "$REPO_ROOT#checks.x86_64-linux.opencode-module.activationPackage" \

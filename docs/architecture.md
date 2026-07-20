@@ -19,7 +19,9 @@ This repository packages a reusable autonomous software-delivery process. It com
 1. **Consume the repo**: import the flake module, enable the Pi/OpenCode modules, apply with Home Manager, then use the installed agents and skills.
 2. **Read the process**: start in `README.md`, then move into `docs/` for workflow, orchestration, setup, and references.
 3. **Change the repo safely**: after a reviewed approach, choose sequential planning or the
-   separate role-based team planning pipeline, then verify through `tests/run-tests.sh`.
+   separate role-based team planning pipeline. For Pi-module changes, run
+   `scripts/pi-dev.sh --verify` against the current checkout before the active-install final gate
+   through `tests/run-tests.sh`.
 
 ## Boundaries and Constraints
 - The existing top-level command surface is stable: `./tests/run-tests.sh fast|all|full` remains the verification entry point.

@@ -9,6 +9,7 @@ Use this README for the current suite inventory, file layout, and adaptation not
 |------|------|----------|--------|
 | **Repo-local specs** | File structure, readiness docs, frontmatter, skill/agent refs, compiler, presets | `bash`, `jq`, `node` | `tests/run-tests.sh fast` |
 | **Flake eval** | Nix module evaluation, package builds | `nix` | `tests/run-tests.sh all` |
+| **Sandboxed Pi proof-set** | Current-checkout activation plus live facade/provenance verification in `.pi-dev` | `nix`; network on first install | `scripts/pi-dev.sh --verify` |
 | **Pi proof-set** | Live facade/provenance verification | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
 | **CLI smoke** | `pi --help`, `pi list` output | Pi installed | `tests/run-tests.sh full` |
 
@@ -37,6 +38,7 @@ bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
 bash tests/specs/pi-startup-wrapper-spec.sh
+bash tests/specs/pi-dev-spec.sh
 bash tests/specs/startup-warning-extension-spec.sh
 bash tests/specs/pi-startup-warning-contract-spec.sh
 ```
@@ -64,6 +66,7 @@ New tests specific to this repo:
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
 - **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
+- **`pi-dev-spec.sh`** — Repo-local Pi development sandbox isolation and credential-copy tests
 - **`startup-warning-extension-spec.sh`** — Startup notifier rendering, footer/status sync, and snapshot consumption tests
 - **`pi-startup-warning-contract-spec.sh`** — Startup warning/helper/README workflow alignment and helper-install wiring tests
 
@@ -97,6 +100,7 @@ tests/
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 │   ├── pi-startup-wrapper-spec.sh   # Repo-owned pi wrapper contract tests
+│   ├── pi-dev-spec.sh               # Repo-local Pi development sandbox contract tests
 │   ├── startup-warning-extension-spec.sh # Startup notifier contract tests
 │   └── pi-startup-warning-contract-spec.sh # Startup warning/helper/docs contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification

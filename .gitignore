@@ -9,6 +9,7 @@ node_modules/
 .DS_Store
 
 .pi
+.pi-dev/
 .omo
 
 docs/.obsidian/

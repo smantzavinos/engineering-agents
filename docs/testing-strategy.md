@@ -6,6 +6,7 @@
 |---|---|---|---|---|---|
 | Fast feedback | `bash tests/specs/repo-readiness-docs-spec.sh` or `bash tests/specs/proof-set-runtime-spec.sh` | touched-files | During TDD loops | seconds | The touched readiness docs or proof-set helper behavior changed as intended without waiting for the whole suite |
 | Integration / task completion gate | `./tests/run-tests.sh fast` | package-wide | Before marking a task complete | under a minute | The repo-local shell spec suite, runner wiring, and doc/helper contracts still agree |
+| Local Pi deployment verification | `./scripts/pi-dev.sh --verify` | current checkout | Before pushing Pi-module, package, skill, or extension changes | minutes; network on first run | The sandboxed Home Manager activation, generated facades, and live Pi proof-set work from the working tree |
 | Build / final plan gate | `./tests/run-tests.sh all` | repo-wide | Before declaring the plan complete | minutes | Repo-local specs, flake evaluation, and Pi proof-set verification are all trustworthy together |
 | Full verification | `./tests/run-tests.sh full` | repo-wide | Optional release smoke after the final gate | minutes | Everything in `all` plus live Pi CLI smoke coverage still works |
 
@@ -32,6 +33,14 @@
 - **Prerequisites:** `bash`, `jq`, `node`
 - **What it catches:** shell-spec aggregation drift, broken runner wiring, doc/test contract mismatches, and repo-local packaging contract regressions
 
+### `./scripts/pi-dev.sh --verify`
+- **Standard level:** Local Pi deployment verification
+- **Scope:** current checkout
+- **When to run:** before pushing changes to the Pi module, managed packages, extensions, skills, or their activation wiring
+- **Prerequisites:** `nix`; network access on the first sandbox activation
+- **What it catches:** generated-facade, managed-package installation, and live proof-set failures using the current working tree under `.pi-dev/`
+- **Boundary:** this is an isolated sandbox and does not replace `./tests/run-tests.sh all`, which verifies the active Home Manager installation and its production wrapper path
+
 ### `./tests/run-tests.sh all`
 - **Standard level:** Build / final plan gate
 - **Scope:** repo-wide
@@ -55,6 +64,7 @@
 - `bash tests/specs/preset-spec.sh` — preset configuration validation
 - `bash tests/specs/compiler-contract-spec.sh` — compile helper and fixture contract validation
 - `bash tests/specs/flake-eval-spec.sh` — Nix flake evaluation (included by `./tests/run-tests.sh all`)
+- `bash tests/specs/pi-dev-spec.sh` — repo-local Pi sandbox isolation and credential-copy contract
 
 ## Gate Roles
 - **Task completion gate:** `./tests/run-tests.sh fast`
