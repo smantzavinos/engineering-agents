@@ -11,8 +11,24 @@
     };
 
     # Pi (pi-mono) coding agent
+    #
+    # PINNED to pi 0.80.7 (pre-refactor), NOT tracking latest.
+    # pi >=0.80.8 broke `/compact` and auto-compaction for GitHub Copilot
+    # Enterprise accounts: "Compaction failed: ... 421 Misdirected Request".
+    # Root cause: the 0.80.8 "Unified model runtime and provider
+    # authentication" (ModelRuntime) refactor stopped threading the
+    # resolved Enterprise base URL into the compaction/summarization call,
+    # so it falls back to the individual-account endpoint and gets rejected.
+    # Upstream bug: https://github.com/earendil-works/pi/issues/6768
+    # Community fix (unmerged as of 2026-07-20):
+    #   https://github.com/earendil-works/pi/compare/main...Marvae:fix/copilot-summarization-base-url
+    # To un-pin: watch for a llm-agents.nix commit past
+    #   https://github.com/numtide/llm-agents.nix/commits/main/packages/pi/hashes.json
+    # that bumps pi to a version where #6768 is closed/fixed, then restore
+    # `url = "github:numtide/llm-agents.nix";` and run
+    # `nix flake lock --update-input llmAgents`.
     llmAgents = {
-      url = "github:numtide/llm-agents.nix";
+      url = "github:numtide/llm-agents.nix/70ff0e7f69a5fe712d675ac29b484e91e98daff0";
     };
 
     # Visual Explainer skill (external, non-flake source)
