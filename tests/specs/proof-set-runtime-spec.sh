@@ -292,6 +292,18 @@ export class DefaultResourceLoader {
 EOF
 }
 
+write_fake_pi_wrapper() {
+  local wrapper_prefix="$1" real_pi_binary="$2"
+
+  mkdir -p "$wrapper_prefix/bin"
+  cat >"$wrapper_prefix/bin/pi" <<EOF
+#!/usr/bin/env bash
+export PI_WRAPPER_REAL_PI_BIN="$real_pi_binary"
+exit 0
+EOF
+  chmod +x "$wrapper_prefix/bin/pi"
+}
+
 write_fake_theme_override_pi_module() {
   local prefix_dir="$1" namespace="$2"
   local module_root="$prefix_dir/lib/node_modules/$namespace/pi-coding-agent"
@@ -460,6 +472,41 @@ assert_snapshot_case() {
   rm -rf "$tmp_dir"
 }
 
+assert_wrapped_snapshot_case() {
+  local namespace="$1" label="$2"
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local wrapper_prefix="$tmp_dir/wrapper-prefix"
+  local real_pi_prefix="$tmp_dir/real-pi-prefix"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local snapshot_path="$tmp_dir/snapshot.json"
+  local stderr_path="$tmp_dir/stderr.txt"
+  local expected_pi_binary="$real_pi_prefix/bin/pi"
+  local expected_module_path="$real_pi_prefix/lib/node_modules/$namespace/pi-coding-agent/dist/index.js"
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  write_fake_pi_module "$real_pi_prefix" "$namespace"
+  write_fake_pi_wrapper "$wrapper_prefix" "$expected_pi_binary"
+
+  if HOME="$home_dir" PATH="$wrapper_prefix/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
+    pass "$label wrapper snapshot succeeds"
+  else
+    fail "$label wrapper snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
+    rm -rf "$tmp_dir"
+    return
+  fi
+
+  local actual_pi_binary actual_module_path
+  actual_pi_binary="$(jq -r '.host.piBinary' "$snapshot_path")"
+  actual_module_path="$(jq -r '.host.piModulePath' "$snapshot_path")"
+  assert_equals "$actual_pi_binary" "$expected_pi_binary" "$label wrapper resolves the real Pi binary"
+  assert_equals "$actual_module_path" "$expected_module_path" "$label wrapper selects the real Pi module path"
+
+  rm -rf "$tmp_dir"
+}
+
 assert_missing_module_fails() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -487,6 +534,40 @@ EOF
 
   assert_equals "$status" '2' 'Missing Pi module entrypoint exits with environment failure'
   assert_file_contains "$stderr_path" 'Unable to locate Pi module entrypoint' 'Missing Pi module entrypoint reports an explicit error'
+
+  rm -rf "$tmp_dir"
+}
+
+assert_wrapped_missing_module_fails() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local wrapper_prefix="$tmp_dir/wrapper-prefix"
+  local real_pi_prefix="$tmp_dir/real-pi-prefix"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local stdout_path="$tmp_dir/stdout.txt"
+  local stderr_path="$tmp_dir/stderr.txt"
+  local real_pi_binary="$real_pi_prefix/bin/pi"
+  local status=0
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  mkdir -p "$real_pi_prefix/bin"
+  cat >"$real_pi_binary" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$real_pi_binary"
+  write_fake_pi_wrapper "$wrapper_prefix" "$real_pi_binary"
+
+  if HOME="$home_dir" PATH="$wrapper_prefix/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$stdout_path" 2>"$stderr_path"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  assert_equals "$status" '2' 'Wrapper without a direct or target Pi module exits with environment failure'
+  assert_file_contains "$stderr_path" 'Unable to locate Pi module entrypoint' 'Wrapper without a Pi module reports an explicit error'
 
   rm -rf "$tmp_dir"
 }
@@ -603,7 +684,10 @@ assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Require
 
 assert_snapshot_case '@earendil-works' 'Current namespace'
 assert_snapshot_case '@mariozechner' 'Legacy namespace'
+assert_wrapped_snapshot_case '@earendil-works' 'Current namespace'
+assert_wrapped_snapshot_case '@mariozechner' 'Legacy namespace'
 assert_missing_module_fails
+assert_wrapped_missing_module_fails
 assert_theme_override_collision_preserves_proof_theme
 assert_test_fast_propagates_environment_failures
 assert_contract_script_accepts_valid_snapshot_fixture

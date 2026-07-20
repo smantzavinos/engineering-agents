@@ -10,6 +10,10 @@ import { pathToFileURL } from 'node:url';
 const EXIT_SUCCESS = 0;
 const EXIT_ENVIRONMENT = 2;
 const EXIT_INTERNAL = 3;
+const PI_MODULE_ENTRYPOINTS = [
+  '@earendil-works/pi-coding-agent/dist/index.js',
+  '@mariozechner/pi-coding-agent/dist/index.js',
+];
 const WARNING_CODES = new Set([
   'PI_VERIFY_WARN_EXTRA_INSTALLED_PACKAGE',
   'PI_VERIFY_WARN_UNRELATED_PI_HELP_WARNING',
@@ -186,6 +190,37 @@ function validateFixture(fixture) {
   }
 }
 
+function piModuleCandidatePaths(piBinary) {
+  const prefixDir = path.dirname(path.dirname(piBinary));
+  return PI_MODULE_ENTRYPOINTS.map((entrypoint) => path.join(prefixDir, 'lib/node_modules', entrypoint));
+}
+
+function findPiModulePath(piBinary) {
+  return piModuleCandidatePaths(piBinary).find((candidatePath) => existsSync(candidatePath));
+}
+
+function wrapperRealPiBinary(wrapperPath) {
+  let wrapperContents;
+
+  try {
+    wrapperContents = readFileSync(wrapperPath, 'utf8');
+  } catch {
+    return undefined;
+  }
+
+  const match = wrapperContents.match(/^export PI_WRAPPER_REAL_PI_BIN=(?:"([^"\n]+)"|'([^'\n]+)')\s*$/m);
+  const configuredPath = match?.[1] ?? match?.[2];
+  if (!configuredPath || !path.isAbsolute(configuredPath)) {
+    return undefined;
+  }
+
+  try {
+    return realpathSync(configuredPath);
+  } catch {
+    return undefined;
+  }
+}
+
 function buildPiModulePath() {
   let piBinary;
 
@@ -197,24 +232,31 @@ function buildPiModulePath() {
     throw error;
   }
 
-  const prefixDir = path.dirname(path.dirname(piBinary));
-  const candidatePaths = [
-    path.join(prefixDir, 'lib/node_modules/@earendil-works/pi-coding-agent/dist/index.js'),
-    path.join(prefixDir, 'lib/node_modules/@mariozechner/pi-coding-agent/dist/index.js'),
-  ];
-
-  const modulePath = candidatePaths.find((candidatePath) => existsSync(candidatePath));
-
-  if (!modulePath) {
-    const error = new Error(`Unable to locate Pi module entrypoint. Tried: ${candidatePaths.join(', ')}`);
-    error.exitCode = EXIT_ENVIRONMENT;
-    throw error;
+  const directCandidatePaths = piModuleCandidatePaths(piBinary);
+  let modulePath = findPiModulePath(piBinary);
+  if (modulePath) {
+    return {
+      piBinary,
+      modulePath: absolutePath(modulePath),
+    };
   }
 
-  return {
-    piBinary,
-    modulePath: absolutePath(modulePath),
-  };
+  const realPiBinary = wrapperRealPiBinary(piBinary);
+  const wrapperCandidatePaths = realPiBinary ? piModuleCandidatePaths(realPiBinary) : [];
+  if (realPiBinary) {
+    modulePath = findPiModulePath(realPiBinary);
+    if (modulePath) {
+      return {
+        piBinary: realPiBinary,
+        modulePath: absolutePath(modulePath),
+      };
+    }
+  }
+
+  const candidatePaths = [...new Set([...directCandidatePaths, ...wrapperCandidatePaths])];
+  const error = new Error(`Unable to locate Pi module entrypoint. Tried: ${candidatePaths.join(', ')}`);
+  error.exitCode = EXIT_ENVIRONMENT;
+  throw error;
 }
 
 function fallbackPackageIdForSource(source) {
