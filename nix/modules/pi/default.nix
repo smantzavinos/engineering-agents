@@ -569,7 +569,7 @@ in
                 };
                 input = [ "text" "image" ];
                 contextWindow = 1048576;
-                maxTokens = 131072;
+                maxTokens = 128000;
                 compat = {
                   forceAdaptiveThinking = true;
                   supportsTemperature = false;

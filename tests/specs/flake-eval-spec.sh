@@ -228,7 +228,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json missing zai-coding-plan provider"
   fi
 
-  if jq -e '.providers["github-copilot"].models | any(.id == "claude-opus-5" and .api == "anthropic-messages" and .contextWindow == 1048576 and .maxTokens == 131072 and .compat.forceAdaptiveThinking == true and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+  if jq -e '.providers["github-copilot"].models | any(.id == "claude-opus-5" and .api == "anthropic-messages" and .contextWindow == 1048576 and .maxTokens == 128000 and .compat.forceAdaptiveThinking == true and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     pass "models.json extends github-copilot with Claude Opus 5"
   else
     fail "models.json missing Claude Opus 5 github-copilot model"
