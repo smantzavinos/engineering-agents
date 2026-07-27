@@ -541,6 +541,34 @@ in
               { id = "glm-4.5-flash"; name = "GLM 4.5 Flash"; contextWindow = 131072; maxTokens = 8192; }
             ];
           };
+
+          # PI-VERSION-OVERLAY: Temporary compatibility overlay for Pi 0.80.7's
+          # bundled Copilot catalog. Remove it when the Pi version we adopt
+          # includes `claude-opus-5` in its built-in github-copilot catalog; a custom model
+          # with the same id replaces the packaged definition. The provider's
+          # built-in OAuth configuration remains in effect.
+          github-copilot = {
+            models = [
+              {
+                id = "claude-opus-5";
+                name = "Claude Opus 5";
+                api = "anthropic-messages";
+                reasoning = true;
+                thinkingLevelMap = {
+                  minimal = "low";
+                  xhigh = "xhigh";
+                  max = "max";
+                };
+                input = [ "text" "image" ];
+                contextWindow = 1048576;
+                maxTokens = 131072;
+                compat = {
+                  forceAdaptiveThinking = true;
+                  supportsTemperature = false;
+                };
+              }
+            ];
+          };
         };
       };
 
