@@ -553,6 +553,14 @@ in
                 id = "claude-opus-5";
                 name = "Claude Opus 5";
                 api = "anthropic-messages";
+                # Copilot requires this IDE identity on every request, including
+                # requests for models added outside Pi's bundled catalog.
+                headers = {
+                  "User-Agent" = "GitHubCopilotChat/0.35.0";
+                  "Editor-Version" = "vscode/1.107.0";
+                  "Editor-Plugin-Version" = "copilot-chat/0.35.0";
+                  "Copilot-Integration-Id" = "vscode-chat";
+                };
                 reasoning = true;
                 thinkingLevelMap = {
                   minimal = "low";
