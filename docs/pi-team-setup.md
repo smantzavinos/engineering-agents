@@ -117,9 +117,10 @@ test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/c
 cmp -s "$PROJECT_CONFIG" "$REPO/config/pi-team/crew-config.json"
 node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"
 jq -e '
-  any(.settings.configuredPackages[]; .source == "./packages/pi-messenger") and
+  . as $root |
+  any($root.settings.configuredPackages[]; .source == "./packages/pi-messenger") and
   any(
-    .proofSet[]
+    $root.proofSet[]
     | select(.packageId == "pi-messenger")
     | .discovered.extensions[]
     | select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))

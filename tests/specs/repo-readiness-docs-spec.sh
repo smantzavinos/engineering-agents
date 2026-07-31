@@ -326,8 +326,30 @@ assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/agents/pi-team-reviewer.md" "$H
 assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-profiles/pi-team.json"' "Pi team setup proves the installed profile matches canonical"
 assert_file_contains "$SETUP_DOC" 'test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"' "Pi team setup proves the project config resolves to canonical"
 assert_file_contains "$SETUP_DOC" 'node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"' "Pi team setup runs the resource snapshot without a model call"
-assert_file_contains "$SETUP_DOC" 'any(.settings.configuredPackages[]; .source == "./packages/pi-messenger")' "Pi team setup proves the snapshot contains pi-messenger"
+assert_file_contains "$SETUP_DOC" '. as $root' "Pi team setup binds the resource snapshot root for nested checks"
+assert_file_contains "$SETUP_DOC" 'any($root.settings.configuredPackages[]; .source == "./packages/pi-messenger")' "Pi team setup proves the snapshot contains pi-messenger"
+assert_file_contains "$SETUP_DOC" '$root.proofSet[]' "Pi team setup retains the resource snapshot root while locating pi-messenger"
 assert_file_contains "$SETUP_DOC" 'select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))' "Pi team setup proves pi_messenger is registered from the messenger extension"
+
+active_resource_proof_is_valid() {
+  local snapshot="$1"
+  jq -e '
+    . as $root |
+    any($root.settings.configuredPackages[]; .source == "./packages/pi-messenger") and
+    any(
+      $root.proofSet[]
+      | select(.packageId == "pi-messenger")
+      | .discovered.extensions[]
+      | select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))
+    )
+  ' "$snapshot" >/dev/null
+}
+
+if active_resource_proof_is_valid "$REPO_ROOT/tests/spec-fixtures/resource-snapshot.v2.ok.json"; then
+  pass "Pi team setup active-resource predicate accepts the pi-messenger snapshot"
+else
+  fail "Pi team setup active-resource predicate accepts the pi-messenger snapshot"
+fi
 
 active_install_proofs_present() {
   local document="$1"

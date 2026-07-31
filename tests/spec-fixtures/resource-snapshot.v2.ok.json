@@ -207,7 +207,9 @@
             "sourceRelativePath": "./index.ts",
             "path": "/fixture/.pi/agent/packages/pi-messenger/_source/index.ts",
             "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-messenger/index.ts",
-            "tools": [],
+            "tools": [
+              "pi_messenger"
+            ],
             "commands": [],
             "flags": []
           }
