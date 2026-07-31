@@ -24,8 +24,31 @@ cite its ID. Mechanism detail and `file:line` citations live here and nowhere el
 | **SUB-4** | Reservations block structured edits only | Enforced via a `tool_call` hook returning `{ block: true }` (`index.ts:1177-1199`); bash writes (`sed -i`, `>`, `python -c`) bypass entirely; registry has no locking or atomic replace | A backstop, not a control. The plan-time disjoint-write-set gate is the real guarantee. |
 | **SUB-5** | No per-task cost is recorded | Crew stores no cost and no persistent tool counts | Cost cannot be an acceptance criterion; the calibration run is not cost-comparable to the baseline. |
 | **SUB-6** | Retry is fresh but not cold | Feedback persists to `task.last_review` and is injected into the retry prompt with up to 30 progress lines (`crew/prompt.ts:62-87`, `crew/handlers/review.ts:146-155`) | Retry #1 is a fresh worker carrying findings + progress; it does not re-discover from scratch. |
+| **SUB-7** | Actions are a **Pi tool**, not a CLI | `pi.registerTool({ name: "pi_messenger" })` (`index.ts:385`); `package.json` `bin` is only `install.mjs` | The board materializer **cannot be a standalone script**. It must run inside a Pi session as `pi_messenger` tool calls — i.e. lead-agent behavior. Only plan parsing, the gates, and telemetry harvesting (plain file reads) can be scripts. |
+| **SUB-8** | `plan.json` is a 5-field record | `createPlan` writes `prd`, optional `prompt`, `created_at`, `updated_at`, `task_count`, `completed_count` (`crew/store.ts:84-98`) | The direct-write coupling in SUB-3 is small and stable, not a broad internal schema. Lowers, but does not remove, the version-pin risk. |
 
 Source files below carry the full derivation for each.
+
+## Verified by upstream's own test suite
+
+`pi-messenger` v0.15.0 ships 408 tests (42 files, vitest). Running them against the pinned
+source is stronger evidence than the integration smoke test originally planned — deterministic,
+no model spend, ~1.4 s. Result at time of writing: **408/408 pass**.
+
+These cover the substrate behaviors this design depends on:
+
+| Design claim | Upstream test | What it proves |
+|---|---|---|
+| Lane roles route models [SUB-2] | `tests/crew/team-work.test.ts:94` | Executes our exact path: `saveProfile` → `setActiveTeam` → `createPlan` → `createTask(role)` → `work` → asserts the role's model lands on the spawned task |
+| Model precedence order [SUB-2] | `tests/crew/model-override.test.ts:70` | `task → params → role → config → session → agent`, asserted at each level |
+| The model actually reaches the worker | `tests/crew/model-override.test.ts:83` | Resolved override appears as the `--model` flag in real spawn args |
+| Packaged-name collision [SUB-2a] | `tests/crew/team-work.test.ts:94` | Mixed-case packaged role resolves to the canonical role's model |
+| Strict dependency ordering | `tests/crew/task-actions.test.ts:52,66` | `unmet_dependencies` under `strict`; permitted under `advisory` |
+| Board/plan/task creation [SUB-3] | `tests/crew/store.test.ts` (41 tests) | Plan and task records, dependencies, resets |
+
+**What the suite cannot establish**, and therefore still needs one live check: that the
+*npm-installed build* behaves like the source tree, that real provider/model IDs resolve (tests
+use placeholder strings), and behavior under real concurrency (`spawnAgents` is mocked).
 
 | File | Answers | Headline |
 |---|---|---|

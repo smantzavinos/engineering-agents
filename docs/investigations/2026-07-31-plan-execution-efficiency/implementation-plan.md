@@ -15,9 +15,9 @@ home-manager**, not by `pi install` / `pi config`. Phase 0 uses a deliberately t
 imperative install to run the kill gate; Phase 1b converts it into a flake declaration. See
 "Nix constraints" under Phase 0.
 
-Ordered so each phase de-risks the next. Phase 1 is a **kill gate**: 20 minutes of work that
-can invalidate the substrate choice, so only the minimum setup it needs happens before it.
-The bulk of configuration waits until the gate passes.
+Ordered so each phase de-risks the next. Phase 1 is a **kill gate**, but most of it is now
+upstream's own test suite rather than a live run — deterministic and free. Only the minimum
+setup the residual live check needs happens before it.
 
 ---
 
@@ -25,7 +25,7 @@ The bulk of configuration waits until the gate passes.
 
 **This repo installs Pi declaratively via a Nix flake + home-manager.** `pi install ...` and
 `pi config` are the wrong verbs here — see "Nix constraints" below. Phase 0 is deliberately
-minimal: everything required to run the Phase 1 smoke test, nothing else. If the gate fails,
+minimal: everything required to run the Phase 1 live check, nothing else. If the gate fails,
 this is all that was spent.
 
 - [ ] **Gate-only install (temporary, imperative).** Run `pi install npm:pi-messenger` *without*
@@ -48,7 +48,7 @@ this is all that was spent.
 | `lsp.hookMode = "agent_end"` is **already set** declaratively | The old "enable `lsp` via `pi config`" step was redundant and wrong. Dropped. |
 | Git-source packages must pin a 40-hex commit; `tests/fixtures/proof-set.json` updates in the same change (`nix/AGENTS.md`) | "Pin versions" is a repo contract with a test, not a reminder. Spelled out in Phase 1b. |
 
-## Phase 1 — Smoke test: the kill gate (~20 min)
+## Phase 1 — Verify the substrate: tests first, then a narrow live check
 
 The five original spikes were answered by reading `pi-messenger` v0.15.0 source rather than
 running experiments — cheaper, faster, and more definitive. Findings with `file:line`
@@ -66,15 +66,21 @@ citations are in `notes/`.
 public API instead of direct store writes — removing the version-skew coupling this plan
 previously accepted.
 
-What reading cannot establish is integration reality, dependency ordering under real
-concurrency, and whether lane roles actually route models. That is the whole remaining test:
+What reading cannot establish, the **upstream test suite can** — and does, far better than the
+integration smoke test originally planned here. `pi-messenger` v0.15.0 ships 408 tests that run
+in ~1.4 s with no model spend, including one (`team-work.test.ts:94`) that executes this
+design's exact materialization path and asserts the lane role's model reaches the spawned
+worker. See "Verified by upstream's own test suite" in `notes/README.md`.
 
-- [ ] **Smoke test (throwaway repo).** Write `plan.json`, `task.create` ×5 in a diamond DAG
-      across the two lanes, run one `work` wave. Confirm: tasks execute in dependency order ·
-      each task runs on its lane's model · the wave stops cleanly.
-      **Fail ⇒ stop.** `pi uninstall pi-messenger` to revert the temporary install, and
-      reconsider the substrate before spending anything on Phase 1b. Nothing has entered
-      `nix/`, so there is nothing to unwind there.
+- [ ] **Run the upstream suite at our pinned version** (`npm install && npx vitest run` in a
+      clone). Confirms the substrate contract deterministically. Expect 408/408.
+      **Regressions here ⇒ stop; do not pin that version.**
+- [ ] **Narrow live check (~10 min).** The suite mocks `spawnAgents` and uses placeholder model
+      strings, so three things remain unproven: that the *npm-installed build* matches the
+      source tree, that our real provider/model IDs resolve, and behavior under real
+      concurrency. Create a two-task board through the `pi_messenger` tool with two lanes and
+      run one wave. **Fail ⇒ stop.** `pi uninstall pi-messenger` reverts; nothing has entered
+      `nix/`.
 
 ## Phase 1b — Adopt into the flake, then configure (only after the gate passes)
 
@@ -90,8 +96,8 @@ local experiment into repo state.
       (`tests/specs/proof-set-runtime-spec.sh`), not a formality.
 - [ ] **Run `home-manager switch`**, then confirm the declared install replaced the temporary
       one and that `pi-messenger` appears in the generated `packages` list. Re-run the Phase 1
-      smoke test once to confirm declared-install parity — cheap, and it catches the case where
-      the imperative and declared installs behave differently.
+      live check once to confirm declared-install parity [SUB-8] — cheap, and it catches the
+      case where the imperative and declared installs behave differently.
 - [ ] **Add `checkpoint` to the module's Pi settings** if wanted (per-turn rollback refs).
       `lsp` is already configured declaratively (`hookMode = "agent_end"`) — nothing to do.
       Note both apply to the **lead session**; reaching Crew workers requires adding the
@@ -114,23 +120,29 @@ local experiment into repo state.
 
 ## Phase 2 — Build `pi-team` (repo-local extension/scripts)
 
-Three small pieces, in order:
+Three small pieces. **`pi_messenger` is a Pi tool, not a CLI** [SUB-7], which decides what can
+be a script and what cannot:
 
-- [ ] **`plan-gates`** — the 4 mechanical checks against a `plan.md` task table:
+- [ ] **`plan-gates`** — a real script (pure file analysis, no messenger involvement): the 4
+      mechanical checks against a `plan.md` task table:
       critical path ≤ 60% of serial · no task > 20% of critical path ·
       same-wave write-sets disjoint · every task packet self-sufficient (no dangling refs).
       Reuse `tools/critical-path.py` (already emits every verdict; wrap it with the
       write-set and self-sufficiency checks). Output: pass/fail + remedy hints. CLI-invokable.
-- [ ] **`board-materializer`** — assert the Team profile is active [SUB-2b], write the
-      `plan.json` record [SUB-3], then parse the plan's Tasks/Contracts/Decisions tables →
+- [ ] **`board-materializer`** — **not a script** [SUB-7]. Board creation happens inside a Pi
+      session as `pi_messenger` tool calls, so this is lead-agent behavior specified in the
+      `pi-team-lead` skill: assert the Team profile is active [SUB-2b], ensure the plan record
+      exists [SUB-3], then walk the plan's Tasks/Contracts/Decisions tables issuing
       `task.create` calls (deps from Deps col, `role` from the lane map [SUB-2], `riskLabels`
-      from risk flags, packet body as task content, worker contract line injected).
-- [ ] **`telemetry-harvest`** — read Crew task state, progress logs, the activity feed, and
-      optional debug artifacts at close → emit the telemetry table (wall-clock, per-task time,
-      defects-by-origin, rework share) into the plan directory as `telemetry.md`. Crew stores
-      no per-task cost [SUB-5]; source it separately or record the gap. **Must redact
-      free-text task fields by default** — raw task text embeds plan paths, file names, and
-      feature names.
+      from risk flags, packet body as task content, worker contract line injected). A helper
+      script may *parse the plan and emit the intended calls* for the lead to execute, but it
+      cannot make them itself.
+- [ ] **`telemetry-harvest`** — a real script (plain reads of `.pi/messenger/crew/`): task
+      state, progress logs, the activity feed, and optional debug artifacts at close → emit the
+      telemetry table (wall-clock, per-task time, defects-by-origin, rework share) into the plan
+      directory as `telemetry.md`. Crew stores no per-task cost [SUB-5]; source it separately or
+      record the gap. **Must redact free-text task fields by default** — raw task text embeds
+      plan paths, file names, and feature names.
 - [ ] Later, optional: lane auto-suggestion from write-set globs
       (`*.tsx` → `visual`, `**/migrations/**` → `complex` + `riskLabels`).
 
@@ -200,11 +212,11 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 (temp install) ──► Phase 1 SMOKE TEST ──► Phase 1b (declare in nix + configure) ──► Phase 2 ──► Phase 3
-                            │  kill gate                                                              │
-                            └─ fail ⇒ pi uninstall, stop.        ┌───────────────────────────────┘
-                               nix/ never touched               ▼
-                                                Phase 5 ──► archive (Phase 4 tail)
-                                                   ▲
-                                    Phase 4 docs ───┘ (parallel with 3)
+Phase 0 (temp install) ──► Phase 1 UPSTREAM TESTS + narrow live check ──► Phase 1b (declare in nix + configure) ──► Phase 2 ──► Phase 3
+                            │  kill gate (408 tests, ~1.4s, free)                                                        │
+                            └─ fail ⇒ pi uninstall, stop.               ┌───────────────────────────────────────┘
+                               nix/ never touched                      ▼
+                                                       Phase 5 ──► archive (Phase 4 tail)
+                                                          ▲
+                                           Phase 4 docs ───┘ (parallel with 3)
 ```
