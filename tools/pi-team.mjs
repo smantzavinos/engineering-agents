@@ -350,22 +350,11 @@ async function initBoard(plan, args) {
     for (const entry of RUNTIME_ENTRIES) if (exists(path.join(crew, entry))) { process.stderr.write(`BOARD_RUNTIME_EXISTS: refusing existing runtime entry ${entry}\n`); return 1; }
     const timestamp = new Date().toISOString();
     const record = { prd: path.relative(root, resolvedPlan).split(path.sep).join('/'), created_at: timestamp, updated_at: timestamp, task_count: 0, completed_count: 0 };
-    const token = `${process.pid}-${crypto.randomBytes(8).toString('hex')}`; const tempRecord = path.join(crew, `.plan.json.${token}`); const tempPlan = path.join(crew, `.plan.md.${token}`);
+    const token = `${process.pid}-${crypto.randomBytes(8).toString('hex')}`; const tempRecord = path.join(crew, `.plan.json.${token}`);
     try {
       fs.writeFileSync(tempRecord, `${JSON.stringify(record)}\n`, { flag: 'wx' });
-      fs.copyFileSync(resolvedPlan, tempPlan, fs.constants.COPYFILE_EXCL);
-      const recordStat = fs.lstatSync(tempRecord);
-      const publishedRecord = path.join(crew, 'plan.json');
-      fs.linkSync(tempRecord, publishedRecord);
-      try { fs.linkSync(tempPlan, path.join(crew, 'plan.md')); }
-      catch (error) {
-        try {
-          const current = fs.lstatSync(publishedRecord);
-          if (current.dev === recordStat.dev && current.ino === recordStat.ino) fs.unlinkSync(publishedRecord);
-        } catch (rollbackError) { if (rollbackError.code !== 'ENOENT') throw rollbackError; }
-        throw error;
-      }
-    } finally { fs.rmSync(tempRecord, { force: true }); fs.rmSync(tempPlan, { force: true }); }
+      fs.linkSync(tempRecord, path.join(crew, 'plan.json'));
+    } finally { fs.rmSync(tempRecord, { force: true }); }
     return 0;
   } catch (error) { process.stderr.write(`PLAN_IO: ${error.message}\n`); return 2; }
 }

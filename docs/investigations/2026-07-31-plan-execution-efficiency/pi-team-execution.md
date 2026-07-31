@@ -99,8 +99,9 @@ its Pi session:
    expanded Contracts, expanded Decisions, minimal Check, and worker rules.
 8. Pass role and risk labels to `task.create`; matching labels persist pending approval and make
    the task unstartable until `task.approve` [SUB-9].
-9. Run `crew.validate`. Any failure stops execution; partial state is archived and recreated,
-   never resumed heuristically.
+9. Run `crew.validate`. The single missing-`plan.md` warning is expected because the authored
+   plan stays at `prd`; any graph/count error or any other warning stops execution. Partial state
+   is archived and recreated, never resumed heuristically.
 
 The authored `plan.md` remains canonical. Board files are generated runtime state.
 

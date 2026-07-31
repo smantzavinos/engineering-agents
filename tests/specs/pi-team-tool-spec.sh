@@ -126,32 +126,38 @@ pass 'unsafe paths, symlinks, and public-boundary filesystem errors fail closed'
 BOARD_REPO="$TMP/board-repo"; mkdir -p "$BOARD_REPO/plans" "$BOARD_REPO/.crew/agents"; cp "$FIXTURES/valid-diamond.md" "$BOARD_REPO/plans/plan.md"; printf '{}\n' >"$BOARD_REPO/.crew/config.json"; printf 'stable\n' >"$BOARD_REPO/.crew/agents/keep"
 run_status 0 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$BOARD_REPO/.crew" --repo-root "$BOARD_REPO"
 jq -e '.prd == "plans/plan.md" and .task_count == 0 and .completed_count == 0 and (.created_at == .updated_at) and (.created_at|test("Z$")) and (keys|sort)==["completed_count","created_at","prd","task_count","updated_at"]' "$BOARD_REPO/.crew/plan.json" >/dev/null || fail 'board record shape mismatch'
-cmp -s "$BOARD_REPO/plans/plan.md" "$BOARD_REPO/.crew/plan.md" || fail 'runtime plan snapshot differs'
+[[ ! -e "$BOARD_REPO/.crew/plan.md" ]] || fail 'board init created a runtime plan.md snapshot'
 [[ -f "$BOARD_REPO/.crew/config.json" && -f "$BOARD_REPO/.crew/agents/keep" && ! -e "$BOARD_REPO/.crew/tasks" ]] || fail 'stable config changed or tasks created'
 run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$BOARD_REPO/.crew" --repo-root "$BOARD_REPO"
 ISOLATED_CREW="$BOARD_REPO/isolated-crew"; mkdir "$ISOLATED_CREW"; printf 'sentinel\n' >"$ISOLATED_CREW/plan.json"
 run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$ISOLATED_CREW" --repo-root "$BOARD_REPO"
 grep -qx sentinel "$ISOLATED_CREW/plan.json" || fail 'isolated plan.json runtime state overwritten'
 [[ ! -e "$ISOLATED_CREW/plan.md" ]] || fail 'isolated plan.json refusal published plan.md'
+PLAN_MD_CREW="$BOARD_REPO/plan-md-crew"; mkdir "$PLAN_MD_CREW"; printf 'existing\n' >"$PLAN_MD_CREW/plan.md"
+run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$PLAN_MD_CREW" --repo-root "$BOARD_REPO"
+grep -qx existing "$PLAN_MD_CREW/plan.md" || fail 'pre-existing runtime plan.md was modified'
+[[ ! -e "$PLAN_MD_CREW/plan.json" ]] || fail 'plan.md refusal published plan.json'
 cat >"$TMP/inject-init-collision.mjs" <<'NODE'
 import fs from 'node:fs';
 const link = fs.linkSync.bind(fs);
+const unlink = fs.unlinkSync.bind(fs);
 fs.linkSync = (source, target) => {
-  if (target.endsWith('/plan.md')) {
-    const record = target.slice(0, -'plan.md'.length) + 'plan.json';
-    fs.unlinkSync(record);
-    fs.writeFileSync(record, 'record-racer\n', { flag: 'wx' });
-    fs.writeFileSync(target, 'plan-racer\n', { flag: 'wx' });
-  }
+  if (target.endsWith('/plan.json')) fs.writeFileSync(target, 'record-racer\n', { flag: 'wx' });
   return link(source, target);
+};
+fs.unlinkSync = (target) => {
+  if (target.endsWith('/plan.json')) throw new Error('published plan.json rollback attempted');
+  return unlink(target);
 };
 NODE
 RACE_CREW="$BOARD_REPO/race-crew"
 run_status 2 env NODE_OPTIONS="--import=$TMP/inject-init-collision.mjs" node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$RACE_CREW" --repo-root "$BOARD_REPO"
-grep -qx record-racer "$RACE_CREW/plan.json" || fail 'collision rollback removed or replaced racer plan.json inode'
-grep -qx plan-racer "$RACE_CREW/plan.md" || fail 'collision publication removed or replaced racer plan.md inode'
+grep -qx record-racer "$RACE_CREW/plan.json" || fail 'concurrent plan.json collision was removed or replaced'
+[[ ! -e "$RACE_CREW/plan.md" ]] || fail 'collision created plan.md'
+[[ -z "$(find "$RACE_CREW" -maxdepth 1 -name '.plan.json.*' -print -quit)" ]] || fail 'collision left a plan.json temporary file'
+! grep -q 'published plan.json rollback attempted' "$TMP/err" || fail 'collision attempted to roll back a published destination'
 run_status 2 node "$TOOL" init-board "$FIXTURES/valid-diamond.md" --crew-dir "$TMP/outside-board" --repo-root "$BOARD_REPO"
-pass 'board init is no-clobber, rolls back only owned publications, and refuses unsafe state'
+pass 'board init publishes only plan.json, preserves collisions without rollback, and refuses unsafe state'
 
 REVIEW="$TMP/review"; mkdir -p "$REVIEW/sandbox"; cp "$FIXTURES/valid-diamond.md" "$REVIEW/plan.md"; git -C "$REVIEW" init -q; git -C "$REVIEW" config user.email test@example.invalid; git -C "$REVIEW" config user.name Test
 for n in {1..8} 10; do printf 'base-%s\n' "$n" >"$REVIEW/sandbox/t$n.txt"; done

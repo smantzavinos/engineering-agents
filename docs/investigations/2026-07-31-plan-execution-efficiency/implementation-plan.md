@@ -86,9 +86,10 @@ through this rollout.
 - Allows stable `DIR/config.json` and `DIR/agents/`. Refuses only runtime entries:
   `plan.json`, `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, or
   `planning-outline.md`.
-- Atomically writes `DIR/plan.json` with `prd`, UTC ISO-8601 `created_at`/`updated_at`,
-  `task_count: 0`, and `completed_count: 0`, then copies the checked source to `DIR/plan.md`
-  as a runtime snapshot [SUB-3] [SUB-8]. It never creates tasks.
+- Atomically publishes only `DIR/plan.json` with no-clobber hard-link semantics: `prd`, UTC
+  ISO-8601 `created_at`/`updated_at`, `task_count: 0`, and `completed_count: 0` [SUB-3] [SUB-8].
+  It never creates tasks or copies the authored plan. Crew's optional missing-`plan.md` validation
+  warning is expected; any graph/count error or any other warning fails materialization.
 - Exit `0`: initialized. Exit `1`: gate failure or existing runtime state. Exit `2`: malformed
   input, unsafe path, or I/O failure. Human diagnostics go to stderr.
 
@@ -175,8 +176,8 @@ archived automatically. Board materialization follows the byte-level packet temp
    malformed/unsupported tables; stable config coexisting with init; runtime-state refusal; and
    tracked/untracked review changes.
 2. Write failing spec for grammar, diagnostic schema/order, exit codes, deterministic JSON,
-   metrics/waves, atomic record/spec shape, exact packet bytes, review manifest/bundles, and no
-   task creation.
+   metrics/waves, atomic no-clobber record shape, exact packet bytes, review manifest/bundles,
+   and no task creation.
 3. Implement the minimum parser/checker/initializer/review bundler and wire/document the spec in
    the fast suite.
 4. Break-it: shuffled task rows produce identical output; CRLF normalizes; traversal/symlink/glob
