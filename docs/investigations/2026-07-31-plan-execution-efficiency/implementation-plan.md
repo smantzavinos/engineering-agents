@@ -14,18 +14,24 @@ irreversible happens before Phase 3.
 
 - [ ] **Install `pi-messenger`:** `pi install npm:pi-messenger`, then `/reload`.
 - [ ] **Enable `pi-hooks` extensions:** `pi config` → enable `lsp` (agent-end diagnostics)
-      and `checkpoint` (per-turn rollback refs).
-- [ ] **Enable the subagents watchdog** on a strong complementary model:
-      `/subagents-watchdog recommend-model` → `/subagents-watchdog model recommended` →
-      `/subagents-watchdog on`.
-- [ ] **Verify child session persistence** (`resume` depends on persisted `.jsonl` child
-      sessions) and run `/subagents-doctor`.
-- [ ] **Write the config block** (messenger config + `.pi/settings.json`):
-      concurrency ≤ 4 · `review.enabled: true`, `review.maxIterations: 3` ·
-      `work.maxAttemptsPerTask: 2` · `dependencies: strict` ·
-      lane→model map (`cheap`/`std`/`complex`/`visual`) · run budgets
-      (`timeoutMs`, `turnBudget`, `toolBudget`).
-- [ ] Pin versions of `pi-messenger` and `pi-subagents` (Q5: version-skew risk).
+      and `checkpoint` (per-turn rollback refs). Note these apply to the **lead session**;
+      reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter
+      (path-like `tools` entries are passed through as `--extension`).
+- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers —
+      `agent_end` deliberately ignores them — so it is not a quality control for task work.
+- [ ] **Write the messenger config** (`~/.pi/agent/pi-messenger.json`, project override at
+      `.pi/messenger/crew/config.json`):
+      `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
+      `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
+      `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
+- [ ] **Create and activate the Team profile** defining the lane roles `worker-cheap`,
+      `worker-std`, `worker-complex`, `worker-visual`, each with its `model` (and `thinking`
+      where wanted), plus `approval.mode: "risk-labels"` with our risk labels. **Verify it is
+      active** — an inactive profile makes every lane silently fall back to the default model.
+- [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
+      replace its criteria with ours (project-level agents override extension defaults by name).
+- [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
+      shape, so re-check that file after any upgrade.
 
 ## Phase 1 — Spikes (timeboxed ~half day each; kill or adjust the design on failure)
 
@@ -50,13 +56,16 @@ Three small pieces, in order:
       same-wave write-sets disjoint · every task packet self-sufficient (no dangling refs).
       Reuse `tools/critical-path.py` (already emits every verdict; wrap it with the
       write-set and self-sufficiency checks). Output: pass/fail + remedy hints. CLI-invokable.
-- [ ] **`board-materializer`** — parse the plan's Tasks/Contracts/Decisions tables →
-      `task.create` calls (deps from Deps col, `model` from lane map, `riskLabels` from
+- [ ] **`board-materializer`** — assert the Team profile is active (silent-degradation guard),
+      write the `plan.json` record, then parse the plan's Tasks/Contracts/Decisions tables →
+      `task.create` calls (deps from Deps col, `role` from the lane map, `riskLabels` from
       risk flags, packet body as task content, worker contract line injected).
-- [ ] **`telemetry-harvest`** — read `.pi-subagents/**/status.json` + Crew artifacts at
-      close → emit the telemetry table (wall-clock, cost, per-task time, defects-by-origin,
-      rework share) into the plan directory as `telemetry.md`. **Must redact free-text task
-      fields by default** — raw task text embeds plan paths, file names, and feature names.
+- [ ] **`telemetry-harvest`** — read Crew task state, progress logs, the activity feed, and
+      optional debug artifacts at close → emit the telemetry table (wall-clock, per-task time,
+      defects-by-origin, rework share) into the plan directory as `telemetry.md`. Note Crew
+      stores **no per-task cost**; source it separately or record the gap. **Must redact
+      free-text task fields by default** — raw task text embeds plan paths, file names, and
+      feature names.
 - [ ] Later, optional: lane auto-suggestion from write-set globs
       (`*.tsx` → `visual`, `**/migrations/**` → `complex` + `riskLabels`).
 
@@ -101,7 +110,8 @@ New/replacing docs in this repo:
 - [ ] Pick a real, representative task (ideally the next cohort of a repeated-shape epic).
       Run it end-to-end: converse → `/pi-team-plan` → execute → close.
 - [ ] Harvest telemetry with the Phase 2 `telemetry-harvest` tool; compare against the reported
-      baseline in `README.md` (5.3 h active / $47.61 / 1.61x ceiling).
+      baseline in `README.md` (5.3 h active / 1.61x ceiling). **Cost is not directly comparable**
+      — Crew records no per-task cost; compare wall-clock and task counts, and note the gap.
 - [ ] **Acceptance criteria:** wall-clock ≤ 60% of a comparable sequential estimate ·
       cost ≤ 2x sequential · zero write-set collisions · all defects caught at handoff or
       wave gate (none surviving to final review that a handoff reviewer should have caught) ·

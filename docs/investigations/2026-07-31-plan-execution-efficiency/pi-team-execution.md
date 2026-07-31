@@ -34,12 +34,13 @@ Five roles. Three are agents, one is a mechanism, one is you.
 |---|---|---|---|
 | **Human** | you | Set intent in conversation. Approve only when asked or on high-risk flags. Watch live if desired. Read the closing summary; iterate if needed. | Babysit execution |
 | **Lead** | primary Pi session | Converse → write plan → create board → dispatch → run wave gates → commit → close and summarize | Implement tasks; read full diffs |
-| **Worker** | fresh subagent per task (1–4 concurrent) | Execute one packet: implement, run its cheap check, hand off | Commit; run broad suites; claim outside its write set |
-| **Reviewer** | fresh subagent per handoff + always-on watchdog | Verdict every handoff: SHIP / NEEDS_WORK (back to same worker, with feedback) / RETHINK (block, escalate to lead) | Fix code; approve its own findings |
+| **Worker** | fresh Crew worker per task (1–4 concurrent) | Execute one packet: implement, run its cheap check, hand off | Commit; run broad suites; claim outside its write set |
+| **Reviewer** | fresh Crew reviewer per handoff | Verdict every handoff: SHIP / NEEDS_WORK (retry with feedback) / RETHINK (block, escalate to lead) | Fix code; approve its own findings |
 | **Board** | pi-messenger crew (files, not an agent) | Hold the task DAG, statuses, file reservations. Wake agents on events. Give the human a live overlay. | — |
 
-Escalation is a rule, not a role: **a worker gets one remediation retry with its own retained
-context; a failed retry gets a fresh worker on a strong model.** Two failures → lead pauses
+Escalation is a rule, not a role: **a worker gets one retry as a fresh worker carrying the
+review findings; if that fails the task blocks and the lead rescues it with a strong
+subagent.** Two failures → lead pauses
 and asks you.
 
 ### Model tiers
@@ -47,18 +48,41 @@ and asks you.
 Lanes multiply **models, not roles**. A worker is the same contract regardless of the model
 running it; the plan's lane tag picks the tier.
 
-| Lane | Tier | Qualifies when | Escalates to |
-|---|---|---|---|
-| `cheap` | small/fast | **decision-complete**: executable from the packet row + referenced contracts/decisions with zero judgment calls | `complex` on failed retry |
-| `std` | mid | normal implementation | `complex` on failed retry |
-| `complex` | strong + thinking | design-bearing, security, migration, concurrency; all risk-flagged tasks | human |
-| `visual` | std/complex variant | UI/UX/a11y — a routing specialization, not a fourth tier | as base tier |
+| Lane | Team role | Tier | Qualifies when | Escalates to |
+|---|---|---|---|---|
+| `cheap` | `worker-cheap` | small/fast | **decision-complete**: executable from the packet row + referenced contracts/decisions with zero judgment calls | `complex` on failed retry |
+| `std` | `worker-std` | mid | normal implementation | `complex` on failed retry |
+| `complex` | `worker-complex` | strong + thinking | design-bearing, security, migration, concurrency; all risk-flagged tasks | human |
+| `visual` | `worker-visual` | std/complex variant | UI/UX/a11y — a routing specialization, not a fourth tier | as base tier |
+
+**A lane is a Team role, and that is the whole routing mechanism.** `task.create` does not
+accept `model` or `skills`, but it does accept `role`, and a Team role carries `model`,
+`thinking`, and `skills` (`crew/team/types.ts:13-17`). `work` resolves the model as
+`task.model → wave param → roleModel → config.models.worker → session model`
+(`crew/handlers/work.ts:176-183`), so one `role` string on a task sets all three. Lanes are
+declared once in the Team profile:
+
+```json
+{ "roles": {
+    "worker-cheap":   { "model": "<small>" },
+    "worker-std":     { "model": "<mid>" },
+    "worker-complex": { "model": "<strong>", "thinking": "high" },
+    "worker-visual":  { "model": "<mid>" } } }
+```
+
+Two constraints this imposes. **Never name a lane with a bare packaged role**
+(`worker`, `scout`, `researcher`, `oracle`, `planner`, `reviewer`, `context-builder`,
+`delegate`): resolution prefers the packaged canonical name when that key also exists
+(`crew/team/store.ts:396-398`), and packaged non-editing roles are barred from editing. The
+`worker-*` prefix is safe. **And the Team profile must be active** — otherwise roles resolve
+to nothing and every task silently falls back to `config.models.worker`, with no error. The
+materializer asserts the profile is active before creating any task.
 
 Three tiers total across the whole process: small (cheap workers), standard (std workers,
-handoff reviewer), strong (complex workers, rescue, watchdog — on a *complementary* strong
-model to the lead's — and final reviewer). The lead runs on your session model. Target ≥ 50%
-of tasks on `cheap` (measured: $0.60 vs $3.10 per task, no quality loss); a plan that can't
-hit that hasn't settled enough decisions — that is a planning signal, not a routing problem.
+handoff reviewer), strong (complex workers, lead-owned rescue, final reviewer). The lead runs
+on your session model. Target ≥ 50% of tasks on `cheap` (measured: $0.60 vs $3.10 per task, no
+quality loss); a plan that can't hit that hasn't settled enough decisions — that is a planning
+signal, not a routing problem.
 
 ## 3. Lifecycle
 
@@ -91,14 +115,19 @@ the conversation. Then:
    immediately and you're notified it started.
 
 ### Execute
-1. Lead materializes the plan's task table onto the board (`task.create` with deps, model
-   lane, risk flags; packet body as task content).
+1. Lead materializes the plan's task table onto the board (`task.create` with deps, **role**
+   — which carries the lane's model, thinking level, and skills — risk flags, and the packet
+   body as task content).
 2. Workers claim ready, file-disjoint tasks. Claim = reserve write set; handoff = release.
-3. **On every handoff**, the reviewer runs. SHIP → done. NEEDS_WORK → task resets to the
-   *same worker, resumed with its context* plus the findings (max 1 retry, then fresh strong
-   worker). RETHINK → blocked, lead decides.
-4. Underneath, the **watchdog** reviews any writer's actual repo diff at turn end (edit-gated,
-   includes LSP diagnostics) — a free adversarial net that costs nothing when nothing changed.
+3. **On every handoff**, the reviewer runs. SHIP → done. NEEDS_WORK → task resets and retries
+   as a *fresh worker carrying the review findings and its own progress log* (Crew workers run
+   `--no-session`; there is no session resume). RETHINK, or a second failure, → blocked for the
+   lead.
+4. **Escalation is the lead's, not Crew's.** A task that exhausts `maxAttemptsPerTask` blocks.
+   The lead — which, being the primary session, is the only participant holding the `subagent`
+   tool — remediates it with a strong fresh subagent, then `task.done`s it. This is the one
+   place `pi-subagents` is used, and it is exactly the place its resume, watchdog, and
+   telemetry are worth paying for.
 5. When a wave completes: lead runs the broad gate profile **once**, commits
    (`team(W<n>): <summary>`). Lead is the only committer. Expensive checks (full suites,
    lint-the-world, E2E) exist only here — never inside a worker's loop.
@@ -126,8 +155,9 @@ need you.
 |---|---|---|
 | task becomes ready (dep met) | idle worker | claim, reserve, execute |
 | worker handoff | reviewer | review, verdict |
-| NEEDS_WORK verdict | same worker (resumed) | fix with feedback |
-| RETHINK / 2nd failure / risk pause | lead → you if needed | decide |
+| NEEDS_WORK verdict | fresh worker, same task | fix, with findings + progress log injected |
+| RETHINK / attempts exhausted | lead | remediate via strong subagent, or escalate to you |
+| risk pause | lead → you | approve / reject |
 | wave complete | lead | broad gate, commit |
 | board empty | lead | close sequence |
 | agent silent 2 turns | lead | nudge once, then restart that member |
@@ -140,10 +170,14 @@ only committer. Timed loops are banned; if an event isn't firing, fix the event.
 | Situation | Context | Why |
 |---|---|---|
 | Worker, first attempt | **fresh + packet** | packet is cheaper and more reliable than a transcript |
-| Worker, remediation retry | **resume** (`subagent resume`) | keeps the mental model; re-discovery was ~27% of measured runtime |
-| Worker, after failed retry | **fresh, strong model** | the old context holds the wrong model — that's why it failed |
+| Worker, remediation retry | **fresh + findings + progress log** | not a choice: Crew workers run `--no-session`. Crew re-injects the task spec, `last_review` feedback, and ~30 progress lines, which recovers part of the re-discovery cost |
+| Worker, attempts exhausted | **lead-owned strong subagent** | the old context holds the wrong model — that's why it failed. Only the lead can spawn, so escalation necessarily leaves Crew |
 | Any reviewer | **fresh, always** | independence |
 | Lead helper (replanning) | fork | genuinely needs the conversation |
+
+> Earlier drafts specified `subagent resume` for retry #1. That is not available: Crew spawns
+> its own `pi --mode json --no-session` workers and does not launch `pi-subagents`
+> (`crew/handlers/plan.ts:599`). See `notes/crew-execution-model.md`.
 
 Anti-bloat rules: handoffs are ≤ ~15 lines (files changed, check output, assumptions, risks);
 full diffs go worker→reviewer directly, never through the lead; the plan template has no
@@ -205,21 +239,28 @@ Nothing else in the repo docs is process-load-bearing.
 
 | Piece | Provides | Status |
 |---|---|---|
-| `pi-subagents` | spawn / resume / steer / budgets / telemetry artifacts / intercom / watchdog | installed |
-| `pi-messenger` | board + deps + waves, file reservations, review-on-handoff loop, live overlay, messaging | `pi install npm:pi-messenger` |
-| `pi-hooks` (lsp, checkpoint) | free diagnostics; per-turn rollback refs | installed, enable |
+| `pi-messenger` | board + deps + waves, **worker/reviewer execution**, file reservations, review-on-handoff loop, live overlay, messaging | `pi install npm:pi-messenger` |
+| `pi-subagents` | lead-side only: rescue of blocked tasks, final reviewer, budgets, telemetry, intercom | installed |
+| `pi-hooks` (lsp, checkpoint) | free diagnostics; per-turn rollback refs. Lead session by default; reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter | installed, enable |
 | `pi-team` (ours, small) | plan table → board materializer; the four plan gates; telemetry harvest | build (~3 small scripts) |
 | Skills | `/discovery`, `/design`, `/pi-team-plan` (human-only, `disable-model-invocation`) + `pi-team-lead`, `pi-team-worker` (model-facing) | write (5, replacing ~19) |
 
-Config in one place (`.pi/settings.json` + messenger config): concurrency ≤ 4, reviewer
-iterations ≤ 3, attempts-per-task ≤ 2, per-run cost/turn budgets, lane→model map, watchdog on
-with a strong complementary model.
+**Crew executes; `pi-subagents` does not.** Crew spawns its own `pi --mode json --no-session`
+children and explicitly does not launch `pi-subagents` (`crew/handlers/plan.ts:599`). The
+consequences are load-bearing and are reflected above: no worker session resume, no
+edit-gated watchdog over workers, and no `status.json` cost/tool telemetry. What we trade
+that for — review on every handoff — is the control the evidence says actually catches
+defects.
+
+Config in one place (messenger config + Team profile): concurrency ≤ 4, reviewer iterations
+≤ 3, attempts-per-task ≤ 2, `dependencies: strict`, lane roles with their models, per-run
+budgets.
 
 ## 9. What this deletes
 
 Discovery and Design as agent modes and artifacts (conversation covers them). Sequential mode
-and per-task Red-Green-Break-Verify (contracts + handoff review + watchdog + wave gates are
-the quality controls; break-it surfaced zero defects in the measured baseline). The
+and per-task Red-Green-Break-Verify (contracts + handoff review + wave gates are the quality
+controls; break-it surfaced zero defects in the measured baseline). The
 brief/findings/approach/approach-review/worklog chain (one plan contract; the board is the
 live worklog; telemetry is the record). Dual-harness rendering (Pi only). Mandatory human
 plan approval (opt-in or risk-triggered).
@@ -228,13 +269,27 @@ plan approval (opt-in or risk-triggered).
 
 - **Conversational planning can skip rigor for big work.** Mitigation: the four plan gates
   are mechanical and always run; you can always say "review this plan with me first."
-- **Two schedulers** (board autonomy vs lead waves) can fight. Mitigation: run the board
-  wave-by-wave under lead control until proven; autonomy is an optimization.
+- **Two schedulers** (board autonomy vs lead waves) can fight. Mitigation: `work` runs exactly
+  one wave by default; `autonomous: true` is opt-in. Run lead-driven until proven.
 - **Reviewer-on-every-handoff costs money.** It buys the removal of late rework (21% of
   measured time) and per-task break-it. Telemetry per run proves or refutes it; budgets cap it.
-- **Reservations are advisory.** The write-set gate at plan time is the real control;
-  reservations catch drift.
+- **Reservations only block structured `edit`/`write` — bash writes bypass them entirely.**
+  `sed -i`, shell redirects, and `python -c` are not examined by the reservation hook, and the
+  registry has no locking. The plan-time disjoint-write-set gate is therefore the real control;
+  reservations only catch drift, and only for well-behaved edits. Do not let this design lean
+  on them.
+- **We depend on `plan.json`'s on-disk shape.** There is no public non-LLM action to create a
+  plan record, so the materializer writes that one file directly. It is the only place we touch
+  Crew's internals — pin the `pi-messenger` version and re-check on upgrade.
+- **A missing Team profile degrades silently.** If the profile isn't active, every lane role
+  resolves to nothing and all tasks run on the default worker model with no error. The
+  materializer must assert it before creating tasks.
+- **Cost telemetry is weaker than the baseline's.** Crew stores no per-task cost or persistent
+  tool counts, so the calibration run cannot be compared to the $47.61 baseline on equal terms.
+  Wall-clock and task counts remain comparable; cost needs a separate source.
 
 ---
 *Evidence base: `README.md` in this directory — measured baseline (5.3 h / $47.61 / 1.61x
-ceiling; all defects found by review+E2E, none by per-task break-it) and extension evaluation.*
+ceiling; all defects found by review+E2E, none by per-task break-it) and extension evaluation.
+Substrate behavior is verified by source inspection in `notes/` — `board-materialization.md`,
+`crew-execution-model.md`, `review-loop.md`, `reservations-and-config.md`.*

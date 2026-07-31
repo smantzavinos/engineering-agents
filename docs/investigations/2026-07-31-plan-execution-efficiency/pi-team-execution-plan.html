@@ -246,11 +246,11 @@
     </div>
     <div class="tax-card">
       <span class="badge b-ext">EXTENSION AUTO</span>
-      <p><strong>Fires without anyone asking.</strong> Watchdog diff-review at turn end (edit-gated), crew auto-review on task completion, LSP diagnostics on touched files, checkpoint refs per turn, stuck-agent detection, completion notifications.</p>
+      <p><strong>Fires without anyone asking.</strong> Crew auto-review on every task completion, reservation blocking on conflicting edits, stuck-agent detection, completion notifications. LSP diagnostics and checkpoint refs apply to the lead session.</p>
     </div>
     <div class="tax-card">
       <span class="badge b-board">BOARD EVENT</span>
-      <p><strong>File-state change wakes an agent.</strong> Task becomes ready (dep met) → idle worker claims. Handoff → reviewer wakes. NEEDS_WORK → worker resumed. Board empty → lead closes. Messages arrive as steering prompts. <em>Nothing polls on a timer.</em></p>
+      <p><strong>File-state change wakes an agent.</strong> Task becomes ready (dep met) → idle worker claims. Handoff → reviewer wakes. NEEDS_WORK → fresh worker retries with findings. Board empty → lead closes. Messages arrive as steering prompts. <em>Nothing polls on a timer.</em></p>
     </div>
   </div>
 </section>
@@ -258,7 +258,7 @@
 <!-- ============ 2. ROLES ============ -->
 <section class="animate" style="--i:2">
   <h2><span class="sec-num">02</span>Roles &amp; responsibilities</h2>
-  <p class="sec-lede">Five roles. Three are agents, one is a mechanism, one is you. Escalation is a rule, not a role: one resumed retry, then a fresh strong worker, then the lead asks you.</p>
+  <p class="sec-lede">Five roles. Three are agents, one is a mechanism, one is you. Escalation is a rule, not a role: one retry carrying the findings, then the lead rescues with a strong subagent, then it asks you.</p>
   <div class="roles">
     <div class="role-card" style="--accent: var(--gold)">
       <h3>Human</h3><p class="who">you · <span class="badge b-human">HUMAN</span></p>
@@ -291,11 +291,11 @@
       </ul>
     </div>
     <div class="role-card" style="--accent: var(--green)">
-      <h3>Reviewer</h3><p class="who">fresh per handoff + watchdog · <span class="badge b-ext">EXTENSION AUTO</span></p>
+      <h3>Reviewer</h3><p class="who">fresh Crew reviewer per handoff · <span class="badge b-ext">EXTENSION AUTO</span></p>
       <ul>
         <li>Verdict on every handoff: SHIP / NEEDS_WORK / RETHINK</li>
-        <li>NEEDS_WORK → same worker resumed, findings attached</li>
-        <li>Watchdog: adversarial diff review under every writer</li>
+        <li>NEEDS_WORK → fresh worker retries, findings + progress log injected</li>
+        <li>Verdict parsed to SHIP / NEEDS_WORK / MAJOR_RETHINK</li>
         <li class="never">Fix code; approve its own findings</li>
       </ul>
     </div>
@@ -323,12 +323,12 @@
   </p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Lane tag</th><th>Tier</th><th>Runs on</th><th>Qualifies when</th><th>Escalates to</th></tr></thead>
+      <thead><tr><th>Lane tag</th><th>Team role</th><th>Tier</th><th>Qualifies when</th><th>Escalates to</th></tr></thead>
       <tbody>
-        <tr><td class="mono">cheap</td><td>○ small / fast</td><td>haiku-class</td><td>Mechanical, decision-complete; explicit write set; existing test patterns</td><td><code>complex</code> on failed retry</td></tr>
-        <tr><td class="mono">std</td><td>◐ standard</td><td>sonnet-class</td><td>Normal implementation (default)</td><td><code>complex</code> on failed retry</td></tr>
-        <tr><td class="mono">complex</td><td>● strong + thinking</td><td>opus / gpt-5-class</td><td>Design-bearing, security, migration, concurrency; <strong>all risk-flagged tasks</strong></td><td>human</td></tr>
-        <tr><td class="mono">visual</td><td>◐/● variant</td><td>visual-capable model</td><td>UI/UX/a11y — a routing specialization, not a fourth tier</td><td>as base tier</td></tr>
+        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>○ small / fast</td><td>Mechanical, decision-complete; explicit write set; existing test patterns</td><td><code>complex</code> on failed retry</td></tr>
+        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>◐ standard</td><td>Normal implementation (default)</td><td><code>complex</code> on failed retry</td></tr>
+        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>● strong + thinking</td><td>Design-bearing, security, migration, concurrency; <strong>all risk-flagged tasks</strong></td><td>human</td></tr>
+        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>◐/● variant</td><td>UI/UX/a11y — a routing specialization, not a fourth tier</td><td>as base tier</td></tr>
       </tbody>
     </table>
   </div>
@@ -339,17 +339,25 @@
         <tr><td>Lead</td><td>your session model</td><td class="mono">1</td></tr>
         <tr><td>Worker</td><td>per task lane (○/◐/●)</td><td class="mono">1–4 concurrent</td></tr>
         <tr><td>Handoff reviewer</td><td>◐ standard</td><td class="mono">fresh per handoff</td></tr>
-        <tr><td>Watchdog</td><td>● strong, <em>complementary</em> to the lead's model</td><td class="mono">ambient</td></tr>
+        <tr><td>Lead rescue</td><td>● strong subagent, lead-spawned</td><td class="mono">on blocked task</td></tr>
         <tr><td>Final reviewer</td><td>● strong, fresh</td><td class="mono">1 per plan</td></tr>
       </tbody>
     </table>
   </div>
   <div class="callout">
-    <strong>Escalation is a tier bump, not a new agent type.</strong> Retry #1 = same worker,
-    same tier, resumed with findings. Failed retry = fresh worker at ● <code>complex</code>
-    regardless of original lane. Five agent kinds, three tiers — the whole inventory.
-    Mechanically: the materializer passes <code>model</code> per task via <code>task.create</code>;
-    escalations pass <code>model</code> per <code>subagent</code> call; the lane→model map is one config block.
+    <strong>A lane <em>is</em> a Team role — that is the entire routing mechanism.</strong>
+    <code>task.create</code> accepts no <code>model</code>, but it accepts <code>role</code>, and a Team
+    role carries <code>model</code>, <code>thinking</code> and <code>skills</code>
+    (<code>crew/team/types.ts:13-17</code>). <code>work</code> resolves
+    <code>task.model → wave param → roleModel → config.models.worker → session model</code>
+    (<code>crew/handlers/work.ts:176-183</code>), so one role string sets all three. Lanes are declared
+    once in the Team profile, and materialization stays on the public API — no direct store writes.
+    <br><br>
+    <strong>Two traps.</strong> Never name a lane with a bare packaged role
+    (<code>worker</code>, <code>scout</code>, <code>reviewer</code>…): resolution prefers the packaged
+    canonical name when that key also exists, and packaged non-editing roles cannot edit. The
+    <code>worker-*</code> prefix is safe. And <strong>the profile must be active</strong> — otherwise every
+    lane silently falls back to the default worker model with no error.
   </div>
 </section>
 
@@ -547,7 +555,7 @@ sequenceDiagram
 <section class="animate" style="--i:6">
   <h2><span class="sec-num">06</span>Remediation &amp; escalation — sequence</h2>
   <p class="sec-lede">
-    What happens when review fails. The core rule: <strong>resume once, then go fresh and strong.</strong>
+    What happens when review fails. The core rule: <strong>retry once with findings, then escalate to the lead.</strong>
     Retry #1 reuses the worker's own context (re-discovery was ~27% of measured runtime);
     a failed retry means the context holds the wrong mental model, so escalation is always fresh.
   </p>
@@ -578,7 +586,7 @@ sequenceDiagram
   B-->>R: review trigger 【EXTENSION auto】
   R->>B: NEEDS_WORK + findings 【AGENT】
   note over B,W: retry #1 — RESUME, not restart
-  B-->>W: subagent resume: same session,<br/>context retained, findings attached 【BOARD→EXTENSION】
+  B-->>W: task reset: fresh worker,<br/>findings + progress log injected 【BOARD】
   W->>B: handoff v2 【AGENT】
   B-->>R: re-review 【EXTENSION auto】
 
@@ -615,8 +623,8 @@ sequenceDiagram
         <tr><td>"plan it"</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">/pi-team-plan</td><td>Lead</td><td>Write plan.md, run gates, materialize board</td></tr>
         <tr><td>Task becomes ready (dep met)</td><td><span class="badge b-board">BOARD</span></td><td class="mono">crew dependency check</td><td>Idle worker</td><td>Claim → reserve write set → execute</td></tr>
         <tr><td>Worker handoff</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">crew review.enabled</td><td>Reviewer</td><td>Review vs contract → verdict</td></tr>
-        <tr><td>Any writer's turn ends with repo changed</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">pi-subagents watchdog</td><td>Watchdog model</td><td>Adversarial diff review + LSP diagnostics</td></tr>
-        <tr><td>NEEDS_WORK verdict</td><td><span class="badge b-board">BOARD</span></td><td class="mono">subagent resume</td><td>Same worker, context kept</td><td>Fix with findings attached (max 1 retry)</td></tr>
+        <tr><td>Task attempts exhausted</td><td><span class="badge b-board">BOARD</span></td><td class="mono">auto-block</td><td>Lead</td><td>Rescue with a strong subagent, then task.done</td></tr>
+        <tr><td>NEEDS_WORK verdict</td><td><span class="badge b-board">BOARD</span></td><td class="mono">task reset</td><td>Fresh worker, same task</td><td>Fix with findings + progress log (max 1 retry)</td></tr>
         <tr><td>RETHINK / 2nd failure</td><td><span class="badge b-board">BOARD</span></td><td class="mono">escalation rule</td><td>Lead → fresh strong worker</td><td>Rescue; after that, ask the human</td></tr>
         <tr><td>Risk-flagged task unresolved by planning</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">crew approval gate</td><td>Human</td><td>Approve / reject; otherwise noted in outcome</td></tr>
         <tr><td>Blocker / product decision needed</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">contact_supervisor (intercom)</td><td>Lead → human</td><td>Immediate notification</td></tr>
@@ -635,7 +643,7 @@ sequenceDiagram
   <p class="sec-lede">Context is the scarce resource. Workers get a packet, not a transcript; the lead never ingests full diffs (they flow worker → reviewer directly); handoffs are ≤15 lines.</p>
   <div class="ctx-grid">
     <div class="ctx-card"><p class="mode">fresh + packet</p><p class="sit">Worker, first attempt</p><p>A packet (write set · contract · decisions · check) beats inheriting a transcript.</p></div>
-    <div class="ctx-card"><p class="mode">resume</p><p class="sit">Worker, retry #1</p><p><code>subagent resume</code> keeps the mental model. Re-discovery was ~27% of measured runtime.</p></div>
+    <div class="ctx-card"><p class="mode">fresh + findings</p><p class="sit">Worker, retry #1</p><p>Not a choice: Crew workers run <code>--no-session</code>. Crew re-injects task spec, review feedback, and ~30 progress lines.</p></div>
     <div class="ctx-card"><p class="mode">fresh + strong</p><p class="sit">After failed retry</p><p>The old context holds the wrong model — that's why it failed.</p></div>
     <div class="ctx-card"><p class="mode">fresh, always</p><p class="sit">Every reviewer</p><p>Independence. Never forked or resumed from the implementer.</p></div>
     <div class="ctx-card"><p class="mode">fork</p><p class="sit">Lead helper only</p><p>Replanning genuinely needs the conversation. (Fork disables child thinking — avoid for complex work.)</p></div>
@@ -645,12 +653,12 @@ sequenceDiagram
 <!-- ============ 9. DEPLOYMENT ============ -->
 <section class="animate" style="--i:9">
   <h2><span class="sec-num">09</span>Deployment</h2>
-  <p class="sec-lede">One install, one small glue extension, two-plus-three skills. Config in one place: concurrency ≤ 4, reviewer iterations ≤ 3, attempts ≤ 2, lane→model map, budgets, watchdog on a strong complementary model.</p>
+  <p class="sec-lede">One install, one small glue extension, two-plus-three skills. Config in one place: concurrency ≤ 4, <code>dependencies: strict</code>, reviewer iterations ≤ 3, attempts ≤ 2, and a Team profile declaring the lane roles.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Piece</th><th>Provides</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td class="mono">pi-subagents</td><td>spawn / resume / steer / budgets / telemetry artifacts / intercom / watchdog</td><td>✅ installed</td></tr>
+        <tr><td class="mono">pi-subagents</td><td><strong>lead-side only:</strong> rescue of blocked tasks, final reviewer, budgets, intercom. Crew does <em>not</em> use it for workers.</td><td>✅ installed</td></tr>
         <tr><td class="mono">pi-messenger</td><td>board + deps + waves · file reservations · review-on-handoff · live overlay · messaging</td><td>⬇ <code>pi install npm:pi-messenger</code></td></tr>
         <tr><td class="mono">pi-hooks (lsp, checkpoint)</td><td>free diagnostics on touched files · per-turn rollback refs</td><td>✅ installed, enable</td></tr>
         <tr><td class="mono">pi-team (ours)</td><td>plan-table → board materializer · the 4 plan gates · telemetry harvest</td><td>🔨 build (~3 small scripts)</td></tr>
