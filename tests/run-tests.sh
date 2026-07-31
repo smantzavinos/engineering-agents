@@ -54,6 +54,7 @@ run_specs() {
               "$SCRIPT_DIR/specs/repo-readiness-docs-spec.sh" \
               "$SCRIPT_DIR/specs/proof-set-runtime-spec.sh" \
               "$SCRIPT_DIR/specs/pi-team-config-spec.sh" \
+              "$SCRIPT_DIR/specs/pi-team-tool-spec.sh" \
               "$SCRIPT_DIR/specs/skill-content-spec.sh" \
               "$SCRIPT_DIR/specs/skill-render-spec.sh" \
               "$SCRIPT_DIR/specs/pi-module-content-spec.sh" \
