@@ -27,6 +27,9 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Development Environment
 - `docs/development-environment.md` — required tooling, setup/apply flow, and verification entry points.
 
+## Experimental Pi Team Setup
+- `docs/pi-team-setup.md` — additive Pi-only setup and preflight for the reviewed calibration rollout; it does not supersede canonical process, requirements, team policy, or OpenCode documentation.
+
 ## Test Infrastructure
 - `docs/testing-strategy.md` — canonical testing levels, task/final gates, scope, timing, and prerequisites.
 - `tests/README.md` — suite inventory, individual spec entry points, and file-layout details.
