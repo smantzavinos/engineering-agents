@@ -61,6 +61,12 @@ be disjoint after normalized prefix comparison.
 Wave = dependency depth. At each depth, task IDs use numeric order; more than four tasks are
 chunked into consecutive groups of four. A task can be dispatched only in its computed wave.
 
+## Scheduling thresholds
+
+The estimated critical path must be `critical path <= 60% of serial estimate`; the largest task on
+that path must be `largest task on critical path <= 20% of critical path`. These are mechanical
+validation gates, calculated from `Estimate min` and the dependency DAG.
+
 ## Check and integration rules
 
 - A task's `Check` references exactly one row with `Scope` `worker` and `Worker-safe` `yes`.

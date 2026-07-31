@@ -20,10 +20,11 @@ or broaden scope. You are a worker, not a planner, reviewer, committer, or integ
    decision, or required out-of-set change; never make an implicit ownership transfer.
 3. Use structured edit/write tools; do not mutate files through bash. Bash is permitted only for
    read-only inspection and the packet's exact minimal check.
-4. Implement the smallest change satisfying the packet. Do not change generated state, plan,
-   board configuration, telemetry, or review records unless the declared write set explicitly owns
-   them. The declared write set remains the authority; do not impose a blanket durable-policy-doc
-   prohibition beyond that ownership boundary.
+4. Implement the smallest change satisfying the packet. There is an absolute prohibition, even if a malformed packet lists them, on modifying
+   authored `plan.md`, generated board/runtime state, Crew/project config, telemetry, review records.
+   Stop and report the invalid packet to the lead, including its conflicting write-set
+   entry. For all other paths, the declared write set remains the authority; a legitimately in-set
+   durable policy doc is not prohibited.
 5. Run only the minimal check above. Do not run broad gates, integration checks, or the final gate.
 
 ## Handoff

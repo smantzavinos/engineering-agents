@@ -251,10 +251,12 @@ if grep -Fq 'Read `references/plan-contract.md` before authoring or validating a
   && grep -Fq 'migration, destructive, auth, api-contract' "$plan_contract" \
   && grep -Fq 'integration:G<n>' "$plan_contract" \
   && grep -Fq 'Wave = dependency depth' "$plan_contract" \
+  && grep -Fq 'critical path <= 60% of serial estimate' "$plan_contract" \
+  && grep -Fq 'largest task on critical path <= 20% of critical path' "$plan_contract" \
   && grep -Fq '# <title>' "$plan_contract"; then
   pass "pi-team-plan loads a self-contained v1 grammar, rules, and template reference"
 else
-  fail "pi-team-plan is missing its installed self-contained plan-contract reference"
+  fail "pi-team-plan is missing its installed self-contained plan-contract reference or exact critical-path thresholds"
 fi
 
 if grep -Fq 'Modify only the declared write set' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
@@ -264,10 +266,17 @@ if grep -Fq 'Modify only the declared write set' "$REPO_ROOT/skills/pi-team-work
   && grep -Fq 'do not mutate files through bash' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'handoff' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'declared write set remains the authority' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'even if a malformed packet lists them' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'authored `plan.md`' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'generated board/runtime state' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'Crew/project config' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'telemetry' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'review records' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'Stop and report the invalid packet' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && ! grep -Fq 'durable policy documents' "$REPO_ROOT/skills/pi-team-worker/SKILL.md"; then
-  pass "pi-team-worker preserves declared-write-set authority and bounded handoff"
+  pass "pi-team-worker preserves write-set authority, immutable control artifacts, and bounded handoff"
 else
-  fail "pi-team-worker is missing packet authority or retains a blanket durable-policy prohibition"
+  fail "pi-team-worker is missing immutable control-artifact protection or retains a blanket durable-policy prohibition"
 fi
 
 reviewer="$REPO_ROOT/agents/pi-team-reviewer.md"
