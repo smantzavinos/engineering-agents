@@ -9,6 +9,8 @@ source "$SCRIPT_DIR/../lib/common.sh"
 require_commands nix jq >/dev/null
 
 REPO_ROOT="$(repo_root)"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 PASS=0 FAIL=0
 
 pass() { PASS=$((PASS + 1)); printf '  PASS: %s\n' "$1"; }
@@ -53,14 +55,34 @@ fi
 
 # The global Pi team skills invoke pi-team, so the module must install a real PATH
 # command backed by the checked-in tool and its Node/git runtime dependencies.
+# Inspect only the home.packages list: a declaration elsewhere must not satisfy this gate.
+home_packages_contains_pi_team_pkg() {
+  local module="$1" packages
+  packages="$(awk '
+    /^[[:space:]]*home\.packages[[:space:]]*=[[:space:]]*\[/ { collecting = 1 }
+    collecting { print }
+    collecting && /^[[:space:]]*\][[:space:]]*\+\+/ { exit }
+  ' "$module")"
+  grep -Eq '^[[:space:]]*piTeamPkg[[:space:]]*$' <<<"$packages"
+}
+
 if grep -Fq 'piTeamPkg = pkgs.writeShellApplication {' "$PI_MODULE" \
   && grep -Fq 'name = "pi-team";' "$PI_MODULE" \
   && grep -Fq 'runtimeInputs = [ pkgs.nodejs pkgs.git ];' "$PI_MODULE" \
   && grep -Fq 'exec node ${repoRoot}/tools/pi-team.mjs "$@"' "$PI_MODULE" \
-  && grep -Fq 'piTeamPkg' "$PI_MODULE"; then
+  && home_packages_contains_pi_team_pkg "$PI_MODULE"; then
   pass "Pi module installs pi-team from the repo tool with Node and git runtime"
 else
-  fail "Pi module is missing the pi-team PATH command or its repo/runtime wiring"
+  fail "Pi module is missing the pi-team PATH command or its home.packages wiring"
+fi
+
+# Prove the previous assertion cannot be satisfied by the piTeamPkg declaration alone.
+MODULE_WITHOUT_PACKAGE="$TMP/default-without-pi-team-package.nix"
+sed '/^[[:space:]]*piTeamPkg[[:space:]]*$/d' "$PI_MODULE" >"$MODULE_WITHOUT_PACKAGE"
+if home_packages_contains_pi_team_pkg "$MODULE_WITHOUT_PACKAGE"; then
+  fail "Pi module home.packages assertion passed after piTeamPkg was removed from the package list"
+else
+  pass "Pi module pi-team assertion rejects a declaration without home.packages installation"
 fi
 
 # Verify the module references skills that actually exist

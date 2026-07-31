@@ -21,7 +21,9 @@ or broaden scope. You are a worker, not a planner, reviewer, committer, or integ
 3. Use structured edit/write tools; do not mutate files through bash. Bash is permitted only for
    read-only inspection and the packet's exact minimal check.
 4. Implement the smallest change satisfying the packet. Do not change generated state, plan,
-   board configuration, telemetry, review records, or durable policy documents.
+   board configuration, telemetry, or review records unless the declared write set explicitly owns
+   them. The declared write set remains the authority; do not impose a blanket durable-policy-doc
+   prohibition beyond that ownership boundary.
 5. Run only the minimal check above. Do not run broad gates, integration checks, or the final gate.
 
 ## Handoff

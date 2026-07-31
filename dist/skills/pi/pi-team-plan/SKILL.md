@@ -19,37 +19,21 @@ plan and risk approval remain human decisions.
 
 ## Plan contract
 
-Write exactly these top-level fields and sections:
-
-```markdown
-# <title>
-Plan schema: 1
-Intent: <change, reason, and unchanged boundary>
-Approval: <auto | requested>
-
-## Contracts
-| ID | Behavior | Evidence |
-## Decisions
-| ID | Decision | Resolution |
-## Checks
-| ID | Scope | Command | Cost | Worker-safe |
-## Tasks
-| ID | Deps | Lane | Estimate min | Risk labels | Integration | Deliverable | Write set | Contracts | Decisions | Check |
-```
-
-Use only valid plan IDs, lanes, risk labels, repo-relative write sets, checks, and dependency
-references from `pi-team-execution.md`. Packets must be decision-complete: one explicit write
-set, minimal worker-safe check, contracts, decisions, integration group, and bounded deliverable.
-Define enough file-disjoint ready work for at most four workers. Do not create another plan format,
+Read `references/plan-contract.md` before authoring or validating a plan. `Plan schema: 1` is
+required. The reference is the self-contained schema-1 grammar, ID/list/lane/risk/path/check/
+integration/wave rules, and exact task-packet template. Do not substitute another plan format,
 team worklog, or source change.
 
 ## Process
 
 1. Confirm human intent, unchanged boundaries, acceptance evidence, risk labels, and whether
    `Approval` is `auto` or `requested`.
-2. Create the plan; resolve every worker decision in `## Decisions` before dispatch.
-3. Run `pi-team check <plan-path> --json`. Correct every diagnostic; mechanical
-   validity never proves semantic sufficiency.
+2. Create the plan using the reference's exact grammar. Resolve every worker decision in
+   `## Decisions` before dispatch. Packets must be decision-complete: one explicit write set,
+   minimal worker-safe check, contracts, decisions, integration group, and bounded deliverable.
+   Define enough file-disjoint ready work for at most four workers per computed wave.
+3. Run `pi-team check <plan-path> --json`. Correct every diagnostic; mechanical validity never
+   proves semantic sufficiency.
 4. Commission a **fresh semantic review** of the authored plan. It must assess intent coverage,
    packet sufficiency, write-set isolation, checks, integration groups, and risk classification.
    Record findings beside the plan and revise until clean.

@@ -200,7 +200,6 @@ if grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'plan-ID→Crew-ID map' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'task.approve' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'HEAD == BASE' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'pi-team check <plan> --json' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'pi-team init-board' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'pi-team review-wave' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'fresh `pi-team-reviewer`' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
@@ -211,15 +210,64 @@ else
   fail "pi-team-lead is missing required execution protocol anchors"
 fi
 
+lead="$REPO_ROOT/skills/pi-team-lead/SKILL.md"
+if grep -Fq 'PLAN="$REPO/plans/YYYY_MM_DD_<slug>/plan.md"' "$lead" \
+  && grep -Fq 'CREW="$REPO/.pi/messenger/crew"' "$lead" \
+  && grep -Fq 'BASE="$(git -C "$REPO" rev-parse HEAD)"' "$lead" \
+  && grep -Fq 'WAVE_IDS="T1,T2"' "$lead" \
+  && grep -Fq 'RETRY_IDS="T1"' "$lead" \
+  && grep -Fq 'pi-team check "$PLAN" --json' "$lead" \
+  && grep -Fq 'pi-team init-board "$PLAN" --crew-dir "$CREW" --repo-root "$REPO"' "$lead" \
+  && grep -Fq -- '--scope "$WAVE_IDS" --bundle "$WAVE_IDS" --repo-root "$REPO" --base "$BASE" --output-dir "$WAVE_OUTPUT_DIR"' "$lead" \
+  && grep -Fq -- '--scope "$WAVE_IDS" --bundle "$RETRY_IDS" --repo-root "$REPO" --base "$BASE" --output-dir "$RETRY_OUTPUT_DIR"' "$lead" \
+  && grep -Fq 'before.get(id) !== sha256' "$lead" \
+  && grep -Fq 'task IDs, never paths' "$lead"; then
+  pass "pi-team-lead supplies executable check, board, wave, retry, and remediation commands"
+else
+  fail "pi-team-lead is missing executable commands or retry/remediation bundle semantics"
+fi
+
+if grep -Fq 'task.unblock' "$lead" \
+  && grep -Fq 'task.start' "$lead" \
+  && grep -Fq 'task.done' "$lead" \
+  && grep -Fq 'summary and review evidence' "$lead" \
+  && grep -Fq 'rescue failure remains blocked' "$lead" \
+  && grep -Fq 'github-copilot/gpt-5.6-sol' "$lead" \
+  && grep -Fq 'fresh full-diff review' "$lead" \
+  && grep -Fq 'same new HEAD commit' "$lead" \
+  && grep -Fq 'at most two fresh remediation passes' "$lead"; then
+  pass "pi-team-lead closes rescue state and requires a fresh clean final review on the new HEAD"
+else
+  fail "pi-team-lead is missing rescue closure or final same-commit review requirements"
+fi
+
+plan_skill="$REPO_ROOT/skills/pi-team-plan/SKILL.md"
+plan_contract="$REPO_ROOT/skills/pi-team-plan/references/plan-contract.md"
+if grep -Fq 'Read `references/plan-contract.md` before authoring or validating a plan.' "$plan_skill" \
+  && [[ -s "$plan_contract" ]] \
+  && grep -Fq 'Exact v1 grammar' "$plan_contract" \
+  && grep -Fq 'T[1-9][0-9]*' "$plan_contract" \
+  && grep -Fq 'cheap, std, complex, visual, visual-complex' "$plan_contract" \
+  && grep -Fq 'migration, destructive, auth, api-contract' "$plan_contract" \
+  && grep -Fq 'integration:G<n>' "$plan_contract" \
+  && grep -Fq 'Wave = dependency depth' "$plan_contract" \
+  && grep -Fq '# <title>' "$plan_contract"; then
+  pass "pi-team-plan loads a self-contained v1 grammar, rules, and template reference"
+else
+  fail "pi-team-plan is missing its installed self-contained plan-contract reference"
+fi
+
 if grep -Fq 'Modify only the declared write set' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'minimal check' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'Do not commit' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'broad gates' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
   && grep -Fq 'do not mutate files through bash' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'handoff' "$REPO_ROOT/skills/pi-team-worker/SKILL.md"; then
-  pass "pi-team-worker preserves packet ownership and bounded handoff"
+  && grep -Fq 'handoff' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'declared write set remains the authority' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && ! grep -Fq 'durable policy documents' "$REPO_ROOT/skills/pi-team-worker/SKILL.md"; then
+  pass "pi-team-worker preserves declared-write-set authority and bounded handoff"
 else
-  fail "pi-team-worker is missing write-set, check, git, bash, or handoff boundaries"
+  fail "pi-team-worker is missing packet authority or retains a blanket durable-policy prohibition"
 fi
 
 reviewer="$REPO_ROOT/agents/pi-team-reviewer.md"

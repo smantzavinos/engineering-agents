@@ -195,6 +195,15 @@ else
   fail "rendered Pi team lead is incomplete"
 fi
 
+if cmp -s "$REPO_ROOT/skills/pi-team-plan/references/plan-contract.md" \
+    "$REPO_ROOT/dist/skills/pi/pi-team-plan/references/plan-contract.md" \
+  && grep -Fq 'Read `references/plan-contract.md` before authoring or validating a plan.' \
+    "$REPO_ROOT/dist/skills/pi/pi-team-plan/SKILL.md"; then
+  pass "renderer installs the Pi team plan contract reference verbatim"
+else
+  fail "renderer did not install the Pi team plan contract reference"
+fi
+
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
 for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
   if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
