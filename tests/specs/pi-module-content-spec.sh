@@ -51,6 +51,18 @@ else
   fail "Pi module declares pi-messenger resources and the canonical pi-team profile"
 fi
 
+# The global Pi team skills invoke pi-team, so the module must install a real PATH
+# command backed by the checked-in tool and its Node/git runtime dependencies.
+if grep -Fq 'piTeamPkg = pkgs.writeShellApplication {' "$PI_MODULE" \
+  && grep -Fq 'name = "pi-team";' "$PI_MODULE" \
+  && grep -Fq 'runtimeInputs = [ pkgs.nodejs pkgs.git ];' "$PI_MODULE" \
+  && grep -Fq 'exec node ${repoRoot}/tools/pi-team.mjs "$@"' "$PI_MODULE" \
+  && grep -Fq 'piTeamPkg' "$PI_MODULE"; then
+  pass "Pi module installs pi-team from the repo tool with Node and git runtime"
+else
+  fail "Pi module is missing the pi-team PATH command or its repo/runtime wiring"
+fi
+
 # Verify the module references skills that actually exist
 SKILL_REFS=(
   "skills/discovery" "skills/design" "skills/research"
@@ -58,6 +70,7 @@ SKILL_REFS=(
   "skills/execute-task" "skills/execution-orchestrator"
   "skills/review-code" "skills/review-approach" "skills/assess-repo"
   "skills/create-skills" "skills/configure-pi" "skills/create-new-repo-docs"
+  "skills/pi-team-plan" "skills/pi-team-lead" "skills/pi-team-worker"
 )
 for ref in "${SKILL_REFS[@]}"; do
   skill_name="$(basename "$ref")"
@@ -72,7 +85,7 @@ done
 AGENT_REFS=(
   "agents/planner.md" "agents/plan-reviewer.md" "agents/code-reviewer.md"
   "agents/worker.md" "agents/ui-worker.md" "agents/researcher.md"
-  "agents/vision.md" "agents/oracle.md"
+  "agents/vision.md" "agents/oracle.md" "agents/pi-team-reviewer.md"
 )
 for ref in "${AGENT_REFS[@]}"; do
   agent_name="$(basename "$ref" .md)"
@@ -82,6 +95,16 @@ for ref in "${AGENT_REFS[@]}"; do
     fail "Module agent ref '${agent_name}' does not resolve (missing $REPO_ROOT/${ref})"
   fi
 done
+
+# Pi team skills and reviewer must be installed from their generated/canonical surfaces.
+if grep -Fq '".pi/agent/skills/pi-team-plan".source = "${repoRoot}/dist/skills/pi/pi-team-plan";' "$PI_MODULE" \
+  && grep -Fq '".pi/agent/skills/pi-team-lead".source = "${repoRoot}/dist/skills/pi/pi-team-lead";' "$PI_MODULE" \
+  && grep -Fq '".pi/agent/skills/pi-team-worker".source = "${repoRoot}/dist/skills/pi/pi-team-worker";' "$PI_MODULE" \
+  && grep -Fq '".pi/agent/agents/pi-team-reviewer.md".source = "${repoRoot}/agents/pi-team-reviewer.md";' "$PI_MODULE"; then
+  pass "Pi module installs the Pi team skills and task reviewer"
+else
+  fail "Pi module is missing Pi team skill or reviewer wiring"
+fi
 
 # Verify preset.jsonc is valid JSONC (stripping comments and trailing commas)
 if node -e "JSON.parse(require('fs').readFileSync('$REPO_ROOT/agents/preset.jsonc','utf8').replace(/\/\/.*$/gm,'').replace(/,\s*([}\]])/g,'\$1'))" 2>/dev/null; then

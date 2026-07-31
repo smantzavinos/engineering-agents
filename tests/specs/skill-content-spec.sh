@@ -172,6 +172,67 @@ else
   fail "Team orchestrator should not duplicate docs/orchestration.md's model suggestion table"
 fi
 
+# The additive Pi team flow is isolated from the shared/OpenCode pipeline and carries
+# its reviewed plan, transaction, review, and worker-safety contracts directly.
+for pi_skill in pi-team-plan pi-team-lead pi-team-worker; do
+  skill_path="$REPO_ROOT/skills/$pi_skill/SKILL.md"
+  if [[ -f "$skill_path" ]] && grep -Fq 'harnesses: [pi]' "$skill_path"; then
+    pass "${pi_skill} is a Pi-only canonical skill"
+  else
+    fail "${pi_skill} is missing or not restricted to Pi"
+  fi
+done
+
+if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && grep -Fq 'human-triggered' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && ! grep -Fq 'do not invoke a model to write, review, or approve the plan' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && grep -Fq 'Plan schema: 1' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && grep -Fq 'pi-team check <plan-path> --json' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && grep -Fq 'fresh semantic review' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
+  && grep -Fq 'Never waive risk approval' "$REPO_ROOT/skills/pi-team-plan/SKILL.md"; then
+  pass "pi-team-plan preserves human-triggered planning and semantic/risk-review gates"
+else
+  fail "pi-team-plan is missing its human-triggered, semantic-review, or risk gate"
+fi
+
+if grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'stable topological order' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'plan-ID→Crew-ID map' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'task.approve' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'HEAD == BASE' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'pi-team check <plan> --json' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'pi-team init-board' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'pi-team review-wave' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'fresh `pi-team-reviewer`' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'two remediation revisions' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'telemetry.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md"; then
+  pass "pi-team-lead encodes profile, transaction, review, remediation, and closure protocol"
+else
+  fail "pi-team-lead is missing required execution protocol anchors"
+fi
+
+if grep -Fq 'Modify only the declared write set' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'minimal check' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'Do not commit' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'broad gates' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'do not mutate files through bash' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
+  && grep -Fq 'handoff' "$REPO_ROOT/skills/pi-team-worker/SKILL.md"; then
+  pass "pi-team-worker preserves packet ownership and bounded handoff"
+else
+  fail "pi-team-worker is missing write-set, check, git, bash, or handoff boundaries"
+fi
+
+reviewer="$REPO_ROOT/agents/pi-team-reviewer.md"
+if [[ -f "$reviewer" ]] \
+  && grep -Fq 'model: github-copilot/gpt-5.6-terra' "$reviewer" \
+  && grep -Fq 'read-only' "$reviewer" \
+  && grep -Fq 'SHIP|NEEDS_WORK|MAJOR_RETHINK' "$reviewer" \
+  && grep -Fq 'Do not inspect peer write sets' "$reviewer"; then
+  pass "pi-team-reviewer is read-only with the exact task-review verdict contract"
+else
+  fail "pi-team-reviewer is missing model, read-only, verdict, or scope boundaries"
+fi
+
 if grep -Fq 'General model suggestion' "$REPO_ROOT/docs/orchestration.md" \
   && grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/docs/orchestration.md" \
   && grep -Fq 'Role-to-runtime mapping' "$REPO_ROOT/docs/orchestration.md"; then

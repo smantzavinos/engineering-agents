@@ -174,6 +174,27 @@ else
   pass "configure-pi is excluded from the OpenCode tree"
 fi
 
+# Pi team execution is additive and Pi-only: all canonical skills render to Pi,
+# never OpenCode, and the generated tree must retain their protocol anchors.
+for pi_only in pi-team-plan pi-team-lead pi-team-worker; do
+  if [[ -f "$REPO_ROOT/dist/skills/pi/${pi_only}/SKILL.md" ]]; then
+    pass "${pi_only} is present in the Pi tree"
+  else
+    fail "${pi_only} is missing from the Pi tree"
+  fi
+  if [[ -e "$REPO_ROOT/dist/skills/opencode/${pi_only}" ]]; then
+    fail "${pi_only} (pi-only) leaked into the OpenCode tree"
+  else
+    pass "${pi_only} is excluded from the OpenCode tree"
+  fi
+done
+if grep -Fq 'compatibility: pi' "$REPO_ROOT/dist/skills/pi/pi-team-lead/SKILL.md" \
+  && grep -Fq 'HEAD == BASE' "$REPO_ROOT/dist/skills/pi/pi-team-lead/SKILL.md"; then
+  pass "rendered Pi team lead retains Pi compatibility and transaction isolation"
+else
+  fail "rendered Pi team lead is incomplete"
+fi
+
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
 for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
   if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then

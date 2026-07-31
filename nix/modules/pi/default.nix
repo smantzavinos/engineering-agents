@@ -247,6 +247,13 @@ let
   piPkg = llmAgents.packages.${pkgs.system}.pi;
   checkUpdatesPkg = self.packages.${pkgs.system}.check-updates;
   piWrapperPkg = lib.hiPrio self.packages.${pkgs.system}.pi-launch-wrapper;
+  piTeamPkg = pkgs.writeShellApplication {
+    name = "pi-team";
+    runtimeInputs = [ pkgs.nodejs pkgs.git ];
+    text = ''
+      exec node ${repoRoot}/tools/pi-team.mjs "$@"
+    '';
+  };
 
   guardrailsConfigPath = "${self}/nix/modules/pi/guardrails.json";
 
@@ -435,6 +442,7 @@ in
     home.packages = [
       checkUpdatesPkg
       piWrapperPkg
+      piTeamPkg
       piPkg
       pkgs.ast-grep
     ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;
@@ -658,6 +666,9 @@ in
       ".pi/agent/skills/create-skills".source = "${repoRoot}/dist/skills/pi/create-skills";
       ".pi/agent/skills/configure-pi".source = "${repoRoot}/dist/skills/pi/configure-pi";
       ".pi/agent/skills/create-new-repo-docs".source = "${repoRoot}/dist/skills/pi/create-new-repo-docs";
+      ".pi/agent/skills/pi-team-plan".source = "${repoRoot}/dist/skills/pi/pi-team-plan";
+      ".pi/agent/skills/pi-team-lead".source = "${repoRoot}/dist/skills/pi/pi-team-lead";
+      ".pi/agent/skills/pi-team-worker".source = "${repoRoot}/dist/skills/pi/pi-team-worker";
 
       # ============================================================
       # Agent definitions
@@ -670,6 +681,7 @@ in
       ".pi/agent/agents/researcher.md".source = "${repoRoot}/agents/researcher.md";
       ".pi/agent/agents/vision.md".source = "${repoRoot}/agents/vision.md";
       ".pi/agent/agents/oracle.md".source = "${repoRoot}/agents/oracle.md";
+      ".pi/agent/agents/pi-team-reviewer.md".source = "${repoRoot}/agents/pi-team-reviewer.md";
 
       # Preset configuration
       ".pi/agent/preset.jsonc".source = "${repoRoot}/agents/preset.jsonc";
