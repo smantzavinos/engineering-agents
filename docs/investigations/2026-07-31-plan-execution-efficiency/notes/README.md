@@ -33,7 +33,12 @@ Source files below carry the full derivation for each.
 
 `pi-messenger` v0.15.0 ships 408 tests (42 files, vitest). Running them against the pinned
 source is stronger evidence than the integration smoke test originally planned — deterministic,
-no model spend, ~1.4 s. Result at time of writing: **408/408 pass**.
+no model spend, ~1.4 s.
+
+**Result (2026-07-31): 408/408 pass, 42 files, 1.35 s** — at tag `v0.15.0`, commit
+`2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab`, clean tree. Reproduced twice. This is the
+implementation plan's Phase 0 gate, and it has passed; `pi-messenger@0.15.0` is the validated
+pin.
 
 These cover the substrate behaviors this design depends on:
 

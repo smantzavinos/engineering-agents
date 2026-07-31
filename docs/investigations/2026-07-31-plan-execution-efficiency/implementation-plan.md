@@ -6,9 +6,11 @@
 **Evidence:** `README.md` — measured baseline and extension evaluation ·
 `notes/` — substrate findings from source inspection
 
-**Progress so far:** the five Phase 1 spikes are **resolved by source inspection** (see
-`notes/`). Nothing has been installed or configured — `pi-messenger` is not installed, there
-is no messenger config and no Team profile. Every checkbox below is still open.
+**Progress so far:** the five original spikes are **resolved by source inspection**, and the
+**Phase 0 substrate gate has passed** — `pi-messenger@0.15.0` (tag `v0.15.0`, commit `2f5e7dc`)
+runs 408/408 of its own tests. See `notes/`. Nothing is installed or configured yet:
+`pi-messenger` is not installed, and there is no messenger config or Team profile.
+**Phase 1 is the next actionable work.**
 
 **Repo constraint:** Pi is installed and configured **declaratively via the Nix flake +
 home-manager**, not by `pi install` / `pi config`. See "Nix constraints" under Phase 1.
@@ -19,16 +21,16 @@ this machine or this repo happens only after it passes.
 
 ---
 
-## Phase 0 — Substrate gate (free, no install required)
+## Phase 0 — Substrate gate ✅ **PASSED 2026-07-31**
 
 The gate is upstream's own test suite, run against the version we intend to pin. It needs no
 install, no config, no Team profile, and no `nix/` change — just a clone. Deterministic,
 ~1.4 s, zero model spend.
 
-- [ ] **Run the upstream suite at the version to be pinned:** clone `pi-messenger`, checkout
-      that version, `npm install && npx vitest run`. **Expect 408/408.**
-      **Regressions ⇒ do not pin that version.** Nothing installed, nothing declared, nothing
-      to unwind.
+- [x] **Ran the upstream suite at the version to be pinned.** Clone at tag `v0.15.0`,
+      commit `2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab` ("chore: release 0.15.0"), clean tree,
+      `npm install && npx vitest run` → **408/408 passed, 42 files, 1.35 s.** Reproduced twice.
+      ⇒ **`pi-messenger@0.15.0` is the validated pin for Phase 1.**
 
 Why this is sufficient, and why the live smoke test that used to sit here was deleted:
 
@@ -52,9 +54,10 @@ Why this is sufficient, and why the live smoke test that used to sit here was de
 `pi config` are the wrong verbs here — see "Nix constraints" below.
 
 - [ ] **Declare `pi-messenger` in `nix/modules/pi/default.nix`** under `piPackages`, following
-      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Use the pinned
-      npm version the gate validated, or a 40-hex commit for a git source — never a branch or
-      tag ref, which defeats the no-change rebuild skip (`nix/AGENTS.md`).
+      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Pin
+      **`pi-messenger@0.15.0`** — the version the Phase 0 gate validated. For a git source use
+      the 40-hex commit `2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab`, never a branch or tag ref,
+      which defeats the no-change rebuild skip (`nix/AGENTS.md`).
 - [ ] **Update `tests/fixtures/proof-set.json` in the same change** if the package ships
       extensions/skills/themes, with its `resourceExpectations`. This is an enforced contract
       (`tests/specs/proof-set-runtime-spec.sh`), not a formality.
@@ -185,8 +188,7 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 GATE (upstream suite, clone only) ──► Phase 1 (install + declare in nix + configure)
-  │  408 tests · ~1.4s · free · nothing installed          │
-  └─ fail ⇒ don't pin that version. Nothing to unwind.   └─► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
-                                                                        └──► Phase 4 docs (parallel with 3)
+Phase 0 GATE ✅ PASSED ──► Phase 1 (install + declare in nix + configure)  ← next
+  408/408 at v0.15.0        └─► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
+  nothing installed                          └──► Phase 4 docs (parallel with 3)
 ```
