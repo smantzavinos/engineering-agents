@@ -27,6 +27,14 @@ _No entries yet._
 
 ## Confirmed Learnings
 
+### Dogfood small plans before locking proportional packet gates
+- Date: 2026-07-31
+- Type: learning
+- Source: Pi team rollout dogfood before T5
+- Summary: Dogfooding exposed a small-plan ceremony trap: a strict 20% critical-path share forced
+  artificial five-task chains even when three independent tasks were each 20 minutes or less.
+  Use an absolute floor with proportional packet gates so small plans stay naturally parallel.
+
 ### Team contracts must start before implementation completion
 - Date: 2026-07-15
 - Type: learning

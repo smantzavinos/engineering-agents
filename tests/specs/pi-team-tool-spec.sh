@@ -37,6 +37,14 @@ jq -e '
 ' "$TMP/valid-1.json" >/dev/null || fail 'valid diamond metrics/waves/task schema mismatch'
 pass 'valid diamond emits deterministic metrics, waves, and natural task order'
 
+run_status 0 node "$TOOL" check "$FIXTURES/valid-small-independent.md" --json
+jq -e '
+  .valid == true and .diagnostics == [] and
+  .metrics == {serialEstimateMin:60,criticalPathMin:20,criticalPathRatio:(1/3),largestCriticalTask:{id:"T1",estimateMin:20,criticalPathShare:1}} and
+  (.waves | map(.taskIds)) == [["T1","T2","T3"]]
+' "$TMP/out" >/dev/null || fail 'small independent plan metrics/waves mismatch'
+pass 'three independent 20-minute tasks pass without artificial dependency chains'
+
 node -e 'const x=JSON.parse(require("fs").readFileSync(process.argv[1]));process.stdout.write(x.tasks.find(t=>t.id==="T1").content)' "$TMP/valid-1.json" >"$TMP/packet"
 cat >"$TMP/expected-packet" <<'PACKET'
 # Plan task T1
@@ -100,6 +108,7 @@ run_status 2 node "$TOOL" check "$FIXTURES/missing-worker-check.md" --json
 jq -e '(.diagnostics|length)>0 and (.diagnostics|map(.code)|unique) == ["PLAN_WORKER_CHECK"]' "$TMP/out" >/dev/null || fail 'missing-worker-check is not isolated'
 run_status 1 node "$TOOL" check "$FIXTURES/threshold-failure.md" --json
 jq -e '(.diagnostics|map(.code)) == ["GATE_CRITICAL_PATH_RATIO","GATE_CRITICAL_TASK_SHARE"]' "$TMP/out" >/dev/null || fail 'threshold fixture does not cover both threshold gates'
+jq -e '.diagnostics[] | select(.code == "GATE_CRITICAL_TASK_SHARE") | .message == "T1 estimate 21 min exceeds max(20 min, 20% of critical path) = 20 min; split T1 into smaller decision-complete packets"' "$TMP/out" >/dev/null || fail 'large critical task diagnostic lacks the exact threshold and remedy'
 pass 'multiple diagnostics are sorted and isolated compiler gates are covered'
 
 sed 's/$/\r/' "$FIXTURES/valid-diamond.md" >"$TMP/crlf.md"

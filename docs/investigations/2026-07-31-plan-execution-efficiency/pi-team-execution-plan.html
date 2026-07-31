@@ -442,8 +442,8 @@
     <script type="text/plain" class="diagram-source">
 flowchart TD
   A["💬 CONVERSE<br/>normal chat with the lead<br/>(optional /discovery, /design)"] -->|"👤 /pi-team-plan"| B["📄 PLAN<br/>lead writes plan.md<br/>from the conversation"]
-  B --> C{"🤖 4 mechanical gates<br/>critical path ≤ 60% · no task > 20%<br/>write-sets disjoint · packets self-sufficient"}
-  C -->|fail| B2["🤖 lead splits /<br/>decouples tasks"] --> C
+  B --> C{"🤖 4 mechanical gates<br/>critical path ≤ 60% · largest task ≤ max(20 min, 20% of path)<br/>write-sets disjoint · packets self-sufficient"}
+  C -->|fail| B2["🤖 lead splits oversized /<br/>decouples tasks; no artificial chains"] --> C
   C -->|pass| D{"risk flags or<br/>approval requested?"}
   D -->|"yes → 👤 approve"| E
   D -->|no| E["⚙️ EXECUTE<br/>board + workers + reviewer<br/>waves → broad gate → commit"]

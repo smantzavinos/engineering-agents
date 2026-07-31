@@ -48,8 +48,9 @@ through this rollout.
 ### `check PLAN.md [--json]`
 
 - Checks required fields/columns, unique/resolved IDs, allowed lanes/risks, positive estimates,
-  worker/integration/final check coverage, DAG validity, deterministic waves, critical-path
-  thresholds, same-wave normalized write-set disjointness, and mechanical packet resolution.
+  worker/integration/final check coverage, DAG validity, deterministic waves, critical path ≤ 60%
+  of serial estimate, largest critical-path task estimate ≤ max(20 minutes, 20% of the critical
+  path), same-wave normalized write-set disjointness, and mechanical packet resolution.
 - Human mode prints the summary to stdout and sorted `CODE: message (location)` diagnostics to
   stderr. `--json` prints one object and nothing to stderr with this versioned shape:
 
@@ -171,10 +172,11 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 **TDD:**
 
-1. Add fixtures for valid diamond DAG; cycle; dangling references; invalid lane/risk/path;
-   zero estimate; missing worker/integration/final checks; write overlap; threshold failure;
-   malformed/unsupported tables; stable config coexisting with init; runtime-state refusal; and
-   tracked/untracked review changes.
+1. Add fixtures for a valid diamond DAG; a valid small plan with three independent tasks of at
+   most 20 minutes; cycle; dangling references; invalid lane/risk/path; zero estimate; missing
+   worker/integration/final checks; write overlap; a task over 20 minutes and over the allowed
+   critical-path share; malformed/unsupported tables; stable config coexisting with init;
+   runtime-state refusal; and tracked/untracked review changes.
 2. Write failing spec for grammar, diagnostic schema/order, exit codes, deterministic JSON,
    metrics/waves, atomic no-clobber record shape, exact packet bytes, review manifest/bundles,
    and no task creation.

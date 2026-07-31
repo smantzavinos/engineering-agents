@@ -68,8 +68,8 @@ there is no mandatory pre-plan stage or durable artifact. `/pi-team-plan` begins
 The lead creates `plans/YYYY_MM_DD_<slug>/plan.md` using §6, then runs two gates:
 
 1. **Mechanical gate:** schema and reference integrity; acyclic dependencies; deterministic
-   wave derivation; critical path ≤ 60% of serial estimate; no task > 20% of the critical path;
-   no same-wave write-set overlap.
+   wave derivation; critical path ≤ 60% of serial estimate; largest critical-path task estimate
+   ≤ max(20 minutes, 20% of the critical path); no same-wave write-set overlap.
 2. **Fresh semantic review:** verifies intent coverage, packet sufficiency, check adequacy,
    risk/approval classification, and that no implementer decision remains.
 

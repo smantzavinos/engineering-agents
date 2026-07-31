@@ -63,9 +63,11 @@ chunked into consecutive groups of four. A task can be dispatched only in its co
 
 ## Scheduling thresholds
 
-The estimated critical path must be `critical path <= 60% of serial estimate`; the largest task on
-that path must be `largest task on critical path <= 20% of critical path`. These are mechanical
-validation gates, calculated from `Estimate min` and the dependency DAG.
+The estimated critical path must be `critical path <= 60% of serial estimate`. The largest task on
+that path must satisfy `estimate <= max(20 minutes, 20% of critical path)`. These are mechanical
+validation gates, calculated from `Estimate min` and the dependency DAG. If the largest-task gate
+fails, split that task into smaller decision-complete packets; do not add artificial dependency
+chains or ceremony-only tasks to manipulate the ratio.
 
 ## Check and integration rules
 

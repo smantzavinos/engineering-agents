@@ -90,8 +90,10 @@ def main():
 
     biggest = max(chain, key=lambda t: dur[t])
     share = dur[biggest] / cp * 100
+    largest_limit = max(20, cp * 0.2)
     print(f"Largest packet on path: {biggest} = {dur[biggest]:.1f} min "
-          f"({share:.0f}% of critical path)   [threshold <= 20%]")
+          f"({share:.0f}% of critical path)   "
+          f"[threshold <= max(20 min, 20%) = {largest_limit:.1f} min]")
 
     lvl = depth_levels(deps)
     waves = collections.defaultdict(list)

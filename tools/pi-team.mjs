@@ -156,7 +156,11 @@ function compilePlan(filename, writeRoot = process.cwd()) {
   }
   const metrics = computeMetrics(sortedTasks, graph);
   if (metrics.criticalPathRatio > 0.6) add('GATE_CRITICAL_PATH_RATIO', `critical path ratio ${metrics.criticalPathRatio} exceeds 0.6`, 'Tasks', parsed.Tasks.headingRow, 'Estimate min');
-  if (metrics.largestCriticalTask.criticalPathShare > 0.2) add('GATE_CRITICAL_TASK_SHARE', `${metrics.largestCriticalTask.id} critical-path share ${metrics.largestCriticalTask.criticalPathShare} exceeds 0.2`, 'Tasks', taskMap.get(metrics.largestCriticalTask.id).row, 'Estimate min');
+  const largestCriticalTaskLimit = Math.max(20, metrics.criticalPathMin * 0.2);
+  if (metrics.largestCriticalTask.estimateMin > largestCriticalTaskLimit) {
+    const task = metrics.largestCriticalTask;
+    add('GATE_CRITICAL_TASK_SHARE', `${task.id} estimate ${task.estimateMin} min exceeds max(20 min, 20% of critical path) = ${largestCriticalTaskLimit} min; split ${task.id} into smaller decision-complete packets`, 'Tasks', taskMap.get(task.id).row, 'Estimate min');
+  }
   for (const wave of waves) {
     for (let leftIndex = 0; leftIndex < wave.taskIds.length; leftIndex += 1) for (let rightIndex = leftIndex + 1; rightIndex < wave.taskIds.length; rightIndex += 1) {
       const left = taskMap.get(wave.taskIds[leftIndex]); const right = taskMap.get(wave.taskIds[rightIndex]);

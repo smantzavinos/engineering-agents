@@ -25,7 +25,7 @@ Approval: auto
 |---|---|---|---|---|---|---|---|---|---|---|
 | T10 | — | cheap | 1 | — | G1 | Add tenth support file | sandbox/t10.txt | C1 | D1 | K1 |
 | T3 | T2 | std | 1 | — | G1 | Implement branch alpha | sandbox/t3.txt | C1 | D1 | K1 |
-| T1 | — | complex | 10 | api-contract | G1 | Establish the root behavior | sandbox/t1.txt | C1 | D1 | K1 |
+| T1 | — | complex | 21 | api-contract | G1 | Establish the oversized root behavior | sandbox/t1.txt | C1 | D1 | K1 |
 | T9 | — | visual | 1 | — | G1 | Add ninth support file | sandbox/t9.txt | C1 | D1 | K1 |
 | T5 | T2 | visual-complex | 1 | auth | G1 | Implement branch beta | sandbox/t5.txt | C1 | D1 | K1 |
 | T2 | T1 | std | 1 | — | G1 | Extend the root behavior | sandbox/t2.txt | C1 | D1 | K1 |

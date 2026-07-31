@@ -260,7 +260,8 @@ if grep -Fq 'Read `references/plan-contract.md` before authoring or validating a
   && grep -Fq 'integration:G<n>' "$plan_contract" \
   && grep -Fq 'Wave = dependency depth' "$plan_contract" \
   && grep -Fq 'critical path <= 60% of serial estimate' "$plan_contract" \
-  && grep -Fq 'largest task on critical path <= 20% of critical path' "$plan_contract" \
+  && grep -Fq 'estimate <= max(20 minutes, 20% of critical path)' "$plan_contract" \
+  && grep -Fq 'do not add artificial dependency' "$plan_contract" \
   && grep -Fq '# <title>' "$plan_contract"; then
   pass "pi-team-plan loads a self-contained v1 grammar, rules, and template reference"
 else
