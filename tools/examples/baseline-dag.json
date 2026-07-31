@@ -1,0 +1,21 @@
+{
+  "_comment": "Baseline DAG from an 18-task sequential child plan (private repo, redacted). Dependencies transcribed from the plan task table; durations are MEASURED wall-clock minutes per task (first attempt only, excluding one hardening re-run and one failed dispatch).",
+  "T1":  {"dur": 12.5, "deps": []},
+  "T2":  {"dur": 5.5,  "deps": []},
+  "T3":  {"dur": 6.5,  "deps": ["T1"]},
+  "T4":  {"dur": 4.3,  "deps": ["T1", "T2"]},
+  "T5":  {"dur": 4.5,  "deps": ["T1", "T2"]},
+  "T6":  {"dur": 7.2,  "deps": ["T3", "T4", "T5"]},
+  "T7":  {"dur": 16.0, "deps": ["T6"]},
+  "T8":  {"dur": 9.2,  "deps": ["T3"]},
+  "T9":  {"dur": 6.3,  "deps": ["T4"]},
+  "T10": {"dur": 4.6,  "deps": ["T5"]},
+  "T11": {"dur": 6.6,  "deps": ["T3", "T4", "T5"]},
+  "T12": {"dur": 4.9,  "deps": ["T3", "T4", "T5"]},
+  "T13": {"dur": 5.2,  "deps": ["T3", "T4", "T5"]},
+  "T14": {"dur": 4.9,  "deps": ["T2"]},
+  "T15": {"dur": 29.7, "deps": ["T7", "T14"]},
+  "T16": {"dur": 17.3, "deps": ["T15"]},
+  "T17": {"dur": 2.1,  "deps": ["T4", "T5", "T12", "T13"]},
+  "T18": {"dur": 5.9,  "deps": ["T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","T13","T14","T15","T16","T17"]}
+}
