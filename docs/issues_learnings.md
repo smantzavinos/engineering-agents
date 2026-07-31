@@ -36,3 +36,27 @@ _No entries yet._
   contract and caused repeated task-board polling. Contract packets should start immediately,
   blocked members should stop until messaged, and final review should use fresh strong context.
 - Follow-up: ADR 0002 and `docs/team-mode-execution.md`
+
+### Ephemeral agent run state is not covered by the `.pi` gitignore rule
+- Date: 2026-07-31
+- Type: issue
+- Source: `docs/investigations/2026-07-31-plan-execution-efficiency/` (commit `cad5f8d`)
+- Summary: `.gitignore` contained `.pi`, which matches only that exact name — not sibling
+  directories like `.pi-subagents/`. Four research subagent runs left full transcripts,
+  inputs, and metadata in `.pi-subagents/artifacts/` and these were staged by a routine
+  `git add -A`. Subagent transcripts embed raw task text, which carries file paths and
+  feature names, so this is a disclosure risk in any public repo, not just noise.
+- Follow-up: `.pi-subagents/` added to `.gitignore`. When adopting any agent extension that
+  writes run state, confirm its directory is ignored before the first delegated run.
+
+### Prefer source inspection over runtime spikes for "does the tool do X" questions
+- Date: 2026-07-31
+- Type: learning
+- Source: `docs/investigations/2026-07-31-plan-execution-efficiency/notes/`
+- Summary: Five planned half-day integration spikes were replaced by four parallel read-only
+  source inspections of the candidate dependency. All five questions were resolved, one was
+  revealed to be moot (the mechanism did not exist), and two incorrect assumptions in the
+  design were caught before any code was written. Reading cannot establish integration
+  reality, race behavior, or version skew — those still need one cheap smoke test.
+- Follow-up: The same principle the investigation applied to verification gates — do not run
+  expensive verification where cheap verification suffices.

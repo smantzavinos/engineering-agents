@@ -493,9 +493,9 @@ sequenceDiagram
   actor H as 👤 Human
   participant L as Lead<br/>(primary Pi)
   participant B as Board<br/>(pi-messenger)
-  participant W as Worker<br/>(subagent)
+  participant W as Worker<br/>(crew)
   participant R as Reviewer
-  participant X as ⚡ Extensions<br/>(watchdog · LSP)
+  participant X as ⚡ Extensions<br/>(reservations · feed)
   participant G as Git
 
   rect rgba(180,83,9,0.06)
@@ -522,7 +522,7 @@ sequenceDiagram
     B-->>W: task ready 【BOARD EVENT wakes worker】
     W->>B: claim + reserve write set 【AGENT: reserve】
     W->>W: implement + cheap check 【AGENT: edit/bash】
-    X-->>W: diff review + LSP at turn end 【EXTENSION, edit-gated】
+    X-->>W: block edits outside reserved set 【EXTENSION, edit/write only】
     W->>B: handoff + release 【AGENT: ≤15 lines】
     B-->>R: review trigger 【EXTENSION: crew auto-review】
     R->>B: verdict SHIP 【AGENT】
@@ -585,7 +585,7 @@ sequenceDiagram
   W->>B: handoff task T3 【AGENT】
   B-->>R: review trigger 【EXTENSION auto】
   R->>B: NEEDS_WORK + findings 【AGENT】
-  note over B,W: retry #1 — RESUME, not restart
+  note over B,W: retry #1 — fresh worker, findings carried
   B-->>W: task reset: fresh worker,<br/>findings + progress log injected 【BOARD】
   W->>B: handoff v2 【AGENT】
   B-->>R: re-review 【EXTENSION auto】

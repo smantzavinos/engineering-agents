@@ -9,6 +9,7 @@ sequential mode.
 | `pi-team-execution.md` | **The design.** Roles, lifecycle, event model, context rules. Start here. |
 | `pi-team-execution-plan.html` | Visual companion — sequence diagrams, trigger taxonomy, model tiers. |
 | `implementation-plan.md` | The rollout checklist: install, spikes, build, skills, docs, calibration. |
+| `notes/` | Substrate findings from `pi-messenger` source inspection, with `file:line` citations. |
 
 Supporting tooling produced by this work lives in `tools/` (see Analysis tools below), not
 here, because this directory is staging. Per `implementation-plan.md` Phase 4,
@@ -45,7 +46,7 @@ approval on fat packets and single-task tail waves.*
 Rework was **27% of subagent time**, and the ordering defect was introduced in T7 but not
 caught until after T18.
 → *Design response: review fires on every handoff, not at plan end. Per-task break-it is
-retired in favour of contracts + handoff review + watchdog + wave gates.*
+retired in favour of contracts + handoff review + wave gates.*
 
 **3. Verification cost is concentrated, not uniform.** ~7.5 gate invocations per task,
 ≈21–24% of implementer time — but backend gates cost 4–13 s warm while frontend lint cost
@@ -60,7 +61,9 @@ worker; expensive profiles are lead-owned wave gates.*
 
 **5. Rework is mostly re-discovery.** A remediation agent starting fresh re-reads the plan,
 re-locates files, and re-derives a mental model before changing a few lines.
-→ *Design response: retry #1 resumes the original worker's session; only escalation goes fresh.*
+→ *Design response: the retry carries the review findings and the worker's own progress log
+rather than starting cold. (An earlier draft resumed the original session; source inspection
+later showed Crew workers run `--no-session`, so resume is unavailable — see `notes/`.)*
 
 > **A caution worth keeping.** An earlier draft reported gate cost at 45–59% of implementer
 > time from 25 s/64 s measurements. Those were cold-cache first invocations; warm re-runs gave
@@ -76,8 +79,8 @@ Verdicts from surveying the Pi ecosystem for a coordination substrate:
 
 | Package | Verdict | Why |
 |---|---|---|
-| **`pi-subagents`** | **Adopt** (installed) | The execution primitive: spawn/resume/steer, worktrees, budgets, intercom, durable lifecycle artifacts, edit-gated watchdog. Cannot provide a durable board or file locks. |
-| **`pi-messenger`** | **Adopt** | The only candidate with a dependency-ordered task board *and* file reservations that block *and* a built-in review-on-handoff loop with retry-with-feedback. Cross-process (file-based). `task.create` accepts `dependsOn`/`model`/`riskLabels` (verified in source), so our plan DAG can be projected onto the board without running its own planner. |
+| **`pi-subagents`** | **Adopt** (installed) | Spawn/resume/steer, worktrees, budgets, intercom, durable lifecycle artifacts, edit-gated watchdog. **Used lead-side only** — see the correction below. Cannot provide a durable board or file locks. |
+| **`pi-messenger`** | **Adopt** | The only candidate with a dependency-ordered task board *and* file reservations that block *and* a built-in review-on-handoff loop with retry-with-feedback. Cross-process (file-based). `task.create` accepts `dependsOn`, `role`, and `riskLabels`, so our plan DAG can be projected onto the board without running its own planner. |
 | **`pi-hooks`** | **Adopt** (lsp, checkpoint) | Free per-edit diagnostics; per-turn rollback refs. |
 | `pi-dynamic-workflows` | **Defer** | Excellent deterministic wave engine with journaled edited-script replay — best fit for epic-level repeated cohorts. Revisit after single-plan team mode works. |
 | `@gjczone/pi-swarm` | **Decline** | Redundant second spawner alongside `pi-subagents`; no task board or DAG. Its pattern/keyword auto-routing idea is worth stealing separately. |
@@ -89,6 +92,14 @@ Two runtime constraints that shaped the design:
   and nesting is depth-bounded — so the team lead must be the primary Pi session.
 - **Forking strips Anthropic thinking blocks** and forces child thinking to `off`, which is
   why workers get a fresh packet rather than a forked context.
+
+> **Correction from source inspection.** This table was written before reading
+> `pi-messenger`'s source, and its division of labour was wrong. Crew spawns its own
+> `pi --mode json --no-session` workers and explicitly does not launch `pi-subagents`
+> (`crew/handlers/plan.ts:599`). `pi-subagents` is therefore **not** the execution primitive
+> for task work; it is used lead-side only, for rescuing blocked tasks and the final review.
+> That also removes worker session resume, watchdog coverage over workers, and `status.json`
+> cost telemetry. Full findings with citations: `notes/`.
 
 **On watching for code changes:** review triggers on *handoff*, not on commit. In this design
 the lead is the only committer and commits happen at wave gates, so commit-triggered review
