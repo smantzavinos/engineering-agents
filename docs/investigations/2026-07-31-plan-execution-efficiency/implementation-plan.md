@@ -1,194 +1,284 @@
 # Implementation Plan: Pi Team Execution
 
-**Status:** proposal — actionable checklist
+**Status:** reviewed additive rollout; authorized for implementation
 **Date:** 2026-07-31
-**Implements:** `pi-team-execution.md` (design) · `pi-team-execution-plan.html` (visual)
-**Evidence:** `README.md` — measured baseline and extension evaluation ·
-`notes/` — substrate findings from source inspection
+**Implements:** `pi-team-execution.md`
+**Evidence:** `README.md` and `notes/`
 
-**Progress so far:** the five original spikes are **resolved by source inspection**, and the
-**Phase 0 substrate gate has passed** — `pi-messenger@0.15.0` (tag `v0.15.0`, commit `2f5e7dc`)
-runs 408/408 of its own tests. See `notes/`. Nothing is installed or configured yet:
-`pi-messenger` is not installed, and there is no messenger config or Team profile.
-**Phase 1 is the next actionable work.**
+**Current state:** upstream substrate unit gate passed at `pi-messenger@0.15.0`; nothing is
+installed or configured. Canonical process, requirements, and OpenCode behavior remain unchanged
+through this rollout.
 
-**Repo constraint:** Pi is installed and configured **declaratively via the Nix flake +
-home-manager**, not by `pi install` / `pi config`. See "Nix constraints" under Phase 1.
+## Phase 0 — Upstream substrate gate ✅
 
-Ordered so each phase de-risks the next. The substrate gate is **Phase 0 and costs nothing** —
-it is upstream's own test suite in a clone, needing no install at all. Everything that touches
-this machine or this repo happens only after it passes.
+- [x] At clean tag `v0.15.0`, commit
+      `2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab`, ran `npm install && npx vitest run` twice:
+      **408/408 tests, 42 files**. This validates the upstream substrate contract, not this repo's
+      deployment.
 
----
+## Locked decisions
 
-## Phase 0 — Substrate gate ✅ **PASSED 2026-07-31**
-
-The gate is upstream's own test suite, run against the version we intend to pin. It needs no
-install, no config, no Team profile, and no `nix/` change — just a clone. Deterministic,
-~1.4 s, zero model spend.
-
-- [x] **Ran the upstream suite at the version to be pinned.** Clone at tag `v0.15.0`,
-      commit `2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab` ("chore: release 0.15.0"), clean tree,
-      `npm install && npx vitest run` → **408/408 passed, 42 files, 1.35 s.** Reproduced twice.
-      ⇒ **`pi-messenger@0.15.0` is the validated pin for Phase 1.**
-
-Why this is sufficient, and why the live smoke test that used to sit here was deleted:
-
-- The suite executes this design's exact materialization path and asserts the lane role's
-  model reaches the spawned worker (`team-work.test.ts:94`), the full precedence chain
-  (`model-override.test.ts:70`), the resolved model landing on the `--model` flag (`:83`), and
-  strict-vs-advisory dependency enforcement (`task-actions.test.ts:52,66`). See
-  "Verified by upstream's own test suite" in `notes/README.md`.
-- There is **no build step** — the published npm package ships this same TypeScript source —
-  so artifact-vs-source parity, the strongest argument for a live check, is a non-question.
-- The two genuinely untested things (real model IDs resolving, true concurrency) are a config
-  concern and a control we do not rely on: the plan-time disjoint write-set gate is the real
-  collision guarantee [SUB-4], not Crew's scheduler. Both are exercised for free while
-  building against the tool in Phase 2 and during the Phase 5 calibration run, which deliver
-  value regardless. A bespoke smoke test would have sampled once what the suite proves
-  exhaustively.
-
-## Phase 1 — Install, declare in Nix, and configure
-
-**This repo installs Pi declaratively via a Nix flake + home-manager.** `pi install ...` and
-`pi config` are the wrong verbs here — see "Nix constraints" below.
-
-- [ ] **Declare `pi-messenger` in `nix/modules/pi/default.nix`** under `piPackages`, following
-      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Pin
-      **`pi-messenger@0.15.0`** — the version the Phase 0 gate validated. For a git source use
-      the 40-hex commit `2f5e7dc9c77fd7a3fba4728931e8564ce48d9bab`, never a branch or tag ref,
-      which defeats the no-change rebuild skip (`nix/AGENTS.md`).
-- [ ] **Update `tests/fixtures/proof-set.json` in the same change** if the package ships
-      extensions/skills/themes, with its `resourceExpectations`. This is an enforced contract
-      (`tests/specs/proof-set-runtime-spec.sh`), not a formality.
-- [ ] **Run `home-manager switch`**, then confirm `pi-messenger` appears in the generated
-      `packages` list and the `pi_messenger` tool is callable.
-- [ ] **Create and activate the Team profile** — `worker-cheap`, `worker-std`,
-      `worker-complex` (with `thinking`), `worker-visual`, plus `approval.mode: "risk-labels"`
-      with our risk labels. **Verify it is active** [SUB-2b].
-- [ ] **Add `checkpoint` to the module's Pi settings** if wanted (per-turn rollback refs).
-      `lsp` is already configured declaratively (`hookMode = "agent_end"`) — nothing to do.
-      Both apply to the **lead session**; reaching Crew workers requires adding the extension
-      path to `crew-worker.md` frontmatter.
-- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
-      [SUB-1], so it is not a quality control for task work.
-- [ ] **Write the messenger config** — `~/.pi/agent/pi-messenger.json`, project override at
-      `.pi/messenger/crew/config.json`:
-      `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
-      `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
-      `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
-      **These paths are not Nix-managed.** Prefer the project-level override — it is
-      version-controlled with the repo.
-- [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
-      replace its criteria with ours (project-level agents override extension defaults by name).
-- [ ] Re-check `plan.json`'s five-field shape [SUB-8] after any `pi-messenger` version bump.
-
-### Nix constraints this plan must respect
-
-| Constraint | Consequence for this plan |
+| Decision | Resolution |
 |---|---|
-| Packages are declared in `nix/modules/pi/default.nix` (`piPackages`) and installed by the home-manager activation script | A `pi install` is invisible to the flake: unpinned, unreproducible, absent from a new machine. Adoption **must** be a declaration, not a command. |
-| Activation does **not** prune undeclared packages | An imperative install silently persists and appears to work — the failure is deferred to the next machine, which is the worse failure mode. |
-| `settings.json` is **merged with Nix winning** (`jq -s '.[0] * .[1]'`, Nix second) | Hand-editing any Nix-managed settings key is silently reverted on the next `home-manager switch`. Pi-level settings changes must go in the module. |
-| Pi's `packages` list is generated from `piRuntimePackageIds` | A declared package is wired into Pi automatically. |
-| `lsp.hookMode = "agent_end"` is **already set** declaratively | The old "enable `lsp` via `pi config`" step was redundant and wrong. Dropped. |
-| Git-source packages must pin a 40-hex commit; `tests/fixtures/proof-set.json` updates in the same change (`nix/AGENTS.md`) | "Pin versions" is a repo contract with a test, not a reminder. |
+| Rollout shape | Additive. Do not replace current canonical process, requirements, shared skills, OpenCode rendering, or archive anything. |
+| Package | Npm `pi-messenger@0.15.0`; expose `./index.ts` and skill `pi-messenger-crew`. |
+| Stable config | `config/pi-team/` is canonical; track one narrow `.pi` symlink for project Crew config; Nix links the global `pi-team` profile from the same source tree. Runtime board/team state remains ignored. |
+| Models | `github-copilot/gpt-5.6-terra` for cheap/std/visual; `github-copilot/gpt-5.6-sol` for complex/visual-complex/reviewer/rescue/final review. |
+| Risk approval | Labels `migration`, `destructive`, `auth`, `api-contract` always require human approval. |
+| Skills | New unique Pi-only canonical skills rendered by the existing pipeline and linked through Nix. Do not modify shared `/discovery` or `/design`. |
+| Tools | One deterministic Node CLI, `tools/pi-team.mjs`, with `check`, `init-board`, and `review-wave`. Board task creation remains lead-issued `pi_messenger` calls [SUB-7]. |
+| Telemetry | Lead-authored `telemetry.md` from observable fields; no separate harvester in the first rollout. Missing data is `unavailable` [SUB-5]. |
+| Promotion | Calibration must pass before a separate approved requirements/process migration. |
 
-## Phase 2 — Build `pi-team` (repo-local extension/scripts)
+## Tool contract
 
-Three small pieces. **`pi_messenger` is a Pi tool, not a CLI** [SUB-7], which decides what can
-be a script and what cannot:
+`tools/pi-team.mjs` is dependency-free Node ESM.
 
-- [ ] **`plan-gates`** — a real script (pure file analysis, no messenger involvement): the 4
-      mechanical checks against a `plan.md` task table:
-      critical path ≤ 60% of serial · no task > 20% of critical path ·
-      same-wave write-sets disjoint · every task packet self-sufficient (no dangling refs).
-      Reuse `tools/critical-path.py` (already emits every verdict; wrap it with the
-      write-set and self-sufficiency checks). Output: pass/fail + remedy hints. CLI-invokable.
-- [ ] **`board-materializer`** — **not a script** [SUB-7]. Board creation happens inside a Pi
-      session as `pi_messenger` tool calls, so this is lead-agent behavior specified in the
-      `pi-team-lead` skill: assert the Team profile is active [SUB-2b], ensure the plan record
-      exists [SUB-3], then walk the plan's Tasks/Contracts/Decisions tables issuing
-      `task.create` calls (deps from Deps col, `role` from the lane map [SUB-2], `riskLabels`
-      from risk flags, packet body as task content, worker contract line injected). A helper
-      script may *parse the plan and emit the intended calls* for the lead to execute, but it
-      cannot make them itself.
-- [ ] **`telemetry-harvest`** — a real script (plain reads of `.pi/messenger/crew/`): task
-      state, progress logs, the activity feed, and optional debug artifacts at close → emit the
-      telemetry table (wall-clock, per-task time, defects-by-origin, rework share) into the plan
-      directory as `telemetry.md`. Crew stores no per-task cost [SUB-5]; source it separately or
-      record the gap. **Must redact free-text task fields by default** — raw task text embeds
-      plan paths, file names, and feature names.
-- [ ] Later, optional: lane auto-suggestion from write-set globs
-      (`*.tsx` → `visual`, `**/migrations/**` → `complex` + `riskLabels`).
+### Input grammar
 
-## Phase 3 — Write the 5 skills (replacing ~19)
+- UTF-8 Markdown, CRLF normalized to LF. The line `Plan schema: 1` is mandatory; all other
+  versions are unsupported.
+- Section names and table headers must exactly match `pi-team-execution.md` §4. Tables are
+  single-line pipe tables; cells are trimmed; escaped or literal `|` inside cells, multiline
+  cells, duplicate sections, and text after `## Tasks` are rejected.
+- IDs and paths follow §4 exactly. Numeric task ID controls natural order (`T2` before `T10`).
+- The v1 warning policy is **no warnings**: every diagnostic is an error and affects the exit
+  status. Diagnostic codes are stable uppercase identifiers.
 
-All under `skills/` (or `.pi/skills/` if we keep them repo-local first — decide at Phase 3
-start; repo-local is safer for iteration).
+### `check PLAN.md [--json]`
 
-| Skill | Frontmatter | Content |
-|---|---|---|
-| `/pi-team-plan` | `disable-model-invocation: true` | The pivot: create `plans/<date>-<slug>/`, freeze conversation → `plan.md` (Intent · Contracts · Decisions · Checks · Tasks template inline), run `plan-gates`, approval only if risk-flagged/requested, then hand to `pi-team-lead` |
-| `/discovery` | `disable-model-invocation: true` | Slimmed Socratic mode (adapt from existing `discovery` skill, cut artifact ceremony) |
-| `/design` | `disable-model-invocation: true` | Slimmed option-comparison + throwaway scout fanout (adapt from existing `design`; output to chat, not files) |
-| `pi-team-lead` | model-discoverable | Execution protocol: materialize board → dispatch → event table (§07 of the HTML) → wave gate + commit → escalation ladder → close sequence |
-| `pi-team-worker` | injected into packets, not discoverable | Claim/reserve/implement/check/handoff(≤15 lines)/release contract; never commit, never broad suites |
+- Checks required fields/columns, unique/resolved IDs, allowed lanes/risks, positive estimates,
+  worker/integration/final check coverage, DAG validity, deterministic waves, critical-path
+  thresholds, same-wave normalized write-set disjointness, and mechanical packet resolution.
+- Human mode prints the summary to stdout and sorted `CODE: message (location)` diagnostics to
+  stderr. `--json` prints one object and nothing to stderr with this versioned shape:
 
-Keep each skill under ~150 lines. State every rule once; the lead skill links to the plan
-template rather than restating it.
+```typescript
+{
+  schemaVersion: 1,
+  valid: boolean,
+  diagnostics: Array<{ code: string, message: string, location: { section: string, row: number, field: string } }>,
+  metrics: null | { serialEstimateMin: number, criticalPathMin: number, criticalPathRatio: number,
+    largestCriticalTask: { id: string, estimateMin: number, criticalPathShare: number } },
+  waves: Array<{ index: number, taskIds: string[], integrationGroups: string[] }>,
+  tasks: Array<{ id: string, title: string, content: string, deps: string[], lane: string,
+    estimateMin: number, riskLabels: string[], integration: string, deliverable: string,
+    writeSet: string[], contracts: string[], decisions: string[], check: string }>
+}
+```
 
-## Phase 4 — Documentation
+  Equal-length critical chains and equal largest-task shares choose the lowest numeric task ID.
+- Diagnostics are `{code,message,location:{section,row,field}}`. `row` is the 1-based physical
+  source line. Sort by code, section, row, field, then message. Contract/parse diagnostics use
+  `PLAN_*`; gate diagnostics use `GATE_*`.
+- Cycles, dangling dependencies, and other cases without computable metrics/waves are malformed
+  contracts and exit `2`; JSON emits `metrics: null`, `waves: []`, and `tasks: []`.
+  Exit `1` is reserved for a structurally valid DAG failing threshold or overlap gates, so its
+  metrics/waves are always complete. Exit `0` is valid.
+- Numeric IDs compare as arbitrary-size digit strings: digit count, then lexical value. Equal
+  critical chains choose the lexicographically lowest full numeric-ID sequence; equal largest
+  tasks on that chain choose the lowest numeric ID. Arrays use those rules. Same input yields
+  byte-identical JSON.
 
-New/replacing docs in this repo:
+### `init-board PLAN.md --crew-dir DIR --repo-root ROOT`
 
-- [ ] **`docs/pi-team-execution.md`** — promote the design doc from the investigation dir
-      (near-verbatim). This is the canonical process doc.
-- [ ] **`docs/pi-team-setup.md`** — the Phase 1 steps + preflight checklist (declared in
-      `piPackages`, `home-manager switch` applied, Team profile **active**,
-      `dependencies: strict`, reviewer override in place, `.pi-subagents/` and `.pi/messenger/`
-      ignored). Since install is declarative, provisioning a new machine is
-      `home-manager switch` plus the non-Nix messenger config — call out exactly which parts
-      are *not* reproducible.
-- [ ] **Update `AGENTS.md`** — route to the new process doc; mark the old pipeline docs as
-      superseded for Pi.
-- [ ] **Trim the three repo hooks** to their contracts: `docs/requirements.md`,
-      `docs/testing-strategy.md` (broad = wave gate, targeted = worker loop; drop
-      sequential-mode Red-Green-Break-Verify language), `docs/backlog.md` (unchanged).
-- [ ] **ADR** — one ADR recording: Pi-only, team-only, conversation-first, sequential mode
-      retired, substrate = `pi-messenger` Crew for execution with `pi-subagents` lead-side
-      only. Supersedes ADR 0002/0003 framing.
-- [ ] **Archive, don't delete:** `docs/orchestration.md`, `docs/team-mode-execution.md`,
-      OpenCode harness configs, and the ~14 retired skills move to an `archive/` (or a
-      branch) after the calibration run passes — not before.
+- Runs `check`; PLAN must resolve inside ROOT. `prd` is its normalized repo-relative path.
+- Allows stable `DIR/config.json` and `DIR/agents/`. Refuses only runtime entries:
+  `plan.json`, `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, or
+  `planning-outline.md`.
+- Atomically writes `DIR/plan.json` with `prd`, UTC ISO-8601 `created_at`/`updated_at`,
+  `task_count: 0`, and `completed_count: 0`, then copies the checked source to `DIR/plan.md`
+  as a runtime snapshot [SUB-3] [SUB-8]. It never creates tasks.
+- Exit `0`: initialized. Exit `1`: gate failure or existing runtime state. Exit `2`: malformed
+  input, unsafe path, or I/O failure. Human diagnostics go to stderr.
 
-## Phase 5 — Calibration run & acceptance
+### `review-wave PLAN.md --scope T1,T2 --bundle T2 --repo-root ROOT --base COMMIT --output-dir DIR`
 
-- [ ] Pick a real, representative task (ideally the next cohort of a repeated-shape epic).
-      Run it end-to-end: converse → `/pi-team-plan` → execute → close.
-- [ ] Harvest telemetry with the Phase 2 `telemetry-harvest` tool; compare against the reported
-      baseline in `README.md` (5.3 h active / 1.61x ceiling). **Cost is not directly comparable**
-      [SUB-5]; compare wall-clock and task counts, and note the gap.
-- [ ] **Acceptance criteria:** wall-clock ≤ 60% of a comparable sequential estimate ·
-      zero write-set collisions · all defects caught at handoff or wave gate (none surviving
-      to final review that a handoff reviewer should have caught) · human interruptions
-      limited to intent, flagged approvals, and the summary. **Cost is deliberately not an
-      acceptance criterion** [SUB-5] — a cost bound would be unfalsifiable. Track it
-      out-of-band if a ceiling matters.
-- [ ] Record results in `docs/issues_learnings.md`; fix the top friction points; only then
-      execute the archive step in Phase 4.
+- Runs `check`. Normal review uses the original wave for both comma-separated sets. Retry uses
+  scope = original wave and bundle = retried tasks. Integration remediation uses scope = original
+  wave plus failed-group tasks and bundle = tasks whose paths the remediation changed. Bundle IDs
+  must be a subset of scope; scope must match one computed chunk plus zero or more complete
+  integration groups.
+- The lead requires a clean tree when recording BASE. The command requires `HEAD == BASE`,
+  mechanically rejecting worker commits. It uses `git status --porcelain=v1 -z`,
+  `git diff --binary BASE -- <write-set>`, and binary no-index diffs for untracked files. Paths
+  are compared after plan normalization.
+- Exit `1` if any changed path is outside scope's write-set union, a bundled task has no changed
+  path, evidence exceeds 102400 bytes for a bundled task, or `HEAD != BASE`. Exit `2` for malformed
+  input/git/I/O errors. It never truncates evidence.
+- Atomically writes `<TASK_ID>.diff` for bundle IDs and `manifest.json`. Manifest schema:
+  `{"schemaVersion":1,"base":"<sha>","tasks":[{"id":"T2","bundle":"T2.diff","bytes":0,"sha256":"hex","changedPaths":["path"]}],"affectedGroups":[{"id":"G1","revision":"sha256"}]}`.
+  An integration revision hashes sorted `path NUL type NUL content-sha256` records for every
+  existing/missing path under the group's exact-file/directory union; symlinks fail closed.
+  `affectedGroups` includes every group whose union intersects any changed path. Tasks, groups,
+  and paths are numeric-ID/lexically sorted. Existing output is refused.
+- The lead passes each changed bundle plus the exact packet to a fresh read-only reviewer. Peer
+  write sets may be in allowed dirty scope but never enter another task's bundle.
 
-## Explicitly deferred
+Recovery moves only the seven board runtime entries above to
+`.pi/messenger/crew-runs/<YYYYMMDDTHHMMSSZ>/`. It never moves `config.json` or `agents/`.
+Incomplete started work requires human confirmation; pre-worker partial materialization may be
+archived automatically. Board materialization follows the byte-level packet template in
+`pi-team-execution.md` §4, captures returned Crew IDs, translates dependencies, and runs
+`crew.validate`. No hidden second plan format.
 
-- Cross-plan/epic parallelism (worktree-level; revisit `pi-dynamic-workflows` after Phase 5).
-- OpenCode support (design is Pi-only; the render pipeline stays untouched until archived).
-- Risk-tiering away any remaining verification rigor (only after live review is proven in
-  Phase 5 — never remove a control before its replacement works).
+## Tasks
+
+### T1 — Package and reproducible configuration
+
+**Depends:** Phase 0
+**Owns:** `nix/modules/pi/default.nix`, `tests/fixtures/proof-set.json`,
+`config/pi-team/{crew-config.json,team-profile.json}`, `.gitignore`,
+`.pi/messenger/crew/config.json`, `tests/specs/pi-team-config-spec.sh`,
+`tests/specs/pi-module-content-spec.sh`, `tests/specs/proof-set-runtime-spec.sh`,
+`tests/run-tests.sh`, `tests/README.md`
+**Requirements:** FR-002, OPR-001
+**Deliverables:**
+
+- Add npm package `pi-messenger@0.15.0` and exact proof expectations:
+  extension `./index.ts`, skill `pi-messenger-crew`, no themes.
+- Create the two canonical files under `config/pi-team/`. Nix links `team-profile.json` to
+  `~/.pi/agent/messenger/team-profiles/pi-team.json`; matching task risk labels persist pending
+  approval and are excluded from ready/start paths until `task.approve` [SUB-9].
+- Track one relative symlink from the admitted `.pi` config path to the canonical config.
+- Use the exact Crew JSON in `pi-team-execution.md` §5: four workers, strict dependencies,
+  Crew auto-review disabled, two attempts, one wave, stop on block, artifacts enabled, and
+  minimal coordination.
+- Narrowly unignore only the stable config symlink; leave all board/team/review/activity state
+  ignored.
+
+**TDD:**
+
+1. Add failing assertions to `pi-module-content-spec.sh`, `proof-set-runtime-spec.sh`, and a focused
+   `pi-team-config-spec.sh` for exact package/profile/config contracts.
+2. Implement the minimum declarations/files.
+3. Wire the new spec into `tests/run-tests.sh fast` and document it in `tests/README.md` in this
+   task.
+4. Break-it: prove runtime board files remain ignored and an invalid profile/risk policy fails.
+5. Verify:
+   `bash tests/specs/pi-team-config-spec.sh` ·
+   `bash tests/specs/proof-set-runtime-spec.sh` ·
+   `bash tests/specs/pi-module-content-spec.sh` · `./tests/run-tests.sh fast`.
+
+### T2 — Deterministic plan compiler and board initializer
+
+**Depends:** T1
+**Owns:** `tools/pi-team.mjs`, `tests/specs/pi-team-tool-spec.sh`,
+`tests/spec-fixtures/pi-team/`, `tests/run-tests.sh`, `tests/README.md`
+**Requirements:** FR-002, OPR-001
+**Deliverables:** implement the locked CLI contract and fixture-backed acceptance tests.
+
+**TDD:**
+
+1. Add fixtures for valid diamond DAG; cycle; dangling references; invalid lane/risk/path;
+   zero estimate; missing worker/integration/final checks; write overlap; threshold failure;
+   malformed/unsupported tables; stable config coexisting with init; runtime-state refusal; and
+   tracked/untracked review changes.
+2. Write failing spec for grammar, diagnostic schema/order, exit codes, deterministic JSON,
+   metrics/waves, atomic record/spec shape, exact packet bytes, review manifest/bundles, and no
+   task creation.
+3. Implement the minimum parser/checker/initializer/review bundler and wire/document the spec in
+   the fast suite.
+4. Break-it: shuffled task rows produce identical output; CRLF normalizes; traversal/symlink/glob
+   paths fail; partial/malformed board state is never overwritten; directory-prefix overlap is
+   detected; `config.json` and `agents/` survive initialization; out-of-set/untracked/oversized
+   review evidence fails closed; peer write sets never enter another task's bundle.
+5. Verify: `bash tests/specs/pi-team-tool-spec.sh` · `./tests/run-tests.sh fast`.
+
+### T3 — Additive Pi-only skills and deployment wiring
+
+**Depends:** T2
+**Owns:** `skills/pi-team-plan/`, `skills/pi-team-lead/`, `skills/pi-team-worker/`,
+`agents/pi-team-reviewer.md`, `dist/skills/pi/pi-team-{plan,lead,worker}/`,
+`nix/modules/pi/default.nix`, `tests/specs/skill-content-spec.sh`,
+`tests/specs/skill-render-spec.sh`, `tests/specs/pi-module-content-spec.sh`
+**Requirements:** FR-002, OPR-001
+**Deliverables:**
+
+- `pi-team-plan` (`disable-model-invocation: true`): create the exact plan contract; run CLI check;
+  commission fresh semantic review; never auto-waive risk approval.
+- `pi-team-lead`: active-profile preflight; exact init/materialization algorithm; clean-tree and
+  `HEAD == BASE` isolation; one-wave dispatch; review-bundle generation; fresh task-reviewer
+  calls; per-wave commits; board reset/block transitions; every affected completed integration
+  group once per content digest with two remediation revisions; bounded rescue; lead gates/close.
+- `pi-team-worker`: packet/write-set discipline, one minimal check, concise handoff, no commit/broad
+  suite/bash-write bypass.
+- `pi-team-reviewer` agent: read-only; one packet plus complete bundle; exact
+  `SHIP|NEEDS_WORK|MAJOR_RETHINK`; no truncation or peer-write-set inspection.
+- All three skills use `harnesses: [pi]`, render through the existing pipeline, and install via
+  Nix together with the reviewer agent.
+
+**TDD:**
+
+1. Add failing content/render/module assertions for Pi-only presence and required protocol anchors.
+2. Write the canonical skills and render with `node tools/render-skills.mjs --write`.
+3. Add Nix skill links.
+4. Break-it: verify no OpenCode outputs exist for these skills and no stale/hand-edited dist passes.
+5. Verify: `bash tests/specs/skill-content-spec.sh` ·
+   `bash tests/specs/skill-render-spec.sh` · `bash tests/specs/pi-module-content-spec.sh` ·
+   `./tests/run-tests.sh fast`.
+
+### T4 — Setup documentation and current-checkout deployment proof
+
+**Depends:** T3
+**Owns:** `docs/pi-team-setup.md`, `AGENTS.md`, `tests/specs/repo-readiness-docs-spec.sh`
+**Requirements:** FR-001, FR-002, NFR-002, OPR-001
+**Deliverables:** route an additive setup/preflight doc without changing canonical execution policy.
+Document package/profile/config provenance, profile activation, board recovery, exact gates, and
+that the investigation remains non-canonical pending calibration.
+
+**TDD and verification:**
+
+1. Add failing readiness assertions, then write the minimum doc/route.
+2. Break-it: stale package version, missing profile activation, or claims that runtime state is
+   tracked must fail the targeted spec.
+3. Run `bash tests/specs/repo-readiness-docs-spec.sh` and `./tests/run-tests.sh fast`.
+4. Run `./scripts/pi-dev.sh --verify` against the current checkout.
+5. Run `home-manager switch --flake .#<hostname>` for the active installation, then verify package,
+   skill, profile, project config, reviewer, and callable `pi_messenger` tool.
+6. Record any pre-existing environment failure separately; new failures block T4.
+
+### T5 — Bootstrap calibration and fresh final review
+
+**Depends:** T4
+**Owns:** `docs/investigations/2026-07-31-plan-execution-efficiency/calibration/bootstrap/`,
+`docs/investigations/2026-07-31-plan-execution-efficiency/README.md`,
+`docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html`,
+`docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh`,
+`docs/issues_learnings.md`;
+no canonical `plans/`, process, requirements, or backlog changes
+**Requirements:** FR-002, OPR-001
+**Deliverables:**
+
+1. Self-host the new flow on a frozen, file-disjoint documentation/tool task: align the
+   investigation `README.md` and visual HTML with the reviewed additive architecture, and extend
+   `check-doc-refs.sh` to reject the stale phrases `review-on-handoff`, `every handoff`,
+   `Phase 1b`, and `plans/<date>-<slug>` in those two promoted summaries. Store its
+   plan/review/telemetry under `calibration/bootstrap/`, outside canonical `plans/`.
+2. Freeze packet estimates and their serial sum before materialization. Use at most three workers
+   with the configured models.
+3. Record objective telemetry: timestamps, task/attempt/review-reset counts, out-of-write-set
+   findings, gate failures, classified interruptions, actual wall-clock, and frozen serial
+   estimate. Cost stays `unavailable`.
+4. Bootstrap pass: zero out-of-write-set changes; no significant defect surviving final review;
+   targeted/fast/deployment/all gates green relative to baseline; no unclassified interruption.
+5. Run `./tests/run-tests.sh all`, then commission a fresh
+   `github-copilot/gpt-5.6-sol` full-diff review. Allow at most two fresh remediation passes;
+   after each, rerun `all` and re-review. Completion requires both green on the same commit.
+6. Record outcomes and top friction in `docs/issues_learnings.md`.
+
+This bootstrap proves mechanics and does **not** count as a representative code-change run.
+Canonical promotion remains blocked until three additional representative code-change
+calibrations pass and their median wall-clock is ≤ 60% of their frozen serial estimates. Failure leaves the additive
+implementation available but **not canonical**. A later migration needs explicit approval and an
+inventory of `WF-005`, `FR-007`, `FR-008`, `NFR-003`, and `OPR-003` changes.
 
 ## Dependency graph
 
+```text
+Phase 0 ✅ → T1 package/config → T2 tool → T3 skills → T4 deploy/docs → T5 calibrate/final review
 ```
-Phase 0 GATE ✅ PASSED ──► Phase 1 (install + declare in nix + configure)  ← next
-  408/408 at v0.15.0        └─► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
-  nothing installed                          └──► Phase 4 docs (parallel with 3)
-```
+
+No tasks are parallelized in the bootstrap plan because T2 consumes T1's config contract, T3
+consumes T2's CLI contract, T4 proves the assembled deployment, and T5 consumes the live system.
+Team-mode parallelism begins with calibration, not while building its own control plane.

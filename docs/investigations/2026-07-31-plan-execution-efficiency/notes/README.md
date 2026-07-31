@@ -4,7 +4,7 @@ Read-only inspection of `pi-messenger` (v0.15.0) source, done in place of the fi
 spikes originally planned in `implementation-plan.md` Phase 1. Every claim carries a
 `file:line` citation against the upstream repo.
 
-Reference material only — per the loading rule in `pi-team-execution.md` §6, none of this is
+Reference material only — per the loading rule in `pi-team-execution.md` §4, none of this is
 injected into task packets.
 
 ## Substrate constraints (`SUB-n`) — cite these, don't restate them
@@ -25,7 +25,8 @@ cite its ID. Mechanism detail and `file:line` citations live here and nowhere el
 | **SUB-5** | No per-task cost is recorded | Crew stores no cost and no persistent tool counts | Cost cannot be an acceptance criterion; the calibration run is not cost-comparable to the baseline. |
 | **SUB-6** | Retry is fresh but not cold | Feedback persists to `task.last_review` and is injected into the retry prompt with up to 30 progress lines (`crew/prompt.ts:62-87`, `crew/handlers/review.ts:146-155`) | Retry #1 is a fresh worker carrying findings + progress; it does not re-discover from scratch. |
 | **SUB-7** | Actions are a **Pi tool**, not a CLI | `pi.registerTool({ name: "pi_messenger" })` (`index.ts:385`); `package.json` `bin` is only `install.mjs` | The board materializer **cannot be a standalone script**. It must run inside a Pi session as `pi_messenger` tool calls — i.e. lead-agent behavior. Only plan parsing, the gates, and telemetry harvesting (plain file reads) can be scripts. |
-| **SUB-8** | `plan.json` is a 5-field record | `createPlan` writes `prd`, optional `prompt`, `created_at`, `updated_at`, `task_count`, `completed_count` (`crew/store.ts:84-98`) | The direct-write coupling in SUB-3 is small and stable, not a broad internal schema. Lowers, but does not remove, the version-pin risk. |
+| **SUB-8** | `plan.json` has five required fields plus optional `prompt` | `createPlan` writes `prd`, optional `prompt`, `created_at`, `updated_at`, `task_count`, `completed_count` (`crew/store.ts:84-98`) | The direct-write coupling in SUB-3 is small and stable, not a broad internal schema. Lowers, but does not remove, the version-pin risk. |
+| **SUB-9** | Matching risk labels gate editing tasks | An active profile's `approval.mode: "risk-labels"` and normalized `approval.labels` make `task.create` persist `{ required: true, status: "pending" }`; ready/start paths exclude pending tasks until `task.approve` changes status (`crew/team/store.ts:414-444`, `crew/handlers/task.ts:90-119`, `crew/handlers/task.ts:639-746`). Covered by `team-store.test.ts:152-175`, `team-work.test.ts:120-157`, and `team-task-approval.test.ts`. | Keep the label set exact and the profile active. Risk-labelled editing work cannot start before explicit approval. |
 
 Source files below carry the full derivation for each.
 
@@ -73,9 +74,10 @@ cheaper, faster, and more definitive than an experiment. The fifth (S3, resume v
 decided by the source: resume does not exist for Crew workers.
 
 This is the investigation's own finding #3 applied to itself — don't run expensive
-verification where cheap verification suffices. What reading genuinely cannot establish is
-integration reality, race behavior under true concurrency, and version skew. Those are
-covered by the single smoke test that replaced Phase 1.
+verification where cheap verification suffices. Reading and upstream tests establish the
+substrate contract. Repo integration, active-profile behavior, and true concurrency are proved
+later by current-checkout deployment verification and the first calibrated run; there is no
+separate bespoke smoke-test phase.
 
 ## What it changed in the design
 

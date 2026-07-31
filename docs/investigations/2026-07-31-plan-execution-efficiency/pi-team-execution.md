@@ -1,285 +1,320 @@
 # Pi Team Execution
 
-**Status:** proposal — fresh design, not canonical
-**Scope:** Pi only. Team mode only. Replaces the Discovery/Design/Execute pipeline and
-sequential mode if adopted.
-**Visual companion:** `pi-team-execution-plan.html` (sequence diagrams + trigger taxonomy).
+**Status:** reviewed proposal — additive rollout; not canonical until calibration passes
+**Scope:** Pi only. Team mode only. OpenCode and the current canonical process remain unchanged
+until a separately approved migration.
+**Visual companion:** `pi-team-execution-plan.html`.
 
-One sentence: **talk until the intent is clear, freeze it into one plan, put the tasks
-on a board, let a small team execute with review-on-handoff, and read the summary at the
-end.**
+One sentence: **talk until intent is clear, freeze it into one self-contained plan, compile the
+plan into a reviewed task board, let a small team execute one dependency wave at a time, and
+close with objective evidence.**
 
 ---
 
 ## 1. Principles
 
-1. **Conversation is the front of the process.** Discovery and design happen in normal chat
-   with the lead. No ceremony, no separate agents, no artifacts until intent is clear.
-2. **One plan contract.** A single `plan.md` holds everything a worker needs. It lives in a
-   plan directory that may hold reference and generated material beside it, but nothing else
-   is load-bearing. No brief, findings, approach, approach-review, worklog chain.
-3. **Feedback is immediate, not terminal.** Every handoff is reviewed on arrival. Defects
-   found at the end of a plan are a process failure.
-4. **Context is the scarce resource.** Workers get a packet, not a transcript. The lead
-   never ingests full diffs. Remediation reuses the context that already exists.
-5. **The human sets intent and reads outcomes.** Everything between is agent work unless the
-   human opts in.
-6. **Measure every run.** A run that leaves no telemetry can't improve the next one.
+1. **Conversation is the front of the process.** No required discovery/design artifact chain.
+   Optional lead-invoked scouts inform chat; they do not create load-bearing artifacts.
+2. **One plan contract.** `plan.md` is the only authored execution contract. Generated board,
+   review, and telemetry files may sit beside it but do not become new sources of truth.
+3. **Mechanical checks prove structure; fresh review proves meaning.** Never claim semantic
+   packet sufficiency from a parser.
+4. **Review follows each completed wave.** The lead generates task-scoped working-tree review
+   bundles after the worker batch returns and sends them to fresh read-only reviewers—not at
+   commit time or on a timer.
+5. **Context is scarce.** Workers receive one packet. The lead does not ingest full worker
+   transcripts or diffs.
+6. **The human sets intent and controls risk.** All risk-labelled tasks require approval.
+7. **Measure only observable facts.** Missing cost or attempt data stays unavailable, never
+   inferred.
 
-## 2. Roles
+## 2. Roles and routing
 
-Five roles. Three are agents, one is a mechanism, one is you.
+| Role | Responsibility | Never does |
+|---|---|---|
+| Human | Set intent; approve risk-labelled work; read outcome | Babysit normal execution |
+| Lead | Write/review plan; create board; dispatch waves; run broad gates; commit; close | Implement planned task packets |
+| Worker | Implement one packet; run its minimal check; publish concise handoff | Commit; run broad suites; write outside its set |
+| Task reviewer | Fresh `pi-team-reviewer` subagent; review one path-scoped bundle after the wave; emit exact verdict | Fix code; inspect peer write sets; approve truncated evidence |
+| Board | Hold DAG, state, progress, and live activity | Make design decisions |
+| Fresh final reviewer | Review full diff after the execution team closes | Reuse the live reviewer context |
 
-| Role | Who | Responsibility | Never does |
-|---|---|---|---|
-| **Human** | you | Set intent in conversation. Approve only when asked or on high-risk flags. Watch live if desired. Read the closing summary; iterate if needed. | Babysit execution |
-| **Lead** | primary Pi session | Converse → write plan → create board → dispatch → run wave gates → commit → close and summarize | Implement tasks; read full diffs |
-| **Worker** | fresh Crew worker per task (1–4 concurrent) | Execute one packet: implement, run its cheap check, hand off | Commit; run broad suites; claim outside its write set |
-| **Reviewer** | fresh Crew reviewer per handoff | Verdict every handoff: SHIP / NEEDS_WORK (retry with feedback) / RETHINK (block, escalate to lead) | Fix code; approve its own findings |
-| **Board** | pi-messenger crew (files, not an agent) | Hold the task DAG, statuses, file reservations. Wake agents on events. Give the human a live overlay. | — |
+A lane is a Team role; its `role` string carries model, thinking, and skills [SUB-2]. Never use
+a bare packaged role name [SUB-2a]. The profile must be active before materialization [SUB-2b].
 
-Escalation is a rule, not a role: **a worker gets one retry as a fresh worker carrying the
-review findings; if that fails the task blocks and the lead rescues it with a strong
-subagent.** Two failures → lead pauses
-and asks you.
-
-### Model tiers
-
-Lanes multiply **models, not roles**. A worker is the same contract regardless of the model
-running it; the plan's lane tag picks the tier.
-
-| Lane | Team role | Tier | Qualifies when | Escalates to |
+| Lane | Team role | Model | Thinking | Use |
 |---|---|---|---|---|
-| `cheap` | `worker-cheap` | small/fast | **decision-complete**: executable from the packet row + referenced contracts/decisions with zero judgment calls | `complex` on failed retry |
-| `std` | `worker-std` | mid | normal implementation | `complex` on failed retry |
-| `complex` | `worker-complex` | strong + thinking | design-bearing, security, migration, concurrency; all risk-flagged tasks | human |
-| `visual` | `worker-visual` | std/complex variant | UI/UX/a11y — a routing specialization, not a fourth tier | as base tier |
+| `cheap` | `worker-cheap` | `github-copilot/gpt-5.6-terra` | low | Decision-complete, isolated work |
+| `std` | `worker-std` | `github-copilot/gpt-5.6-terra` | medium | Normal implementation |
+| `complex` | `worker-complex` | `github-copilot/gpt-5.6-sol` | high | Security, migration, concurrency, cross-cutting work |
+| `visual` | `worker-visual` | `github-copilot/gpt-5.6-terra` | high | Normal UI/UX/a11y work |
+| `visual-complex` | `worker-visual-complex` | `github-copilot/gpt-5.6-sol` | high | Risk-bearing or cross-cutting visual work |
 
-**A lane is a Team role, and that is the whole routing mechanism** — one `role` string on a
-task sets its model, thinking level, and skills [SUB-2]. Lanes are declared once in the Team
-profile:
-
-```json
-{ "roles": {
-    "worker-cheap":   { "model": "<small>" },
-    "worker-std":     { "model": "<mid>" },
-    "worker-complex": { "model": "<strong>", "thinking": "high" },
-    "worker-visual":  { "model": "<mid>" } } }
-```
-
-Two constraints this imposes. **Never name a lane with a bare packaged role** — the `worker-*`
-prefix keeps lanes distinct and editing-capable [SUB-2a]. **And the Team profile must be
-active**, or every task silently falls back to the default worker model with no error, so the
-materializer asserts it before creating any task [SUB-2b].
-
-Three tiers total across the whole process: small (cheap workers), standard (std workers,
-handoff reviewer), strong (complex workers, lead-owned rescue, final reviewer). The lead runs
-on your session model. Target ≥ 50% of tasks on `cheap` (measured: $0.60 vs $3.10 per task, no
-quality loss); a plan that can't hit that hasn't settled enough decisions — that is a planning
-signal, not a routing problem.
+Cheap-lane share is telemetry, not a gate. Calibration may establish a useful target later.
 
 ## 3. Lifecycle
 
-```
-CONVERSE ──► PLAN ──► EXECUTE ──► CLOSE
- (chat)     (1 file)  (board+team)  (summary)
+```text
+CONVERSE → PLAN + REVIEW → MATERIALIZE → EXECUTE WAVES → FINAL REVIEW → CLOSE
 ```
 
 ### Converse
-Normal chat with the lead. Talk through the problem, options, constraints. The lead may spawn
-throwaway scouts/researchers to inform the conversation; their output lands in chat, not in
-artifacts. Two optional, **human-only** skills exist for when plain conversation isn't enough:
-`/discovery` (Socratic pushback for fuzzy problems) and `/design` (structured option
-comparison with scout fanout). Both carry `disable-model-invocation: true` — Pi cannot
-discover or auto-load them, so they cost zero context until you type the slash command.
-The stage ends when you trigger **`/pi-team-plan`**.
 
-### Plan
-The lead creates `plans/<date>-<slug>/` and writes `plan.md` (template in §6) directly from
-the conversation. Then:
+Normal chat is sufficient. `/discovery` and `/design` remain optional human-invoked helpers;
+there is no mandatory pre-plan stage or durable artifact. `/pi-team-plan` begins planning.
 
-1. A **fresh reviewer** checks it against four mechanical gates (no judgment calls):
-   - critical path ≤ 60% of the serial estimate
-   - no task > 20% of the critical path
-   - no two same-wave tasks with overlapping write sets
-   - every task executable from its packet alone (no "see conversation")
-2. Gate failures → lead splits/decouples tasks and re-checks. No human involvement.
-3. **Human approval only if:** you asked for it up front, or any task carries a risk flag
-   (`migration`, `destructive`, `auth`, `api-contract`). Otherwise execution starts
-   immediately and you're notified it started.
+### Plan and review
 
-### Execute
-1. Lead materializes the plan's task table onto the board (`task.create` with deps, **role**
-   — which carries the lane's model, thinking level, and skills — risk flags, and the packet
-   body as task content).
-2. Workers claim ready, file-disjoint tasks. Claim = reserve write set; handoff = release.
-3. **On every handoff**, the reviewer runs. SHIP → done. NEEDS_WORK → task resets and retries
-   as a *fresh worker carrying the review findings and its own progress log* (Crew workers run
-   `--no-session`; there is no session resume). RETHINK, or a second failure, → blocked for the
-   lead.
-4. **Escalation is the lead's, not Crew's.** A task that exhausts `maxAttemptsPerTask` blocks.
-   The lead — which, being the primary session, is the only participant holding the `subagent`
-   tool — remediates it with a strong fresh subagent, then `task.done`s it. This is the one
-   place `pi-subagents` is used, and it is exactly the place its resume, watchdog, and
-   telemetry are worth paying for.
-5. When a wave completes: lead runs the broad gate profile **once**, commits
-   (`team(W<n>): <summary>`). Lead is the only committer. Expensive checks (full suites,
-   lint-the-world, E2E) exist only here — never inside a worker's loop.
-6. Risk-flagged tasks pause for your approval **only if planning couldn't resolve them**;
-   otherwise they run and the outcome notes what to verify after the fact.
-7. Blockers, ambiguity, or product decisions reach you via intercom immediately. Nothing
-   else does.
+The lead creates `plans/YYYY_MM_DD_<slug>/plan.md` using §6, then runs two gates:
 
-**Watching:** `/messenger` overlay shows every agent, its status, current task, and the
-activity feed, live. You can DM any agent from there. Watching is optional; the run doesn't
-need you.
+1. **Mechanical gate:** schema and reference integrity; acyclic dependencies; deterministic
+   wave derivation; critical path ≤ 60% of serial estimate; no task > 20% of the critical path;
+   no same-wave write-set overlap.
+2. **Fresh semantic review:** verifies intent coverage, packet sufficiency, check adequacy,
+   risk/approval classification, and that no implementer decision remains.
 
-### Close
-1. Lead runs the final gate, then commissions a **fresh strong reviewer** on the full diff
-   vs `plan.md`. Findings → one remediation pass → re-review.
-2. Lead harvests telemetry (wall-clock, cost, per-task time, defects-by-origin, rework share)
-   from run artifacts into the plan directory.
-3. Lead posts the closing summary: what shipped, evidence, deferred items (→ backlog),
-   risk-flag outcomes to verify, telemetry vs estimate.
-4. You read it. Iterate in conversation if needed — a follow-up is just a new small plan.
+The lead fixes findings and repeats until both pass. Execution starts automatically unless the
+human requested plan approval. Risk-labelled tasks remain blocked at the board until the human
+approves them.
 
-## 4. Event model — nothing polls
+### Materialize
 
-| Event | Wakes | Action |
-|---|---|---|
-| task becomes ready (dep met) | idle worker | claim, reserve, execute |
-| worker handoff | reviewer | review, verdict |
-| NEEDS_WORK verdict | fresh worker, same task | fix, with findings + progress log injected |
-| RETHINK / attempts exhausted | lead | remediate via strong subagent, or escalate to you |
-| risk pause | lead → you | approve / reject |
-| wave complete | lead | broad gate, commit |
-| board empty | lead | close sequence |
-| agent silent 2 turns | lead | nudge once, then restart that member |
+`pi_messenger` is a Pi tool rather than a CLI [SUB-7], so the lead performs task creation in
+its Pi session:
 
-Commits do **not** trigger review — review already happened at handoff, and the lead is the
-only committer. Timed loops are banned; if an event isn't firing, fix the event.
+1. Confirm the active profile is exactly `pi-team` and contains all five roles [SUB-2b].
+2. Treat `config.json` and `agents/` as stable inputs. Board runtime entries are `plan.json`,
+   `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and
+   `planning-outline.md`. Refuse initialization when any runtime entry exists.
+3. Recovery moves only those runtime entries to
+   `.pi/messenger/crew-runs/<UTC-basic-timestamp>/`; it never moves stable inputs. An incomplete
+   run requires human confirmation before recovery. A partial materialization failure may be
+   archived automatically because no worker has started.
+4. Atomically initialize `plan.json` with `prd` equal to the repo-relative authored plan path,
+   UTC ISO-8601 `created_at`/`updated_at`, and zero counters [SUB-3] [SUB-8].
+5. Create tasks in stable topological order (numeric task ID as tie-breaker).
+6. Capture each returned Crew ID and translate later `Deps` through the plan-ID→Crew-ID map.
+7. Use title `<ID> — <Deliverable truncated to 80 Unicode code points>`. Serialize content in
+   this fixed order: plan ID, lane, estimate, integration group, deliverable, write set,
+   expanded Contracts, expanded Decisions, minimal Check, and worker rules.
+8. Pass role and risk labels to `task.create`; matching labels persist pending approval and make
+   the task unstartable until `task.approve` [SUB-9].
+9. Run `crew.validate`. Any failure stops execution; partial state is archived and recreated,
+   never resumed heuristically.
 
-## 5. Context rules
+The authored `plan.md` remains canonical. Board files are generated runtime state.
 
-| Situation | Context | Why |
-|---|---|---|
-| Worker, first attempt | **fresh + packet** | packet is cheaper and more reliable than a transcript |
-| Worker, remediation retry | **fresh + findings + progress log** | not a choice: Crew workers run `--no-session`. Crew re-injects the task spec, `last_review` feedback, and ~30 progress lines, which recovers part of the re-discovery cost |
-| Worker, attempts exhausted | **lead-owned strong subagent** | the old context holds the wrong model — that's why it failed. Only the lead can spawn, so escalation necessarily leaves Crew |
-| Any reviewer | **fresh, always** | independence |
-| Lead helper (replanning) | fork | genuinely needs the conversation |
+### Execute waves
 
-> Earlier drafts specified `subagent resume` for retry #1. That mechanism does not exist here
-> [SUB-1]; the retry is fresh but carries findings and progress [SUB-6].
+1. Open one **wave transaction**: require a clean index/worktree, record `BASE = HEAD`, then
+   invoke one `work` wave; autonomous continuation stays off. Cleanliness is required only when
+   opening the transaction. All retries, rescue, and integration remediation remain dirty inside
+   the same transaction with `HEAD == BASE` until its single lead commit.
+2. Up to four ready, file-disjoint workers run. Reservations are drift detection only; plan-time
+   disjoint write sets are the actual collision control [SUB-4].
+3. Crew auto-review is disabled. Its reviewer only sees `base_commit..HEAD`, which is empty
+   before the lead commit; worker commits are forbidden because concurrent shared-index commits
+   can capture peer changes. The lead records the wave base commit before dispatch.
+4. After the batch returns, require `HEAD == BASE` (mechanically rejecting worker commits), then
+   run `pi-team review-wave` with the original wave as both allowed scope and bundle set. It
+   rejects changed paths outside the scope union and emits one complete bundle per requested
+   task, including untracked files. Oversized or incomplete evidence blocks review.
+5. A fresh read-only `pi-team-reviewer` subagent reviews each bundle against the expanded packet
+   and emits exact verdict `SHIP`, `NEEDS_WORK`, or `MAJOR_RETHINK`.
+6. `NEEDS_WORK`: lead writes each finding to task progress, resets the task, and retries inside
+   the same dirty transaction. Regenerate evidence with allowed scope = original wave and bundle
+   set = retried task; re-review only bundles whose SHA changed. The retry is fresh and receives
+   recent progress [SUB-6]. Two Crew attempts are the limit.
+7. `MAJOR_RETHINK` or exhausted attempts: lead resets/blocks the task and gets one strong rescue
+   using a fresh `github-copilot/gpt-5.6-sol` subagent. Regenerate the bundle; a fresh task review
+   must return `SHIP` before completion. Rescue failure pauses for the human.
+8. `review-wave` hashes the current contents of every integration group's normalized write-set
+   union. The lead stores the last green digest. After task review, run each completed group whose
+   digest differs from its last green digest—even if a later wave changed an already-green group.
+9. On integration failure, a fresh strong remediation pass owns only that group's union and stays
+   inside the wave transaction. Regenerate evidence with allowed scope = original wave plus the
+   failed group's tasks, bundle only tasks whose paths changed, and re-review changed bundles.
+   Rerun the check only when its digest changed. Allow two remediation revisions; record every
+   attempt and never rerun an unchanged digest.
+10. Commit every reviewed wave before dispatching the next, even when an integration group spans
+    waves. A spanning group runs only when complete; earlier wave commits keep review isolation.
+    Commit only when every affected completed group has a green digest.
 
-Anti-bloat rules: handoffs are ≤ ~15 lines (files changed, check output, assumptions, risks);
-full diffs go worker→reviewer directly, never through the lead; the plan template has no
-prose sections a worker doesn't consume; skills state rules once and link, never restate.
+Only events wake work. No polling, commit-triggered review, or timer-triggered review.
 
-## 6. The plan directory
+### Final review and close
 
+1. Run the repo final gate.
+2. Close Crew execution and commission a fresh `github-copilot/gpt-5.6-sol` full-diff review.
+3. If findings require changes, allow at most two fresh strong remediation passes. After each
+   pass, rerun the final gate on the changed tree and commission a fresh re-review. Completion
+   requires both a green final gate and a clean review on the same commit. Cap exhaustion pauses.
+4. Write `telemetry.md` from observable data only: start/end timestamps, task count, Crew
+   attempts/review resets when present, out-of-write-set findings, integration/final gate
+   failures, and human interruptions by enumerated category. Cost is `unavailable` [SUB-5].
+5. Summarize shipped behavior, exact evidence, approved risk outcomes, backlog IDs, and measured
+   calibration results.
+
+## 4. The plan contract
+
+```text
+plans/YYYY_MM_DD_<slug>/
+  plan.md       # authored source of truth
+  review.md     # generated semantic/final review record
+  telemetry.md  # generated objective run record
+  notes/        # optional human reference; never injected by default
 ```
-plans/<date>-<slug>/
-  plan.md        ← the contract. The only file agents read by default.
-  notes/         ← optional. Reference material, research, diagrams, superseded drafts.
-  review.md      ← generated at close: final review findings.
-  telemetry.md   ← generated at close: measured vs planned.
-```
 
-**Loading rule.** Only `plan.md` is injected into task packets. Anything else in the
-directory is human/reference material and never enters an agent's context unless a task row
-explicitly cites it. If a worker needs a note to do its job, the plan didn't freeze enough —
-fix the plan, don't add a reference.
-
-`plan.md` has five sections and nothing else:
+`plan.md` has exactly these sections and declares its input contract version:
 
 ```markdown
 # <title>
-Intent: <2–4 lines: what changes, why, what stays the same>
-Risk flags: <none | migration, destructive, auth, api-contract>
-Approval: <auto | human>
+Plan schema: 1
+Intent: <what changes, why, and what stays unchanged>
+Approval: <auto | requested>
 
 ## Contracts
-| ID | Behavior | Evidence (test/command) |
+| ID | Behavior | Evidence |
 
 ## Decisions
-| ID | Decision | Resolution |          ← everything the conversation settled; workers never guess
+| ID | Decision | Resolution |
 
 ## Checks
-| Profile | Command | Cost | Inner-loop safe? |   ← measured; expensive ⇒ wave-gate only
+| ID | Scope | Command | Cost | Worker-safe |
 
 ## Tasks
-| ID | Deps | Lane | Deliverable | Write set | Contracts | Check |
+| ID | Deps | Lane | Estimate min | Risk labels | Integration | Deliverable | Write set | Contracts | Decisions | Check |
 ```
 
-Lanes route models per the tier table in §2. A task row plus its referenced contracts and
-decisions must be sufficient to execute it — that self-sufficiency is also what qualifies a
-task for the `cheap` lane.
+Rules:
 
-## 7. Repo hooks
+- Task IDs match `T[1-9][0-9]*`; contract IDs `C[1-9][0-9]*`; decision IDs
+  `D[1-9][0-9]*`; check IDs `K[1-9][0-9]*`; integration groups `G[1-9][0-9]*`.
+  IDs are unique, references resolve, and dependencies form a DAG.
+- `Deps`, `Risk labels`, `Contracts`, and `Decisions` use comma-separated values or `—`.
+- `Write set` uses comma-separated POSIX repo-relative paths. Absolute paths, `.`/`..`, empty
+  segments, backslashes, symlinks, and globs are rejected. A trailing `/` means directory;
+  otherwise the path is an exact file. Same-wave sets must be disjoint by normalized prefix.
+- Wave = dependency depth; numeric task ID breaks ties. More than four tasks at one depth are
+  chunked in groups of four in that order.
+- Every task has a positive integer estimate, one worker-safe `Check`, and one integration group.
+  Each referenced integration group has exactly one `Checks` row with scope `integration:G<n>`.
+  Exactly one Checks row has scope `final`. A check row used by a task has scope `worker` and
+  `Worker-safe` = `yes`.
+- Allowed lanes are the five roles above.
+- Allowed risk labels are `migration`, `destructive`, `auth`, and `api-contract`; every such task
+  requires human approval through the active profile [SUB-9]. No per-task waiver exists.
+- Mechanical self-sufficiency means required fields are non-empty and references resolve.
+  Semantic sufficiency is the fresh reviewer's responsibility.
 
-The process touches durable repo state at exactly three points, all lead-owned:
+The task `content` passed to `task.create` is exactly this LF-terminated template. Referenced rows
+are sorted by numeric ID; `—` fields expand to `- none`. The worker-rules block is invariant.
 
-| Hook | When | Contract |
+```markdown
+# Plan task <TASK_ID>
+
+Lane: <LANE>
+Estimate min: <N>
+Integration: <GROUP_ID>
+
+## Deliverable
+<DELIVERABLE>
+
+## Write set
+- <PATH>
+
+## Contracts
+- <ID>: <BEHAVIOR> | Evidence: <EVIDENCE>
+
+## Decisions
+- <ID>: <DECISION> | Resolution: <RESOLUTION>
+
+## Minimal check
+<CHECK_ID>: <COMMAND>
+
+## Worker rules
+- Modify only the declared write set.
+- Use structured edit/write tools; do not mutate files through bash.
+- Run only the minimal check above.
+- Do not commit or run broad gates.
+- Record concise progress and complete the Crew task with evidence.
+```
+
+## 5. Configuration and deployment boundary
+
+Stable configuration is reproducible; runtime state is not:
+
+| State | Durable source | Runtime location |
 |---|---|---|
-| **Requirements** | plan cites IDs; approved edits are a plan task; final review checks alignment | `docs/requirements.md` |
-| **Testing levels** | check profiles come from repo test docs; broad = wave gate, targeted = worker loop | `docs/testing-strategy.md` |
-| **Backlog** | deferred/discovered non-critical work → `TASK-XXXX` at close; critical discoveries stop the line instead | `docs/backlog.md` |
+| `pi-messenger@0.15.0` | `nix/modules/pi/default.nix` | managed Pi package |
+| Crew defaults | `config/pi-team/crew-config.json` | tracked relative symlink at `.pi/messenger/crew/config.json` |
+| Task reviewer | `agents/pi-team-reviewer.md` via Nix `home.file` | `~/.pi/agent/agents/pi-team-reviewer.md` |
+| `pi-team` profile | `config/pi-team/team-profile.json` via Nix `home.file` | `~/.pi/agent/messenger/team-profiles/pi-team.json` |
+| Active Team and board | generated | `.pi/messenger/team/`, `.pi/messenger/crew/` |
+| Pi-only skills | canonical `skills/*`, `harnesses: [pi]`, rendered `dist/skills/pi/*` | `~/.pi/agent/skills/*` |
 
-Nothing else in the repo docs is process-load-bearing.
+`.gitignore` narrowly admits the stable project config symlink and ignores all other `.pi/`
+runtime state. `config/pi-team/` is the single source for Crew/profile configuration; the task
+reviewer is a normal repo-owned Pi agent. Each repository adopting this experimental flow copies
+that config scaffold and commits the same narrow symlink/ignore rules. It activates `pi-team`
+via `team.profile.use`; activation is idempotent and is a lead preflight, not durable project
+state.
 
-## 8. Deployment
+Exact Crew config:
 
-| Piece | Provides | Status |
-|---|---|---|
-| `pi-messenger` | board + deps + waves, **worker/reviewer execution**, file reservations, review-on-handoff loop, live overlay, messaging | declare in `nix/modules/pi/default.nix` |
-| `pi-subagents` | lead-side only: rescue of blocked tasks, final reviewer, budgets, telemetry, intercom | declared, installed |
-| `pi-hooks` (lsp, checkpoint) | free diagnostics; per-turn rollback refs. `lsp` already configured declaratively. Lead session by default; reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter | declared, installed |
-| `pi-team` (ours, small) | plan table → board materializer; the four plan gates; telemetry harvest | build (~3 small scripts) |
-| Skills | `/discovery`, `/design`, `/pi-team-plan` (human-only, `disable-model-invocation`) + `pi-team-lead`, `pi-team-worker` (model-facing) | write (5, replacing ~19) |
+```json
+{"concurrency":{"workers":4},"artifacts":{"enabled":true},"review":{"enabled":false,"maxIterations":2},"work":{"maxAttemptsPerTask":2,"maxWaves":1,"stopOnBlock":true},"dependencies":"strict","coordination":"minimal"}
+```
 
-**Crew executes; `pi-subagents` does not** [SUB-1]. The consequences are load-bearing and are
-reflected above: no worker session resume, no edit-gated watchdog over workers, and no stored
-cost/tool telemetry. What we trade that for — review on every handoff — is the control the
-evidence says actually catches defects.
+Exact Nix-managed `pi-team` profile:
 
-Config in one place (messenger config + Team profile): concurrency ≤ 4, reviewer iterations
-≤ 3, attempts-per-task ≤ 2, `dependencies: strict`, lane roles with their models, per-run
-budgets. Note that Pi itself is installed and configured declaratively through this repo's
-Nix flake, while messenger's own config is not Nix-managed — prefer the project-level
-override at `.pi/messenger/crew/config.json` so it stays version-controlled.
+```json
+{"name":"pi-team","roles":{"worker-cheap":{"model":"github-copilot/gpt-5.6-terra","thinking":"low","skills":["pi-team-worker"]},"worker-std":{"model":"github-copilot/gpt-5.6-terra","thinking":"medium","skills":["pi-team-worker"]},"worker-complex":{"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]},"worker-visual":{"model":"github-copilot/gpt-5.6-terra","thinking":"high","skills":["pi-team-worker"]},"worker-visual-complex":{"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]}},"approval":{"mode":"risk-labels","labels":["migration","destructive","auth","api-contract"]},"memory":{"inject":["decision","interface","risk"],"maxCharsPerType":4000}}
+```
 
-## 9. What this deletes
+The additive rollout does not alter OpenCode outputs, existing shared skills, current canonical
+requirements, or current process docs. New skills use unique names and `harnesses: [pi]`.
 
-Discovery and Design as agent modes and artifacts (conversation covers them). Sequential mode
-and per-task Red-Green-Break-Verify (contracts + handoff review + wave gates are the quality
-controls; break-it surfaced zero defects in the measured baseline). The
-brief/findings/approach/approach-review/worklog chain (one plan contract; the board is the
-live worklog; telemetry is the record). Dual-harness rendering (Pi only). Mandatory human
-plan approval (opt-in or risk-triggered).
+## 6. Verification and calibration
 
-## 10. Known risks
+Implementation uses the repo's canonical gates:
 
-- **Conversational planning can skip rigor for big work.** Mitigation: the four plan gates
-  are mechanical and always run; you can always say "review this plan with me first."
-- **Two schedulers** (board autonomy vs lead waves) can fight. Mitigation: `work` runs exactly
-  one wave by default; `autonomous: true` is opt-in. Run lead-driven until proven.
-- **Reviewer-on-every-handoff costs money.** It buys the removal of late rework (21% of
-  measured time) and per-task break-it. Telemetry per run proves or refutes it; budgets cap it.
-- **Reservations only block structured `edit`/`write` — bash writes bypass them entirely**
-  [SUB-4]. The plan-time disjoint-write-set gate is therefore the real control; reservations
-  only catch drift, and only for well-behaved edits. Do not let this design lean on them.
-- **We depend on `plan.json`'s on-disk shape** [SUB-3]. It is the only place we touch Crew's
-  internals — pin the `pi-messenger` version and re-check on upgrade.
-- **A missing Team profile degrades silently** [SUB-2b]. The materializer must assert it
-  before creating tasks.
-- **Cost telemetry is weaker than the baseline's** [SUB-5]. The calibration run cannot be
-  compared to the baseline on cost. Wall-clock and task counts remain comparable.
+- targeted specs during each task;
+- `./tests/run-tests.sh fast` at task/integration completion;
+- `./scripts/pi-dev.sh --verify` for current-checkout Pi package/skill/module wiring;
+- `home-manager switch --flake .#<hostname>` before active-install proof;
+- `./tests/run-tests.sh all` before rollout completion.
+
+Baseline failures are recorded before the touched gate and compared after it; only new failures
+block completion.
+
+Bootstrap calibration lives under this investigation's `calibration/` directory, not canonical
+`plans/`, because current accepted requirements still prescribe `team_plan.md` and a team
+worklog. This is an isolated experiment, not a silent process exception.
+
+Each run freezes its serial comparator before execution and records only objective measures:
+wall-clock start/end; review resets; out-of-write-set findings; integration/final gate failures;
+and human interruptions classified as `intent`, `risk-approval`, `blocked-correctness`, or
+`environment`. A run passes correctness only with no out-of-write-set change, no significant
+defect surviving final review, all required gates green relative to baseline, and no unclassified
+interruption. The documentation bootstrap does not count toward efficiency promotion. Promotion additionally
+requires three representative code-change runs whose median wall-clock is ≤ 60% of their frozen
+serial estimates. Cheap-lane share is diagnostic only.
+
+Only after those calibration criteria pass may a separate, explicitly approved migration update
+canonical requirements/process docs or retire existing Pi/OpenCode paths.
+
+## 7. Known constraints
+
+- Crew workers, not `pi-subagents`, execute tasks [SUB-1]. `pi-subagents` is lead-side for
+  path-scoped task review, rescue, and final review.
+- The retry is fresh but carries findings and progress [SUB-6].
+- Direct `plan.json` initialization is the only internal-store coupling [SUB-3] [SUB-8]. Re-check
+  it on every version bump.
+- Reservations do not protect bash writes [SUB-4].
+- Crew stores no task cost [SUB-5].
 
 ---
-*Evidence base: `README.md` in this directory — measured baseline (5.3 h / $47.61 / 1.61x
-ceiling; all defects found by review+E2E, none by per-task break-it) and extension evaluation.*
 
-*`SUB-n` references point to the substrate constraints table in `notes/README.md`, which is the
-single source for how the substrate behaves. State consequences here; never restate mechanism
-or `file:line` citations — change them in one place.*
+*Evidence base: this directory's `README.md`; substrate mechanism and citations live only in
+`notes/README.md` under `SUB-n` IDs.*
