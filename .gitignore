@@ -8,7 +8,12 @@ node_modules/
 # OS
 .DS_Store
 
-.pi
+.pi/*
+!.pi/messenger/
+.pi/messenger/*
+!.pi/messenger/crew/
+.pi/messenger/crew/*
+!.pi/messenger/crew/config.json
 .pi-subagents/
 .pi-dev/
 .omo

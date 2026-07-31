@@ -53,6 +53,13 @@
         "installedPath": "/fixture/.pi/agent/packages/pi-subagents"
       },
       {
+        "packageId": "pi-messenger",
+        "source": "./packages/pi-messenger",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-messenger"
+      },
+      {
         "packageId": "pi-powerline-footer",
         "source": "./packages/pi-powerline-footer",
         "scope": "user",
@@ -156,6 +163,61 @@
             "relativePath": "./_source/skills/pi-subagents/SKILL.md",
             "sourceRelativePath": "./skills/pi-subagents/SKILL.md",
             "path": "/fixture/.pi/agent/packages/pi-subagents/_source/skills/pi-subagents/SKILL.md"
+          }
+        ],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-messenger",
+      "configuredPackagePath": "./packages/pi-messenger",
+      "facadePath": "/fixture/.pi/agent/packages/pi-messenger",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-pi-messenger",
+      "sourceManifestName": "pi-messenger",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-messenger",
+        "source": {
+          "type": "npm",
+          "spec": "pi-messenger@0.15.0",
+          "materializedKey": "src-pi-messenger"
+        },
+        "sourceManifestName": "pi-messenger",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-pi-messenger",
+        "selectedResources": {
+          "extensions": [
+            "./index.ts"
+          ],
+          "skills": [
+            "pi-messenger-crew"
+          ],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/index.ts",
+            "sourceRelativePath": "./index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-messenger/_source/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-messenger/index.ts",
+            "tools": [],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [
+          {
+            "name": "pi-messenger-crew",
+            "relativePath": "./_source/skills/pi-messenger-crew/SKILL.md",
+            "sourceRelativePath": "./skills/pi-messenger-crew/SKILL.md",
+            "path": "/fixture/.pi/agent/packages/pi-messenger/_source/skills/pi-messenger-crew/SKILL.md"
           }
         ],
         "themes": []

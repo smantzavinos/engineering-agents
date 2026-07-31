@@ -657,6 +657,27 @@ EOF
   rm -rf "$tmp_dir"
 }
 
+assert_proof_set_messenger_contract() {
+  if jq -e '
+    [ .packages[] | select(.packageId == "pi-messenger") ] == [
+      {
+        "packageId": "pi-messenger",
+        "sourceManifestName": "pi-messenger",
+        "sourceSpec": "pi-messenger@0.15.0",
+        "resourceExpectations": {
+          "extensions": ["./index.ts"],
+          "skills": ["pi-messenger-crew"],
+          "themes": []
+        }
+      }
+    ]
+  ' "$REPO_ROOT/tests/fixtures/proof-set.json" >/dev/null; then
+    pass 'Proof set declares exact pi-messenger extension, skill, and no-theme contract'
+  else
+    fail 'Proof set declares exact pi-messenger extension, skill, and no-theme contract'
+  fi
+}
+
 assert_contract_script_accepts_valid_snapshot_fixture() {
   local stdout_path stderr_path status=0
   stdout_path="$(mktemp)"
@@ -681,6 +702,7 @@ printf 'Proof-set runtime verification\n'
 printf '==============================\n\n'
 
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' 'Proof-set runtime spec uses the documented requirement citation format'
+assert_proof_set_messenger_contract
 
 assert_snapshot_case '@earendil-works' 'Current namespace'
 assert_snapshot_case '@mariozechner' 'Legacy namespace'

@@ -36,6 +36,21 @@ else
   fail "compile-managed-packages.mjs has syntax errors"
 fi
 
+PI_MODULE="$REPO_ROOT/nix/modules/pi/default.nix"
+if grep -Fq 'pi-messenger = {' "$PI_MODULE" &&
+   grep -Fq 'packageName = "pi-messenger";' "$PI_MODULE" &&
+   grep -Fq 'spec = "pi-messenger@0.15.0";' "$PI_MODULE" &&
+   grep -Fq 'installSpec = "pi-messenger@0.15.0";' "$PI_MODULE" &&
+   grep -Fq 'version = "0.15.0";' "$PI_MODULE" &&
+   grep -Fq 'extensions = [ "./index.ts" ];' "$PI_MODULE" &&
+   grep -Fq 'skills = [ "pi-messenger-crew" ];' "$PI_MODULE" &&
+   grep -Fq '".pi/agent/messenger/team-profiles/pi-team.json".source =' "$PI_MODULE" &&
+   grep -Fq '"${repoRoot}/config/pi-team/team-profile.json";' "$PI_MODULE"; then
+  pass "Pi module declares pi-messenger resources and the canonical pi-team profile"
+else
+  fail "Pi module declares pi-messenger resources and the canonical pi-team profile"
+fi
+
 # Verify the module references skills that actually exist
 SKILL_REFS=(
   "skills/discovery" "skills/design" "skills/research"

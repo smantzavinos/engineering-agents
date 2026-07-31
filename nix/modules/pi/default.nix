@@ -36,6 +36,22 @@ let
       };
     };
 
+    pi-messenger = {
+      source = {
+        type = "npm";
+        packageName = "pi-messenger";
+        spec = "pi-messenger@0.15.0";
+        installSpec = "pi-messenger@0.15.0";
+        version = "0.15.0";
+      };
+      expose = {
+        extensions = [ "./index.ts" ];
+        skills = [ "pi-messenger-crew" ];
+        prompts = [ ];
+        themes = [ ];
+      };
+    };
+
     pi-agent-guidance = {
       source = {
         type = "npm";
@@ -486,6 +502,10 @@ in
       # Repo-owned startup notifier extension
       ".pi/agent/extensions/startup-staleness-warning/index.ts".source =
         "${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning/index.ts";
+
+      # Canonical Pi Messenger team profile
+      ".pi/agent/messenger/team-profiles/pi-team.json".source =
+        "${repoRoot}/config/pi-team/team-profile.json";
 
       # Agent guidance
       ".pi/agent/CODEX.md".text = ''
