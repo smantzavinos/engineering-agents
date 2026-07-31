@@ -11,97 +11,62 @@
 is no messenger config and no Team profile. Every checkbox below is still open.
 
 **Repo constraint:** Pi is installed and configured **declaratively via the Nix flake +
-home-manager**, not by `pi install` / `pi config`. Phase 0 uses a deliberately temporary
-imperative install to run the kill gate; Phase 1b converts it into a flake declaration. See
-"Nix constraints" under Phase 0.
+home-manager**, not by `pi install` / `pi config`. See "Nix constraints" under Phase 1.
 
-Ordered so each phase de-risks the next. Phase 1 is a **kill gate**, but most of it is now
-upstream's own test suite rather than a live run — deterministic and free. Only the minimum
-setup the residual live check needs happens before it.
+Ordered so each phase de-risks the next. The substrate gate is **Phase 0 and costs nothing** —
+it is upstream's own test suite in a clone, needing no install at all. Everything that touches
+this machine or this repo happens only after it passes.
 
 ---
 
-## Phase 0 — Declare the minimum the gate needs
+## Phase 0 — Substrate gate (free, no install required)
+
+The gate is upstream's own test suite, run against the version we intend to pin. It needs no
+install, no config, no Team profile, and no `nix/` change — just a clone. Deterministic,
+~1.4 s, zero model spend.
+
+- [ ] **Run the upstream suite at the version to be pinned:** clone `pi-messenger`, checkout
+      that version, `npm install && npx vitest run`. **Expect 408/408.**
+      **Regressions ⇒ do not pin that version.** Nothing installed, nothing declared, nothing
+      to unwind.
+
+Why this is sufficient, and why the live smoke test that used to sit here was deleted:
+
+- The suite executes this design's exact materialization path and asserts the lane role's
+  model reaches the spawned worker (`team-work.test.ts:94`), the full precedence chain
+  (`model-override.test.ts:70`), the resolved model landing on the `--model` flag (`:83`), and
+  strict-vs-advisory dependency enforcement (`task-actions.test.ts:52,66`). See
+  "Verified by upstream's own test suite" in `notes/README.md`.
+- There is **no build step** — the published npm package ships this same TypeScript source —
+  so artifact-vs-source parity, the strongest argument for a live check, is a non-question.
+- The two genuinely untested things (real model IDs resolving, true concurrency) are a config
+  concern and a control we do not rely on: the plan-time disjoint write-set gate is the real
+  collision guarantee [SUB-4], not Crew's scheduler. Both are exercised for free while
+  building against the tool in Phase 2 and during the Phase 5 calibration run, which deliver
+  value regardless. A bespoke smoke test would have sampled once what the suite proves
+  exhaustively.
+
+## Phase 1 — Install, declare in Nix, and configure
 
 **This repo installs Pi declaratively via a Nix flake + home-manager.** `pi install ...` and
-`pi config` are the wrong verbs here — see "Nix constraints" below. Phase 0 is deliberately
-minimal: everything required to run the Phase 1 live check, nothing else. If the gate fails,
-this is all that was spent.
-
-- [ ] **Gate-only install (temporary, imperative).** Run `pi install npm:pi-messenger` *without*
-      touching the flake. Rationale: the gate may reject the substrate outright, and a rejected
-      dependency should never have entered the reproducible declaration. Record that this is
-      deliberate, temporary, and machine-local; `pi uninstall` reverts it.
-      **Do not commit anything in `nix/` at this stage.**
-- [ ] **Create a two-lane Team profile** — `worker-cheap` and `worker-std` with distinct models,
-      enough to prove lane routing works. **Verify it is active** [SUB-2b]. This lives in
-      messenger's own config, which is not Nix-managed (see below).
-
-### Nix constraints this plan must respect
-
-| Constraint | Consequence for this plan |
-|---|---|
-| Packages are declared in `nix/modules/pi/default.nix` (`piPackages`) and installed by the home-manager activation script | A permanent `pi install` is invisible to the flake: unpinned, unreproducible, absent from a new machine. Post-gate adoption **must** be a declaration, not a command. |
-| Activation does **not** prune undeclared packages | An imperative install silently persists and appears to work — the failure is deferred to the next machine. This is why the temporary install above must be explicitly reverted or promoted. |
-| `settings.json` is **merged with Nix winning** (`jq -s '.[0] * .[1]'`, Nix second) | Hand-editing any Nix-managed settings key is silently reverted on the next `home-manager switch`. Pi-level settings changes must go in the module. |
-| Pi's `packages` list is generated from `piRuntimePackageIds` | A declared package is wired into Pi automatically; an imperatively installed one is not necessarily registered the same way. **Verify parity after promotion** rather than assuming it. |
-| `lsp.hookMode = "agent_end"` is **already set** declaratively | The old "enable `lsp` via `pi config`" step was redundant and wrong. Dropped. |
-| Git-source packages must pin a 40-hex commit; `tests/fixtures/proof-set.json` updates in the same change (`nix/AGENTS.md`) | "Pin versions" is a repo contract with a test, not a reminder. Spelled out in Phase 1b. |
-
-## Phase 1 — Verify the substrate: tests first, then a narrow live check
-
-The five original spikes were answered by reading `pi-messenger` v0.15.0 source rather than
-running experiments — cheaper, faster, and more definitive. Findings with `file:line`
-citations are in `notes/`.
-
-| ID | Question | Outcome |
-|---|---|---|
-| S1 | Board without Crew's LLM planner? | **Feasible.** `task.create` takes `title`/`content`/`dependsOn`/`role`/`riskLabels`. Needs a `plan.json` record we write directly [SUB-3]. |
-| S2 | Auto-review feedback + our reviewer? | **Yes to both.** Findings are injected into the retry prompt [SUB-6]; a project `crew-reviewer.md` overrides the packaged one. |
-| S3 | `resume` vs fresh remediation? | **Moot.** Resume does not exist for Crew workers [SUB-1]. |
-| S4 | Do reservations block? | **Partially** — backstop, not a control [SUB-4]. |
-| S5 | Autonomous loop vs lead-driven waves? | **Not a conflict.** `work` runs exactly one wave; `autonomous: true` is opt-in. |
-
-**Lane routing resolved.** Lanes are Team roles [SUB-2], which keeps materialization on the
-public API instead of direct store writes — removing the version-skew coupling this plan
-previously accepted.
-
-What reading cannot establish, the **upstream test suite can** — and does, far better than the
-integration smoke test originally planned here. `pi-messenger` v0.15.0 ships 408 tests that run
-in ~1.4 s with no model spend, including one (`team-work.test.ts:94`) that executes this
-design's exact materialization path and asserts the lane role's model reaches the spawned
-worker. See "Verified by upstream's own test suite" in `notes/README.md`.
-
-- [ ] **Run the upstream suite at our pinned version** (`npm install && npx vitest run` in a
-      clone). Confirms the substrate contract deterministically. Expect 408/408.
-      **Regressions here ⇒ stop; do not pin that version.**
-- [ ] **Narrow live check (~10 min).** The suite mocks `spawnAgents` and uses placeholder model
-      strings, so three things remain unproven: that the *npm-installed build* matches the
-      source tree, that our real provider/model IDs resolve, and behavior under real
-      concurrency. Create a two-task board through the `pi_messenger` tool with two lanes and
-      run one wave. **Fail ⇒ stop.** `pi uninstall pi-messenger` reverts; nothing has entered
-      `nix/`.
-
-## Phase 1b — Adopt into the flake, then configure (only after the gate passes)
-
-The gate has proven the substrate. Now make it reproducible — this is the step that converts a
-local experiment into repo state.
+`pi config` are the wrong verbs here — see "Nix constraints" below.
 
 - [ ] **Declare `pi-messenger` in `nix/modules/pi/default.nix`** under `piPackages`, following
-      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Use a pinned
-      npm version (`pi-messenger@<version>`) or a 40-hex commit for a git source — never a
-      branch or tag ref, which defeats the no-change rebuild skip (`nix/AGENTS.md`).
+      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Use the pinned
+      npm version the gate validated, or a 40-hex commit for a git source — never a branch or
+      tag ref, which defeats the no-change rebuild skip (`nix/AGENTS.md`).
 - [ ] **Update `tests/fixtures/proof-set.json` in the same change** if the package ships
       extensions/skills/themes, with its `resourceExpectations`. This is an enforced contract
       (`tests/specs/proof-set-runtime-spec.sh`), not a formality.
-- [ ] **Run `home-manager switch`**, then confirm the declared install replaced the temporary
-      one and that `pi-messenger` appears in the generated `packages` list. Re-run the Phase 1
-      live check once to confirm declared-install parity [SUB-8] — cheap, and it catches the
-      case where the imperative and declared installs behave differently.
+- [ ] **Run `home-manager switch`**, then confirm `pi-messenger` appears in the generated
+      `packages` list and the `pi_messenger` tool is callable.
+- [ ] **Create and activate the Team profile** — `worker-cheap`, `worker-std`,
+      `worker-complex` (with `thinking`), `worker-visual`, plus `approval.mode: "risk-labels"`
+      with our risk labels. **Verify it is active** [SUB-2b].
 - [ ] **Add `checkpoint` to the module's Pi settings** if wanted (per-turn rollback refs).
       `lsp` is already configured declaratively (`hookMode = "agent_end"`) — nothing to do.
-      Note both apply to the **lead session**; reaching Crew workers requires adding the
-      extension path to `crew-worker.md` frontmatter.
+      Both apply to the **lead session**; reaching Crew workers requires adding the extension
+      path to `crew-worker.md` frontmatter.
 - [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
       [SUB-1], so it is not a quality control for task work.
 - [ ] **Write the messenger config** — `~/.pi/agent/pi-messenger.json`, project override at
@@ -109,14 +74,22 @@ local experiment into repo state.
       `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
       `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
       `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
-      **These paths are not Nix-managed.** Decide explicitly: leave machine-local (simple, but
-      a new machine starts unconfigured) or bring under the module (reproducible, more wiring).
-      Prefer the project-level override — it is version-controlled with the repo.
-- [ ] **Complete the Team profile** — add `worker-complex` (with `thinking`) and
-      `worker-visual`, plus `approval.mode: "risk-labels"` with our risk labels.
+      **These paths are not Nix-managed.** Prefer the project-level override — it is
+      version-controlled with the repo.
 - [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
       replace its criteria with ours (project-level agents override extension defaults by name).
-- [ ] Re-check `plan.json`'s on-disk shape [SUB-3] after any `pi-messenger` version bump.
+- [ ] Re-check `plan.json`'s five-field shape [SUB-8] after any `pi-messenger` version bump.
+
+### Nix constraints this plan must respect
+
+| Constraint | Consequence for this plan |
+|---|---|
+| Packages are declared in `nix/modules/pi/default.nix` (`piPackages`) and installed by the home-manager activation script | A `pi install` is invisible to the flake: unpinned, unreproducible, absent from a new machine. Adoption **must** be a declaration, not a command. |
+| Activation does **not** prune undeclared packages | An imperative install silently persists and appears to work — the failure is deferred to the next machine, which is the worse failure mode. |
+| `settings.json` is **merged with Nix winning** (`jq -s '.[0] * .[1]'`, Nix second) | Hand-editing any Nix-managed settings key is silently reverted on the next `home-manager switch`. Pi-level settings changes must go in the module. |
+| Pi's `packages` list is generated from `piRuntimePackageIds` | A declared package is wired into Pi automatically. |
+| `lsp.hookMode = "agent_end"` is **already set** declaratively | The old "enable `lsp` via `pi config`" step was redundant and wrong. Dropped. |
+| Git-source packages must pin a 40-hex commit; `tests/fixtures/proof-set.json` updates in the same change (`nix/AGENTS.md`) | "Pin versions" is a repo contract with a test, not a reminder. |
 
 ## Phase 2 — Build `pi-team` (repo-local extension/scripts)
 
@@ -168,7 +141,7 @@ New/replacing docs in this repo:
 
 - [ ] **`docs/pi-team-execution.md`** — promote the design doc from the investigation dir
       (near-verbatim). This is the canonical process doc.
-- [ ] **`docs/pi-team-setup.md`** — the Phase 0 + 1b steps + preflight checklist (declared in
+- [ ] **`docs/pi-team-setup.md`** — the Phase 1 steps + preflight checklist (declared in
       `piPackages`, `home-manager switch` applied, Team profile **active**,
       `dependencies: strict`, reviewer override in place, `.pi-subagents/` and `.pi/messenger/`
       ignored). Since install is declarative, provisioning a new machine is
@@ -212,11 +185,8 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 (temp install) ──► Phase 1 UPSTREAM TESTS + narrow live check ──► Phase 1b (declare in nix + configure) ──► Phase 2 ──► Phase 3
-                            │  kill gate (408 tests, ~1.4s, free)                                                        │
-                            └─ fail ⇒ pi uninstall, stop.               ┌───────────────────────────────────────┘
-                               nix/ never touched                      ▼
-                                                       Phase 5 ──► archive (Phase 4 tail)
-                                                          ▲
-                                           Phase 4 docs ───┘ (parallel with 3)
+Phase 0 GATE (upstream suite, clone only) ──► Phase 1 (install + declare in nix + configure)
+  │  408 tests · ~1.4s · free · nothing installed          │
+  └─ fail ⇒ don't pin that version. Nothing to unwind.   └─► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
+                                                                        └──► Phase 4 docs (parallel with 3)
 ```

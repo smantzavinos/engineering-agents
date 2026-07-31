@@ -46,9 +46,13 @@ These cover the substrate behaviors this design depends on:
 | Strict dependency ordering | `tests/crew/task-actions.test.ts:52,66` | `unmet_dependencies` under `strict`; permitted under `advisory` |
 | Board/plan/task creation [SUB-3] | `tests/crew/store.test.ts` (41 tests) | Plan and task records, dependencies, resets |
 
-**What the suite cannot establish**, and therefore still needs one live check: that the
-*npm-installed build* behaves like the source tree, that real provider/model IDs resolve (tests
-use placeholder strings), and behavior under real concurrency (`spawnAgents` is mocked).
+**What the suite cannot establish** is narrower than it first appears. There is no build step
+— `package.json` has no build script, ships `files: ['*.ts', 'crew/**', ...]`, and `npm pack`
+emits raw TypeScript — so the published package *is* this source tree, and artifact-vs-source
+parity is a non-question. What remains is that real provider/model IDs resolve (a config
+concern, not a substrate one, and self-evident on first use) and behavior under true
+concurrency (`spawnAgents` is mocked). Neither justifies a dedicated gate; both are exercised
+for free while building against the tool and during the first real run.
 
 | File | Answers | Headline |
 |---|---|---|
