@@ -86,16 +86,21 @@ sed 's/Preserve the contract/Preserve \\| the contract/' "$FIXTURES/valid-diamon
 sed '/## Decisions/i ## Contracts' "$FIXTURES/valid-diamond.md" >"$TMP/duplicate-section.md"; run_status 2 node "$TOOL" check "$TMP/duplicate-section.md" --json
 pass 'trailing task text, embedded pipes, and duplicate sections are rejected'
 
-run_status 2 node "$TOOL" check "$FIXTURES/cycle.md" --json
-node - "$TMP/out" <<'NODE' || fail 'diagnostics are not contract-sorted'
+sed -e 's/| T3 | T2 | std |/| T3 | T2 | bogus |/' -e 's/| T5 | T2 | visual-complex | 1 | auth |/| T5 | T2 | visual-complex | 1 | bogus |/' "$FIXTURES/cycle.md" >"$TMP/multiple-diagnostics.md"
+run_status 2 node "$TOOL" check "$TMP/multiple-diagnostics.md" --json
+node - "$TMP/out" <<'NODE' || fail 'multiple diagnostics are not contract-sorted'
 const fs=require('fs'); const d=JSON.parse(fs.readFileSync(process.argv[2])).diagnostics;
 const sorted=[...d].sort((a,b)=>a.code.localeCompare(b.code)||a.location.section.localeCompare(b.location.section)||a.location.row-b.location.row||a.location.field.localeCompare(b.location.field)||a.message.localeCompare(b.message));
-if(JSON.stringify(d)!==JSON.stringify(sorted)) process.exit(1);
+if(d.length < 2 || JSON.stringify(d)!==JSON.stringify(sorted)) process.exit(1);
 NODE
 [[ ! -s "$TMP/err" ]] || fail '--json wrote stderr'
 run_status 2 node "$TOOL" check "$FIXTURES/cycle.md"
 grep -Eq '^PLAN_[A-Z_]+: .+ \(.+\)$' "$TMP/err" || fail 'human diagnostic format missing'
-pass 'diagnostics are sorted and human/JSON streams obey the contract'
+run_status 2 node "$TOOL" check "$FIXTURES/missing-worker-check.md" --json
+jq -e '(.diagnostics|length)>0 and (.diagnostics|map(.code)|unique) == ["PLAN_WORKER_CHECK"]' "$TMP/out" >/dev/null || fail 'missing-worker-check is not isolated'
+run_status 1 node "$TOOL" check "$FIXTURES/threshold-failure.md" --json
+jq -e '(.diagnostics|map(.code)) == ["GATE_CRITICAL_PATH_RATIO","GATE_CRITICAL_TASK_SHARE"]' "$TMP/out" >/dev/null || fail 'threshold fixture does not cover both threshold gates'
+pass 'multiple diagnostics are sorted and isolated compiler gates are covered'
 
 sed 's/$/\r/' "$FIXTURES/valid-diamond.md" >"$TMP/crlf.md"
 run_status 0 node "$TOOL" check "$TMP/crlf.md" --json
@@ -111,7 +116,12 @@ for bad in '../x' 'sandbox/*.txt' 'sandbox\\x' 'sandbox//x'; do
 done
 mkdir -p "$TMP/path-root/sandbox"; ln -s real "$TMP/path-root/sandbox/link"; sed 's#sandbox/t3.txt#sandbox/link/file#' "$FIXTURES/valid-diamond.md" >"$TMP/path-root/plan.md"
 (cd "$TMP/path-root" && run_status 2 node "$TOOL" check plan.md --json)
-pass 'unsafe and symlink write-set paths fail closed'
+mkdir -p "$TMP/notdir-root"; printf 'not a directory\n' >"$TMP/notdir-root/sandbox"; sed 's#sandbox/t3.txt#sandbox/child#' "$FIXTURES/valid-diamond.md" >"$TMP/notdir-root/plan.md"
+(cd "$TMP/notdir-root" && run_status 2 node "$TOOL" check plan.md --json)
+[[ ! -s "$TMP/err" ]] || fail 'filesystem failure under --json wrote stderr'
+jq -e '.schemaVersion==1 and .valid==false and (.diagnostics|map(.code))==["PLAN_IO"] and .metrics==null and .waves==[] and .tasks==[]' "$TMP/out" >/dev/null || fail 'filesystem failure did not emit one compiler schema object'
+[[ "$(wc -l <"$TMP/out")" == 1 ]] || fail 'filesystem failure emitted more than one JSON object'
+pass 'unsafe paths, symlinks, and public-boundary filesystem errors fail closed'
 
 BOARD_REPO="$TMP/board-repo"; mkdir -p "$BOARD_REPO/plans" "$BOARD_REPO/.crew/agents"; cp "$FIXTURES/valid-diamond.md" "$BOARD_REPO/plans/plan.md"; printf '{}\n' >"$BOARD_REPO/.crew/config.json"; printf 'stable\n' >"$BOARD_REPO/.crew/agents/keep"
 run_status 0 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$BOARD_REPO/.crew" --repo-root "$BOARD_REPO"
@@ -119,20 +129,73 @@ jq -e '.prd == "plans/plan.md" and .task_count == 0 and .completed_count == 0 an
 cmp -s "$BOARD_REPO/plans/plan.md" "$BOARD_REPO/.crew/plan.md" || fail 'runtime plan snapshot differs'
 [[ -f "$BOARD_REPO/.crew/config.json" && -f "$BOARD_REPO/.crew/agents/keep" && ! -e "$BOARD_REPO/.crew/tasks" ]] || fail 'stable config changed or tasks created'
 run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$BOARD_REPO/.crew" --repo-root "$BOARD_REPO"
-printf 'sentinel\n' >"$BOARD_REPO/.crew/plan.json"; run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$BOARD_REPO/.crew" --repo-root "$BOARD_REPO"; grep -qx sentinel "$BOARD_REPO/.crew/plan.json" || fail 'partial runtime state overwritten'
+ISOLATED_CREW="$BOARD_REPO/isolated-crew"; mkdir "$ISOLATED_CREW"; printf 'sentinel\n' >"$ISOLATED_CREW/plan.json"
+run_status 1 node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$ISOLATED_CREW" --repo-root "$BOARD_REPO"
+grep -qx sentinel "$ISOLATED_CREW/plan.json" || fail 'isolated plan.json runtime state overwritten'
+[[ ! -e "$ISOLATED_CREW/plan.md" ]] || fail 'isolated plan.json refusal published plan.md'
+cat >"$TMP/inject-init-collision.mjs" <<'NODE'
+import fs from 'node:fs';
+const link = fs.linkSync.bind(fs);
+fs.linkSync = (source, target) => {
+  if (target.endsWith('/plan.md')) {
+    const record = target.slice(0, -'plan.md'.length) + 'plan.json';
+    fs.unlinkSync(record);
+    fs.writeFileSync(record, 'record-racer\n', { flag: 'wx' });
+    fs.writeFileSync(target, 'plan-racer\n', { flag: 'wx' });
+  }
+  return link(source, target);
+};
+NODE
+RACE_CREW="$BOARD_REPO/race-crew"
+run_status 2 env NODE_OPTIONS="--import=$TMP/inject-init-collision.mjs" node "$TOOL" init-board "$BOARD_REPO/plans/plan.md" --crew-dir "$RACE_CREW" --repo-root "$BOARD_REPO"
+grep -qx record-racer "$RACE_CREW/plan.json" || fail 'collision rollback removed or replaced racer plan.json inode'
+grep -qx plan-racer "$RACE_CREW/plan.md" || fail 'collision publication removed or replaced racer plan.md inode'
 run_status 2 node "$TOOL" init-board "$FIXTURES/valid-diamond.md" --crew-dir "$TMP/outside-board" --repo-root "$BOARD_REPO"
-pass 'board init preserves stable config, creates no tasks, and refuses runtime/unsafe state'
+pass 'board init is no-clobber, rolls back only owned publications, and refuses unsafe state'
 
 REVIEW="$TMP/review"; mkdir -p "$REVIEW/sandbox"; cp "$FIXTURES/valid-diamond.md" "$REVIEW/plan.md"; git -C "$REVIEW" init -q; git -C "$REVIEW" config user.email test@example.invalid; git -C "$REVIEW" config user.name Test
-for n in {1..10}; do printf 'base-%s\n' "$n" >"$REVIEW/sandbox/t$n.txt"; done
+for n in {1..8} 10; do printf 'base-%s\n' "$n" >"$REVIEW/sandbox/t$n.txt"; done
 git -C "$REVIEW" add .; git -C "$REVIEW" commit -qm base; BASE="$(git -C "$REVIEW" rev-parse HEAD)"; export BASE
-printf 'tracked-change\n' >>"$REVIEW/sandbox/t1.txt"; rm "$REVIEW/sandbox/t9.txt"; printf '\000\001untracked\377' >"$REVIEW/sandbox/t9.txt"
+printf 'tracked-change\n' >>"$REVIEW/sandbox/t1.txt"; printf '\000\001untracked\377' >"$REVIEW/sandbox/t9.txt"
+[[ "$(git -C "$REVIEW" status --porcelain=v1 -- sandbox/t9.txt)" == '?? sandbox/t9.txt' ]] || fail 'binary review fixture is not truly untracked'
 run_status 0 node "$TOOL" review-wave "$REVIEW/plan.md" --scope T1,T9,T10 --bundle T1,T9 --repo-root "$REVIEW" --base "$BASE" --output-dir "$TMP/evidence-1"
 run_status 0 node "$TOOL" review-wave "$REVIEW/plan.md" --scope T1,T9,T10 --bundle T1,T9 --repo-root "$REVIEW" --base "$BASE" --output-dir "$TMP/evidence-2"
 cmp -s "$TMP/evidence-1/manifest.json" "$TMP/evidence-2/manifest.json" || fail 'manifest not deterministic'
 jq -e '.schemaVersion==1 and .base==env.BASE and (.tasks|map(.id))==["T1","T9"] and .tasks[0].changedPaths==["sandbox/t1.txt"] and .tasks[1].changedPaths==["sandbox/t9.txt"] and all(.tasks[]; .bytes>0 and (.sha256|test("^[0-9a-f]{64}$"))) and (.affectedGroups|map(.id))==["G1"] and (.affectedGroups[0].revision|test("^[0-9a-f]{64}$"))' "$TMP/evidence-1/manifest.json" >/dev/null || fail 'review manifest shape/content mismatch'
-grep -q 'tracked-change' "$TMP/evidence-1/T1.diff" || fail 'tracked diff absent'; grep -q 'sandbox/t9.txt' "$TMP/evidence-1/T9.diff" || fail 'untracked binary diff absent'; ! grep -q 'sandbox/t9.txt' "$TMP/evidence-1/T1.diff" || fail 'peer write set leaked into bundle'
-pass 'review bundles tracked/untracked binary changes with deterministic isolated evidence'
+grep -q 'tracked-change' "$TMP/evidence-1/T1.diff" || fail 'tracked diff absent'; grep -q 'sandbox/t9.txt' "$TMP/evidence-1/T9.diff" || fail 'untracked binary diff absent'; grep -q '^new file mode ' "$TMP/evidence-1/T9.diff" || fail 'untracked binary did not use no-index evidence'; ! grep -q 'sandbox/t9.txt' "$TMP/evidence-1/T1.diff" || fail 'peer write set leaked into bundle'
+pass 'review bundles tracked and truly untracked no-index binary changes with deterministic isolated evidence'
+
+LITERAL="$TMP/literal-path-repo"; mkdir -p "$LITERAL"; sed 's#sandbox/t1.txt#:foo#' "$FIXTURES/valid-diamond.md" >"$LITERAL/plan.md"
+printf 'base\n' >"$LITERAL/:foo"; git -C "$LITERAL" init -q; git -C "$LITERAL" config user.email test@example.invalid; git -C "$LITERAL" config user.name Test
+git -C "$LITERAL" add .; git -C "$LITERAL" commit -qm base; LITERAL_BASE="$(git -C "$LITERAL" rev-parse HEAD)"; printf 'literal-change\n' >>"$LITERAL/:foo"
+run_status 0 node "$TOOL" review-wave "$LITERAL/plan.md" --scope T1,T9,T10 --bundle T1 --repo-root "$LITERAL" --base "$LITERAL_BASE" --output-dir "$TMP/literal-evidence"
+jq -e '.tasks[0].changedPaths==[":foo"] and .tasks[0].bytes>0' "$TMP/literal-evidence/manifest.json" >/dev/null || fail 'literal path evidence is empty or malformed'
+grep -q 'literal-change' "$TMP/literal-evidence/T1.diff" || fail 'colon-prefixed path was interpreted as pathspec magic'
+pass 'git path arguments are literal and changed paths cannot produce empty evidence'
+
+DIGEST="$TMP/digest-repo"; mkdir -p "$DIGEST/sandbox/tree" "$DIGEST/sandbox/empty-dir"
+sed -e 's#sandbox/t1.txt#sandbox/tree/#' -e 's#sandbox/t2.txt#sandbox/tree/file.txt#' -e 's#sandbox/t9.txt#sandbox/missing.txt#' -e 's#sandbox/t10.txt#sandbox/empty-dir/#' "$FIXTURES/valid-diamond.md" >"$DIGEST/plan.md"
+printf 'tree-base\n' >"$DIGEST/sandbox/tree/file.txt"
+for n in {3..8}; do printf 'digest-%s\n' "$n" >"$DIGEST/sandbox/t$n.txt"; done
+git -C "$DIGEST" init -q; git -C "$DIGEST" config user.email test@example.invalid; git -C "$DIGEST" config user.name Test; git -C "$DIGEST" add .; git -C "$DIGEST" commit -qm base
+DIGEST_BASE="$(git -C "$DIGEST" rev-parse HEAD)"; printf 'tree-change\n' >>"$DIGEST/sandbox/tree/file.txt"
+run_status 0 node "$TOOL" review-wave "$DIGEST/plan.md" --scope T1,T9,T10 --bundle T1 --repo-root "$DIGEST" --base "$DIGEST_BASE" --output-dir "$TMP/digest-evidence"
+EXPECTED_DIGEST="$(node - "$DIGEST" <<'NODE'
+const crypto=require('crypto'),fs=require('fs'),path=require('path');
+const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
+const empty=hash(Buffer.alloc(0));
+const records=[
+  ['sandbox/empty-dir','directory',empty],
+  ['sandbox/missing.txt','missing',empty],
+  ...[3,4,5,6,7,8].map(n=>[`sandbox/t${n}.txt`,'file',hash(fs.readFileSync(path.join(process.argv[2],`sandbox/t${n}.txt`)))]),
+  ['sandbox/tree','directory',empty],
+  ['sandbox/tree/file.txt','file',hash(fs.readFileSync(path.join(process.argv[2],'sandbox/tree/file.txt')))],
+].sort((a,b)=>a[0]<b[0]?-1:a[0]>b[0]?1:0);
+process.stdout.write(hash(Buffer.concat(records.map(([name,type,digest])=>Buffer.from(`${name}\0${type}\0${digest}`)))));
+NODE
+)"
+[[ "$(jq -r '.affectedGroups[0].revision' "$TMP/digest-evidence/manifest.json")" == "$EXPECTED_DIGEST" ]] || fail 'integration digest construction/content/missing/directory/dedup contract mismatch'
+pass 'integration digest exactly covers content, missing paths, directories, and deduplicated records'
 
 printf 'late-change\n' >>"$REVIEW/sandbox/t8.txt"
 run_status 0 node "$TOOL" review-wave "$REVIEW/plan.md" --scope T1,T2,T3,T4,T5,T6,T7,T8,T9,T10 --bundle T8 --repo-root "$REVIEW" --base "$BASE" --output-dir "$TMP/remediation"

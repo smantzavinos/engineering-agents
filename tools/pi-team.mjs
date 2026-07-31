@@ -37,6 +37,20 @@ function diagnosticCompare(a, b) {
 function hash(value) { return crypto.createHash('sha256').update(value).digest('hex'); }
 function exists(pathname) { try { fs.lstatSync(pathname); return true; } catch (error) { if (error.code === 'ENOENT') return false; throw error; } }
 function inside(root, target) { const relative = path.relative(root, target); return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative)); }
+function ioFailure(error) {
+  return {
+    exitCode: 2,
+    output: {
+      schemaVersion: SCHEMA_VERSION,
+      valid: false,
+      diagnostics: [{ code: 'PLAN_IO', message: error.message, location: { section: 'Plan', row: 1, field: '' } }],
+      metrics: null,
+      waves: [],
+      tasks: [],
+    },
+    internal: null,
+  };
+}
 
 function readUtf8(filename) {
   const bytes = fs.readFileSync(filename);
@@ -312,7 +326,7 @@ function parseOptions(values, names) {
   return result;
 }
 function runGit(root, args, allowDifference = false) {
-  const result = spawnSync('git', args, { cwd: root, encoding: null, maxBuffer: 100 * 1024 * 1024 });
+  const result = spawnSync('git', ['--literal-pathspecs', ...args], { cwd: root, encoding: null, maxBuffer: 100 * 1024 * 1024 });
   if (result.error) throw result.error;
   if (result.status !== 0 && !(allowDifference && result.status === 1)) throw new Error(`git ${args[0]} failed: ${result.stderr.toString('utf8').trim()}`);
   return result.stdout;
@@ -340,8 +354,17 @@ async function initBoard(plan, args) {
     try {
       fs.writeFileSync(tempRecord, `${JSON.stringify(record)}\n`, { flag: 'wx' });
       fs.copyFileSync(resolvedPlan, tempPlan, fs.constants.COPYFILE_EXCL);
-      fs.renameSync(tempRecord, path.join(crew, 'plan.json'));
-      try { fs.renameSync(tempPlan, path.join(crew, 'plan.md')); } catch (error) { fs.rmSync(path.join(crew, 'plan.json'), { force: true }); throw error; }
+      const recordStat = fs.lstatSync(tempRecord);
+      const publishedRecord = path.join(crew, 'plan.json');
+      fs.linkSync(tempRecord, publishedRecord);
+      try { fs.linkSync(tempPlan, path.join(crew, 'plan.md')); }
+      catch (error) {
+        try {
+          const current = fs.lstatSync(publishedRecord);
+          if (current.dev === recordStat.dev && current.ino === recordStat.ino) fs.unlinkSync(publishedRecord);
+        } catch (rollbackError) { if (rollbackError.code !== 'ENOENT') throw rollbackError; }
+        throw error;
+      }
     } finally { fs.rmSync(tempRecord, { force: true }); fs.rmSync(tempPlan, { force: true }); }
     return 0;
   } catch (error) { process.stderr.write(`PLAN_IO: ${error.message}\n`); return 2; }
@@ -414,6 +437,7 @@ async function reviewWave(plan, args) {
       const paths = changed.paths.filter((pathname) => taskMap.get(id).writeSet.some((spec) => pathMatchesSpec(pathname, spec))).sort(lexicalCompare);
       if (!paths.length) { process.stderr.write(`REVIEW_NO_CHANGE: ${id} has no changed path\n`); return 1; }
       const bytes = taskDiff(root, base, paths, changed.untracked);
+      if (!bytes.length) { process.stderr.write(`REVIEW_NO_CHANGE: ${id} changed paths produced empty evidence\n`); return 1; }
       if (bytes.length > MAX_EVIDENCE_BYTES) { process.stderr.write(`REVIEW_OVERSIZE: ${id} evidence is ${bytes.length} bytes\n`); return 1; }
       records.push({ id, filename: `${id}.diff`, bytes, changedPaths: paths });
     }
@@ -438,7 +462,9 @@ async function main() {
   if (!command || !plan) { process.stderr.write('Usage: pi-team.mjs check PLAN.md [--json] | init-board PLAN.md --crew-dir DIR --repo-root ROOT | review-wave PLAN.md --scope IDS --bundle IDS --repo-root ROOT --base COMMIT --output-dir DIR\n'); return 2; }
   if (command === 'check') {
     if (args.some((argument) => argument !== '--json') || args.filter((argument) => argument === '--json').length > 1) { process.stderr.write('PLAN_ARGUMENT: check accepts only --json\n'); return 2; }
-    const compiled = compilePlan(plan); printCheck(compiled, args.includes('--json')); return compiled.exitCode;
+    let compiled;
+    try { compiled = compilePlan(plan); } catch (error) { compiled = ioFailure(error); }
+    printCheck(compiled, args.includes('--json')); return compiled.exitCode;
   }
   if (command === 'init-board') return initBoard(plan, args);
   if (command === 'review-wave') return reviewWave(plan, args);

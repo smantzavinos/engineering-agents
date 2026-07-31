@@ -16,7 +16,7 @@ Approval: auto
 ## Checks
 | ID | Scope | Command | Cost | Worker-safe |
 |---|---|---|---|---|
-| K1 | final | node --check tools/pi-team.mjs | low | yes |
+| K1 | worker | node --check tools/pi-team.mjs | low | no |
 | K2 | integration:G1 | bash tests/specs/pi-team-tool-spec.sh | medium | no |
 | K3 | final | ./tests/run-tests.sh fast | high | no |
 
