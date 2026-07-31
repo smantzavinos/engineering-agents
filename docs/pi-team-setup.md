@@ -29,15 +29,21 @@ home-manager switch --flake .#<hostname>
 | Item | Canonical source | Installed or project runtime location |
 |---|---|---|
 | Crew defaults | `config/pi-team/crew-config.json` | tracked relative symlink `.pi/messenger/crew/config.json` |
+| Crew worker override | `config/pi-team/crew-worker.md` | tracked relative symlink `.pi/messenger/crew/agents/crew-worker.md` |
 | `pi-team` profile | `config/pi-team/team-profile.json` | `~/.pi/agent/messenger/team-profiles/pi-team.json` |
 | Task reviewer | `agents/pi-team-reviewer.md` | `~/.pi/agent/agents/pi-team-reviewer.md` |
 | Messenger package | `nix/modules/pi/default.nix` | managed Pi package |
 
-The tracked symlink is the only admitted project `.pi` configuration. Do not copy or edit its
-target under `.pi`; edit `config/pi-team/crew-config.json`. Runtime board state is generated and
-ignored: `.pi/messenger/team/` and all board entries under `.pi/messenger/crew/` except
-`config.json` and `agents/`. The generated entries are `plan.json`, `plan.md`, `tasks/`, `blocks/`,
-`artifacts/`, `planning-progress.md`, and `planning-outline.md`.
+The two tracked symlinks are the only admitted project `.pi` configuration. Do not copy or edit
+their targets under `.pi`; edit the canonical files under `config/pi-team/`. Runtime board state
+is generated and ignored: `.pi/messenger/team/` and all board entries under
+`.pi/messenger/crew/` except `config.json` and the one admitted `agents/crew-worker.md` override.
+Every other project agent remains ignored. The generated entries are `plan.json`, `plan.md`,
+`tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and `planning-outline.md`.
+
+The override is mandatory: the bundled worker requires a commit and commit evidence, while this
+design reserves all Git mutation and wave commits for the lead. Crew discovers same-name project
+agents after bundled agents, so the tracked `crew-worker` replaces that system prompt [SUB-11].
 
 Recovery moves only those generated board entries to
 `.pi/messenger/crew-runs/<UTC-basic-timestamp>/`; it never moves `config.json` or `agents/`.
@@ -63,7 +69,9 @@ it must contain these roles with the declared `pi-team-worker` skill:
 - `worker-visual-complex`: `github-copilot/gpt-5.6-sol`, `high`
 
 Also verify the approval policy is `risk-labels` with exactly `migration, destructive, auth,
-api-contract`. Never use a bare packaged role and never auto-approve a risk-labelled task.
+api-contract`. Never use a bare packaged role and never auto-approve a risk-labelled task. Before
+dispatch, verify the project `crew-worker` symlink resolves to `config/pi-team/crew-worker.md` and
+that the resolved prompt has no `git add`, `git commit`, or `commits:` evidence instruction.
 
 ## Board preflight and commands
 
@@ -105,6 +113,7 @@ home-manager switch --flake .#<hostname>
 REPO="$(git rev-parse --show-toplevel)"
 SETTINGS="$HOME/.pi/agent/settings.json"
 PROJECT_CONFIG="$REPO/.pi/messenger/crew/config.json"
+PROJECT_WORKER="$REPO/.pi/messenger/crew/agents/crew-worker.md"
 SNAPSHOT="$(mktemp)"
 trap 'rm -f "$SNAPSHOT"' EXIT
 
@@ -118,6 +127,10 @@ cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-
 test -L "$PROJECT_CONFIG"
 test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"
 cmp -s "$PROJECT_CONFIG" "$REPO/config/pi-team/crew-config.json"
+test -L "$PROJECT_WORKER"
+test "$(readlink -f "$PROJECT_WORKER")" = "$(readlink -f "$REPO/config/pi-team/crew-worker.md")"
+cmp -s "$PROJECT_WORKER" "$REPO/config/pi-team/crew-worker.md"
+! grep -Eq 'git (add|commit)|commits:' "$PROJECT_WORKER"
 node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"
 jq -e '
   . as $root |
@@ -136,7 +149,8 @@ jq -e '
 The targeted readiness spec is fast feedback. `fast` is the task gate. `pi-dev` verifies the
 current checkout in its isolated sandbox. The Home Manager command applies the active installation,
 and the post-activation proof verifies the live command, package configuration, skills, reviewer,
-profile, project configuration, and registered `pi_messenger` tool without invoking a model. `all`
+profile, project configuration, project worker override, and registered `pi_messenger` tool
+without invoking a model. `all`
 is the final plan gate. Baseline failures must be recorded separately and compared after the gate;
 only new failures block this rollout task. `full` remains an optional release smoke under
 `docs/testing-strategy.md`.

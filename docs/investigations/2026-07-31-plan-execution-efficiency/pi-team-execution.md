@@ -86,25 +86,28 @@ that registered state [SUB-10]:
 
 1. Activate and confirm the active profile is exactly `pi-team` and contains all five roles
    [SUB-2b].
-2. Treat `config.json` and `agents/` as stable inputs. Board runtime entries are `plan.json`,
+2. Before dispatch, verify `.pi/messenger/crew/agents/crew-worker.md` resolves to the canonical
+   `config/pi-team/crew-worker.md` override and contains no worker commit or commit-evidence
+   instruction. Same-name project discovery replaces the bundled worker system prompt [SUB-11].
+3. Treat `config.json` and `agents/` as stable inputs. Board runtime entries are `plan.json`,
    `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and
    `planning-outline.md`. Refuse initialization when any runtime entry exists.
-3. Recovery moves only those runtime entries to
+4. Recovery moves only those runtime entries to
    `.pi/messenger/crew-runs/<UTC-basic-timestamp>/`; it never moves stable inputs. An incomplete
    run requires human confirmation before recovery. A partial materialization failure may be
    archived automatically because no worker has started.
-4. Atomically initialize `plan.json` with `prd` equal to the repo-relative authored plan path,
+5. Atomically initialize `plan.json` with `prd` equal to the repo-relative authored plan path,
    UTC ISO-8601 `created_at`/`updated_at`, and zero counters [SUB-3] [SUB-8].
-5. Create tasks in stable topological order (numeric task ID as tie-breaker).
-6. Capture each returned Crew ID and translate later `Deps` through the plan-ID→Crew-ID map.
-7. Use title `<ID> — <Deliverable truncated to 80 Unicode code points>`. Serialize content in
+6. Create tasks in stable topological order (numeric task ID as tie-breaker).
+7. Capture each returned Crew ID and translate later `Deps` through the plan-ID→Crew-ID map.
+8. Use title `<ID> — <Deliverable truncated to 80 Unicode code points>`. Serialize content in
    this fixed order: plan ID, lane, estimate, integration group, deliverable, write set,
    expanded Contracts, expanded Decisions, minimal Check, and worker rules.
-8. Pass role and risk labels to `task.create`; matching labels persist pending approval and make
+9. Pass role and risk labels to `task.create`; matching labels persist pending approval and make
    the task unstartable until `task.approve` [SUB-9].
-9. Run `crew.validate`. The single missing-`plan.md` warning is expected because the authored
-   plan stays at `prd`; any graph/count error or any other warning stops execution. Partial state
-   is archived and recreated, never resumed heuristically.
+10. Run `crew.validate`. The single missing-`plan.md` warning is expected because the authored
+    plan stays at `prd`; any graph/count error or any other warning stops execution. Partial state
+    is archived and recreated, never resumed heuristically.
 
 The authored `plan.md` remains canonical. Board files are generated runtime state.
 
@@ -252,17 +255,21 @@ Stable configuration is reproducible; runtime state is not:
 |---|---|---|
 | `pi-messenger@0.15.0` | `nix/modules/pi/default.nix` | managed Pi package |
 | Crew defaults | `config/pi-team/crew-config.json` | tracked relative symlink at `.pi/messenger/crew/config.json` |
+| Crew worker override | `config/pi-team/crew-worker.md` | tracked relative symlink at `.pi/messenger/crew/agents/crew-worker.md` |
 | Task reviewer | `agents/pi-team-reviewer.md` via Nix `home.file` | `~/.pi/agent/agents/pi-team-reviewer.md` |
 | `pi-team` profile | `config/pi-team/team-profile.json` via Nix `home.file` | `~/.pi/agent/messenger/team-profiles/pi-team.json` |
 | Active Team and board | generated | `.pi/messenger/team/`, `.pi/messenger/crew/` |
 | Pi-only skills | canonical `skills/*`, `harnesses: [pi]`, rendered `dist/skills/pi/*` | `~/.pi/agent/skills/*` |
 
-`.gitignore` narrowly admits the stable project config symlink and ignores all other `.pi/`
-runtime state. `config/pi-team/` is the single source for Crew/profile configuration; the task
-reviewer is a normal repo-owned Pi agent. Each repository adopting this experimental flow copies
-that config scaffold and commits the same narrow symlink/ignore rules. Each lead session first
-joins Messenger, then activates `pi-team` via `team.profile.use` [SUB-10]; activation is
-idempotent and is a lead preflight, not durable project state.
+`.gitignore` narrowly admits the stable project config and `crew-worker` symlinks while ignoring
+all other `.pi/` agents and runtime state. `config/pi-team/` is the single source for Crew/profile
+configuration and the worker override; the task reviewer is a normal repo-owned Pi agent. The
+project override is mandatory because the bundled worker commits and supplies commit evidence,
+which violates the lead-only wave transaction [SUB-11]. Each repository adopting this experimental
+flow copies that config scaffold and commits the same narrow symlink/ignore rules. Each lead
+session first joins Messenger, activates `pi-team` via `team.profile.use` [SUB-10], and verifies the
+worker override before dispatch; activation is idempotent and is a lead preflight, not durable
+project state.
 
 Exact Crew config:
 
@@ -317,6 +324,8 @@ canonical requirements/process docs or retire existing Pi/OpenCode paths.
   it on every version bump.
 - Reservations do not protect bash writes [SUB-4].
 - Crew stores no task cost [SUB-5].
+- Same-name project agent discovery must replace the bundled committing `crew-worker` before any
+  wave dispatch [SUB-11].
 
 ---
 

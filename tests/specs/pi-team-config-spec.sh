@@ -43,8 +43,10 @@ printf 'Pi team configuration verification\n'
 printf '==================================\n\n'
 
 crew_config="$REPO_ROOT/config/pi-team/crew-config.json"
+crew_worker="$REPO_ROOT/config/pi-team/crew-worker.md"
 team_profile="$REPO_ROOT/config/pi-team/team-profile.json"
 project_config="$REPO_ROOT/.pi/messenger/crew/config.json"
+project_worker="$REPO_ROOT/.pi/messenger/crew/agents/crew-worker.md"
 expected_crew='{"concurrency":{"workers":4},"artifacts":{"enabled":true},"review":{"enabled":false,"maxIterations":2},"work":{"maxAttemptsPerTask":2,"maxWaves":1,"stopOnBlock":true},"dependencies":"strict","coordination":"minimal"}'
 
 if [[ -f "$crew_config" ]] && [[ "$(jq -cS . "$crew_config")" == "$(printf '%s\n' "$expected_crew" | jq -cS .)" ]]; then
@@ -65,13 +67,75 @@ else
   fail 'Project Crew config is a relative canonical-config symlink'
 fi
 
-config_ignore_rule="$(git check-ignore -v --no-index "$project_config" || true)"
-if git check-ignore -q --no-index "$REPO_ROOT/.pi/messenger/crew/plan.json" &&
-   git check-ignore -q --no-index "$REPO_ROOT/.pi/messenger/team/activity.json" &&
-   [[ "$config_ignore_rule" == *':!.pi/messenger/crew/config.json'* ]]; then
-  pass 'Runtime board and team state remain ignored while stable config is admitted'
+if [[ -L "$project_worker" ]]; then
+  assert_equals "$(readlink "$project_worker")" '../../../../config/pi-team/crew-worker.md' 'Project Crew worker is a relative canonical override symlink'
 else
-  fail 'Runtime board and team state remain ignored while stable config is admitted'
+  fail 'Project Crew worker is a relative canonical override symlink'
+fi
+
+if [[ -f "$crew_worker" ]] \
+  && grep -Fq 'name: crew-worker' "$crew_worker" \
+  && grep -Fq 'tools: read, write, edit, bash, pi_messenger' "$crew_worker" \
+  && grep -Fq 'crewRole: worker' "$crew_worker" \
+  && grep -Fq 'pi_messenger({ action: "task.show", id: "<TASK_ID>" })' "$crew_worker" \
+  && grep -Fq 'Use structured `edit` and `write` tools for every file mutation.' "$crew_worker" \
+  && grep -Fq 'Run only the task packet’s minimal check.' "$crew_worker" \
+  && grep -Fq 'tests: ["<minimal-check-command>"]' "$crew_worker"; then
+  pass 'Canonical Crew worker override has the bounded worker protocol and tools'
+else
+  fail 'Canonical Crew worker override has the bounded worker protocol and tools'
+fi
+
+protocol_lines=()
+for anchor in \
+  'pi_messenger({ action: "join" })' \
+  'pi_messenger({ action: "task.show", id: "<TASK_ID>" })' \
+  'read({ path: ".pi/messenger/crew/tasks/<TASK_ID>.md" })' \
+  'pi_messenger({ action: "task.start", id: "<TASK_ID>" })' \
+  'pi_messenger({ action: "reserve", paths: ["<declared-write-set>"], reason: "<TASK_ID>" })' \
+  'Use structured `edit` and `write` tools for every file mutation.' \
+  'Run only the task packet’s minimal check.' \
+  'pi_messenger({ action: "task.progress", id: "<TASK_ID>", message:' \
+  'pi_messenger({ action: "release" })' \
+  'action: "task.done"'; do
+  protocol_lines+=("$(grep -nF "$anchor" "$crew_worker" | head -n1 | cut -d: -f1 || true)")
+done
+protocol_order_valid=true
+for ((i = 0; i < ${#protocol_lines[@]}; i++)); do
+  if [[ ! "${protocol_lines[$i]}" =~ ^[0-9]+$ ]] ||
+     ((i > 0 && protocol_lines[i - 1] >= protocol_lines[i])); then
+    protocol_order_valid=false
+    break
+  fi
+done
+if [[ "$protocol_order_valid" == true ]]; then
+  pass 'Crew worker override orders join, re-anchor, start, reserve, edit, check, progress, release, and completion'
+else
+  fail 'Crew worker override orders join, re-anchor, start, reserve, edit, check, progress, release, and completion'
+fi
+
+if [[ -f "$crew_worker" ]] \
+  && ! grep -Fq 'git add -A' "$crew_worker" \
+  && ! grep -Eq 'git (add|commit|checkout|reset|restore|stash|merge|rebase|cherry-pick)' "$crew_worker" \
+  && ! grep -Fq 'commits:' "$crew_worker" \
+  && grep -Fq 'Do not commit, stage, or run any Git mutation command.' "$crew_worker" \
+  && grep -Fq 'Do not run broad gates.' "$crew_worker" \
+  && grep -Fq 'Do not mutate files through `bash`' "$crew_worker"; then
+  pass 'Crew worker override removes bundled commit behavior and forbids unsafe mutation and broad gates'
+else
+  fail 'Crew worker override removes bundled commit behavior and forbids unsafe mutation and broad gates'
+fi
+
+config_ignore_rule="$(git check-ignore -v --no-index "$project_config" || true)"
+worker_ignore_rule="$(git check-ignore -v --no-index "$project_worker" || true)"
+if git check-ignore -q --no-index "$REPO_ROOT/.pi/messenger/crew/plan.json" &&
+   git check-ignore -q --no-index "$REPO_ROOT/.pi/messenger/crew/agents/other-agent.md" &&
+   git check-ignore -q --no-index "$REPO_ROOT/.pi/messenger/team/activity.json" &&
+   [[ "$config_ignore_rule" == *':!.pi/messenger/crew/config.json'* ]] &&
+   [[ "$worker_ignore_rule" == *':!.pi/messenger/crew/agents/crew-worker.md'* ]]; then
+  pass 'Runtime state and other agents remain ignored while stable config and worker override are admitted'
+else
+  fail 'Runtime state and other agents remain ignored while stable config and worker override are admitted'
 fi
 
 invalid_profile="$(mktemp)"

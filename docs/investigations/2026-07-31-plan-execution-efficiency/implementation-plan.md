@@ -5,9 +5,10 @@
 **Implements:** `pi-team-execution.md`
 **Evidence:** `README.md` and `notes/`
 
-**Current state:** upstream substrate unit gate passed at `pi-messenger@0.15.0`; nothing is
-installed or configured. Canonical process, requirements, and OpenCode behavior remain unchanged
-through this rollout.
+**Current state:** upstream substrate unit gate passed at `pi-messenger@0.15.0`; additive T1-T4
+artifacts are implemented. This correction adds the pre-dispatch worker-system override to the T1
+configuration and T3 lead contracts before T5 calibration. Canonical process, requirements, and
+OpenCode behavior remain unchanged through this rollout.
 
 ## Phase 0 — Upstream substrate gate ✅
 
@@ -22,7 +23,7 @@ through this rollout.
 |---|---|
 | Rollout shape | Additive. Do not replace current canonical process, requirements, shared skills, OpenCode rendering, or archive anything. |
 | Package | Npm `pi-messenger@0.15.0`; expose `./index.ts` and skill `pi-messenger-crew`. |
-| Stable config | `config/pi-team/` is canonical; track one narrow `.pi` symlink for project Crew config; Nix links the global `pi-team` profile from the same source tree. Runtime board/team state remains ignored. |
+| Stable config | `config/pi-team/` is canonical; track narrow `.pi` symlinks for project Crew config and the `crew-worker` override; Nix links the global `pi-team` profile from the same source tree. Other agents and runtime board/team state remain ignored. |
 | Models | `github-copilot/gpt-5.6-terra` for cheap/std/visual; `github-copilot/gpt-5.6-sol` for complex/visual-complex/reviewer/rescue/final review. |
 | Risk approval | Labels `migration`, `destructive`, `auth`, `api-contract` always require human approval. |
 | Skills | New unique Pi-only canonical skills rendered by the existing pipeline and linked through Nix. Do not modify shared `/discovery` or `/design`. |
@@ -130,8 +131,10 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 **Depends:** Phase 0
 **Owns:** `nix/modules/pi/default.nix`, `tests/fixtures/proof-set.json`,
-`config/pi-team/{crew-config.json,team-profile.json}`, `.gitignore`,
-`.pi/messenger/crew/config.json`, `tests/specs/pi-team-config-spec.sh`,
+`config/pi-team/crew-config.json`, `config/pi-team/crew-worker.md`,
+`config/pi-team/team-profile.json`, `.gitignore`,
+`.pi/messenger/crew/config.json`, `.pi/messenger/crew/agents/crew-worker.md`,
+`tests/specs/pi-team-config-spec.sh`,
 `tests/specs/pi-module-content-spec.sh`, `tests/specs/proof-set-runtime-spec.sh`,
 `tests/run-tests.sh`, `tests/README.md`
 **Requirements:** FR-002, OPR-001
@@ -139,10 +142,12 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 - Add npm package `pi-messenger@0.15.0` and exact proof expectations:
   extension `./index.ts`, skill `pi-messenger-crew`, no themes.
-- Create the two canonical files under `config/pi-team/`. Nix links `team-profile.json` to
+- Create the three canonical files under `config/pi-team/`. Nix links `team-profile.json` to
   `~/.pi/agent/messenger/team-profiles/pi-team.json`; matching task risk labels persist pending
   approval and are excluded from ready/start paths until `task.approve` [SUB-9].
-- Track one relative symlink from the admitted `.pi` config path to the canonical config.
+- Track relative symlinks from the admitted `.pi` paths to the canonical Crew defaults and
+  `crew-worker` override. The same-name project agent replaces the bundled committing worker
+  system prompt [SUB-11]; all other project agents remain ignored.
 - Use the exact Crew JSON in `pi-team-execution.md` §5: four workers, strict dependencies,
   Crew auto-review disabled, two attempts, one wave, stop on block, artifacts enabled, and
   minimal coordination.
@@ -200,8 +205,9 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 - `pi-team-plan` (`disable-model-invocation: true`): create the exact plan contract; run CLI check;
   commission fresh semantic review; never auto-waive risk approval.
-- `pi-team-lead`: active-profile preflight; exact init/materialization algorithm; clean-tree and
-  `HEAD == BASE` isolation; one-wave dispatch; review-bundle generation; fresh task-reviewer
+- `pi-team-lead`: active-profile and canonical worker-override preflight before dispatch; exact
+  init/materialization algorithm; clean-tree and `HEAD == BASE` isolation; one-wave dispatch;
+  review-bundle generation; fresh task-reviewer
   calls; per-wave commits; board reset/block transitions; every affected completed integration
   group once per content digest with two remediation revisions; bounded rescue; lead gates/close.
 - `pi-team-worker`: packet/write-set discipline, one minimal check, concise handoff, no commit/broad
@@ -213,7 +219,8 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 **TDD:**
 
-1. Add failing content/render/module assertions for Pi-only presence and required protocol anchors.
+1. Add failing content/render/module assertions for Pi-only presence, required protocol anchors,
+   and the pre-dispatch worker-system override.
 2. Write the canonical skills and render with `node tools/render-skills.mjs --write`.
 3. Add Nix skill links.
 4. Break-it: verify no OpenCode outputs exist for these skills and no stale/hand-edited dist passes.
