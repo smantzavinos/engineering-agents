@@ -1,0 +1,44 @@
+# Bootstrap the Pi team documentation calibration
+Plan schema: 1
+Intent: Self-host the additive Pi team flow by aligning the investigation summary and visual companion with the reviewed architecture, then make stale promoted lifecycle claims executable failures. Current canonical process, requirements, OpenCode behavior, and implementation code stay unchanged.
+Approval: auto
+
+## Contracts
+| ID | Behavior | Evidence |
+|---|---|---|
+| C1 | README states: additive non-canonical status; pi-messenger@0.15.0; join before Team actions; Crew workers plus lead-generated path-scoped review bundles; no worker commits; per-wave lead commits; T1-T4 implementation and deployment green; bootstrap excluded from the three representative code-run promotion gate; notes remain the SUB mechanism source. K1 is smoke only; acceptance is a fresh pi-team-reviewer SHIP over the complete T1 bundle and packet. | K1 plus external task-review SHIP attestation recorded in review.md |
+| C2 | HTML depicts: join then profile activation; five lane roles and exact terra/sol routing; risk-label approval; plan check and board initialization; one dirty wave transaction; no worker commits; lead review-wave bundles to fresh pi-team-reviewer; retry/rescue; affected-group content digests; per-wave lead commit; additive rollout and three-code-run promotion boundary. K2 is smoke only; acceptance is a fresh pi-team-reviewer SHIP over the complete T2 bundle and packet. | K2 plus external task-review SHIP attestation recorded in review.md |
+| C3 | check-doc-refs normal mode checks README.md and pi-team-execution-plan.html case-sensitively for each exact fixed string: review-on-handoff, every handoff, Phase 1b, plans/<date>-<slug>. Any match fails. `--self-test` uses clean temporary target fixtures that first pass the stale scan, then injects each of the eight literal/target combinations independently and requires the exact single diagnostic `STALE_CLAIM: <literal> in <repo-relative-path>` for that literal and target. It does not read concurrently edited real targets. Existing source-citation and SUB integrity checks remain. | bash docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh --self-test |
+| C4 | Final changed paths from the committed bootstrap base are exactly the three worker files, calibration/bootstrap/review.md, calibration/bootstrap/telemetry.md, and docs/issues_learnings.md. The already committed calibration plan is excluded from that base diff. | git diff --name-only <bootstrap-base>..HEAD compared with the frozen six-path allowlist |
+| C5 | Telemetry records baseline and G1 integration evidence only. For closure, stage the finalized six paths, compute the index tree ID with `git write-tree`, run check-doc-refs, fast, pi-dev --verify, and all without changing the index/tree, and save results in an external log naming that tree ID. Commit the unchanged index, verify HEAD^{tree} equals the attested tree ID, then run a fresh sol review of HEAD. Final-gate and final-review attestations remain external so they cannot mutate the reviewed tree. Remediation repeats stage/tree-ID, gates, commit, and fresh review. | external final-gate log by tree ID plus external final-review attestation for HEAD |
+
+## Decisions
+| ID | Decision | Resolution |
+|---|---|---|
+| D1 | Promotion posture | Keep the rollout additive and non-canonical. Bootstrap proves mechanics only and does not count toward the three representative code-change calibrations; promotion requires those three code runs with median wall-clock at most 60% of frozen serial estimates. |
+| D2 | Review mechanism | Crew auto-review is disabled. Lead records clean BASE, workers leave dirty changes without commits, `pi-team review-wave` emits complete path-scoped tracked/untracked bundles, and fresh `pi-team-reviewer` subagents return SHIP, NEEDS_WORK, or MAJOR_RETHINK. |
+| D3 | Commit boundary | Workers never commit. The lead commits each reviewed wave only after every affected completed integration-group content digest is green. |
+| D4 | Checker semantics | Four exact case-sensitive fixed strings are forbidden in both promoted summaries. Historical notes are outside the stale-claim scan. `--self-test` is isolated from real peer-owned files. |
+| D5 | Runtime preflight | Every ephemeral Pi lead calls pi_messenger join before team.profile.use pi-team. The profile has worker-cheap/std/complex/visual/visual-complex; terra routes cheap/std/visual, sol routes complex/visual-complex; all use pi-team-worker. |
+| D6 | Risk and retries | migration, destructive, auth, and api-contract always require human approval. Ordinary tasks get two Crew attempts; exhausted/MAJOR_RETHINK work gets one fresh sol rescue and fresh task review. |
+| D7 | Integration | G1 runs only after all three task bundles SHIP. Its revision is the normalized write-set content digest; rerun only after a changed digest. Lead commits after G1 is green. |
+| D8 | Current implementation facts | Phase 0 upstream 408/408 passed; package/config/profile, deterministic pi-team CLI, three Pi-only skills plus reviewer, sandbox and active deployment, resource proof, and profile activation are implemented and green. Canonical process and OpenCode remain unchanged. |
+| D9 | Baseline | Before bootstrap dispatch, check-doc-refs, fast, pi-dev --verify, and all passed on the committed implementation head. Record that head and results in telemetry; compare final commands to this green baseline. |
+| D10 | Lead-owned files | Lead alone writes calibration/bootstrap/review.md with task-bundle verdicts, calibration/bootstrap/telemetry.md with baseline and G1 evidence, and docs/issues_learnings.md after task work. Workers never receive those paths. Final-gate and final-review attestations remain outside the reviewed Git tree. |
+| D11 | Evidence split | K1/K2 are worker smoke checks, not full contract proofs. Fresh packet-scoped task-reviewer SHIP verdicts prove C1/C2 semantics and are recorded by the lead in review.md. |
+
+## Checks
+| ID | Scope | Command | Cost | Worker-safe |
+|---|---|---|---|---|
+| K1 | worker | grep -Fq 'additive' docs/investigations/2026-07-31-plan-execution-efficiency/README.md && grep -Fq 'pi-team-reviewer' docs/investigations/2026-07-31-plan-execution-efficiency/README.md && grep -Fq 'three representative code-change' docs/investigations/2026-07-31-plan-execution-efficiency/README.md | seconds | yes |
+| K2 | worker | grep -Fq 'review bundle' docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html && grep -Fq 'team.profile.use' docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html && grep -Fq 'worker commits' docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html && grep -Fq 'content digest' docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html && grep -Fq '</html>' docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html | seconds | yes |
+| K3 | worker | bash docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh --self-test | seconds | yes |
+| K4 | integration:G1 | bash docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh && ./tests/run-tests.sh fast && ./scripts/pi-dev.sh --verify | minutes | no |
+| K5 | final | bash docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh && ./tests/run-tests.sh fast && ./scripts/pi-dev.sh --verify && ./tests/run-tests.sh all | minutes | no |
+
+## Tasks
+| ID | Deps | Lane | Estimate min | Risk labels | Integration | Deliverable | Write set | Contracts | Decisions | Check |
+|---|---|---|---|---|---|---|---|---|---|---|
+| T1 | — | cheap | 15 | — | G1 | Rewrite the investigation README as a concise current-state summary containing every frozen C1 fact, implementation evidence, promotion boundary, and source-note index without restating SUB mechanisms. | docs/investigations/2026-07-31-plan-execution-efficiency/README.md | C1, C4 | D1, D2, D3, D5, D6, D7, D8 | K1 |
+| T2 | — | visual | 20 | — | G1 | Update the self-contained visual companion so its lifecycle, roles, exact model/config routing, risk approval, review bundles, retry/rescue, content-digest integration, commit boundary, implementation status, and rollout boundary contain every frozen C2 fact. Preserve existing responsive styling, valid closing HTML, and readable diagrams/cards. | docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution-plan.html | C2, C4 | D1, D2, D3, D5, D6, D7, D8 | K2 |
+| T3 | — | cheap | 15 | — | G1 | Add the exact C3 normal-mode stale scan and isolated `--self-test` behavior to check-doc-refs.sh. Keep deterministic output, existing citation/SUB checks, and zero-argument compatibility. | docs/investigations/2026-07-31-plan-execution-efficiency/check-doc-refs.sh | C3, C4 | D4 | K3 |
