@@ -657,7 +657,7 @@ sequenceDiagram
       <thead><tr><th>Piece</th><th>Provides</th><th>Status</th></tr></thead>
       <tbody>
         <tr><td class="mono">pi-subagents</td><td><strong>lead-side only:</strong> rescue of blocked tasks, final reviewer, budgets, intercom. Crew does <em>not</em> use it for workers.</td><td>✅ installed</td></tr>
-        <tr><td class="mono">pi-messenger</td><td>board + deps + waves · file reservations · review-on-handoff · live overlay · messaging</td><td>⬇ <code>pi install npm:pi-messenger</code></td></tr>
+        <tr><td class="mono">pi-messenger</td><td>board + deps + waves · <strong>worker/reviewer execution</strong> · file reservations · review-on-handoff · live overlay · messaging</td><td>⬇ declare in <code>nix/modules/pi/default.nix</code></td></tr>
         <tr><td class="mono">pi-hooks (lsp, checkpoint)</td><td>free diagnostics on touched files · per-turn rollback refs</td><td>✅ installed, enable</td></tr>
         <tr><td class="mono">pi-team (ours)</td><td>plan-table → board materializer · the 4 plan gates · telemetry harvest</td><td>🔨 build (~3 small scripts)</td></tr>
         <tr><td class="mono">skills</td><td><code>/discovery</code> · <code>/design</code> · <code>/pi-team-plan</code> (human-only) + <code>pi-team-lead</code> · <code>pi-team-worker</code></td><td>🔨 write (5, replacing ~19)</td></tr>

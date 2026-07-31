@@ -232,9 +232,9 @@ Nothing else in the repo docs is process-load-bearing.
 
 | Piece | Provides | Status |
 |---|---|---|
-| `pi-messenger` | board + deps + waves, **worker/reviewer execution**, file reservations, review-on-handoff loop, live overlay, messaging | `pi install npm:pi-messenger` |
-| `pi-subagents` | lead-side only: rescue of blocked tasks, final reviewer, budgets, telemetry, intercom | installed |
-| `pi-hooks` (lsp, checkpoint) | free diagnostics; per-turn rollback refs. Lead session by default; reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter | installed, enable |
+| `pi-messenger` | board + deps + waves, **worker/reviewer execution**, file reservations, review-on-handoff loop, live overlay, messaging | declare in `nix/modules/pi/default.nix` |
+| `pi-subagents` | lead-side only: rescue of blocked tasks, final reviewer, budgets, telemetry, intercom | declared, installed |
+| `pi-hooks` (lsp, checkpoint) | free diagnostics; per-turn rollback refs. `lsp` already configured declaratively. Lead session by default; reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter | declared, installed |
 | `pi-team` (ours, small) | plan table → board materializer; the four plan gates; telemetry harvest | build (~3 small scripts) |
 | Skills | `/discovery`, `/design`, `/pi-team-plan` (human-only, `disable-model-invocation`) + `pi-team-lead`, `pi-team-worker` (model-facing) | write (5, replacing ~19) |
 
@@ -245,7 +245,9 @@ evidence says actually catches defects.
 
 Config in one place (messenger config + Team profile): concurrency ≤ 4, reviewer iterations
 ≤ 3, attempts-per-task ≤ 2, `dependencies: strict`, lane roles with their models, per-run
-budgets.
+budgets. Note that Pi itself is installed and configured declaratively through this repo's
+Nix flake, while messenger's own config is not Nix-managed — prefer the project-level
+override at `.pi/messenger/crew/config.json` so it stays version-controlled.
 
 ## 9. What this deletes
 

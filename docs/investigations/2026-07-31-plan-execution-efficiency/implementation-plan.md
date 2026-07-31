@@ -10,20 +10,43 @@
 `notes/`). Nothing has been installed or configured — `pi-messenger` is not installed, there
 is no messenger config and no Team profile. Every checkbox below is still open.
 
+**Repo constraint:** Pi is installed and configured **declaratively via the Nix flake +
+home-manager**, not by `pi install` / `pi config`. Phase 0 uses a deliberately temporary
+imperative install to run the kill gate; Phase 1b converts it into a flake declaration. See
+"Nix constraints" under Phase 0.
+
 Ordered so each phase de-risks the next. Phase 1 is a **kill gate**: 20 minutes of work that
 can invalidate the substrate choice, so only the minimum setup it needs happens before it.
 The bulk of configuration waits until the gate passes.
 
 ---
 
-## Phase 0 — Install the minimum the gate needs (~15 min)
+## Phase 0 — Declare the minimum the gate needs
 
-Deliberately minimal: everything here is required to run the Phase 1 smoke test, and nothing
-else. If the gate fails, this is all that was spent.
+**This repo installs Pi declaratively via a Nix flake + home-manager.** `pi install ...` and
+`pi config` are the wrong verbs here — see "Nix constraints" below. Phase 0 is deliberately
+minimal: everything required to run the Phase 1 smoke test, nothing else. If the gate fails,
+this is all that was spent.
 
-- [ ] **Install `pi-messenger`:** `pi install npm:pi-messenger`, then `/reload`.
-- [ ] **Create a two-lane Team profile** — `worker-cheap` and `worker-std` with distinct
-      models, enough to prove lane routing works. **Verify it is active** [SUB-2b].
+- [ ] **Gate-only install (temporary, imperative).** Run `pi install npm:pi-messenger` *without*
+      touching the flake. Rationale: the gate may reject the substrate outright, and a rejected
+      dependency should never have entered the reproducible declaration. Record that this is
+      deliberate, temporary, and machine-local; `pi uninstall` reverts it.
+      **Do not commit anything in `nix/` at this stage.**
+- [ ] **Create a two-lane Team profile** — `worker-cheap` and `worker-std` with distinct models,
+      enough to prove lane routing works. **Verify it is active** [SUB-2b]. This lives in
+      messenger's own config, which is not Nix-managed (see below).
+
+### Nix constraints this plan must respect
+
+| Constraint | Consequence for this plan |
+|---|---|
+| Packages are declared in `nix/modules/pi/default.nix` (`piPackages`) and installed by the home-manager activation script | A permanent `pi install` is invisible to the flake: unpinned, unreproducible, absent from a new machine. Post-gate adoption **must** be a declaration, not a command. |
+| Activation does **not** prune undeclared packages | An imperative install silently persists and appears to work — the failure is deferred to the next machine. This is why the temporary install above must be explicitly reverted or promoted. |
+| `settings.json` is **merged with Nix winning** (`jq -s '.[0] * .[1]'`, Nix second) | Hand-editing any Nix-managed settings key is silently reverted on the next `home-manager switch`. Pi-level settings changes must go in the module. |
+| Pi's `packages` list is generated from `piRuntimePackageIds` | A declared package is wired into Pi automatically; an imperatively installed one is not necessarily registered the same way. **Verify parity after promotion** rather than assuming it. |
+| `lsp.hookMode = "agent_end"` is **already set** declaratively | The old "enable `lsp` via `pi config`" step was redundant and wrong. Dropped. |
+| Git-source packages must pin a 40-hex commit; `tests/fixtures/proof-set.json` updates in the same change (`nix/AGENTS.md`) | "Pin versions" is a repo contract with a test, not a reminder. Spelled out in Phase 1b. |
 
 ## Phase 1 — Smoke test: the kill gate (~20 min)
 
@@ -49,27 +72,45 @@ concurrency, and whether lane roles actually route models. That is the whole rem
 - [ ] **Smoke test (throwaway repo).** Write `plan.json`, `task.create` ×5 in a diamond DAG
       across the two lanes, run one `work` wave. Confirm: tasks execute in dependency order ·
       each task runs on its lane's model · the wave stops cleanly.
-      **Fail ⇒ stop. Reconsider the substrate before spending anything on Phase 1b.**
+      **Fail ⇒ stop.** `pi uninstall pi-messenger` to revert the temporary install, and
+      reconsider the substrate before spending anything on Phase 1b. Nothing has entered
+      `nix/`, so there is nothing to unwind there.
 
-## Phase 1b — Full configuration (~45 min, only after the gate passes)
+## Phase 1b — Adopt into the flake, then configure (only after the gate passes)
 
-- [ ] **Enable `pi-hooks` extensions:** `pi config` → enable `lsp` (agent-end diagnostics)
-      and `checkpoint` (per-turn rollback refs). Note these apply to the **lead session**;
-      reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter
-      (path-like `tools` entries are passed through as `--extension`).
+The gate has proven the substrate. Now make it reproducible — this is the step that converts a
+local experiment into repo state.
+
+- [ ] **Declare `pi-messenger` in `nix/modules/pi/default.nix`** under `piPackages`, following
+      the existing shape (`source.type`, `packageName`, `spec`, `installSpec`). Use a pinned
+      npm version (`pi-messenger@<version>`) or a 40-hex commit for a git source — never a
+      branch or tag ref, which defeats the no-change rebuild skip (`nix/AGENTS.md`).
+- [ ] **Update `tests/fixtures/proof-set.json` in the same change** if the package ships
+      extensions/skills/themes, with its `resourceExpectations`. This is an enforced contract
+      (`tests/specs/proof-set-runtime-spec.sh`), not a formality.
+- [ ] **Run `home-manager switch`**, then confirm the declared install replaced the temporary
+      one and that `pi-messenger` appears in the generated `packages` list. Re-run the Phase 1
+      smoke test once to confirm declared-install parity — cheap, and it catches the case where
+      the imperative and declared installs behave differently.
+- [ ] **Add `checkpoint` to the module's Pi settings** if wanted (per-turn rollback refs).
+      `lsp` is already configured declaratively (`hookMode = "agent_end"`) — nothing to do.
+      Note both apply to the **lead session**; reaching Crew workers requires adding the
+      extension path to `crew-worker.md` frontmatter.
 - [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
       [SUB-1], so it is not a quality control for task work.
-- [ ] **Write the messenger config** (`~/.pi/agent/pi-messenger.json`, project override at
-      `.pi/messenger/crew/config.json`):
+- [ ] **Write the messenger config** — `~/.pi/agent/pi-messenger.json`, project override at
+      `.pi/messenger/crew/config.json`:
       `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
       `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
       `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
+      **These paths are not Nix-managed.** Decide explicitly: leave machine-local (simple, but
+      a new machine starts unconfigured) or bring under the module (reproducible, more wiring).
+      Prefer the project-level override — it is version-controlled with the repo.
 - [ ] **Complete the Team profile** — add `worker-complex` (with `thinking`) and
       `worker-visual`, plus `approval.mode: "risk-labels"` with our risk labels.
 - [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
       replace its criteria with ours (project-level agents override extension defaults by name).
-- [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
-      shape [SUB-3], so re-check that file after any upgrade.
+- [ ] Re-check `plan.json`'s on-disk shape [SUB-3] after any `pi-messenger` version bump.
 
 ## Phase 2 — Build `pi-team` (repo-local extension/scripts)
 
@@ -115,10 +156,12 @@ New/replacing docs in this repo:
 
 - [ ] **`docs/pi-team-execution.md`** — promote the design doc from the investigation dir
       (near-verbatim). This is the canonical process doc.
-- [ ] **`docs/pi-team-setup.md`** — the Phase 0 + 1b install/config steps + preflight checklist
-      (messenger installed, Team profile **active**, `dependencies: strict`, reviewer override
-      in place, `.pi-subagents/` and `.pi/messenger/` ignored) so a new machine can be
-      provisioned in minutes.
+- [ ] **`docs/pi-team-setup.md`** — the Phase 0 + 1b steps + preflight checklist (declared in
+      `piPackages`, `home-manager switch` applied, Team profile **active**,
+      `dependencies: strict`, reviewer override in place, `.pi-subagents/` and `.pi/messenger/`
+      ignored). Since install is declarative, provisioning a new machine is
+      `home-manager switch` plus the non-Nix messenger config — call out exactly which parts
+      are *not* reproducible.
 - [ ] **Update `AGENTS.md`** — route to the new process doc; mark the old pipeline docs as
       superseded for Pi.
 - [ ] **Trim the three repo hooks** to their contracts: `docs/requirements.md`,
@@ -157,11 +200,11 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 (minimal) ──► Phase 1 SMOKE TEST ──► Phase 1b (full config) ──► Phase 2 ──► Phase 3
-                        │  kill gate                                                    │
-                        └─ fail ⇒ stop, reconsider substrate      ┌────────────────────┘
-                                                                 ▼
-                                    Phase 5 ──► archive (Phase 4 tail)
-                                       ▲
-                        Phase 4 docs ───┘ (parallel with 3)
+Phase 0 (temp install) ──► Phase 1 SMOKE TEST ──► Phase 1b (declare in nix + configure) ──► Phase 2 ──► Phase 3
+                            │  kill gate                                                              │
+                            └─ fail ⇒ pi uninstall, stop.        ┌───────────────────────────────┘
+                               nix/ never touched               ▼
+                                                Phase 5 ──► archive (Phase 4 tail)
+                                                   ▲
+                                    Phase 4 docs ───┘ (parallel with 3)
 ```
