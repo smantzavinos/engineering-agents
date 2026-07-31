@@ -18,8 +18,8 @@ replaced were resolved by source inspection); nothing irreversible happens befor
       and `checkpoint` (per-turn rollback refs). Note these apply to the **lead session**;
       reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter
       (path-like `tools` entries are passed through as `--extension`).
-- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers —
-      `agent_end` deliberately ignores them — so it is not a quality control for task work.
+- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
+      [SUB-1], so it is not a quality control for task work.
 - [ ] **Write the messenger config** (`~/.pi/agent/pi-messenger.json`, project override at
       `.pi/messenger/crew/config.json`):
       `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
@@ -27,12 +27,12 @@ replaced were resolved by source inspection); nothing irreversible happens befor
       `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
 - [ ] **Create and activate the Team profile** defining the lane roles `worker-cheap`,
       `worker-std`, `worker-complex`, `worker-visual`, each with its `model` (and `thinking`
-      where wanted), plus `approval.mode: "risk-labels"` with our risk labels. **Verify it is
-      active** — an inactive profile makes every lane silently fall back to the default model.
+      where wanted), plus `approval.mode: "risk-labels"` with our risk labels.
+      **Verify it is active** [SUB-2b].
 - [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
       replace its criteria with ours (project-level agents override extension defaults by name).
 - [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
-      shape, so re-check that file after any upgrade.
+      shape [SUB-3], so re-check that file after any upgrade.
 
 ## Phase 1 — Substrate verification (**spikes resolved by source inspection**)
 
@@ -42,17 +42,15 @@ citations are in `notes/`.
 
 | ID | Question | Outcome |
 |---|---|---|
-| S1 | Board without Crew's LLM planner? | **Feasible.** `task.create` takes `title`/`content`/`dependsOn`/`role`/`riskLabels`. Needs a `plan.json` record, which has no public non-LLM create action — we write that one file. `notes/board-materialization.md` |
-| S2 | Auto-review feedback + our reviewer? | **Yes to both.** Feedback persists to `task.last_review` and is injected into the retry prompt; a project `crew-reviewer.md` overrides the packaged one. `notes/review-loop.md` |
-| S3 | `resume` vs fresh remediation? | **Moot.** Crew workers run `--no-session`; resume does not exist. Retry is a fresh process carrying findings + progress log. `notes/crew-execution-model.md` |
-| S4 | Do reservations block? | **Partially.** Structured `edit`/`write` only; **bash writes bypass entirely**; registry has no locking. Backstop, not a control. `notes/reservations-and-config.md` |
+| S1 | Board without Crew's LLM planner? | **Feasible.** `task.create` takes `title`/`content`/`dependsOn`/`role`/`riskLabels`. Needs a `plan.json` record we write directly [SUB-3]. |
+| S2 | Auto-review feedback + our reviewer? | **Yes to both.** Findings are injected into the retry prompt [SUB-6]; a project `crew-reviewer.md` overrides the packaged one. |
+| S3 | `resume` vs fresh remediation? | **Moot.** Resume does not exist for Crew workers [SUB-1]. |
+| S4 | Do reservations block? | **Partially** — backstop, not a control [SUB-4]. |
 | S5 | Autonomous loop vs lead-driven waves? | **Not a conflict.** `work` runs exactly one wave; `autonomous: true` is opt-in. |
 
-**Lane routing resolved.** `task.create` accepts no `model`, but it accepts `role`, and a Team
-role carries `model` + `thinking` + `skills` (`crew/team/types.ts:13-17`), consumed at
-`crew/handlers/work.ts:176-183`. Lanes are therefore Team roles, which keeps materialization
-on the public API instead of direct store writes — removing the version-skew coupling this
-plan previously accepted.
+**Lane routing resolved.** Lanes are Team roles [SUB-2], which keeps materialization on the
+public API instead of direct store writes — removing the version-skew coupling this plan
+previously accepted.
 
 ### The one remaining experiment
 
@@ -71,14 +69,14 @@ Three small pieces, in order:
       same-wave write-sets disjoint · every task packet self-sufficient (no dangling refs).
       Reuse `tools/critical-path.py` (already emits every verdict; wrap it with the
       write-set and self-sufficiency checks). Output: pass/fail + remedy hints. CLI-invokable.
-- [ ] **`board-materializer`** — assert the Team profile is active (silent-degradation guard),
-      write the `plan.json` record, then parse the plan's Tasks/Contracts/Decisions tables →
-      `task.create` calls (deps from Deps col, `role` from the lane map, `riskLabels` from
-      risk flags, packet body as task content, worker contract line injected).
+- [ ] **`board-materializer`** — assert the Team profile is active [SUB-2b], write the
+      `plan.json` record [SUB-3], then parse the plan's Tasks/Contracts/Decisions tables →
+      `task.create` calls (deps from Deps col, `role` from the lane map [SUB-2], `riskLabels`
+      from risk flags, packet body as task content, worker contract line injected).
 - [ ] **`telemetry-harvest`** — read Crew task state, progress logs, the activity feed, and
       optional debug artifacts at close → emit the telemetry table (wall-clock, per-task time,
-      defects-by-origin, rework share) into the plan directory as `telemetry.md`. Note Crew
-      stores **no per-task cost**; source it separately or record the gap. **Must redact
+      defects-by-origin, rework share) into the plan directory as `telemetry.md`. Crew stores
+      no per-task cost [SUB-5]; source it separately or record the gap. **Must redact
       free-text task fields by default** — raw task text embeds plan paths, file names, and
       feature names.
 - [ ] Later, optional: lane auto-suggestion from write-set globs
@@ -128,13 +126,13 @@ New/replacing docs in this repo:
       Run it end-to-end: converse → `/pi-team-plan` → execute → close.
 - [ ] Harvest telemetry with the Phase 2 `telemetry-harvest` tool; compare against the reported
       baseline in `README.md` (5.3 h active / 1.61x ceiling). **Cost is not directly comparable**
-      — Crew records no per-task cost; compare wall-clock and task counts, and note the gap.
+      [SUB-5]; compare wall-clock and task counts, and note the gap.
 - [ ] **Acceptance criteria:** wall-clock ≤ 60% of a comparable sequential estimate ·
       zero write-set collisions · all defects caught at handoff or wave gate (none surviving
       to final review that a handoff reviewer should have caught) · human interruptions
       limited to intent, flagged approvals, and the summary. **Cost is deliberately not an
-      acceptance criterion** — Crew records none, so a cost bound would be unfalsifiable.
-      Track it out-of-band if a ceiling matters.
+      acceptance criterion** [SUB-5] — a cost bound would be unfalsifiable. Track it
+      out-of-band if a ceiling matters.
 - [ ] Record results in `docs/issues_learnings.md`; fix the top friction points; only then
       execute the archive step in Phase 4.
 

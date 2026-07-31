@@ -215,6 +215,7 @@
     h1 { font-size: 26px; }
     .mermaid-wrap { padding: 16px 12px; }
   }
+  .ref { font-family: ui-monospace, monospace; font-size: 0.82em; color: #6366f1; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -346,18 +347,15 @@
   </div>
   <div class="callout">
     <strong>A lane <em>is</em> a Team role — that is the entire routing mechanism.</strong>
-    <code>task.create</code> accepts no <code>model</code>, but it accepts <code>role</code>, and a Team
-    role carries <code>model</code>, <code>thinking</code> and <code>skills</code>
-    (<code>crew/team/types.ts:13-17</code>). <code>work</code> resolves
-    <code>task.model → wave param → roleModel → config.models.worker → session model</code>
-    (<code>crew/handlers/work.ts:176-183</code>), so one role string sets all three. Lanes are declared
-    once in the Team profile, and materialization stays on the public API — no direct store writes.
+    One <code>role</code> string on a task sets its model, thinking level, and skills
+    <span class="ref">[SUB-2]</span>. Lanes are declared once in the Team profile, and
+    materialization stays on the public API — no direct store writes.
     <br><br>
     <strong>Two traps.</strong> Never name a lane with a bare packaged role
-    (<code>worker</code>, <code>scout</code>, <code>reviewer</code>…): resolution prefers the packaged
-    canonical name when that key also exists, and packaged non-editing roles cannot edit. The
-    <code>worker-*</code> prefix is safe. And <strong>the profile must be active</strong> — otherwise every
-    lane silently falls back to the default worker model with no error.
+    (<code>worker</code>, <code>scout</code>, <code>reviewer</code>…) — the <code>worker-*</code> prefix
+    keeps lanes distinct and editing-capable <span class="ref">[SUB-2a]</span>. And
+    <strong>the profile must be active</strong>, or every lane silently falls back to the default
+    worker model with no error <span class="ref">[SUB-2b]</span>.
   </div>
 </section>
 

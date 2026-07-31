@@ -8,8 +8,12 @@ sequential mode.
 |---|---|
 | `pi-team-execution.md` | **The design.** Roles, lifecycle, event model, context rules. Start here. |
 | `pi-team-execution-plan.html` | Visual companion — sequence diagrams, trigger taxonomy, model tiers. |
-| `implementation-plan.md` | The rollout checklist: install, spikes, build, skills, docs, calibration. |
-| `notes/` | Substrate findings from `pi-messenger` source inspection, with `file:line` citations. |
+| `implementation-plan.md` | The rollout checklist: install, smoke test, build, skills, docs, calibration. |
+| `notes/` | **Substrate truth.** Source-inspection findings with `file:line` citations, and the `SUB-n` constraints table every other doc cites. |
+
+**Convention:** `notes/README.md` owns how the substrate behaves. Every other document states
+the *consequence* of a constraint and cites its `[SUB-n]` ID — no mechanism detail, no
+`file:line` citations outside `notes/`. A substrate change is then a one-place edit.
 
 Supporting tooling produced by this work lives in `tools/` (see Analysis tools below), not
 here, because this directory is staging. Per `implementation-plan.md` Phase 4,
@@ -94,12 +98,10 @@ Two runtime constraints that shaped the design:
   why workers get a fresh packet rather than a forked context.
 
 > **Correction from source inspection.** This table was written before reading
-> `pi-messenger`'s source, and its division of labour was wrong. Crew spawns its own
-> `pi --mode json --no-session` workers and explicitly does not launch `pi-subagents`
-> (`crew/handlers/plan.ts:599`). `pi-subagents` is therefore **not** the execution primitive
-> for task work; it is used lead-side only, for rescuing blocked tasks and the final review.
-> That also removes worker session resume, watchdog coverage over workers, and `status.json`
-> cost telemetry. Full findings with citations: `notes/`.
+> `pi-messenger`'s source, and its division of labour was wrong. Crew executes tasks with its
+> own workers and does not launch `pi-subagents` [SUB-1], which is therefore **not** the
+> execution primitive for task work — it is used lead-side only, for rescuing blocked tasks
+> and the final review. Full findings and the substrate constraints table: `notes/README.md`.
 
 **On watching for code changes:** review triggers on *handoff*, not on commit. In this design
 the lead is the only committer and commits happen at wave gates, so commit-triggered review

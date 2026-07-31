@@ -55,12 +55,9 @@ running it; the plan's lane tag picks the tier.
 | `complex` | `worker-complex` | strong + thinking | design-bearing, security, migration, concurrency; all risk-flagged tasks | human |
 | `visual` | `worker-visual` | std/complex variant | UI/UX/a11y — a routing specialization, not a fourth tier | as base tier |
 
-**A lane is a Team role, and that is the whole routing mechanism.** `task.create` does not
-accept `model` or `skills`, but it does accept `role`, and a Team role carries `model`,
-`thinking`, and `skills` (`crew/team/types.ts:13-17`). `work` resolves the model as
-`task.model → wave param → roleModel → config.models.worker → session model`
-(`crew/handlers/work.ts:176-183`), so one `role` string on a task sets all three. Lanes are
-declared once in the Team profile:
+**A lane is a Team role, and that is the whole routing mechanism** — one `role` string on a
+task sets its model, thinking level, and skills [SUB-2]. Lanes are declared once in the Team
+profile:
 
 ```json
 { "roles": {
@@ -70,13 +67,10 @@ declared once in the Team profile:
     "worker-visual":  { "model": "<mid>" } } }
 ```
 
-Two constraints this imposes. **Never name a lane with a bare packaged role**
-(`worker`, `scout`, `researcher`, `oracle`, `planner`, `reviewer`, `context-builder`,
-`delegate`): resolution prefers the packaged canonical name when that key also exists
-(`crew/team/store.ts:396-398`), and packaged non-editing roles are barred from editing. The
-`worker-*` prefix is safe. **And the Team profile must be active** — otherwise roles resolve
-to nothing and every task silently falls back to `config.models.worker`, with no error. The
-materializer asserts the profile is active before creating any task.
+Two constraints this imposes. **Never name a lane with a bare packaged role** — the `worker-*`
+prefix keeps lanes distinct and editing-capable [SUB-2a]. **And the Team profile must be
+active**, or every task silently falls back to the default worker model with no error, so the
+materializer asserts it before creating any task [SUB-2b].
 
 Three tiers total across the whole process: small (cheap workers), standard (std workers,
 handoff reviewer), strong (complex workers, lead-owned rescue, final reviewer). The lead runs
@@ -175,9 +169,8 @@ only committer. Timed loops are banned; if an event isn't firing, fix the event.
 | Any reviewer | **fresh, always** | independence |
 | Lead helper (replanning) | fork | genuinely needs the conversation |
 
-> Earlier drafts specified `subagent resume` for retry #1. That is not available: Crew spawns
-> its own `pi --mode json --no-session` workers and does not launch `pi-subagents`
-> (`crew/handlers/plan.ts:599`). See `notes/crew-execution-model.md`.
+> Earlier drafts specified `subagent resume` for retry #1. That mechanism does not exist here
+> [SUB-1]; the retry is fresh but carries findings and progress [SUB-6].
 
 Anti-bloat rules: handoffs are ≤ ~15 lines (files changed, check output, assumptions, risks);
 full diffs go worker→reviewer directly, never through the lead; the plan template has no
@@ -245,12 +238,10 @@ Nothing else in the repo docs is process-load-bearing.
 | `pi-team` (ours, small) | plan table → board materializer; the four plan gates; telemetry harvest | build (~3 small scripts) |
 | Skills | `/discovery`, `/design`, `/pi-team-plan` (human-only, `disable-model-invocation`) + `pi-team-lead`, `pi-team-worker` (model-facing) | write (5, replacing ~19) |
 
-**Crew executes; `pi-subagents` does not.** Crew spawns its own `pi --mode json --no-session`
-children and explicitly does not launch `pi-subagents` (`crew/handlers/plan.ts:599`). The
-consequences are load-bearing and are reflected above: no worker session resume, no
-edit-gated watchdog over workers, and no `status.json` cost/tool telemetry. What we trade
-that for — review on every handoff — is the control the evidence says actually catches
-defects.
+**Crew executes; `pi-subagents` does not** [SUB-1]. The consequences are load-bearing and are
+reflected above: no worker session resume, no edit-gated watchdog over workers, and no stored
+cost/tool telemetry. What we trade that for — review on every handoff — is the control the
+evidence says actually catches defects.
 
 Config in one place (messenger config + Team profile): concurrency ≤ 4, reviewer iterations
 ≤ 3, attempts-per-task ≤ 2, `dependencies: strict`, lane roles with their models, per-run
@@ -273,23 +264,20 @@ plan approval (opt-in or risk-triggered).
   one wave by default; `autonomous: true` is opt-in. Run lead-driven until proven.
 - **Reviewer-on-every-handoff costs money.** It buys the removal of late rework (21% of
   measured time) and per-task break-it. Telemetry per run proves or refutes it; budgets cap it.
-- **Reservations only block structured `edit`/`write` — bash writes bypass them entirely.**
-  `sed -i`, shell redirects, and `python -c` are not examined by the reservation hook, and the
-  registry has no locking. The plan-time disjoint-write-set gate is therefore the real control;
-  reservations only catch drift, and only for well-behaved edits. Do not let this design lean
-  on them.
-- **We depend on `plan.json`'s on-disk shape.** There is no public non-LLM action to create a
-  plan record, so the materializer writes that one file directly. It is the only place we touch
-  Crew's internals — pin the `pi-messenger` version and re-check on upgrade.
-- **A missing Team profile degrades silently.** If the profile isn't active, every lane role
-  resolves to nothing and all tasks run on the default worker model with no error. The
-  materializer must assert it before creating tasks.
-- **Cost telemetry is weaker than the baseline's.** Crew stores no per-task cost or persistent
-  tool counts, so the calibration run cannot be compared to the $47.61 baseline on equal terms.
-  Wall-clock and task counts remain comparable; cost needs a separate source.
+- **Reservations only block structured `edit`/`write` — bash writes bypass them entirely**
+  [SUB-4]. The plan-time disjoint-write-set gate is therefore the real control; reservations
+  only catch drift, and only for well-behaved edits. Do not let this design lean on them.
+- **We depend on `plan.json`'s on-disk shape** [SUB-3]. It is the only place we touch Crew's
+  internals — pin the `pi-messenger` version and re-check on upgrade.
+- **A missing Team profile degrades silently** [SUB-2b]. The materializer must assert it
+  before creating tasks.
+- **Cost telemetry is weaker than the baseline's** [SUB-5]. The calibration run cannot be
+  compared to the baseline on cost. Wall-clock and task counts remain comparable.
 
 ---
 *Evidence base: `README.md` in this directory — measured baseline (5.3 h / $47.61 / 1.61x
-ceiling; all defects found by review+E2E, none by per-task break-it) and extension evaluation.
-Substrate behavior is verified by source inspection in `notes/` — `board-materialization.md`,
-`crew-execution-model.md`, `review-loop.md`, `reservations-and-config.md`.*
+ceiling; all defects found by review+E2E, none by per-task break-it) and extension evaluation.*
+
+*`SUB-n` references point to the substrate constraints table in `notes/README.md`, which is the
+single source for how the substrate behaves. State consequences here; never restate mechanism
+or `file:line` citations — change them in one place.*
