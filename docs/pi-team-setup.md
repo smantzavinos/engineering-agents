@@ -47,11 +47,11 @@ confirmation before recovering incomplete started work.
 ## Pi-session preflight
 
 `pi_messenger` is a Pi tool, not a shell command. In the lead's Pi session, activate the profile
-with the exact tool invocation `pi_messenger team.profile.use name pi-team`. Activation is
-idempotent and is a preflight, not persisted project state.
+with the exact structured tool invocation `pi_messenger({ action: "team.profile.use", name: "pi-team" })`.
+Activation is idempotent and is a preflight, not persisted project state.
 
-After activation, inspect the returned active profile. It must be exactly `pi-team` and contain
-these roles with the declared `pi-team-worker` skill:
+After activation, inspect the tool result. Its active profile name must be exactly `pi-team`, and
+it must contain these roles with the declared `pi-team-worker` skill:
 
 - `worker-cheap`: `github-copilot/gpt-5.6-terra`, `low`
 - `worker-std`: `github-copilot/gpt-5.6-terra`, `medium`
@@ -97,14 +97,44 @@ bash tests/specs/repo-readiness-docs-spec.sh
 ./tests/run-tests.sh fast
 ./scripts/pi-dev.sh --verify
 home-manager switch --flake .#<hostname>
+
+# Active-install proof: resource loading only; no paid model call.
+REPO="$(git rev-parse --show-toplevel)"
+SETTINGS="$HOME/.pi/agent/settings.json"
+PROJECT_CONFIG="$REPO/.pi/messenger/crew/config.json"
+SNAPSHOT="$(mktemp)"
+trap 'rm -f "$SNAPSHOT"' EXIT
+
+command -v pi-team
+jq -e '.packages | index("./packages/pi-messenger") != null' "$SETTINGS" >/dev/null
+test -f "$HOME/.pi/agent/skills/pi-team-plan/SKILL.md"
+test -f "$HOME/.pi/agent/skills/pi-team-lead/SKILL.md"
+test -f "$HOME/.pi/agent/skills/pi-team-worker/SKILL.md"
+cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"
+cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-profiles/pi-team.json"
+test -L "$PROJECT_CONFIG"
+test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"
+cmp -s "$PROJECT_CONFIG" "$REPO/config/pi-team/crew-config.json"
+node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"
+jq -e '
+  any(.settings.configuredPackages[]; .source == "./packages/pi-messenger") and
+  any(
+    .proofSet[]
+    | select(.packageId == "pi-messenger")
+    | .discovered.extensions[]
+    | select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))
+  )
+' "$SNAPSHOT" >/dev/null
+
 ./tests/run-tests.sh all
 ```
 
 The targeted readiness spec is fast feedback. `fast` is the task gate. `pi-dev` verifies the
-current checkout in its isolated sandbox. The Home Manager command applies the active installation
-for live package, skill, profile, project-config, reviewer, and callable `pi_messenger` proof.
-`all` is the final plan gate. Baseline failures must be recorded separately and compared after the
-gate; only new failures block this rollout task. `full` remains an optional release smoke under
+current checkout in its isolated sandbox. The Home Manager command applies the active installation,
+and the post-activation proof verifies the live command, package configuration, skills, reviewer,
+profile, project configuration, and registered `pi_messenger` tool without invoking a model. `all`
+is the final plan gate. Baseline failures must be recorded separately and compared after the gate;
+only new failures block this rollout task. `full` remains an optional release smoke under
 `docs/testing-strategy.md`.
 
 Do not treat a green deployment proof as calibration. Current canonical process and OpenCode

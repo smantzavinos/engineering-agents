@@ -301,7 +301,7 @@ assert_file_contains "$SETUP_DOC" "config/pi-team/team-profile.json" "Pi team se
 assert_file_contains "$SETUP_DOC" "~/.pi/agent/messenger/team-profiles/pi-team.json" "Pi team setup identifies the global profile runtime path"
 assert_file_contains "$SETUP_DOC" "config/pi-team/crew-config.json" "Pi team setup identifies the canonical project Crew source"
 assert_file_contains "$SETUP_DOC" ".pi/messenger/crew/config.json" "Pi team setup identifies the tracked project config symlink"
-assert_file_contains "$SETUP_DOC" "pi_messenger team.profile.use name pi-team" "Pi team setup documents exact profile activation"
+assert_file_contains "$SETUP_DOC" 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "Pi team setup documents Pi structured profile activation"
 assert_file_contains "$SETUP_DOC" "worker-cheap" "Pi team setup verifies all lane roles"
 assert_file_contains "$SETUP_DOC" "worker-visual-complex" "Pi team setup verifies the complex visual lane"
 assert_file_contains "$SETUP_DOC" "risk-labels" "Pi team setup verifies risk-label approval mode"
@@ -317,6 +317,35 @@ assert_file_contains "$SETUP_DOC" "bash tests/specs/repo-readiness-docs-spec.sh"
 assert_file_contains "$SETUP_DOC" "./tests/run-tests.sh fast" "Pi team setup lists the task gate"
 assert_file_contains "$SETUP_DOC" "./scripts/pi-dev.sh --verify" "Pi team setup lists the current-checkout deployment gate"
 assert_file_contains "$SETUP_DOC" "home-manager switch --flake .#<hostname>" "Pi team setup lists the active-install deployment gate"
+assert_file_contains "$SETUP_DOC" "command -v pi-team" "Pi team setup proves the installed pi-team command"
+assert_file_contains "$SETUP_DOC" 'jq -e '\''.packages | index("./packages/pi-messenger") != null'\''' "Pi team setup proves pi-messenger is configured as a package"
+assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-plan/SKILL.md"' "Pi team setup proves the pi-team-plan skill is installed"
+assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-lead/SKILL.md"' "Pi team setup proves the pi-team-lead skill is installed"
+assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-worker/SKILL.md"' "Pi team setup proves the pi-team-worker skill is installed"
+assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"' "Pi team setup proves the installed reviewer matches canonical"
+assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-profiles/pi-team.json"' "Pi team setup proves the installed profile matches canonical"
+assert_file_contains "$SETUP_DOC" 'test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"' "Pi team setup proves the project config resolves to canonical"
+assert_file_contains "$SETUP_DOC" 'node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"' "Pi team setup runs the resource snapshot without a model call"
+assert_file_contains "$SETUP_DOC" 'any(.settings.configuredPackages[]; .source == "./packages/pi-messenger")' "Pi team setup proves the snapshot contains pi-messenger"
+assert_file_contains "$SETUP_DOC" 'select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))' "Pi team setup proves pi_messenger is registered from the messenger extension"
+
+active_install_proofs_present() {
+  local document="$1"
+  grep -Fq 'command -v pi-team' "$document" &&
+    grep -Fq 'test -f "$HOME/.pi/agent/skills/pi-team-plan/SKILL.md"' "$document" &&
+    grep -Fq 'cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"' "$document" &&
+    grep -Fq 'select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))' "$document"
+}
+
+proof_mutation="$(mktemp)"
+trap 'rm -f "$proof_mutation"' EXIT
+sed '/test -f "\$HOME\/\.pi\/agent\/skills\/pi-team-plan\/SKILL.md"/d' "$SETUP_DOC" >"$proof_mutation"
+if active_install_proofs_present "$SETUP_DOC" && ! active_install_proofs_present "$proof_mutation"; then
+  pass "Pi team setup readiness mutation rejects a missing active-install proof"
+else
+  fail "Pi team setup readiness mutation rejects a missing active-install proof"
+fi
+
 assert_file_contains "$SETUP_DOC" "./tests/run-tests.sh all" "Pi team setup lists the final plan gate"
 assert_file_contains "$SETUP_DOC" "Baseline failures" "Pi team setup documents baseline-failure comparison"
 assert_file_contains "$SETUP_DOC" "OpenCode" "Pi team setup preserves the OpenCode boundary"
