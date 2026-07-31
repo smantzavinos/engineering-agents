@@ -6,37 +6,28 @@
 **Evidence:** `README.md` — measured baseline and extension evaluation ·
 `notes/` — substrate findings from source inspection
 
-Ordered so each phase de-risks the next. Phase 1 is now a single smoke test (the spikes it
-replaced were resolved by source inspection); nothing irreversible happens before Phase 3.
+**Progress so far:** the five Phase 1 spikes are **resolved by source inspection** (see
+`notes/`). Nothing has been installed or configured — `pi-messenger` is not installed, there
+is no messenger config and no Team profile. Every checkbox below is still open.
+
+Ordered so each phase de-risks the next. Phase 1 is a **kill gate**: 20 minutes of work that
+can invalidate the substrate choice, so only the minimum setup it needs happens before it.
+The bulk of configuration waits until the gate passes.
 
 ---
 
-## Phase 0 — Install & configure (~1 hour)
+## Phase 0 — Install the minimum the gate needs (~15 min)
+
+Deliberately minimal: everything here is required to run the Phase 1 smoke test, and nothing
+else. If the gate fails, this is all that was spent.
 
 - [ ] **Install `pi-messenger`:** `pi install npm:pi-messenger`, then `/reload`.
-- [ ] **Enable `pi-hooks` extensions:** `pi config` → enable `lsp` (agent-end diagnostics)
-      and `checkpoint` (per-turn rollback refs). Note these apply to the **lead session**;
-      reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter
-      (path-like `tools` entries are passed through as `--extension`).
-- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
-      [SUB-1], so it is not a quality control for task work.
-- [ ] **Write the messenger config** (`~/.pi/agent/pi-messenger.json`, project override at
-      `.pi/messenger/crew/config.json`):
-      `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
-      `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
-      `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
-- [ ] **Create and activate the Team profile** defining the lane roles `worker-cheap`,
-      `worker-std`, `worker-complex`, `worker-visual`, each with its `model` (and `thinking`
-      where wanted), plus `approval.mode: "risk-labels"` with our risk labels.
-      **Verify it is active** [SUB-2b].
-- [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
-      replace its criteria with ours (project-level agents override extension defaults by name).
-- [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
-      shape [SUB-3], so re-check that file after any upgrade.
+- [ ] **Create a two-lane Team profile** — `worker-cheap` and `worker-std` with distinct
+      models, enough to prove lane routing works. **Verify it is active** [SUB-2b].
 
-## Phase 1 — Substrate verification (**spikes resolved by source inspection**)
+## Phase 1 — Smoke test: the kill gate (~20 min)
 
-All five original spikes were answered by reading `pi-messenger` v0.15.0 source rather than
+The five original spikes were answered by reading `pi-messenger` v0.15.0 source rather than
 running experiments — cheaper, faster, and more definitive. Findings with `file:line`
 citations are in `notes/`.
 
@@ -52,13 +43,33 @@ citations are in `notes/`.
 public API instead of direct store writes — removing the version-skew coupling this plan
 previously accepted.
 
-### The one remaining experiment
+What reading cannot establish is integration reality, dependency ordering under real
+concurrency, and whether lane roles actually route models. That is the whole remaining test:
 
-- [ ] **Smoke test (~20 min, throwaway repo).** Write `plan.json`, `task.create` ×5 in a
-      diamond DAG across two lanes, activate the Team profile, run one `work` wave.
-      Verifies the three things reading cannot establish: integration reality, dependency
-      ordering under real concurrency, and that lane roles actually route models.
-      **Fail ⇒ stop and reconsider the substrate before Phase 2.**
+- [ ] **Smoke test (throwaway repo).** Write `plan.json`, `task.create` ×5 in a diamond DAG
+      across the two lanes, run one `work` wave. Confirm: tasks execute in dependency order ·
+      each task runs on its lane's model · the wave stops cleanly.
+      **Fail ⇒ stop. Reconsider the substrate before spending anything on Phase 1b.**
+
+## Phase 1b — Full configuration (~45 min, only after the gate passes)
+
+- [ ] **Enable `pi-hooks` extensions:** `pi config` → enable `lsp` (agent-end diagnostics)
+      and `checkpoint` (per-turn rollback refs). Note these apply to the **lead session**;
+      reaching Crew workers requires adding the extension path to `crew-worker.md` frontmatter
+      (path-like `tools` entries are passed through as `--extension`).
+- [ ] **Watchdog:** enable on the lead session only. It does **not** cover Crew workers
+      [SUB-1], so it is not a quality control for task work.
+- [ ] **Write the messenger config** (`~/.pi/agent/pi-messenger.json`, project override at
+      `.pi/messenger/crew/config.json`):
+      `concurrency.workers: 4` · `dependencies: "strict"` (default is `advisory`) ·
+      `review.enabled: true`, `review.maxIterations: 3` · `work.maxAttemptsPerTask: 2` ·
+      `artifacts.enabled: true`. Ready-to-paste block in `notes/reservations-and-config.md`.
+- [ ] **Complete the Team profile** — add `worker-complex` (with `thinking`) and
+      `worker-visual`, plus `approval.mode: "risk-labels"` with our risk labels.
+- [ ] **Override the reviewer:** copy `crew-reviewer.md` to `.pi/messenger/crew/agents/` and
+      replace its criteria with ours (project-level agents override extension defaults by name).
+- [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
+      shape [SUB-3], so re-check that file after any upgrade.
 
 ## Phase 2 — Build `pi-team` (repo-local extension/scripts)
 
@@ -104,7 +115,7 @@ New/replacing docs in this repo:
 
 - [ ] **`docs/pi-team-execution.md`** — promote the design doc from the investigation dir
       (near-verbatim). This is the canonical process doc.
-- [ ] **`docs/pi-team-setup.md`** — Phase 0 install/config steps + preflight checklist
+- [ ] **`docs/pi-team-setup.md`** — the Phase 0 + 1b install/config steps + preflight checklist
       (messenger installed, Team profile **active**, `dependencies: strict`, reviewer override
       in place, `.pi-subagents/` and `.pi/messenger/` ignored) so a new machine can be
       provisioned in minutes.
@@ -146,6 +157,11 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 ──► Phase 1 smoke test ──► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
-                                      └──► Phase 4 docs (parallel with 3)
+Phase 0 (minimal) ──► Phase 1 SMOKE TEST ──► Phase 1b (full config) ──► Phase 2 ──► Phase 3
+                        │  kill gate                                                    │
+                        └─ fail ⇒ stop, reconsider substrate      ┌────────────────────┘
+                                                                 ▼
+                                    Phase 5 ──► archive (Phase 4 tail)
+                                       ▲
+                        Phase 4 docs ───┘ (parallel with 3)
 ```
