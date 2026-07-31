@@ -73,18 +73,45 @@ else
   fail 'Project Crew worker is a relative canonical override symlink'
 fi
 
-if [[ -f "$crew_worker" ]] \
-  && grep -Fq 'name: crew-worker' "$crew_worker" \
-  && grep -Fq 'tools: read, write, edit, bash, pi_messenger' "$crew_worker" \
-  && grep -Fq 'crewRole: worker' "$crew_worker" \
-  && grep -Fq 'pi_messenger({ action: "task.show", id: "<TASK_ID>" })' "$crew_worker" \
-  && grep -Fq 'Use structured `edit` and `write` tools for every file mutation.' "$crew_worker" \
-  && grep -Fq 'Run only the task packet’s minimal check.' "$crew_worker" \
-  && grep -Fq 'tests: ["<minimal-check-command>"]' "$crew_worker"; then
-  pass 'Canonical Crew worker override has the bounded worker protocol and tools'
+worker_override_is_valid() {
+  local worker="$1"
+  [[ -f "$worker" ]] \
+    && grep -Fq 'name: crew-worker' "$worker" \
+    && ! grep -Eq '^tools[[:space:]]*:' "$worker" \
+    && grep -Fq 'crewRole: worker' "$worker" \
+    && grep -Fq '## 1. Join and re-anchor' "$worker" \
+    && grep -Fq 'pi_messenger({ action: "task.show", id: "<TASK_ID>" })' "$worker" \
+    && grep -Fq 'read({ path: ".pi/messenger/crew/tasks/<TASK_ID>.md" })' "$worker" \
+    && grep -Fq '## 2. Start and reserve' "$worker" \
+    && grep -Fq 'pi_messenger({ action: "task.start", id: "<TASK_ID>" })' "$worker" \
+    && grep -Fq 'pi_messenger({ action: "reserve", paths: ["<declared-write-set>"], reason: "<TASK_ID>" })' "$worker" \
+    && grep -Fq '## 3. Implement' "$worker" \
+    && grep -Fq 'Use structured `edit` and `write` tools for every file mutation.' "$worker" \
+    && grep -Fq 'Run only the task packet’s minimal check.' "$worker" \
+    && grep -Fq 'pi_messenger({ action: "task.progress", id: "<TASK_ID>", message:' "$worker" \
+    && grep -Fq '## 4. Release and complete' "$worker" \
+    && grep -Fq 'pi_messenger({ action: "release" })' "$worker" \
+    && grep -Fq 'action: "task.done"' "$worker" \
+    && grep -Fq 'tests: ["<minimal-check-command>"]' "$worker" \
+    && grep -Fq 'task.block' "$worker" \
+    && grep -Fq '## Hard boundaries' "$worker" \
+    && grep -Fq 'Do not dispatch other agents or perform lead/reviewer work.' "$worker"
+}
+
+if worker_override_is_valid "$crew_worker"; then
+  pass 'Canonical Crew worker override omits tools frontmatter and preserves the bounded worker protocol'
 else
-  fail 'Canonical Crew worker override has the bounded worker protocol and tools'
+  fail 'Canonical Crew worker override must omit tools frontmatter and preserve the bounded worker protocol'
 fi
+
+worker_with_tools="$(mktemp)"
+sed '/^description:/a tools: read, write, edit, bash, pi_messenger' "$crew_worker" >"$worker_with_tools"
+if worker_override_is_valid "$crew_worker" && ! worker_override_is_valid "$worker_with_tools"; then
+  pass 'Crew worker override validation rejects tools frontmatter'
+else
+  fail 'Crew worker override validation must reject tools frontmatter'
+fi
+rm -f "$worker_with_tools"
 
 protocol_lines=()
 for anchor in \

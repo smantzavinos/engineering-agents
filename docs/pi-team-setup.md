@@ -44,6 +44,9 @@ Every other project agent remains ignored. The generated entries are `plan.json`
 The override is mandatory: the bundled worker requires a commit and commit evidence, while this
 design reserves all Git mutation and wave commits for the lead. Crew discovers same-name project
 agents after bundled agents, so the tracked `crew-worker` replaces that system prompt [SUB-11].
+The override must have no `tools` frontmatter. Crew otherwise filters the named tools, drops the
+custom `pi_messenger` name, and applies the resulting `--tools` restriction to extension tools;
+omitting the key preserves Pi defaults plus the explicitly loaded Messenger extension [SUB-12].
 
 Recovery moves only those generated board entries to
 `.pi/messenger/crew-runs/<UTC-basic-timestamp>/`; it never moves `config.json` or `agents/`.
@@ -70,8 +73,10 @@ it must contain these roles with the declared `pi-team-worker` skill:
 
 Also verify the approval policy is `risk-labels` with exactly `migration, destructive, auth,
 api-contract`. Never use a bare packaged role and never auto-approve a risk-labelled task. Before
-dispatch, verify the project `crew-worker` symlink resolves to `config/pi-team/crew-worker.md` and
-that the resolved prompt has no `git add`, `git commit`, or `commits:` evidence instruction.
+dispatch, verify the project `crew-worker` symlink resolves to `config/pi-team/crew-worker.md`,
+that the resolved prompt has no `git add`, `git commit`, or `commits:` evidence instruction, and
+that its frontmatter has no `tools` key. This preserves every coordination action in the worker
+protocol [SUB-12].
 
 ## Board preflight and commands
 
@@ -131,6 +136,7 @@ test -L "$PROJECT_WORKER"
 test "$(readlink -f "$PROJECT_WORKER")" = "$(readlink -f "$REPO/config/pi-team/crew-worker.md")"
 cmp -s "$PROJECT_WORKER" "$REPO/config/pi-team/crew-worker.md"
 ! grep -Eq 'git (add|commit)|commits:' "$PROJECT_WORKER"
+! grep -Eq '^tools[[:space:]]*:' "$PROJECT_WORKER"
 node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"
 jq -e '
   . as $root |

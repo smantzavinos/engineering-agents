@@ -87,8 +87,10 @@ that registered state [SUB-10]:
 1. Activate and confirm the active profile is exactly `pi-team` and contains all five roles
    [SUB-2b].
 2. Before dispatch, verify `.pi/messenger/crew/agents/crew-worker.md` resolves to the canonical
-   `config/pi-team/crew-worker.md` override and contains no worker commit or commit-evidence
-   instruction. Same-name project discovery replaces the bundled worker system prompt [SUB-11].
+   `config/pi-team/crew-worker.md` override, contains no worker commit or commit-evidence
+   instruction, and has no `tools` frontmatter. Same-name project discovery replaces the bundled
+   worker system prompt [SUB-11]; omitting the key preserves Pi defaults and the explicitly loaded
+   `pi_messenger` extension tool required by the full worker protocol [SUB-12].
 3. Treat `config.json` and `agents/` as stable inputs. Board runtime entries are `plan.json`,
    `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and
    `planning-outline.md`. Refuse initialization when any runtime entry exists.
@@ -265,7 +267,9 @@ Stable configuration is reproducible; runtime state is not:
 all other `.pi/` agents and runtime state. `config/pi-team/` is the single source for Crew/profile
 configuration and the worker override; the task reviewer is a normal repo-owned Pi agent. The
 project override is mandatory because the bundled worker commits and supplies commit evidence,
-which violates the lead-only wave transaction [SUB-11]. Each repository adopting this experimental
+which violates the lead-only wave transaction [SUB-11]. The override must have no `tools`
+frontmatter so Crew does not filter out `pi_messenger`; Pi defaults and the explicitly loaded
+Messenger extension must remain available [SUB-12]. Each repository adopting this experimental
 flow copies that config scaffold and commits the same narrow symlink/ignore rules. Each lead
 session first joins Messenger, activates `pi-team` via `team.profile.use` [SUB-10], and verifies the
 worker override before dispatch; activation is idempotent and is a lead preflight, not durable
@@ -326,6 +330,8 @@ canonical requirements/process docs or retire existing Pi/OpenCode paths.
 - Crew stores no task cost [SUB-5].
 - Same-name project agent discovery must replace the bundled committing `crew-worker` before any
   wave dispatch [SUB-11].
+- The project `crew-worker` must have no `tools` frontmatter so `pi_messenger` remains exposed and
+  the full coordination protocol remains executable [SUB-12].
 
 ---
 

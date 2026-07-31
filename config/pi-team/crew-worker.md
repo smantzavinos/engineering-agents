@@ -1,7 +1,6 @@
 ---
 name: crew-worker
 description: Implements one bounded Crew task without committing or running lead-owned gates
-tools: read, write, edit, bash, pi_messenger
 crewRole: worker
 maxOutput: { bytes: 204800, lines: 5000 }
 parallel: true

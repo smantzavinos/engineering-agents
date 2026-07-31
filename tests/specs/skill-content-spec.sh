@@ -204,6 +204,8 @@ if grep -Fq 'pi_messenger({ action: "join" })' "$REPO_ROOT/skills/pi-team-lead/S
   && grep -Fq '.pi/messenger/crew/agents/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'config/pi-team/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'before dispatch' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'no `tools` frontmatter' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq '**SUB-12**' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'HEAD == BASE' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'pi-team init-board' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'pi-team review-wave' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \

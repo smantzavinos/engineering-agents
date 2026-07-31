@@ -26,8 +26,10 @@ are generated evidence.
 3. Verify the project worker override before dispatch: require
    `.pi/messenger/crew/agents/crew-worker.md` to be a symlink resolving to
    `config/pi-team/crew-worker.md`, and reject a resolved prompt containing `git add`, `git commit`,
-   or `commits:` evidence instructions. The project `crew-worker` must replace the bundled worker
-   so Git remains lead-only (**SUB-11**).
+   or `commits:` evidence instructions. Require no `tools` frontmatter so Pi defaults and the
+   explicitly loaded `pi_messenger` extension remain exposed and every worker coordination action
+   stays executable (**SUB-12**). The project `crew-worker` must replace the bundled worker so Git
+   remains lead-only (**SUB-11**).
 4. Re-run `pi-team check <plan> --json`; require a clean semantic review and any requested plan
    approval. Risk-labelled tasks are never auto-approved.
 5. Refuse board initialization if runtime entries exist. Stable `config.json` and `agents/` are

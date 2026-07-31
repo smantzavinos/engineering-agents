@@ -147,7 +147,9 @@ archived automatically. Board materialization follows the byte-level packet temp
   approval and are excluded from ready/start paths until `task.approve` [SUB-9].
 - Track relative symlinks from the admitted `.pi` paths to the canonical Crew defaults and
   `crew-worker` override. The same-name project agent replaces the bundled committing worker
-  system prompt [SUB-11]; all other project agents remain ignored.
+  system prompt [SUB-11]; all other project agents remain ignored. Require no `tools` frontmatter
+  on the override so Pi defaults and the explicitly loaded `pi_messenger` extension remain exposed
+  for the full worker protocol [SUB-12].
 - Use the exact Crew JSON in `pi-team-execution.md` §5: four workers, strict dependencies,
   Crew auto-review disabled, two attempts, one wave, stop on block, artifacts enabled, and
   minimal coordination.
@@ -157,7 +159,9 @@ archived automatically. Board materialization follows the byte-level packet temp
 **TDD:**
 
 1. Add failing assertions to `pi-module-content-spec.sh`, `proof-set-runtime-spec.sh`, and a focused
-   `pi-team-config-spec.sh` for exact package/profile/config contracts.
+   `pi-team-config-spec.sh` for exact package/profile/config contracts. The worker assertion rejects
+   any `tools` key while preserving every join, re-anchor, start, reserve, progress, release,
+   completion, blocker, and hard-boundary protocol anchor [SUB-12].
 2. Implement the minimum declarations/files.
 3. Wire the new spec into `tests/run-tests.sh fast` and document it in `tests/README.md` in this
    task.
@@ -205,8 +209,9 @@ archived automatically. Board materialization follows the byte-level packet temp
 
 - `pi-team-plan` (`disable-model-invocation: true`): create the exact plan contract; run CLI check;
   commission fresh semantic review; never auto-waive risk approval.
-- `pi-team-lead`: active-profile and canonical worker-override preflight before dispatch; exact
-  init/materialization algorithm; clean-tree and `HEAD == BASE` isolation; one-wave dispatch;
+- `pi-team-lead`: active-profile and canonical worker-override preflight before dispatch,
+  including rejection of worker `tools` frontmatter [SUB-12]; exact init/materialization algorithm;
+  clean-tree and `HEAD == BASE` isolation; one-wave dispatch;
   review-bundle generation; fresh task-reviewer
   calls; per-wave commits; board reset/block transitions; every affected completed integration
   group once per content digest with two remediation revisions; bounded rescue; lead gates/close.
