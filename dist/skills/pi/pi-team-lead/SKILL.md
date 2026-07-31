@@ -16,21 +16,25 @@ are generated evidence.
 
 ## Preflight and materialization
 
-1. Confirm the active profile is exactly `pi-team`: invoke `team.profile.use` idempotently, then
-   verify all five lane roles, their models/thinking/`pi-team-worker` skill, and risk-label
-   approval policy. Never use a bare packaged role.
-2. Re-run `pi-team check <plan> --json`; require a clean semantic review and any requested plan
+1. Register this Pi session with the exact structured tool invocation
+   `pi_messenger({ action: "join" })`. Registration is ephemeral, so repeat this before every
+   lead-session preflight.
+2. Confirm the active profile is exactly `pi-team`: invoke
+   `pi_messenger({ action: "team.profile.use", name: "pi-team" })` idempotently, then verify all
+   five lane roles, their models/thinking/`pi-team-worker` skill, and risk-label approval policy.
+   Never use a bare packaged role.
+3. Re-run `pi-team check <plan> --json`; require a clean semantic review and any requested plan
    approval. Risk-labelled tasks are never auto-approved.
-3. Refuse board initialization if runtime entries exist. Stable `config.json` and `agents/` are
+4. Refuse board initialization if runtime entries exist. Stable `config.json` and `agents/` are
    no-clobber inputs. For a partial pre-worker materialization, archive only runtime state; for
    started work, obtain human confirmation before recovery.
-4. Run `pi-team init-board` once. Create every task through `pi_messenger` in stable topological order
+5. Run `pi-team init-board` once. Create every task through `pi_messenger` in stable topological order
    (numeric plan ID tie-breaker). Save each returned Crew ID in the
    **plan-ID→Crew-ID map**, and translate `Deps` only through that map.
-5. Use the compiler's LF packet bytes, title `<ID> — <deliverable truncated to 80 Unicode code
+6. Use the compiler's LF packet bytes, title `<ID> — <deliverable truncated to 80 Unicode code
    points>`, lane role, and risk labels for `task.create`. Risk-labelled tasks persist blocked
    until the human uses `task.approve` (**SUB-9**).
-6. Run `crew.validate`. Only its expected missing-board-`plan.md` warning is acceptable; graph,
+7. Run `crew.validate`. Only its expected missing-board-`plan.md` warning is acceptable; graph,
    count, or any other warning archives partial state and stops.
 
 ## Executable CLI commands

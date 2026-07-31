@@ -301,7 +301,10 @@ assert_file_contains "$SETUP_DOC" "config/pi-team/team-profile.json" "Pi team se
 assert_file_contains "$SETUP_DOC" "~/.pi/agent/messenger/team-profiles/pi-team.json" "Pi team setup identifies the global profile runtime path"
 assert_file_contains "$SETUP_DOC" "config/pi-team/crew-config.json" "Pi team setup identifies the canonical project Crew source"
 assert_file_contains "$SETUP_DOC" ".pi/messenger/crew/config.json" "Pi team setup identifies the tracked project config symlink"
+assert_file_contains "$SETUP_DOC" 'pi_messenger({ action: "join" })' "Pi team setup documents Pi structured Messenger registration"
 assert_file_contains "$SETUP_DOC" 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "Pi team setup documents Pi structured profile activation"
+assert_file_contains "$SETUP_DOC" "Registration is ephemeral to the Pi session" "Pi team setup explains session-local registration"
+assert_file_contains "$SETUP_DOC" "every other Crew action requires registered state [SUB-10]" "Pi team setup documents the Crew registration prerequisite"
 assert_file_contains "$SETUP_DOC" "worker-cheap" "Pi team setup verifies all lane roles"
 assert_file_contains "$SETUP_DOC" "worker-visual-complex" "Pi team setup verifies the complex visual lane"
 assert_file_contains "$SETUP_DOC" "risk-labels" "Pi team setup verifies risk-label approval mode"
@@ -350,6 +353,31 @@ if active_resource_proof_is_valid "$REPO_ROOT/tests/spec-fixtures/resource-snaps
 else
   fail "Pi team setup active-resource predicate accepts the pi-messenger snapshot"
 fi
+
+registration_preflight_is_valid() {
+  local document="$1" join_line profile_line
+  join_line="$(grep -nF 'pi_messenger({ action: "join" })' "$document" | head -n1 | cut -d: -f1 || true)"
+  profile_line="$(grep -nF 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$document" | head -n1 | cut -d: -f1 || true)"
+  [[ "$join_line" =~ ^[0-9]+$ ]] && [[ "$profile_line" =~ ^[0-9]+$ ]] &&
+    [[ "$join_line" -lt "$profile_line" ]] &&
+    grep -Fq 'Registration is ephemeral to the Pi session' "$document" &&
+    grep -Fq 'every other Crew action requires registered state [SUB-10]' "$document"
+}
+
+if registration_preflight_is_valid "$SETUP_DOC"; then
+  pass "Pi team setup registers Messenger before profile activation"
+else
+  fail "Pi team setup must register Messenger before profile activation"
+fi
+
+registration_mutation="$(mktemp)"
+sed '/pi_messenger({ action: "join" })/d' "$SETUP_DOC" >"$registration_mutation"
+if registration_preflight_is_valid "$SETUP_DOC" && ! registration_preflight_is_valid "$registration_mutation"; then
+  pass "Pi team setup registration preflight mutation rejects a missing join"
+else
+  fail "Pi team setup registration preflight mutation rejects a missing join"
+fi
+rm -f "$registration_mutation"
 
 active_install_proofs_present() {
   local document="$1"

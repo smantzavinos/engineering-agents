@@ -80,9 +80,12 @@ approves them.
 ### Materialize
 
 `pi_messenger` is a Pi tool rather than a CLI [SUB-7], so the lead performs task creation in
-its Pi session:
+its Pi session. Before materialization, the lead-session preflight registers with
+`pi_messenger({ action: "join" })`; registration is ephemeral and every other Crew action requires
+that registered state [SUB-10]:
 
-1. Confirm the active profile is exactly `pi-team` and contains all five roles [SUB-2b].
+1. Activate and confirm the active profile is exactly `pi-team` and contains all five roles
+   [SUB-2b].
 2. Treat `config.json` and `agents/` as stable inputs. Board runtime entries are `plan.json`,
    `plan.md`, `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and
    `planning-outline.md`. Refuse initialization when any runtime entry exists.
@@ -257,9 +260,9 @@ Stable configuration is reproducible; runtime state is not:
 `.gitignore` narrowly admits the stable project config symlink and ignores all other `.pi/`
 runtime state. `config/pi-team/` is the single source for Crew/profile configuration; the task
 reviewer is a normal repo-owned Pi agent. Each repository adopting this experimental flow copies
-that config scaffold and commits the same narrow symlink/ignore rules. It activates `pi-team`
-via `team.profile.use`; activation is idempotent and is a lead preflight, not durable project
-state.
+that config scaffold and commits the same narrow symlink/ignore rules. Each lead session first
+joins Messenger, then activates `pi-team` via `team.profile.use` [SUB-10]; activation is
+idempotent and is a lead preflight, not durable project state.
 
 Exact Crew config:
 

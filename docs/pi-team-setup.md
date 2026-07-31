@@ -46,8 +46,11 @@ confirmation before recovering incomplete started work.
 
 ## Pi-session preflight
 
-`pi_messenger` is a Pi tool, not a shell command. In the lead's Pi session, activate the profile
+`pi_messenger` is a Pi tool, not a shell command. In the lead's Pi session, first register with
+the exact structured tool invocation `pi_messenger({ action: "join" })`, then activate the profile
 with the exact structured tool invocation `pi_messenger({ action: "team.profile.use", name: "pi-team" })`.
+Registration is ephemeral to the Pi session, not persisted project state; `join` and
+`autoRegisterPath` are exempt, but every other Crew action requires registered state [SUB-10].
 Activation is idempotent and is a preflight, not persisted project state.
 
 After activation, inspect the tool result. Its active profile name must be exactly `pi-team`, and

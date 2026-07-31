@@ -195,7 +195,9 @@ else
   fail "pi-team-plan is missing its human-triggered, semantic-review, or risk gate"
 fi
 
-if grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+if grep -Fq 'pi_messenger({ action: "join" })' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'stable topological order' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'plan-ID→Crew-ID map' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'task.approve' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
@@ -205,12 +207,18 @@ if grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'fresh `pi-team-reviewer`' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'two remediation revisions' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'telemetry.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md"; then
-  pass "pi-team-lead encodes profile, transaction, review, remediation, and closure protocol"
+  pass "pi-team-lead encodes Messenger join, profile, transaction, review, remediation, and closure protocol"
 else
-  fail "pi-team-lead is missing required execution protocol anchors"
+  fail "pi-team-lead is missing required Messenger join or execution protocol anchors"
 fi
 
 lead="$REPO_ROOT/skills/pi-team-lead/SKILL.md"
+if [[ "$(grep -nF 'pi_messenger({ action: "join" })' "$lead" | head -n1 | cut -d: -f1)" \
+    -lt "$(grep -nF 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$lead" | head -n1 | cut -d: -f1)" ]]; then
+  pass "pi-team-lead joins Messenger before activating the team profile"
+else
+  fail "pi-team-lead must join Messenger before activating the team profile"
+fi
 if grep -Fq 'PLAN="$REPO/plans/YYYY_MM_DD_<slug>/plan.md"' "$lead" \
   && grep -Fq 'CREW="$REPO/.pi/messenger/crew"' "$lead" \
   && grep -Fq 'BASE="$(git -C "$REPO" rev-parse HEAD)"' "$lead" \
