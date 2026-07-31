@@ -3,10 +3,11 @@
 **Status:** proposal — actionable checklist
 **Date:** 2026-07-31
 **Implements:** `pi-team-execution.md` (design) · `pi-team-execution-plan.html` (visual)
-**Evidence:** `README.md` — measured baseline and extension evaluation
+**Evidence:** `README.md` — measured baseline and extension evaluation ·
+`notes/` — substrate findings from source inspection
 
-Ordered so each phase de-risks the next. Phases 1–2 are half-day spikes; nothing
-irreversible happens before Phase 3.
+Ordered so each phase de-risks the next. Phase 1 is now a single smoke test (the spikes it
+replaced were resolved by source inspection); nothing irreversible happens before Phase 3.
 
 ---
 
@@ -33,19 +34,33 @@ irreversible happens before Phase 3.
 - [ ] Pin versions of `pi-messenger` and `pi-subagents` — we depend on `plan.json`'s on-disk
       shape, so re-check that file after any upgrade.
 
-## Phase 1 — Spikes (timeboxed ~half day each; kill or adjust the design on failure)
+## Phase 1 — Substrate verification (**spikes resolved by source inspection**)
 
-| ID | Question | Method | Pass criteria | Blocks |
-|---|---|---|---|---|
-| S1 | Can we materialize a board **without Crew's LLM planner**? | Throwaway repo: create plan record + `task.create` ×5 (diamond DAG, per-task `model`, `riskLabels`), run `work` | Tasks execute in dependency order on the assigned models | Phase 2–4 entirely |
-| S2 | Does auto-review reset NEEDS_WORK **with feedback attached**, and can the reviewer prompt be ours? | Seed a deliberate defect; inspect `.pi/messenger/crew/` artifacts; override reviewer via `.pi/messenger/crew/agents/` | Retry receives findings; our review criteria applied | Reviewer skill |
-| S3 | Does `subagent resume` beat a fresh remediation agent? | Same defect, both paths; compare `durationMs`/`totalCost` from `status.json` | Resume measurably cheaper/faster | Context rules |
-| S4 | Do reservations block a second worker mid-run? Do sentinel paths work as resource locks? | Two workers with overlapping write sets; reserve `.locks/e2e` | Blocked worker gets holder's name; no corruption | Write-set enforcement |
-| S5 | Does Crew's autonomous wave loop coexist with a lead-driven wave cycle? | Run one plan `autonomous: true`, one wave-by-wave | Clear winner chosen; no double-scheduling | Lead skill protocol |
+All five original spikes were answered by reading `pi-messenger` v0.15.0 source rather than
+running experiments — cheaper, faster, and more definitive. Findings with `file:line`
+citations are in `notes/`.
 
-Record outcomes in this file. **S1 failing means the substrate choice is wrong — stop and
-reconsider a subagents-only design (board kept as a file the lead owns) before writing
-anything else.**
+| ID | Question | Outcome |
+|---|---|---|
+| S1 | Board without Crew's LLM planner? | **Feasible.** `task.create` takes `title`/`content`/`dependsOn`/`role`/`riskLabels`. Needs a `plan.json` record, which has no public non-LLM create action — we write that one file. `notes/board-materialization.md` |
+| S2 | Auto-review feedback + our reviewer? | **Yes to both.** Feedback persists to `task.last_review` and is injected into the retry prompt; a project `crew-reviewer.md` overrides the packaged one. `notes/review-loop.md` |
+| S3 | `resume` vs fresh remediation? | **Moot.** Crew workers run `--no-session`; resume does not exist. Retry is a fresh process carrying findings + progress log. `notes/crew-execution-model.md` |
+| S4 | Do reservations block? | **Partially.** Structured `edit`/`write` only; **bash writes bypass entirely**; registry has no locking. Backstop, not a control. `notes/reservations-and-config.md` |
+| S5 | Autonomous loop vs lead-driven waves? | **Not a conflict.** `work` runs exactly one wave; `autonomous: true` is opt-in. |
+
+**Lane routing resolved.** `task.create` accepts no `model`, but it accepts `role`, and a Team
+role carries `model` + `thinking` + `skills` (`crew/team/types.ts:13-17`), consumed at
+`crew/handlers/work.ts:176-183`. Lanes are therefore Team roles, which keeps materialization
+on the public API instead of direct store writes — removing the version-skew coupling this
+plan previously accepted.
+
+### The one remaining experiment
+
+- [ ] **Smoke test (~20 min, throwaway repo).** Write `plan.json`, `task.create` ×5 in a
+      diamond DAG across two lanes, activate the Team profile, run one `work` wave.
+      Verifies the three things reading cannot establish: integration reality, dependency
+      ordering under real concurrency, and that lane roles actually route models.
+      **Fail ⇒ stop and reconsider the substrate before Phase 2.**
 
 ## Phase 2 — Build `pi-team` (repo-local extension/scripts)
 
@@ -92,7 +107,8 @@ New/replacing docs in this repo:
 - [ ] **`docs/pi-team-execution.md`** — promote the design doc from the investigation dir
       (near-verbatim). This is the canonical process doc.
 - [ ] **`docs/pi-team-setup.md`** — Phase 0 install/config steps + preflight checklist
-      (`/subagents-doctor`, persistence check, watchdog status) so a new machine can be
+      (messenger installed, Team profile **active**, `dependencies: strict`, reviewer override
+      in place, `.pi-subagents/` and `.pi/messenger/` ignored) so a new machine can be
       provisioned in minutes.
 - [ ] **Update `AGENTS.md`** — route to the new process doc; mark the old pipeline docs as
       superseded for Pi.
@@ -100,7 +116,8 @@ New/replacing docs in this repo:
       `docs/testing-strategy.md` (broad = wave gate, targeted = worker loop; drop
       sequential-mode Red-Green-Break-Verify language), `docs/backlog.md` (unchanged).
 - [ ] **ADR** — one ADR recording: Pi-only, team-only, conversation-first, sequential mode
-      retired, substrate = subagents + messenger. Supersedes ADR 0002/0003 framing.
+      retired, substrate = `pi-messenger` Crew for execution with `pi-subagents` lead-side
+      only. Supersedes ADR 0002/0003 framing.
 - [ ] **Archive, don't delete:** `docs/orchestration.md`, `docs/team-mode-execution.md`,
       OpenCode harness configs, and the ~14 retired skills move to an `archive/` (or a
       branch) after the calibration run passes — not before.
@@ -113,9 +130,11 @@ New/replacing docs in this repo:
       baseline in `README.md` (5.3 h active / 1.61x ceiling). **Cost is not directly comparable**
       — Crew records no per-task cost; compare wall-clock and task counts, and note the gap.
 - [ ] **Acceptance criteria:** wall-clock ≤ 60% of a comparable sequential estimate ·
-      cost ≤ 2x sequential · zero write-set collisions · all defects caught at handoff or
-      wave gate (none surviving to final review that a handoff reviewer should have caught) ·
-      human interruptions limited to intent, flagged approvals, and the summary.
+      zero write-set collisions · all defects caught at handoff or wave gate (none surviving
+      to final review that a handoff reviewer should have caught) · human interruptions
+      limited to intent, flagged approvals, and the summary. **Cost is deliberately not an
+      acceptance criterion** — Crew records none, so a cost bound would be unfalsifiable.
+      Track it out-of-band if a ceiling matters.
 - [ ] Record results in `docs/issues_learnings.md`; fix the top friction points; only then
       execute the archive step in Phase 4.
 
@@ -129,6 +148,6 @@ New/replacing docs in this repo:
 ## Dependency graph
 
 ```
-Phase 0 ──► S1 ──► S2..S5 ──► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
-                                   └──► Phase 4 docs (parallel with 3)
+Phase 0 ──► Phase 1 smoke test ──► Phase 2 ──► Phase 3 ──► Phase 5 ──► archive (Phase 4 tail)
+                                      └──► Phase 4 docs (parallel with 3)
 ```
