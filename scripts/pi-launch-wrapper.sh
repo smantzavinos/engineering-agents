@@ -13,6 +13,21 @@ SNAPSHOT_DIR="${PI_WRAPPER_STARTUP_STATUS_DIR:-${HOME}/.pi/agent/startup-status}
 NPM_BIN="${PI_WRAPPER_NPM_BIN:-npm}"
 GIT_BIN="${PI_WRAPPER_GIT_BIN:-git}"
 
+configure_team_profile_env() {
+  # A repository-local pi-team profile overrides the global fallback profile. Keep an
+  # explicit caller override authoritative, and leave ordinary non-team repositories
+  # unchanged when they do not carry the profile contract.
+  if [[ -n "${PI_MESSENGER_TEAM_PROFILE_DIR:-}" ]]; then
+    return 0
+  fi
+
+  local repo_root profile_dir
+  repo_root="$("$GIT_BIN" rev-parse --show-toplevel 2>/dev/null)" || return 0
+  profile_dir="$repo_root/config/pi-team"
+  [[ -f "$profile_dir/pi-team.json" ]] || return 0
+  export PI_MESSENGER_TEAM_PROFILE_DIR="$profile_dir"
+}
+
 clear_startup_status_env() {
   unset PI_MANAGED_PACKAGE_STARTUP_STATUS_PATH || true
 }
@@ -135,6 +150,8 @@ NODE
 }
 
 main() {
+  configure_team_profile_env
+
   if ! is_interactive_launch "$@"; then
     clear_startup_status_env
     exec_real_pi "$@"

@@ -12,6 +12,11 @@ log_path="${FAKE_REAL_PI_LOG:?FAKE_REAL_PI_LOG is required}"
   else
     printf 'startup_status_path=<unset>\n'
   fi
+  if [[ -n "${PI_MESSENGER_TEAM_PROFILE_DIR+x}" ]]; then
+    printf 'team_profile_dir=%s\n' "$PI_MESSENGER_TEAM_PROFILE_DIR"
+  else
+    printf 'team_profile_dir=<unset>\n'
+  fi
 } >"$log_path"
 
 exit "${FAKE_REAL_PI_EXIT_CODE:-0}"

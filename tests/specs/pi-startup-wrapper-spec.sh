@@ -94,6 +94,18 @@ exit 98
 EOF
 chmod +x "$poison_dir/node" "$poison_dir/pi"
 
+fake_git_bin="$TMP_DIR/fake-git"
+cat >"$fake_git_bin" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "\$#" -eq 2 && "\$1" == "rev-parse" && "\$2" == "--show-toplevel" ]]; then
+  printf '%s\\n' '$REPO_ROOT'
+  exit 0
+fi
+exit 1
+EOF
+chmod +x "$fake_git_bin"
+
 run_wrapper() {
   local home_dir="$1"
   local helper_mode="$2"
@@ -117,6 +129,7 @@ run_wrapper() {
   PI_WRAPPER_NODE_BIN="$REAL_NODE_BIN" \
   PI_WRAPPER_STATUS_HELPER="$FIXTURE_DIR/fake-status-helper.mjs" \
   PI_WRAPPER_MANIFEST_PATH="$FIXTURE_DIR/manifest.ok.json" \
+  PI_WRAPPER_GIT_BIN="$fake_git_bin" \
   "$WRAPPER_PATH" "$@" >"$stdout_path" 2>"$stderr_path"
   local status=$?
   set -e
@@ -147,6 +160,7 @@ fi
 assert_not_exists 'wrapper does not resolve node from poisoned PATH' "$SUCCESS_NODE_MARKER"
 assert_not_exists 'wrapper does not rediscover pi from poisoned PATH' "$SUCCESS_PI_MARKER"
 assert_contains 'interactive launch invokes the injected real pi binary' "$SUCCESS_REAL_LOG" 'argc=0'
+assert_contains 'interactive launch exports the repository Team profile directory' "$SUCCESS_REAL_LOG" "team_profile_dir=$REPO_ROOT/config/pi-team"
 assert_contains 'interactive launch exports a startup snapshot path to the child pi process' "$SUCCESS_REAL_LOG" 'startup_status_path='
 assert_json \
   'interactive launch invokes the helper through the injected absolute node/helper paths with startup-mode arguments' \

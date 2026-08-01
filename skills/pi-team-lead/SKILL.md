@@ -19,10 +19,14 @@ are generated evidence.
 1. Register this Pi session with the exact structured tool invocation
    `pi_messenger({ action: "join" })`. Registration is ephemeral, so repeat this before every
    lead-session preflight.
-2. Confirm the active profile is exactly `pi-team`: invoke
+2. Confirm the repository-local profile is selected: require
+   `PI_MESSENGER_TEAM_PROFILE_DIR` to resolve to `<repo>/config/pi-team`, and require
+   `<repo>/config/pi-team/pi-team.json` to resolve to the repository's authored profile. The
+   installed `pi` wrapper sets this automatically for a configured repository; do not silently
+   fall back to the global profile. Then confirm the active profile is exactly `pi-team`: invoke
    `pi_messenger({ action: "team.profile.use", name: "pi-team" })` idempotently, then verify all
-   five lane roles, their models/thinking/`pi-team-worker` skill, and risk-label approval policy.
-   Never use a bare packaged role.
+   five lane roles, their repository-selected models/thinking/`pi-team-worker` skill, and risk-label
+   approval policy. Never use a bare packaged role.
 3. Verify the project worker override before dispatch: require
    `.pi/messenger/crew/agents/crew-worker.md` to be a symlink resolving to
    `config/pi-team/crew-worker.md`, and reject a resolved prompt containing `git add`, `git commit`,

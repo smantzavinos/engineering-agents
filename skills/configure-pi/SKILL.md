@@ -1,6 +1,6 @@
 ---
 name: configure-pi
-description: Configure Pi safely for the current repository through `.pi/settings.json`, including project-specific models, resources, and subagent role overrides. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
+description: Configure Pi safely for the current repository through `.pi/settings.json` and the Pi-team profile, including project-specific models, resources, subagent role overrides, and Crew lane routing. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
 harnesses: [pi]
 metadata:
   domain: pi
@@ -8,7 +8,7 @@ metadata:
 
 ## What I do
 - Create or update the committed, project-local Pi settings file: `.pi/settings.json`.
-- Configure project-specific model defaults, model cycling, resource paths, and `subagents.agentOverrides` without inventing model IDs or overwriting unrelated settings.
+- Configure project-specific model defaults, model cycling, resource paths, `subagents.agentOverrides`, and Pi-team Crew lane routing without inventing model IDs or overwriting unrelated settings.
 - Diagnose project trust, invalid JSON, precedence, and reload/restart requirements when a project setting appears ignored.
 - Explain when a requested behavior belongs to a user-wide extension configuration rather than this project skill's scope.
 
@@ -54,12 +54,12 @@ Example: keep the project's default model and route a reviewer to a verified str
 ```json
 {
   "defaultProvider": "github-copilot",
-  "defaultModel": "github-copilot/gpt-5.4",
+  "defaultModel": "github-copilot/gpt-5.6-terra",
   "subagents": {
     "agentOverrides": {
-      "reviewer": {
-        "model": "github-copilot/claude-sonnet-4.6",
-        "thinking": "high"
+      "code-reviewer": {
+        "model": "github-copilot/gpt-5.6-sol",
+        "thinking": "medium"
       }
     }
   }
@@ -67,6 +67,53 @@ Example: keep the project's default model and route a reviewer to a verified str
 ```
 
 Use only model IDs available in the current environment. Keep every project configuration secret-free.
+
+### Pi-team Crew lane models
+
+Pi-team model routing is separate from `subagents.agentOverrides`. Configure the five Crew lanes
+in the repository's `config/pi-team/team-profile.json`; the installed `pi` wrapper automatically
+sets `PI_MESSENGER_TEAM_PROFILE_DIR` to the current repository's `config/pi-team` when the
+repository provides `config/pi-team/pi-team.json`. Keep that entry as a relative symlink to the
+canonical profile so the profile remains one authored source.
+
+Example profile roles:
+
+```json
+{
+  "name": "pi-team",
+  "roles": {
+    "worker-cheap": {
+      "model": "github-copilot/gpt-5.6-luna",
+      "thinking": "high",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-std": {
+      "model": "github-copilot/gpt-5.6-terra",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-complex": {
+      "model": "github-copilot/gpt-5.6-sol",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-visual": {
+      "model": "github-copilot/claude-sonnet-5",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-visual-complex": {
+      "model": "github-copilot/claude-opus-5",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    }
+  }
+}
+```
+
+The exact role choices are repository policy, not universal defaults. Verify model availability
+with `pi --list-models` before committing a profile. Keep rescue and final-review policy in the
+Pi-team lead contract; do not silently replace the configured lane model from a worker packet.
 
 ## Out-of-scope: subagent runtime limits
 
@@ -86,16 +133,17 @@ This affects only that Pi process and does not modify project files or global co
 
 ## Process
 1. Confirm that the request is for the current repository and identify the exact project behavior.
-2. Inspect `.pi/settings.json` and any relevant project-local resources.
+2. Inspect `.pi/settings.json`, any relevant project-local resources, and `config/pi-team/team-profile.json` when the repository uses Pi-team.
 3. Verify project trust if local settings or resources are not loading.
 4. Preserve unrelated configuration and make the smallest valid JSON change.
 5. Validate the file with `jq -e . .pi/settings.json`.
 6. Restart Pi after startup-loaded setting changes. `/reload` is appropriate for reloadable resources, but a restart is the reliable default for settings changes.
-7. Report the modified file, changed keys, validation command, and any required restart.
+7. Validate the relevant JSON files with `jq -e .`, report the modified file and changed keys, and state any required Pi restart or Home Manager activation.
 
 ## Examples
 - “Make this repo use a different default Pi model.” → inspect `.pi/settings.json` and available models, then add the minimal project override.
-- “Use stronger reviewers but keep workers cheap in this repo.” → update only `subagents.agentOverrides` in `.pi/settings.json` with verified model IDs.
+- “Use stronger reviewers but keep workers cheap in this repo.” → update only `subagents.agentOverrides` in `.pi/settings.json` with verified model IDs; if Pi-team is also enabled, update its five lane models in `config/pi-team/team-profile.json`.
+- “Use Luna for cheap work, Terra for standard work, Sol for complex work, Sonnet 5 for visual work, and Opus 5 for complex visual work.” → update the repository's Pi-team profile with those verified IDs and thinking levels; do not change unrelated subagent overrides.
 - “My project settings do nothing.” → verify project trust, configuration path, JSON validity, precedence, and whether a restart is required.
 - “Raise the subagent cap above 40.” → explain that the cap is user-wide extension runtime configuration and is outside this project-scoped skill.
 

@@ -24,19 +24,25 @@ home-manager switch --flake .#<hostname>
 
 ## Stable configuration and runtime boundary
 
-`config/pi-team/` is the canonical project source for both Crew and profile configuration.
+`config/pi-team/` is the canonical project source for both Crew and profile configuration. The
+profile entry must be available as `config/pi-team/pi-team.json`; keep it as a relative symlink
+to the one authored profile file when using a differently named canonical source.
 
 | Item | Canonical source | Installed or project runtime location |
 |---|---|---|
 | Crew defaults | `config/pi-team/crew-config.json` | tracked relative symlink `.pi/messenger/crew/config.json` |
 | Crew worker override | `config/pi-team/crew-worker.md` | tracked relative symlink `.pi/messenger/crew/agents/crew-worker.md` |
-| `pi-team` profile | `config/pi-team/team-profile.json` | `~/.pi/agent/messenger/team-profiles/pi-team.json` |
+| `pi-team` profile | `config/pi-team/team-profile.json` plus `config/pi-team/pi-team.json` entry | repository-local profile selected by the `pi` wrapper; global `~/.pi/agent/messenger/team-profiles/pi-team.json` is fallback only |
 | Task reviewer | `agents/pi-team-reviewer.md` | `~/.pi/agent/agents/pi-team-reviewer.md` |
 | Messenger package | `nix/modules/pi/default.nix` | managed Pi package |
 
-The two tracked symlinks are the only admitted project `.pi` configuration. Do not copy or edit
-their targets under `.pi`; edit the canonical files under `config/pi-team/`. Runtime board state
-is generated and ignored: `.pi/messenger/team/` and all board entries under
+The three stable project entries are the admitted project configuration: the Crew config symlink,
+the worker override symlink, and the `config/pi-team/pi-team.json` profile entry. Do not copy or edit
+their targets under `.pi`; edit the canonical files under `config/pi-team/`. The installed `pi`
+wrapper resolves the current Git repository and exports
+`PI_MESSENGER_TEAM_PROFILE_DIR="$REPO/config/pi-team"` when the profile entry exists, so each
+repository can choose its own lane models. Runtime board state is generated and ignored:
+`.pi/messenger/team/` and all board entries under
 `.pi/messenger/crew/` except `config.json` and the one admitted `agents/crew-worker.md` override.
 Every other project agent remains ignored. The generated entries are `plan.json`, `plan.md`,
 `tasks/`, `blocks/`, `artifacts/`, `planning-progress.md`, and `planning-outline.md`.
@@ -63,13 +69,16 @@ Registration is ephemeral to the Pi session, not persisted project state; `join`
 Activation is idempotent and is a preflight, not persisted project state.
 
 After activation, inspect the tool result. Its active profile name must be exactly `pi-team`, and
-it must contain these roles with the declared `pi-team-worker` skill:
+it must contain these roles with the declared `pi-team-worker` skill. The active repository chooses
+its model mapping. One supported example is:
 
-- `worker-cheap`: `github-copilot/gpt-5.6-terra`, `low`
+- `worker-cheap`: `github-copilot/gpt-5.6-luna`, `high`
 - `worker-std`: `github-copilot/gpt-5.6-terra`, `medium`
-- `worker-complex`: `github-copilot/gpt-5.6-sol`, `high`
-- `worker-visual`: `github-copilot/gpt-5.6-terra`, `high`
-- `worker-visual-complex`: `github-copilot/gpt-5.6-sol`, `high`
+- `worker-complex`: `github-copilot/gpt-5.6-sol`, `medium`
+- `worker-visual`: `github-copilot/claude-sonnet-5`, `medium`
+- `worker-visual-complex`: `github-copilot/claude-opus-5`, `medium`
+
+Verify the actual active profile result rather than assuming these examples are universal.
 
 Also verify the approval policy is `risk-labels` with exactly `migration, destructive, auth,
 api-contract`. Never use a bare packaged role and never auto-approve a risk-labelled task. Before
@@ -129,6 +138,7 @@ test -f "$HOME/.pi/agent/skills/pi-team-lead/SKILL.md"
 test -f "$HOME/.pi/agent/skills/pi-team-worker/SKILL.md"
 cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"
 cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-profiles/pi-team.json"
+test "$(readlink -f "$REPO/config/pi-team/pi-team.json")" = "$(readlink -f "$REPO/config/pi-team/team-profile.json")"
 test -L "$PROJECT_CONFIG"
 test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"
 cmp -s "$PROJECT_CONFIG" "$REPO/config/pi-team/crew-config.json"

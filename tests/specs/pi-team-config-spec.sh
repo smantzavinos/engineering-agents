@@ -45,6 +45,7 @@ printf '==================================\n\n'
 crew_config="$REPO_ROOT/config/pi-team/crew-config.json"
 crew_worker="$REPO_ROOT/config/pi-team/crew-worker.md"
 team_profile="$REPO_ROOT/config/pi-team/team-profile.json"
+team_profile_entry="$REPO_ROOT/config/pi-team/pi-team.json"
 project_config="$REPO_ROOT/.pi/messenger/crew/config.json"
 project_worker="$REPO_ROOT/.pi/messenger/crew/agents/crew-worker.md"
 expected_crew='{"concurrency":{"workers":4},"artifacts":{"enabled":true},"review":{"enabled":false,"maxIterations":2},"work":{"maxAttemptsPerTask":2,"maxWaves":1,"stopOnBlock":true},"dependencies":"strict","coordination":"minimal"}'
@@ -59,6 +60,12 @@ if [[ -f "$team_profile" ]] && validate_profile "$team_profile"; then
   pass 'Canonical pi-team profile exactly enforces models, skills, and risk approval'
 else
   fail 'Canonical pi-team profile exactly enforces models, skills, and risk approval'
+fi
+
+if [[ -L "$team_profile_entry" ]]; then
+  assert_equals "$(readlink "$team_profile_entry")" 'team-profile.json' 'Repository pi command profile entry is a relative symlink'
+else
+  fail 'Repository pi command profile entry is a relative symlink'
 fi
 
 if [[ -L "$project_config" ]]; then

@@ -201,6 +201,8 @@ if grep -Fq 'pi_messenger({ action: "join" })' "$REPO_ROOT/skills/pi-team-lead/S
   && grep -Fq 'stable topological order' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'plan-ID→Crew-ID map' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'task.approve' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'PI_MESSENGER_TEAM_PROFILE_DIR' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
+  && grep -Fq 'config/pi-team/pi-team.json' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq '.pi/messenger/crew/agents/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'config/pi-team/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
   && grep -Fq 'before dispatch' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
