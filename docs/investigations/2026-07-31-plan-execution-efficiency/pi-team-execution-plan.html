@@ -259,7 +259,7 @@
 <!-- ============ 2. ROLES ============ -->
 <section class="animate" style="--i:2">
   <h2><span class="sec-num">02</span>Roles &amp; responsibilities</h2>
-  <p class="sec-lede">Five lane roles route the same <code>pi-team-worker</code> protocol. Terra runs cheap, std, and visual; sol runs complex and visual-complex. Escalation is bounded: two Crew attempts, then one fresh sol rescue and a fresh review.</p>
+  <p class="sec-lede">Five lane roles route the same <code>pi-team-worker</code> protocol. Each repository selects the lane models in its local profile; the current example uses Luna, Terra, Sol, Sonnet 5, and Opus 5. Escalation is bounded: two Crew attempts, then one fresh sol rescue and a fresh review.</p>
   <div class="roles">
     <div class="role-card" style="--accent: var(--gold)">
       <h3>Human approval</h3><p class="who">risk gate · <span class="badge b-human">HUMAN</span></p>
@@ -281,8 +281,8 @@
     <div class="role-card" style="--accent: var(--primary)">
       <h3>Five worker lanes</h3><p class="who">all use pi-team-worker · <span class="badge b-agent">AGENT TOOL</span></p>
       <ul>
-        <li><code>worker-cheap</code>, <code>worker-std</code>, <code>worker-visual</code> route to terra</li>
-        <li><code>worker-complex</code>, <code>worker-visual-complex</code> route to sol</li>
+        <li>Repository profile routes <code>worker-cheap</code> to Luna, <code>worker-std</code> to Terra, and <code>worker-complex</code> to Sol</li>
+        <li>Repository profile routes <code>worker-visual</code> to Sonnet 5 and <code>worker-visual-complex</code> to Opus 5</li>
         <li>Reserve write set, make the dirty change, run the packet check, and hand off</li>
         <li class="never">Worker commits, broad gates, or out-of-set edits</li>
       </ul>
@@ -315,11 +315,11 @@
     <table>
       <thead><tr><th>Lane tag</th><th>Team role</th><th>Tier</th><th>Qualifies when</th><th>Escalates to</th></tr></thead>
       <tbody>
-        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>terra</td><td>Decision-complete, bounded task</td><td>second Crew attempt, then sol rescue</td></tr>
-        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>terra</td><td>Normal implementation</td><td>second Crew attempt, then sol rescue</td></tr>
-        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>sol</td><td>Complex or risk-bearing implementation</td><td>fresh review after rescue</td></tr>
-        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>terra</td><td>Visual, UI, UX, or accessibility task</td><td>second Crew attempt, then sol rescue</td></tr>
-        <tr><td class="mono">visual-complex</td><td class="mono">worker-visual-complex</td><td>sol</td><td>Complex visual task</td><td>fresh review after rescue</td></tr>
+        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>profile: Luna</td><td>Decision-complete, bounded task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>profile: Terra</td><td>Normal implementation</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>profile: Sol</td><td>Complex or risk-bearing implementation</td><td>fresh review after rescue</td></tr>
+        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>profile: Sonnet 5</td><td>Visual, UI, UX, or accessibility task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">visual-complex</td><td class="mono">worker-visual-complex</td><td>profile: Opus 5</td><td>Complex visual task</td><td>fresh review after rescue</td></tr>
       </tbody>
     </table>
   </div>
@@ -338,7 +338,7 @@
   <div class="callout">
     <strong>Preflight is ordered and explicit.</strong> An ephemeral lead calls <code>pi_messenger join</code>
     before <code>team.profile.use pi-team</code>; only then do the five lane roles resolve to their
-    terra or sol routes. The profile, deterministic CLI, three Pi-only skills plus reviewer,
+    repository-selected model routes. The profile, deterministic CLI, three Pi-only skills plus reviewer,
     sandbox and active deployment, resource proof, and profile activation are implemented and green
     (Phase 0 upstream: 408/408 passed). Canonical process and OpenCode remain unchanged.
   </div>

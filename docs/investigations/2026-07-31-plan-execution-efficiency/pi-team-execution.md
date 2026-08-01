@@ -44,11 +44,11 @@ a bare packaged role name [SUB-2a]. The profile must be active before materializ
 
 | Lane | Team role | Model | Thinking | Use |
 |---|---|---|---|---|
-| `cheap` | `worker-cheap` | `github-copilot/gpt-5.6-terra` | low | Decision-complete, isolated work |
-| `std` | `worker-std` | `github-copilot/gpt-5.6-terra` | medium | Normal implementation |
-| `complex` | `worker-complex` | `github-copilot/gpt-5.6-sol` | high | Security, migration, concurrency, cross-cutting work |
-| `visual` | `worker-visual` | `github-copilot/gpt-5.6-terra` | high | Normal UI/UX/a11y work |
-| `visual-complex` | `worker-visual-complex` | `github-copilot/gpt-5.6-sol` | high | Risk-bearing or cross-cutting visual work |
+| `cheap` | `worker-cheap` | repository profile (example: `github-copilot/gpt-5.6-luna`) | high | Decision-complete, isolated work |
+| `std` | `worker-std` | repository profile (example: `github-copilot/gpt-5.6-terra`) | medium | Normal implementation |
+| `complex` | `worker-complex` | repository profile (example: `github-copilot/gpt-5.6-sol`) | medium | Security, migration, concurrency, cross-cutting work |
+| `visual` | `worker-visual` | repository profile (example: `github-copilot/claude-sonnet-5`) | medium | Normal UI/UX/a11y work |
+| `visual-complex` | `worker-visual-complex` | repository profile (example: `github-copilot/claude-opus-5`) | medium | Risk-bearing or cross-cutting visual work |
 
 Cheap-lane share is telemetry, not a gate. Calibration may establish a useful target later.
 
@@ -284,7 +284,7 @@ Exact Crew config:
 Exact Nix-managed `pi-team` profile:
 
 ```json
-{"name":"pi-team","roles":{"worker-cheap":{"model":"github-copilot/gpt-5.6-terra","thinking":"low","skills":["pi-team-worker"]},"worker-std":{"model":"github-copilot/gpt-5.6-terra","thinking":"medium","skills":["pi-team-worker"]},"worker-complex":{"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]},"worker-visual":{"model":"github-copilot/gpt-5.6-terra","thinking":"high","skills":["pi-team-worker"]},"worker-visual-complex":{"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]}},"approval":{"mode":"risk-labels","labels":["migration","destructive","auth","api-contract"]},"memory":{"inject":["decision","interface","risk"],"maxCharsPerType":4000}}
+{"name":"pi-team","roles":{"worker-cheap":{"model":"github-copilot/gpt-5.6-luna","thinking":"high","skills":["pi-team-worker"]},"worker-std":{"model":"github-copilot/gpt-5.6-terra","thinking":"medium","skills":["pi-team-worker"]},"worker-complex":{"model":"github-copilot/gpt-5.6-sol","thinking":"medium","skills":["pi-team-worker"]},"worker-visual":{"model":"github-copilot/claude-sonnet-5","thinking":"medium","skills":["pi-team-worker"]},"worker-visual-complex":{"model":"github-copilot/claude-opus-5","thinking":"medium","skills":["pi-team-worker"]}},"approval":{"mode":"risk-labels","labels":["migration","destructive","auth","api-contract"]},"memory":{"inject":["decision","interface","risk"],"maxCharsPerType":4000}}
 ```
 
 The additive rollout does not alter OpenCode outputs, existing shared skills, current canonical

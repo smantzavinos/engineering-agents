@@ -11,13 +11,13 @@ package, configuration and `pi-team` profile, deterministic `pi-team` CLI, three
 plus `pi-team-reviewer`, sandbox and active deployment, resource proof, and profile activation.
 
 Operationally, every ephemeral Pi lead calls `pi_messenger` **join before Team actions** (and
-before profile activation). The `pi-team` profile has five Team roles: `worker-cheap`,
-`worker-std`, `worker-complex`, `worker-visual`, and `worker-visual-complex`; all use the
-`pi-team-worker` skill. Terra routes cheap, standard, and visual work; sol routes complex and
-visual-complex work. Crew workers implement packets and never commit. The lead records a clean
-BASE, then uses `pi-team review-wave` to create complete path-scoped review bundles containing
-both tracked and untracked changes; the lead commits each reviewed wave only after its required
-integration work is green.
+before profile activation). The repository-local `pi-team` profile has five Team roles:
+`worker-cheap`, `worker-std`, `worker-complex`, `worker-visual`, and `worker-visual-complex`; all
+use the `pi-team-worker` skill. Each repository chooses its lane models and thinking levels in
+that profile; the current example uses Luna/Terra/Sol/Sonnet 5/Opus 5. Crew workers implement
+packets and never commit. The lead records a clean BASE, then uses `pi-team review-wave` to create
+complete path-scoped review bundles containing both tracked and untracked changes; the lead
+commits each reviewed wave only after its required integration work is green.
 
 Crew auto-review is disabled. Fresh `pi-team-reviewer` review results are `SHIP`, `NEEDS_WORK`,
 or `MAJOR_RETHINK`. Ordinary work has two Crew attempts; exhausted or major-rethink work receives

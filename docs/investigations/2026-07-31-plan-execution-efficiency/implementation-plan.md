@@ -24,7 +24,7 @@ OpenCode behavior remain unchanged through this rollout.
 | Rollout shape | Additive. Do not replace current canonical process, requirements, shared skills, OpenCode rendering, or archive anything. |
 | Package | Npm `pi-messenger@0.15.0`; expose `./index.ts` and skill `pi-messenger-crew`. |
 | Stable config | `config/pi-team/` is canonical; track narrow `.pi` symlinks for project Crew config and the `crew-worker` override; Nix links the global `pi-team` profile from the same source tree. Other agents and runtime board/team state remain ignored. |
-| Models | `github-copilot/gpt-5.6-terra` for cheap/std/visual; `github-copilot/gpt-5.6-sol` for complex/visual-complex/reviewer/rescue/final review. |
+| Models | Repository-selected Team profile: the current example uses `github-copilot/gpt-5.6-luna` for cheap, `github-copilot/gpt-5.6-terra` for std, `github-copilot/gpt-5.6-sol` for complex, `github-copilot/claude-sonnet-5` for visual, and `github-copilot/claude-opus-5` for visual-complex. Sol remains the rescue/final-review default. |
 | Risk approval | Labels `migration`, `destructive`, `auth`, `api-contract` always require human approval. |
 | Skills | New unique Pi-only canonical skills rendered by the existing pipeline and linked through Nix. Do not modify shared `/discovery` or `/design`. |
 | Tools | One deterministic Node CLI, `tools/pi-team.mjs`, with `check`, `init-board`, and `review-wave`. Board task creation remains lead-issued `pi_messenger` calls [SUB-7]. |

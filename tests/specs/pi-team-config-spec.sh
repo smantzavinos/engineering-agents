@@ -28,11 +28,11 @@ validate_profile() {
   jq -e '
     .name == "pi-team" and
     .roles == {
-      "worker-cheap": {"model":"github-copilot/gpt-5.6-terra","thinking":"low","skills":["pi-team-worker"]},
+      "worker-cheap": {"model":"github-copilot/gpt-5.6-luna","thinking":"high","skills":["pi-team-worker"]},
       "worker-std": {"model":"github-copilot/gpt-5.6-terra","thinking":"medium","skills":["pi-team-worker"]},
-      "worker-complex": {"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]},
-      "worker-visual": {"model":"github-copilot/gpt-5.6-terra","thinking":"high","skills":["pi-team-worker"]},
-      "worker-visual-complex": {"model":"github-copilot/gpt-5.6-sol","thinking":"high","skills":["pi-team-worker"]}
+      "worker-complex": {"model":"github-copilot/gpt-5.6-sol","thinking":"medium","skills":["pi-team-worker"]},
+      "worker-visual": {"model":"github-copilot/claude-sonnet-5","thinking":"medium","skills":["pi-team-worker"]},
+      "worker-visual-complex": {"model":"github-copilot/claude-opus-5","thinking":"medium","skills":["pi-team-worker"]}
     } and
     .approval == {"mode":"risk-labels","labels":["migration","destructive","auth","api-contract"]} and
     .memory == {"inject":["decision","interface","risk"],"maxCharsPerType":4000}
