@@ -372,7 +372,7 @@
           <td class="mono">/pi-team-plan</td>
           <td><span class="badge b-human">HUMAN</span></td>
           <td>No — <code>disable-model-invocation</code></td>
-          <td>The pivot. Creates <code>plans/&lt;date&gt;-&lt;slug&gt;/</code> and freezes the conversation into <code>plan.md</code> (Intent · Contracts · Decisions · Checks · Tasks), runs the 4 mechanical gates, requests approval only if risk-flagged or requested, else starts execution.</td>
+          <td>The pivot. Freezes the conversation into one authored <code>plan.md</code> (Intent · Contracts · Decisions · Checks · Tasks), runs the 4 mechanical gates, requests approval only if risk-flagged or requested, else starts execution.</td>
         </tr>
         <tr>
           <td class="mono">pi-team-lead</td>
@@ -396,8 +396,8 @@
     "entering discovery mode" when you just wanted a conversation.
   </div>
   <div class="callout">
-    <strong>One contract, one directory.</strong> The plan lives at
-    <code>plans/&lt;date&gt;-&lt;slug&gt;/plan.md</code>. The directory may also hold
+    <strong>One contract, one directory.</strong> The selected plan directory contains one authored
+    <code>plan.md</code>. It may also hold
     <code>notes/</code> (reference material, research, superseded drafts) and, generated at
     close, <code>review.md</code> and <code>telemetry.md</code>. <strong>Only
     <code>plan.md</code> is injected into task packets</strong> — everything else is human
