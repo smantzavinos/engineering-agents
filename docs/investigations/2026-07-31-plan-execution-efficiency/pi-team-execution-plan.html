@@ -225,10 +225,10 @@
   <p class="eyebrow">Proposal · Pi only · Team mode only</p>
   <h1>Pi Team Execution</h1>
   <p class="subtitle">
-    Talk until the intent is clear, freeze it into one <code>plan.md</code> contract, put the
-    tasks on a board, let a small team execute with review-on-handoff, read the summary at the
-    end. Every arrow below is labeled with <em>who</em> pulls the trigger: the human, an agent's tool
-    call, or an extension firing automatically.
+    An additive, Pi-only calibration: freeze one <code>plan.md</code> contract, initialize a
+    board, execute one dirty wave, review complete bundles, digest the affected write sets, then
+    let the lead commit. Every arrow below identifies the responsible human, lead, worker, or
+    reviewer — and the boundaries that keep canonical process and OpenCode unchanged.
   </p>
 </header>
 
@@ -243,15 +243,15 @@
     </div>
     <div class="tax-card">
       <span class="badge b-agent">AGENT TOOL</span>
-      <p><strong>An agent decides to call a tool.</strong> Lead writes <code>plan.md</code>, calls <code>task.create</code>, spawns workers via <code>subagent</code>, commits. Workers <code>reserve</code>/<code>release</code> and edit files. Deliberate, visible in transcripts.</p>
+      <p><strong>An agent decides to call a tool.</strong> Each ephemeral lead calls <code>pi_messenger join</code>, then <code>team.profile.use pi-team</code>. The lead checks the plan, initializes the board, emits review bundles, and alone commits reviewed waves. Workers reserve, edit, check, release — never commit.</p>
     </div>
     <div class="tax-card">
       <span class="badge b-ext">EXTENSION AUTO</span>
-      <p><strong>Fires without anyone asking.</strong> Crew auto-review on every task completion, reservation blocking on conflicting edits, stuck-agent detection, completion notifications. LSP diagnostics and checkpoint refs apply to the lead session.</p>
+      <p><strong>Fires without anyone asking.</strong> Reservation conflicts and completion notifications remain visible, but Crew auto-review is disabled. The lead explicitly creates a complete path-scoped <strong>review bundle</strong> for a fresh <code>pi-team-reviewer</code>.</p>
     </div>
     <div class="tax-card">
       <span class="badge b-board">BOARD EVENT</span>
-      <p><strong>File-state change wakes an agent.</strong> Task becomes ready (dep met) → idle worker claims. Handoff → reviewer wakes. NEEDS_WORK → fresh worker retries with findings. Board empty → lead closes. Messages arrive as steering prompts. <em>Nothing polls on a timer.</em></p>
+      <p><strong>File-state change wakes an agent.</strong> A green task bundle enables G1 only after all three task bundles SHIP. Its revision is the normalized write-set <strong>content digest</strong>; it reruns only when that digest changes. <em>Nothing polls on a timer.</em></p>
     </div>
   </div>
 </section>
@@ -259,45 +259,41 @@
 <!-- ============ 2. ROLES ============ -->
 <section class="animate" style="--i:2">
   <h2><span class="sec-num">02</span>Roles &amp; responsibilities</h2>
-  <p class="sec-lede">Five roles. Three are agents, one is a mechanism, one is you. Escalation is a rule, not a role: one retry carrying the findings, then the lead rescues with a strong subagent, then it asks you.</p>
+  <p class="sec-lede">Five lane roles route the same <code>pi-team-worker</code> protocol. Terra runs cheap, std, and visual; sol runs complex and visual-complex. Escalation is bounded: two Crew attempts, then one fresh sol rescue and a fresh review.</p>
   <div class="roles">
     <div class="role-card" style="--accent: var(--gold)">
-      <h3>Human</h3><p class="who">you · <span class="badge b-human">HUMAN</span></p>
+      <h3>Human approval</h3><p class="who">risk gate · <span class="badge b-human">HUMAN</span></p>
       <ul>
-        <li>Set intent in normal conversation</li>
-        <li>Approve only when asked, or on risk flags</li>
-        <li>Watch live via <code>/messenger</code> overlay (optional)</li>
-        <li>Read the closing summary; iterate if needed</li>
-        <li class="never">Babysit execution</li>
+        <li>Must approve <code>migration</code>, <code>destructive</code>, <code>auth</code>, and <code>api-contract</code> labels</li>
+        <li>Receives a pause only when rescue or scope needs a decision</li>
+        <li class="never">Approve ordinary work or worker commits</li>
       </ul>
     </div>
     <div class="role-card" style="--accent: var(--primary)">
-      <h3>Lead</h3><p class="who">primary Pi session · <span class="badge b-agent">AGENT TOOL</span></p>
+      <h3>Pi lead</h3><p class="who">ephemeral Pi session · <span class="badge b-agent">AGENT TOOL</span></p>
       <ul>
-        <li>Converse → write plan → run 4 plan gates</li>
-        <li>Materialize board, dispatch workers</li>
-        <li>Broad gate once per wave, then commit (only committer)</li>
-        <li>Escalations, close, telemetry, summary</li>
-        <li class="never">Implement tasks; read full diffs</li>
+        <li><code>pi_messenger join</code> then <code>team.profile.use pi-team</code></li>
+        <li>Require a clean index/worktree, record <code>BASE = HEAD</code>, then open one dirty wave transaction</li>
+        <li>Create review bundles; commit only after affected-group content digests are green</li>
+        <li class="never">Let workers commit</li>
       </ul>
     </div>
     <div class="role-card" style="--accent: var(--primary)">
-      <h3>Worker ×1–4</h3><p class="who">fresh subagent per task · model = task lane · <span class="badge b-agent">AGENT TOOL</span></p>
+      <h3>Five worker lanes</h3><p class="who">all use pi-team-worker · <span class="badge b-agent">AGENT TOOL</span></p>
       <ul>
-        <li>Claim ready, file-disjoint task; reserve write set</li>
-        <li>Implement + run its cheap inner-loop check</li>
-        <li>Handoff ≤15 lines: files, check output, assumptions, risks</li>
-        <li>Same contract at every tier — lane picks the model, not the role</li>
-        <li class="never">Commit; run broad suites; claim outside write set</li>
+        <li><code>worker-cheap</code>, <code>worker-std</code>, <code>worker-visual</code> route to terra</li>
+        <li><code>worker-complex</code>, <code>worker-visual-complex</code> route to sol</li>
+        <li>Reserve write set, make the dirty change, run the packet check, and hand off</li>
+        <li class="never">Worker commits, broad gates, or out-of-set edits</li>
       </ul>
     </div>
     <div class="role-card" style="--accent: var(--green)">
-      <h3>Reviewer</h3><p class="who">fresh Crew reviewer per handoff · <span class="badge b-ext">EXTENSION AUTO</span></p>
+      <h3>Fresh reviewer</h3><p class="who">pi-team-reviewer · <span class="badge b-agent">AGENT TOOL</span></p>
       <ul>
-        <li>Verdict on every handoff: SHIP / NEEDS_WORK / RETHINK</li>
-        <li>NEEDS_WORK → fresh worker retries, findings + progress log injected</li>
-        <li>Verdict parsed to SHIP / NEEDS_WORK / MAJOR_RETHINK</li>
-        <li class="never">Fix code; approve its own findings</li>
+        <li>Reviews a complete path-scoped tracked/untracked review bundle</li>
+        <li>Returns <code>SHIP</code>, <code>NEEDS_WORK</code>, or <code>MAJOR_RETHINK</code></li>
+        <li>Reviews every retry and the sol rescue afresh</li>
+        <li class="never">Auto-review a handoff or fix its own findings</li>
       </ul>
     </div>
     <div class="role-card" style="--accent: var(--violet)">
@@ -314,22 +310,16 @@
 <!-- ============ 2b. MODEL TIERS ============ -->
 <section class="animate" style="--i:2">
   <h2><span class="sec-num">02b</span>Model tiers — lanes route models, not roles</h2>
-  <p class="sec-lede">
-    Three intelligence tiers across the whole process. The plan tags every task with a lane;
-    the lane picks the worker's model. A task qualifies for <code>cheap</code> only if it is
-    <strong>decision-complete</strong> — executable from its packet row plus referenced
-    contracts/decisions with zero judgment calls. Target ≥ 50% of tasks on <code>cheap</code>
-    (measured: $0.60 vs $3.10 per task, no quality loss); a plan that can't hit that hasn't
-    settled enough decisions — a planning signal, not a routing problem.
-  </p>
+  <p class="sec-lede">The active <code>pi-team</code> profile supplies exactly five lane roles. They all run <code>pi-team-worker</code>; the lane selects the configured model route, not a different execution contract.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Lane tag</th><th>Team role</th><th>Tier</th><th>Qualifies when</th><th>Escalates to</th></tr></thead>
       <tbody>
-        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>○ small / fast</td><td>Mechanical, decision-complete; explicit write set; existing test patterns</td><td><code>complex</code> on failed retry</td></tr>
-        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>◐ standard</td><td>Normal implementation (default)</td><td><code>complex</code> on failed retry</td></tr>
-        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>● strong + thinking</td><td>Design-bearing, security, migration, concurrency; <strong>all risk-flagged tasks</strong></td><td>human</td></tr>
-        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>◐/● variant</td><td>UI/UX/a11y — a routing specialization, not a fourth tier</td><td>as base tier</td></tr>
+        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>terra</td><td>Decision-complete, bounded task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>terra</td><td>Normal implementation</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>sol</td><td>Complex or risk-bearing implementation</td><td>fresh review after rescue</td></tr>
+        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>terra</td><td>Visual, UI, UX, or accessibility task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">visual-complex</td><td class="mono">worker-visual-complex</td><td>sol</td><td>Complex visual task</td><td>fresh review after rescue</td></tr>
       </tbody>
     </table>
   </div>
@@ -346,16 +336,11 @@
     </table>
   </div>
   <div class="callout">
-    <strong>A lane <em>is</em> a Team role — that is the entire routing mechanism.</strong>
-    One <code>role</code> string on a task sets its model, thinking level, and skills
-    <span class="ref">[SUB-2]</span>. Lanes are declared once in the Team profile, and
-    materialization stays on the public API — no direct store writes.
-    <br><br>
-    <strong>Two traps.</strong> Never name a lane with a bare packaged role
-    (<code>worker</code>, <code>scout</code>, <code>reviewer</code>…) — the <code>worker-*</code> prefix
-    keeps lanes distinct and editing-capable <span class="ref">[SUB-2a]</span>. And
-    <strong>the profile must be active</strong>, or every lane silently falls back to the default
-    worker model with no error <span class="ref">[SUB-2b]</span>.
+    <strong>Preflight is ordered and explicit.</strong> An ephemeral lead calls <code>pi_messenger join</code>
+    before <code>team.profile.use pi-team</code>; only then do the five lane roles resolve to their
+    terra or sol routes. The profile, deterministic CLI, three Pi-only skills plus reviewer,
+    sandbox and active deployment, resource proof, and profile activation are implemented and green
+    (Phase 0 upstream: 408/408 passed). Canonical process and OpenCode remain unchanged.
   </div>
 </section>
 
@@ -441,18 +426,24 @@
     </div>
     <script type="text/plain" class="diagram-source">
 flowchart TD
-  A["💬 CONVERSE<br/>normal chat with the lead<br/>(optional /discovery, /design)"] -->|"👤 /pi-team-plan"| B["📄 PLAN<br/>lead writes plan.md<br/>from the conversation"]
-  B --> C{"🤖 4 mechanical gates<br/>critical path ≤ 60% · largest task ≤ max(20 min, 20% of path)<br/>write-sets disjoint · packets self-sufficient"}
-  C -->|fail| B2["🤖 lead splits oversized /<br/>decouples tasks; no artificial chains"] --> C
-  C -->|pass| D{"risk flags or<br/>approval requested?"}
-  D -->|"yes → 👤 approve"| E
-  D -->|no| E["⚙️ EXECUTE<br/>board + workers + reviewer<br/>waves → broad gate → commit"]
-  E --> F["🏁 CLOSE<br/>final review · telemetry<br/>summary → 👤 human reads"]
-  F -->|"iterate = new small plan"| A
+  A["👤 intent → frozen plan.md"] --> B["🤖 ephemeral lead:<br/>pi_messenger join"]
+  B --> C["🤖 team.profile.use pi-team<br/>five lanes resolve"]
+  C --> D{"plan check passes?"}
+  D -->|no| A
+  D -->|yes| E{"migration / destructive /<br/>auth / api-contract risk?"}
+  E -->|yes| F["👤 human approval"]
+  E -->|no| G["🤖 initialize board"]
+  F --> G
+  G --> H["⚙️ clean tree · record BASE = HEAD<br/>one dirty wave · workers do not commit"]
+  H --> I["🤖 complete review bundle →<br/>fresh pi-team-reviewer"]
+  I --> J{"all task bundles SHIP?"}
+  J -->|no| H
+  J -->|yes| K["🤖 G1: affected-group<br/>content digest green"]
+  K --> L["🤖 lead commits wave"]
+  L --> M["🏁 additive calibration only:<br/>three code runs still required"]
 
   style A fill:#fdf3e3,stroke:#b45309,color:#172a4c
   style B fill:#e8eefc,stroke:#1d4ed8,color:#172a4c
-  style B2 fill:#e8eefc,stroke:#1d4ed8,color:#172a4c
   style E fill:#e4f3ec,stroke:#047857,color:#172a4c
   style F fill:#f0eafb,stroke:#6d28d9,color:#172a4c
     </script>
@@ -468,10 +459,7 @@ flowchart TD
 <!-- ============ 5. MAIN SEQUENCE ============ -->
 <section class="animate" style="--i:5">
   <h2><span class="sec-num">05</span>Full run — sequence</h2>
-  <p class="sec-lede">
-    One plan, happy path. Solid arrows are deliberate actions (human or agent tool call);
-    dashed arrows are automatic (extension or board event). Notes flag the trigger type at each handoff.
-  </p>
+  <p class="sec-lede">One bounded wave. Crew auto-review is disabled: the lead intentionally bundles each dirty task change and assigns a fresh reviewer before integration or commit.</p>
   <section class="diagram-shell">
     <p class="diagram-shell__hint">Ctrl/Cmd + wheel to zoom · drag to pan · double-click to fit · ⛶ opens full size</p>
     <div class="mermaid-wrap">
@@ -492,52 +480,40 @@ sequenceDiagram
   participant L as Lead<br/>(primary Pi)
   participant B as Board<br/>(pi-messenger)
   participant W as Worker<br/>(crew)
-  participant R as Reviewer
-  participant X as ⚡ Extensions<br/>(reservations · feed)
+  participant R as pi-team-reviewer<br/>(fresh)
   participant G as Git
 
-  rect rgba(180,83,9,0.06)
-    note over H,L: CONVERSE — 👤 human + lead, plain chat
-    H->>L: talk through problem, options, constraints
-    L-->>H: tradeoffs (may spawn throwaway scouts)
-    H->>L: /pi-team-plan  【HUMAN slash command】
-  end
-
   rect rgba(29,78,216,0.06)
-    note over L,B: PLAN — 🤖 agent tool calls
-    L->>L: write plan.md 【AGENT: write】
-    L->>L: 4 mechanical gates 【AGENT: pi-team lint】
-    opt risk flags or requested
-      L->>H: approval request 【notification】
-      H->>L: approve 【HUMAN】
+    note over L,B: PREFLIGHT AND BOARD
+    L->>L: pi_messenger join
+    L->>L: team.profile.use pi-team
+    L->>L: plan check
+    opt migration / destructive / auth / api-contract
+      L->>H: request human approval
+      H->>L: approve
     end
-    L->>B: task.create × N (deps, lane→model, risk) 【AGENT】
-    L->>W: spawn workers, ≤4 【AGENT: subagent】
+    L->>B: initialize board with exact lane roles
   end
 
   rect rgba(4,120,87,0.06)
-    note over B,G: EXECUTE — event-driven, nothing polls
-    B-->>W: task ready 【BOARD EVENT wakes worker】
-    W->>B: claim + reserve write set 【AGENT: reserve】
-    W->>W: implement + cheap check 【AGENT: edit/bash】
-    X-->>W: block edits outside reserved set 【EXTENSION, edit/write only】
-    W->>B: handoff + release 【AGENT: ≤15 lines】
-    B-->>R: review trigger 【EXTENSION: crew auto-review】
-    R->>B: verdict SHIP 【AGENT】
-    B-->>W: next ready task 【BOARD EVENT】
-    B-->>L: wave complete 【BOARD EVENT】
-    L->>G: broad gate once, commit team(W1) 【AGENT — lead only】
+    note over B,G: ONE DIRTY WAVE — workers never commit
+    B-->>W: ready task: terra or sol lane
+    W->>B: reserve → implement → packet check → handoff
+    W->>B: release; leave dirty change
+    L->>R: pi-team review-wave complete review bundle
+    R->>L: SHIP / NEEDS_WORK / MAJOR_RETHINK
+    opt every task bundle SHIP
+      L->>L: calculate affected-group content digest
+      L->>L: run G1 only for a changed digest
+      L->>G: lead commits reviewed wave after G1 green
+    end
   end
 
   rect rgba(109,40,217,0.06)
-    note over L,H: CLOSE
-    B-->>L: board empty 【BOARD EVENT】
-    L->>R: fresh strong reviewer, full diff vs plan.md 【AGENT】
-    R->>L: findings → one remediation pass → clean
-    L->>G: final gate + commit 【AGENT】
-    L->>L: harvest telemetry from run artifacts 【AGENT】
-    L-->>H: summary: shipped, evidence, deferred→backlog,<br/>risk outcomes, telemetry vs estimate 【notification】
-    H->>H: read · iterate in conversation if needed 【HUMAN】
+    note over L,H: ROLLOUT BOUNDARY
+    L-->>H: additive bootstrap evidence and telemetry
+    L->>L: do not change canonical process or OpenCode
+    L->>L: promotion awaits three representative code runs<br/>and median wall-clock ≤ 60% serial estimate
   end
     </script>
   </section>
@@ -552,11 +528,7 @@ sequenceDiagram
 <!-- ============ 6. REMEDIATION SEQUENCE ============ -->
 <section class="animate" style="--i:6">
   <h2><span class="sec-num">06</span>Remediation &amp; escalation — sequence</h2>
-  <p class="sec-lede">
-    What happens when review fails. The core rule: <strong>retry once with findings, then escalate to the lead.</strong>
-    Retry #1 reuses the worker's own context (re-discovery was ~27% of measured runtime);
-    a failed retry means the context holds the wrong mental model, so escalation is always fresh.
-  </p>
+  <p class="sec-lede">Ordinary work receives two Crew attempts. Exhausted or <code>MAJOR_RETHINK</code> work gets exactly one fresh sol rescue, followed by a fresh task review.</p>
   <section class="diagram-shell">
     <p class="diagram-shell__hint">Ctrl/Cmd + wheel to zoom · drag to pan · double-click to fit · ⛶ opens full size</p>
     <div class="mermaid-wrap">
@@ -581,22 +553,22 @@ sequenceDiagram
   participant R as Reviewer
 
   W->>B: handoff task T3 【AGENT】
-  B-->>R: review trigger 【EXTENSION auto】
+  L->>R: review bundle 【AGENT: review-wave】
   R->>B: NEEDS_WORK + findings 【AGENT】
-  note over B,W: retry #1 — fresh worker, findings carried
-  B-->>W: task reset: fresh worker,<br/>findings + progress log injected 【BOARD】
-  W->>B: handoff v2 【AGENT】
-  B-->>R: re-review 【EXTENSION auto】
+  note over B,W: Crew attempt 2 — findings carried
+  B-->>W: task reset: fresh worker and packet
+  W->>B: handoff v2, still dirty
+  L->>R: fresh review bundle
 
   alt SHIP
     R->>B: SHIP — task done 【AGENT】
   else still failing / RETHINK
-    R->>B: RETHINK — task blocked 【AGENT】
+    R->>B: MAJOR_RETHINK / exhausted 【AGENT】
     B-->>L: escalation 【BOARD EVENT】
-    note over L,W2: escalation — FRESH context, strong model.<br/>The old context is why the retry failed.
-    L->>W2: spawn rescue worker, fresh packet 【AGENT: subagent】
-    W2->>B: handoff v3 【AGENT】
-    B-->>R: review 【EXTENSION auto】
+    note over L,W2: one fresh sol rescue only
+    L->>W2: spawn sol rescue, fresh packet
+    W2->>B: handoff v3, still dirty
+    L->>R: fresh task review bundle
     alt SHIP
       R->>B: SHIP 【AGENT】
     else second failure
@@ -613,20 +585,19 @@ sequenceDiagram
 <!-- ============ 7. EVENT MODEL ============ -->
 <section class="animate" style="--i:7">
   <h2><span class="sec-num">07</span>Event model — every trigger in one table</h2>
-  <p class="sec-lede">Nothing polls on a timer. If an event is not firing, fix the event — never add a loop. Commits do <em>not</em> trigger review; review already happened at handoff, and the lead is the only committer.</p>
+  <p class="sec-lede">Nothing polls on a timer. Crew auto-review is disabled: a lead action creates the review bundle, and only a green affected-group content digest permits the lead's per-wave commit.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Event</th><th>Trigger type</th><th>Mechanism</th><th>Wakes</th><th>Action</th></tr></thead>
       <tbody>
-        <tr><td>"plan it"</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">/pi-team-plan</td><td>Lead</td><td>Write plan.md, run gates, materialize board</td></tr>
-        <tr><td>Task becomes ready (dep met)</td><td><span class="badge b-board">BOARD</span></td><td class="mono">crew dependency check</td><td>Idle worker</td><td>Claim → reserve write set → execute</td></tr>
-        <tr><td>Worker handoff</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">crew review.enabled</td><td>Reviewer</td><td>Review vs contract → verdict</td></tr>
-        <tr><td>Task attempts exhausted</td><td><span class="badge b-board">BOARD</span></td><td class="mono">auto-block</td><td>Lead</td><td>Rescue with a strong subagent, then task.done</td></tr>
-        <tr><td>NEEDS_WORK verdict</td><td><span class="badge b-board">BOARD</span></td><td class="mono">task reset</td><td>Fresh worker, same task</td><td>Fix with findings + progress log (max 1 retry)</td></tr>
-        <tr><td>RETHINK / 2nd failure</td><td><span class="badge b-board">BOARD</span></td><td class="mono">escalation rule</td><td>Lead → fresh strong worker</td><td>Rescue; after that, ask the human</td></tr>
-        <tr><td>Risk-flagged task unresolved by planning</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">crew approval gate</td><td>Human</td><td>Approve / reject; otherwise noted in outcome</td></tr>
-        <tr><td>Blocker / product decision needed</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">contact_supervisor (intercom)</td><td>Lead → human</td><td>Immediate notification</td></tr>
-        <tr><td>Wave complete</td><td><span class="badge b-board">BOARD</span></td><td class="mono">all wave tasks done</td><td>Lead</td><td>Broad gate once → commit (lead only)</td></tr>
+        <tr><td>Ephemeral lead starts</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">pi_messenger join → team.profile.use</td><td>Pi team profile</td><td>Activate the exact five lane routes</td></tr>
+        <tr><td>Plan accepted</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">clean tree · BASE = HEAD · board init</td><td>Workers</td><td>Create one dirty wave transaction</td></tr>
+        <tr><td>Risk label present</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">migration | destructive | auth | api-contract</td><td>Human</td><td>Must approve before work proceeds</td></tr>
+        <tr><td>Worker handoff</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">pi-team review-wave</td><td>Fresh reviewer</td><td>Review complete tracked/untracked review bundle</td></tr>
+        <tr><td>NEEDS_WORK</td><td><span class="badge b-board">BOARD</span></td><td class="mono">Crew attempt 2</td><td>Fresh worker</td><td>Retry with findings; ordinary work has two attempts</td></tr>
+        <tr><td>Exhausted / MAJOR_RETHINK</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">sol rescue</td><td>Fresh sol worker + reviewer</td><td>One rescue, then fresh task review</td></tr>
+        <tr><td>All three task bundles SHIP</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">G1</td><td>Lead</td><td>Use normalized write-set content digest; rerun only when changed</td></tr>
+        <tr><td>Affected-group digest green</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">per-wave boundary</td><td>Lead</td><td>Lead commits the reviewed dirty wave</td></tr>
         <tr><td>Board empty</td><td><span class="badge b-board">BOARD</span></td><td class="mono">crew status</td><td>Lead</td><td>Close: final review, telemetry, summary</td></tr>
         <tr><td>Agent silent 2 turns</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">messenger stuck detection</td><td>Lead</td><td>Nudge once, then restart that member</td></tr>
         <tr><td>Watch / steer mid-run</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">/messenger overlay</td><td>—</td><td>Observe presence + feed; DM any agent (optional)</td></tr>
@@ -651,16 +622,16 @@ sequenceDiagram
 <!-- ============ 9. DEPLOYMENT ============ -->
 <section class="animate" style="--i:9">
   <h2><span class="sec-num">09</span>Deployment</h2>
-  <p class="sec-lede">One install, one small glue extension, two-plus-three skills. Config in one place: concurrency ≤ 4, <code>dependencies: strict</code>, reviewer iterations ≤ 3, attempts ≤ 2, and a Team profile declaring the lane roles.</p>
+  <p class="sec-lede">Bootstrap mechanics are implemented and green: deterministic <code>pi-team</code> CLI, package/config/profile, three Pi-only skills plus reviewer, sandbox and active deployment, resource proof, and profile activation. This rollout is additive and does not alter canonical process or OpenCode.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Piece</th><th>Provides</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td class="mono">pi-subagents</td><td><strong>lead-side only:</strong> rescue of blocked tasks, final reviewer, budgets, intercom. Crew does <em>not</em> use it for workers.</td><td>✅ installed</td></tr>
-        <tr><td class="mono">pi-messenger</td><td>board + deps + waves · <strong>worker/reviewer execution</strong> · file reservations · review-on-handoff · live overlay · messaging</td><td>⬇ declare in <code>nix/modules/pi/default.nix</code></td></tr>
-        <tr><td class="mono">pi-hooks (lsp, checkpoint)</td><td>free diagnostics on touched files · per-turn rollback refs</td><td>✅ installed, enable</td></tr>
-        <tr><td class="mono">pi-team (ours)</td><td>plan-table → board materializer · the 4 plan gates · telemetry harvest</td><td>🔨 build (~3 small scripts)</td></tr>
-        <tr><td class="mono">skills</td><td><code>/discovery</code> · <code>/design</code> · <code>/pi-team-plan</code> (human-only) + <code>pi-team-lead</code> · <code>pi-team-worker</code></td><td>🔨 write (5, replacing ~19)</td></tr>
+        <tr><td class="mono">pi-team profile</td><td>Exact terra routes for cheap/std/visual and sol routes for complex/visual-complex; all lanes use <code>pi-team-worker</code></td><td>✅ active</td></tr>
+        <tr><td class="mono">pi-team CLI</td><td>Deterministic plan check, board initialization, review-wave bundles, and digest integration</td><td>✅ implemented</td></tr>
+        <tr><td class="mono">review boundary</td><td>Crew auto-review disabled; fresh <code>pi-team-reviewer</code> reviews each complete bundle</td><td>✅ implemented</td></tr>
+        <tr><td class="mono">deployment proof</td><td>Sandbox + active deployment, resource proof, and Phase 0 upstream 408/408</td><td>✅ green</td></tr>
+        <tr><td class="mono">promotion</td><td>Three representative code-change calibrations; median wall-clock must be ≤ 60% of frozen serial estimates</td><td>⏳ not counted by bootstrap</td></tr>
       </tbody>
     </table>
   </div>

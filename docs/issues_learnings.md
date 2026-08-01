@@ -35,6 +35,17 @@ _No entries yet._
   artificial five-task chains even when three independent tasks were each 20 minutes or less.
   Use an absolute floor with proportional packet gates so small plans stay naturally parallel.
 
+### Crew worker tool allowlists can hide Messenger itself
+- Date: 2026-08-01
+- Type: learning
+- Source: `docs/investigations/2026-07-31-plan-execution-efficiency/calibration/bootstrap/review.md`; `notes/README.md` (SUB-12)
+- Summary: `pi-messenger` loads its extension for Crew workers but filters agent-frontmatter
+  `tools` to built-ins before applying Pi's `--tools` allowlist. Listing `pi_messenger` in that
+  frontmatter therefore drops the custom extension tool and prevents the worker protocol from
+  completing. The project Crew worker override must omit `tools` frontmatter so Pi defaults and
+  the explicitly loaded Messenger extension remain available.
+- Follow-up: Preserve the no-`tools` assertion in the Pi-team configuration and readiness specs.
+
 ### Team contracts must start before implementation completion
 - Date: 2026-07-15
 - Type: learning

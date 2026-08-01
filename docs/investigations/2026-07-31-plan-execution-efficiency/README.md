@@ -1,132 +1,59 @@
-# Pi Team Execution — design & rollout
+# Pi Team execution — current state
 
-A redesign of how plans get executed in Pi: conversation-first, one plan artifact, a small
-parallel team with review-on-handoff. Replaces the Discovery/Design/Execute pipeline and
-sequential mode.
+This investigation's Pi-team rollout is **additive and non-canonical**. It does not change the
+canonical process or OpenCode. The validated dependency is **pi-messenger@0.15.0**; its Phase 0
+upstream suite passed **408/408** tests.
 
-| File | What it is |
+## Implemented and green
+
+T1–T4 implementation and deployment are green. The completed rollout includes the pinned
+package, configuration and `pi-team` profile, deterministic `pi-team` CLI, three Pi-only skills
+plus `pi-team-reviewer`, sandbox and active deployment, resource proof, and profile activation.
+
+Operationally, every ephemeral Pi lead calls `pi_messenger` **join before Team actions** (and
+before profile activation). The `pi-team` profile has five Team roles: `worker-cheap`,
+`worker-std`, `worker-complex`, `worker-visual`, and `worker-visual-complex`; all use the
+`pi-team-worker` skill. Terra routes cheap, standard, and visual work; sol routes complex and
+visual-complex work. Crew workers implement packets and never commit. The lead records a clean
+BASE, then uses `pi-team review-wave` to create complete path-scoped review bundles containing
+both tracked and untracked changes; the lead commits each reviewed wave only after its required
+integration work is green.
+
+Crew auto-review is disabled. Fresh `pi-team-reviewer` review results are `SHIP`, `NEEDS_WORK`,
+or `MAJOR_RETHINK`. Ordinary work has two Crew attempts; exhausted or major-rethink work receives
+one fresh sol rescue and a fresh task review. Migration, destructive, auth, and API-contract work
+always requires human approval.
+
+## Promotion boundary
+
+Bootstrap proves the mechanics only. It is excluded from the **three representative code-change**
+calibration gate and does not count toward promotion. Promotion requires three representative
+code runs whose median wall-clock is at most 60% of the frozen serial estimates.
+
+The G1 integration runs only after all three task bundles receive `SHIP`. Its revision is the
+normalized write-set content digest and it reruns only when that digest changes; the lead commits
+after G1 is green.
+
+## Verification and acceptance
+
+K1 is a smoke check only. T1 acceptance requires a fresh `pi-team-reviewer` `SHIP` over the
+complete T1 bundle and packet; that external task-review attestation is recorded in
+`calibration/bootstrap/review.md`.
+
+From the committed bootstrap base, the final changed-path allowlist is the three worker files,
+`calibration/bootstrap/review.md`, `calibration/bootstrap/telemetry.md`, and
+`docs/issues_learnings.md`. The already committed calibration plan is excluded from that base
+diff.
+
+## Source notes
+
+`notes/` remains the source of truth for SUB mechanism details and upstream citations; this
+summary intentionally does not restate them.
+
+| Note | Scope |
 |---|---|
-| `pi-team-execution.md` | **The design.** Roles, lifecycle, event model, context rules. Start here. |
-| `pi-team-execution-plan.html` | Visual companion — sequence diagrams, trigger taxonomy, model tiers. |
-| `implementation-plan.md` | The rollout checklist: install, smoke test, build, skills, docs, calibration. |
-| `notes/` | **Substrate truth.** Source-inspection findings with `file:line` citations, and the `SUB-n` constraints table every other doc cites. |
-
-**Convention:** `notes/README.md` owns how the substrate behaves. Every other document states
-the *consequence* of a constraint and cites its `[SUB-n]` ID — no mechanism detail, no
-`file:line` citations outside `notes/`. A substrate change is then a one-place edit.
-
-Supporting tooling produced by this work lives in `tools/` (see Analysis tools below), not
-here, because this directory is staging. Per `implementation-plan.md` Phase 4,
-`pi-team-execution.md` is promoted to `docs/pi-team-execution.md` once the calibration run
-passes, and this directory is archived.
-
----
-
-## Evidence base
-
-One production sequential-mode plan (18 tasks) was measured end to end: **5.3 h active
-wall-clock, $47.61, 33 subagent runs**. The findings below are what the design responds to.
-The subject repo is private; project, plan, file, and commit identifiers are omitted, and the
-per-run telemetry CSV is deliberately not committed. Figures are reported, not third-party
-reproducible.
-
-**1. Parallelism alone could not have fixed it.** Measured critical path was 95 min against
-153 min serial — a hard ceiling of **1.61x** regardless of team size. Two packets (UI, E2E)
-were 49% of the critical path; the last three dependency levels held one task each. Cause:
-layered decomposition (schema → adapters → API → UI → E2E), where each layer depends on the
-*implementation* of the one below.
-→ *Design response: acceptance contracts decouple layers; four mechanical plan gates block
-approval on fat packets and single-task tail waves.*
-
-**2. Every significant defect was found by review or E2E. None by per-task break-it TDD.**
-
-| Defect | Found by | Would per-task unit TDD have caught it? |
-|---|---|---|
-| Authorization bypass in a hierarchical view guard | step review | No — tests passed |
-| Ordering defect: resolve-before-validate | final review | No — tests passed |
-| State-transition gating gap | E2E test | Yes (integration level) |
-| "A field is load-bearing" assumption | break-it step | Confirmed *test quality*; found no defect |
-
-Rework was **27% of subagent time**, and the ordering defect was introduced in T7 but not
-caught until after T18.
-→ *Design response: review fires on every handoff, not at plan end. Per-task break-it is
-retired in favour of contracts + handoff review + wave gates.*
-
-**3. Verification cost is concentrated, not uniform.** ~7.5 gate invocations per task,
-≈21–24% of implementer time — but backend gates cost 4–13 s warm while frontend lint cost
-52 s and one E2E spec ~7.4 min. The two packets that ran expensive profiles inside their own
-loop became the two largest packets on the critical path.
-→ *Design response: profiles carry measured cost; only inner-loop-safe profiles run in a
-worker; expensive profiles are lead-owned wave gates.*
-
-**4. Cheap-model routing works.** Cheap-lane tasks averaged 5.4 min / ~$0.60 against 15 min /
-~$3.10 for the standard lane, with no quality regression attributable to the cheap lane.
-→ *Design response: three model tiers routed by plan lane tag; target ≥50% of tasks on cheap.*
-
-**5. Rework is mostly re-discovery.** A remediation agent starting fresh re-reads the plan,
-re-locates files, and re-derives a mental model before changing a few lines.
-→ *Design response: the retry carries the review findings and the worker's own progress log
-rather than starting cold. (An earlier draft resumed the original session; source inspection
-later showed Crew workers run `--no-session`, so resume is unavailable — see `notes/`.)*
-
-> **A caution worth keeping.** An earlier draft reported gate cost at 45–59% of implementer
-> time from 25 s/64 s measurements. Those were cold-cache first invocations; warm re-runs gave
-> 4 s/13 s and the finding was revised down to 21–24%. The original number would have sent
-> effort toward warm-runner infrastructure for a fraction of the predicted return. Measure
-> twice, and record cache state.
-
----
-
-## Extension evaluation
-
-Verdicts from surveying the Pi ecosystem for a coordination substrate:
-
-| Package | Verdict | Why |
-|---|---|---|
-| **`pi-subagents`** | **Adopt** (installed) | Spawn/resume/steer, worktrees, budgets, intercom, durable lifecycle artifacts, edit-gated watchdog. **Used lead-side only** — see the correction below. Cannot provide a durable board or file locks. |
-| **`pi-messenger`** | **Adopt** | The only candidate with a dependency-ordered task board *and* file reservations that block *and* a built-in review-on-handoff loop with retry-with-feedback. Cross-process (file-based). `task.create` accepts `dependsOn`, `role`, and `riskLabels`, so our plan DAG can be projected onto the board without running its own planner. |
-| **`pi-hooks`** | **Adopt** (lsp, checkpoint) | Free per-edit diagnostics; per-turn rollback refs. |
-| `pi-dynamic-workflows` | **Defer** | Excellent deterministic wave engine with journaled edited-script replay — best fit for epic-level repeated cohorts. Revisit after single-plan team mode works. |
-| `@gjczone/pi-swarm` | **Decline** | Redundant second spawner alongside `pi-subagents`; no task board or DAG. Its pattern/keyword auto-routing idea is worth stealing separately. |
-| `@pi-unipi/subagents` | **Decline** | Different harness ecosystem (`~/.unipi/`); dominated by `pi-subagents` except for file locking, which `pi-messenger` does better. |
-
-Two runtime constraints that shaped the design:
-
-- **The lead cannot be a subagent.** Child sessions don't get the `subagent` tool by default
-  and nesting is depth-bounded — so the team lead must be the primary Pi session.
-- **Forking strips Anthropic thinking blocks** and forces child thinking to `off`, which is
-  why workers get a fresh packet rather than a forked context.
-
-> **Correction from source inspection.** This table was written before reading
-> `pi-messenger`'s source, and its division of labour was wrong. Crew executes tasks with its
-> own workers and does not launch `pi-subagents` [SUB-1], which is therefore **not** the
-> execution primitive for task work — it is used lead-side only, for rescuing blocked tasks
-> and the final review. Full findings and the substrate constraints table: `notes/README.md`.
-
-**On watching for code changes:** review triggers on *handoff*, not on commit. In this design
-the lead is the only committer and commits happen at wave gates, so commit-triggered review
-would fire at almost exactly the moment wave-gate review already does — the late feedback that
-let the ordering defect survive T7→T18. Timed polling is banned outright.
-
----
-
-## Analysis tools
-
-Promoted to `tools/` as live repo tooling; `implementation-plan.md` Phase 2 builds on them.
-
-| Script | Use |
-|---|---|
-| `tools/critical-path.py` | Critical path, wave structure, threshold verdicts from a DAG spec. Backs the plan gates. |
-| `tools/measure-gate-cost.sh` | Wall-clock vs runner-reported time per verification profile. Run twice — first invocation is cold. |
-| `tools/examples/baseline-dag.json` | The measured 18-task DAG behind finding 1. Fixture and worked example. |
-
-```bash
-python3 tools/critical-path.py tools/examples/baseline-dag.json
-```
-
-A third script aggregated per-run subagent telemetry into the figures above. It is not
-retained: it read an artifact layout from the subject repo's pi-subagents version that cannot
-be verified against current releases, and Phase 2 specifies a fresh `telemetry-harvest` built
-against the documented `status.json` / `events.jsonl` lifecycle artifacts. Whatever replaces
-it must redact free-text task fields by default — raw task text embeds plan paths and feature
-names, which is what forced the redaction of this investigation's own data.
+| [`notes/README.md`](notes/README.md) | Constraint index and upstream verification evidence |
+| [`notes/board-materialization.md`](notes/board-materialization.md) | Board materialization findings |
+| [`notes/crew-execution-model.md`](notes/crew-execution-model.md) | Crew execution-model findings |
+| [`notes/review-loop.md`](notes/review-loop.md) | Review-loop findings |
+| [`notes/reservations-and-config.md`](notes/reservations-and-config.md) | Reservation and configuration findings |
