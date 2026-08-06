@@ -27,6 +27,49 @@ _No entries yet._
 
 ## Confirmed Learnings
 
+### Check strength must match risk label, not task size
+- Date: 2026-08-06
+- Type: learning
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §3
+- Requirement refs: `NFR-003`
+- Summary: The two `destructive`/`migration` tasks in the Hermes run were authored with `bash -n`
+  as their minimal check. Workers truthfully reported the check passing while the real contract
+  suite had failing assertions, so verification silently moved to the lead and those two tasks
+  absorbed 46% of all attempts. Risk-labelled tasks require an executable check that runs their
+  own fixtures and reports assertion totals.
+- Follow-up: `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`
+
+### Unbounded fresh review ratchets instead of converging
+- Date: 2026-08-06
+- Type: learning
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §4
+- Summary: Fourteen review rounds using one model, one prompt shape, and no stopping rule kept
+  producing new high-severity findings on already-reviewed code, including demands outside the
+  write set and evidence the bundle format cannot carry. Bound review to two rounds, give the
+  reviewer an explicit negative scope, require in-scope/out-of-scope tagging, and rotate reviewer
+  identity between rounds.
+- Follow-up: `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`
+
+### Crew barriers serve review and Git, not scheduling
+- Date: 2026-08-06
+- Type: learning
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §5–§6
+- Summary: `crew/handlers/work.ts` awaits the whole dispatched batch, so there is no slot refill,
+  but the decisive serialization was the lead protocol: per-wave diff review plus per-wave commit
+  requires a frozen HEAD. Because write sets are disjoint, `git diff -- <write set>` supports
+  per-task review with no frozen HEAD, which removes the barrier without weakening review.
+- Follow-up: `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`; `TASK-0005`
+
+### Lobby-worker crashes consume the Crew attempt budget
+- Date: 2026-08-06
+- Type: issue
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §5
+- Summary: Five `Lobby worker <name> exited (code 1)` events counted as genuine attempts and
+  auto-blocked three tasks under `maxAttemptsPerTask: 2`, forcing 15 live mutations of
+  `config/pi-team/crew-config.json` mid-run. Keep the package default of 5 attempts and treat
+  lobby crashes as retryable infrastructure events rather than task failures.
+- Follow-up: `TASK-0006`
+
 ### Dogfood small plans before locking proportional packet gates
 - Date: 2026-07-31
 - Type: learning

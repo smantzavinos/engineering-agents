@@ -27,3 +27,4 @@ When a decision becomes stale, add a superseding ADR instead of deleting the old
 - `0001-repo-operational-contracts.md` — adopt repo-local operational contracts, readiness checks, and centralized `agentOverrides` guidance.
 - `0002-split-team-planning-pipeline.md` — branch after approach review into sequential and role-based team planning pipelines.
 - `0003-restore-team-mode-throughput-scheduling.md` — restore DAG/lane-based throughput scheduling, Turn-Exit Contract, bounded-cheap routing, and compact wave ledger in team mode.
+- `0004-continuous-crew-execution-and-per-task-review.md` — extend throughput scheduling to the Pi-team Crew substrate: continuous execution, per-task review, gate-only barriers, bounded review rounds, and risk-matched check strength.

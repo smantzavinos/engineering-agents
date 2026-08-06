@@ -70,6 +70,18 @@ _No items yet._
 
 ## Inbox
 
+### TASK-0005 — Upstream ask: slot-refill dispatch for Crew work batches
+- Status: Inbox
+- Summary: `crew/handlers/work.ts` calls `await spawnAgents(workerTasks, ...)` and blocks until the entire dispatched batch resolves, so a worker that finishes early idles until the slowest member of its batch returns even when a newly-unblocked task is ready. Request slot-refill dispatch that assigns the next ready, file-disjoint task the moment any worker slot frees, reusing the existing `crew/lobby.ts` persistent-worker assignment path.
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §6; `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`
+- Notes: Chained autonomous waves (`maxWaves: 50`, `stopOnBlock: false`) approximate this and are the interim posture. Value is the last ~20% of scheduling gain, not the primary remedy; the measured ceiling from perfect scheduling on the observed plan was 1.8×. Persistent warm workers and steer-message assignment already exist, so only dispatch policy changes.
+
+### TASK-0006 — Separate infrastructure failures from the Crew attempt budget
+- Status: Inbox
+- Summary: Lobby-worker crashes (`Lobby worker <name> exited (code 1)`) increment `attempt_count` and auto-block tasks identically to genuine worker failures. Request that infra-class exits be retried without consuming the budget, and that `review-wave` bundles embed the worker's check command, exit code, and staged-path status so reviewers stop demanding evidence the bundle format cannot carry.
+- Source: `docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` §4–§5; `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`
+- Notes: Five such crashes auto-blocked three tasks under `maxAttemptsPerTask: 2` and drove 15 live config mutations during one run. Three separate `NEEDS_WORK` verdicts in the same run contained no code defect and were caused solely by missing bundle evidence. The bundle change is repo-local in `tools/pi-team.mjs`; the attempt-accounting change is upstream in `pi-messenger`.
+
 ### TASK-0003 — Fix resource-snapshot.mjs Pi module path resolution through the startup wrapper
 - Status: Inbox
 - Summary: `tests/scripts/resource-snapshot.mjs` (`buildPiModulePath()`) locates the real `pi-coding-agent` package by resolving `which pi` and walking two directories up to find `lib/node_modules/{@earendil-works,@mariozechner}/pi-coding-agent/dist/index.js`. On hosts where the repo's own `pi` startup wrapper is on `PATH` (see `pi-startup-wrapper-spec.sh` / `pi-launch-wrapper.sh`), `which pi` resolves to the wrapper's Nix store package (which only contains `bin/pi`, no `lib/node_modules`), not the real `pi-coding-agent` package — so the entrypoint lookup fails with "Unable to locate Pi module entrypoint" and `./tests/run-tests.sh all` / the Pi proof-set step cannot run.

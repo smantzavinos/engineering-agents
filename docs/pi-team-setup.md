@@ -113,6 +113,47 @@ warning is expected because the authored plan remains at `prd`; any other warnin
 count error stops execution and archives partial state. Do not create a second board plan or treat
 runtime files as tracked sources.
 
+Only tasks a Crew worker can actually execute belong on the board. Operator evidence records that
+require a live migrated host stay as plan steps; boarding them adds width-1 waves and approval
+stops for work Crew cannot perform.
+
+## Execution model
+
+Per `docs/adr/0004-continuous-crew-execution-and-per-task-review.md`, execution is continuous and
+barriers exist only at integration gates.
+
+```text
+continuous workers ──► per-task review ──► accumulate
+                                              │
+                                     ┌────────┴────────┐
+                                     │ integration gate│  ← the only barrier
+                                     └────────┬────────┘
+                                              ▼
+                                        lead commit
+```
+
+- Run `pi_messenger({ action: "work", autonomous: true, concurrency: 4 })`. Reserve single-wave
+  manual mode for tasks carrying an approval-gated risk label.
+- Review a completed task against its own write set while other tasks continue. Write sets are
+  disjoint, so `git diff -- <write set>` needs no frozen HEAD and no dispatch pause.
+- Bound review to two rounds per task: round 1 admits blocking, in-scope, write-set actionable
+  defects; round 2 verifies those fixes and may raise regressions only. Further findings become
+  backlog items, not another round.
+- Give each reviewer an explicit negative scope: no files outside the write set, no evidence the
+  bundle does not carry, no live-host evidence in an offline review. Require in-scope or
+  out-of-scope tagging and discard out-of-scope findings without a worker round trip.
+- Rotate reviewer model or role prompt between rounds.
+- Stage and commit by explicit write-set paths only, after the task's required gate is green.
+
+The Crew defaults in `config/pi-team/crew-config.json` must keep `work.maxWaves` at the package
+default, `work.stopOnBlock` false, and `work.maxAttemptsPerTask` at 5. Do not lower the attempt
+budget to compensate for lobby-worker crashes; those are retryable infrastructure events
+(`TASK-0006`). Never mutate Crew configuration mid-run to unblock a task.
+
+Risk-labelled tasks require an executable minimal check that runs their own fixtures and reports
+assertion totals. `bash -n` and presence-only `rg` assertions are not admissible checks for
+`destructive` or `migration` work.
+
 ## Verification gates and failure policy
 
 Run the narrow checks during work and record baseline failures before each touched gate:
@@ -174,4 +215,6 @@ only new failures block this rollout task. `full` remains an optional release sm
 Do not treat a green deployment proof as calibration. Current canonical process and OpenCode
 behavior remain unchanged pending calibration; see
 `docs/investigations/2026-07-31-plan-execution-efficiency/pi-team-execution.md` for the reviewed
-experimental lifecycle and its promotion boundary.
+experimental lifecycle and its promotion boundary, and
+`docs/investigations/2026-08-06-team-mode-throughput-regression/README.md` for the measured
+throughput regression that produced the current execution model.
