@@ -31,7 +31,7 @@
     # Before updating, review every temporary Pi-version compatibility overlay:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {
-      url = "github:numtide/llm-agents.nix/70ff0e7f69a5fe712d675ac29b484e91e98daff0";
+      url = "github:numtide/llm-agents.nix";
     };
 
     # Visual Explainer skill (external, non-flake source)
