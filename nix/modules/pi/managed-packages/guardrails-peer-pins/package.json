@@ -1,0 +1,12 @@
+{
+  "name": "guardrails-peer-pins",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Build-time pin carrier: materializes @aliou/pi-guardrails' exact 0.61.0 peerDependencies so nix can nest them under node_modules/@aliou/pi-guardrails/node_modules (reproducing npm's global auto-peer layout). Never imported at runtime.",
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "0.61.0",
+    "@mariozechner/pi-ai": "0.61.0",
+    "@mariozechner/pi-coding-agent": "0.61.0",
+    "@mariozechner/pi-tui": "0.61.0"
+  }
+}
