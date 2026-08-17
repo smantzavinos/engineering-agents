@@ -36,6 +36,7 @@ bash tests/specs/skill-render-spec.sh
 bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
+bash tests/specs/pi-vendor-spec.sh
 bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
@@ -65,6 +66,7 @@ New tests specific to this repo:
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
 - **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`)
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
+- **`pi-vendor-spec.sh`** — Build-time vendor contracts: git pins match declarations, spec/installSpec normalized, injected core not vendored, nested lock shape
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests

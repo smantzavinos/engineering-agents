@@ -111,6 +111,11 @@
       nixosModules = {
         # OpenCode config delivery for system users via activation script
         opencode-for-user = import ./nix/modules/opencode/nixos-user.nix { inherit self llmAgents visualExplainer; };
+
+        # Pi config + managed package delivery for system users via activation
+        # script (hermes agent profiles). Consumes the same build-time
+        # managed-packages derivation as homeManagerModules.pi.
+        pi-for-user = import ./nix/modules/pi/nixos-user.nix { inherit self llmAgents visualExplainer; };
       };
 
       # ============================================================
@@ -133,6 +138,10 @@
           lib = pkgs.lib;
           inherit pkgs self;
         }) makeOpenCodeConfig;
+        inherit (import ./nix/modules/pi/config.nix {
+          lib = pkgs.lib;
+          inherit pkgs self;
+        }) makePiConfig makePiManagedPackages;
       });
 
       # ============================================================
@@ -147,6 +156,14 @@
           lib = pkgs.lib;
           inherit pkgs self;
         }).makeOpenCodeConfig {};
+
+        # Build-time managed Pi packages (vendor tree + facades + install
+        # state). Same derivation the HM module and pi-for-user deliver.
+        pi-managed-packages = self.lib.${system}.makePiManagedPackages { };
+
+        # Pre-built default Pi static agent tree for inspection/testing.
+        # See nix/modules/pi/config.nix for the makePiConfig function.
+        pi-agent-config-default = self.lib.${system}.makePiConfig { };
 
         # Documentation bundle
         engineering-agents-docs = pkgs.runCommand "engineering-agents-docs" { } ''
@@ -271,6 +288,120 @@
 
           touch $out
         '';
+
+        # Pi static agent tree produces the expected file set and settings body
+        pi-agent-config-shape = pkgs.runCommand "pi-agent-config-shape-check" {} ''
+          cfgd=${self.packages.${system}.pi-agent-config-default}
+          for f in settings.json models.json mcp.json keybindings.json guardrails.json \
+                   preset.jsonc CLAUDE.md CODEX.md themes/catppuccin-mocha.json \
+                   messenger/team-profiles/pi-team.json extensions/startup-staleness-warning/index.ts; do
+            test -e "$cfgd/agent/$f" || { echo "MISSING: agent/$f"; exit 1; }
+          done
+          for a in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle pi-team-reviewer; do
+            test -f "$cfgd/agent/agents/$a.md" || { echo "MISSING: agents/$a.md"; exit 1; }
+          done
+          for s in discovery design research create-plan review-plan create-worklog \
+                   execute-task execution-orchestrator review-code review-approach \
+                   assess-repo create-skills configure-pi create-new-repo-docs \
+                   pi-team-plan pi-team-lead pi-team-worker; do
+            test -d "$cfgd/agent/skills/$s" || { echo "MISSING: skills/$s"; exit 1; }
+          done
+          ${pkgs.jq}/bin/jq -e '.defaultProvider == "zai-coding-plan" and .defaultModel == "glm-5.2"' \
+            "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: default settings body"; exit 1; }
+          ${pkgs.jq}/bin/jq -e '(.packages | index("./packages/pi-powerline-footer")) != null' \
+            "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: powerline not in runtime packages"; exit 1; }
+          ${pkgs.jq}/bin/jq -e '(.packages | index("./packages/pi-zentui")) == null' \
+            "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: zentui must not be a runtime package by default"; exit 1; }
+          touch $out
+        '';
+
+        # Managed packages tree: facades exist, sources resolve, theme is
+        # patched, git metadata present, install-state is well-formed.
+        pi-managed-packages-shape = pkgs.runCommand "pi-managed-packages-shape-check" {} ''
+          tree=${self.packages.${system}.pi-managed-packages}
+          for id in pi-subagents pi-hooks pi-messenger pi-agent-guidance pi-mcp-adapter \
+                    pi-web-access pi-powerline-footer pi-zentui pi-interactive-shell \
+                    pi-subdir-context pi-ding pi-notify pi-auto-rename pi-ext-leader-key \
+                    pi-ext-review pi-guardrails pi-preset pi-prompt-template-model pi-btw; do
+            test -f "$tree/agent/packages/$id/package.json" || { echo "MISSING facade: $id"; exit 1; }
+          done
+          test ! -e "$tree/agent/packages/pi-gitnexus" || { echo "FAIL: pi-gitnexus must be excluded by default"; exit 1; }
+
+          # Facade source links must resolve to reachable files.
+          test -f "$tree/agent/packages/pi-messenger/_source/index.ts" || { echo "FAIL: pi-messenger _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-subagents/_source/src/extension/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-powerline-footer/_source/index.ts" || { echo "FAIL: powerline _source unreachable"; exit 1; }
+
+          # Git sources carry install metadata for the staleness checker.
+          test -f "$tree/vendor/node_modules/pi-subagents/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
+
+          # Powerline theme override applied at build time.
+          ${pkgs.jq}/bin/jq -e '.colors.model == "#cba6f7"' \
+            "$tree/vendor/node_modules/pi-powerline-footer/theme.json" >/dev/null \
+            || { echo "FAIL: powerline theme not patched"; exit 1; }
+
+          # Install state covers every facade package and no gitnexus.
+          count=$(${pkgs.jq}/bin/jq '.sources | map(.packageIds[]) | unique | length' "$tree/agent/managed-packages.install-state.json")
+          [ "$count" = "19" ] || { echo "FAIL: install-state covers $count packageIds, expected 19"; exit 1; }
+          touch $out
+        '';
+
+        # NixOS pi-for-user module instantiates and emits the activation
+        # script that materializes config + managed packages into targetDir.
+        pi-for-user-module =
+          let
+            mockBaseModule = { config, lib, ... }: {
+              options.system.activationScripts = lib.mkOption {
+                type = lib.types.attrsOf (lib.types.submodule {
+                  options.text = lib.mkOption { type = lib.types.str; default = ""; };
+                  options.deps = lib.mkOption { type = lib.types.listOf lib.types.str; default = []; };
+                });
+                default = {};
+              };
+            };
+            eval = nixpkgs.lib.evalModules {
+              modules = [
+                mockBaseModule
+                self.nixosModules.pi-for-user
+                {
+                  _module.args.pkgs = pkgs;
+                  engineering-agents.pi-for-user = {
+                    enable = true;
+                    user = "testuser";
+                    group = "testgroup";
+                    targetDir = "/tmp/test-pi";
+                    args = {};
+                  };
+                }
+              ];
+            };
+            scriptText = eval.config.system.activationScripts."pi-for-user".text;
+          in
+          pkgs.runCommand "pi-for-user-module-check" {
+            inherit scriptText;
+          } ''
+            echo "$scriptText" | grep -qF 'agent="/tmp/test-pi/agent"' || {
+              echo "FAIL: activation script must target the configured targetDir/agent"
+              exit 1
+            }
+            echo "$scriptText" | grep -qF 'settings.json|guardrails.json) continue' || {
+              echo "FAIL: activation script must keep settings.json and guardrails.json as real files"
+              exit 1
+            }
+            echo "$scriptText" | grep -qF 'managed/packages' || {
+              echo "FAIL: activation script must link managed packages"
+              exit 1
+            }
+            echo "$scriptText" | grep -qF 'managed-packages.install-state.json' || {
+              echo "FAIL: activation script must link the install-state manifest"
+              exit 1
+            }
+            echo "$scriptText" | grep -qF 'chown testuser:testgroup' || {
+              echo "FAIL: activation script must chown to the configured user/group"
+              exit 1
+            }
+            touch $out
+          '';
 
         # NixOS opencode-for-user module instantiates and emits the activation
         # script that materializes the config into targetDir.

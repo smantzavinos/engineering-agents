@@ -39,15 +39,15 @@ else
 fi
 
 PI_MODULE="$REPO_ROOT/nix/modules/pi/default.nix"
-if grep -Fq 'pi-messenger = {' "$PI_MODULE" &&
-   grep -Fq 'packageName = "pi-messenger";' "$PI_MODULE" &&
-   grep -Fq 'spec = "pi-messenger@0.15.0";' "$PI_MODULE" &&
-   grep -Fq 'installSpec = "pi-messenger@0.15.0";' "$PI_MODULE" &&
-   grep -Fq 'version = "0.15.0";' "$PI_MODULE" &&
-   grep -Fq 'extensions = [ "./index.ts" ];' "$PI_MODULE" &&
-   grep -Fq 'skills = [ "pi-messenger-crew" ];' "$PI_MODULE" &&
-   grep -Fq '".pi/agent/messenger/team-profiles/pi-team.json".source =' "$PI_MODULE" &&
-   grep -Fq '"${repoRoot}/config/pi-team/team-profile.json";' "$PI_MODULE"; then
+PI_CONFIG="$REPO_ROOT/nix/modules/pi/config.nix"
+if grep -Fq 'pi-messenger = {' "$PI_CONFIG" &&
+   grep -Fq 'packageName = "pi-messenger";' "$PI_CONFIG" &&
+   grep -Fq 'spec = "pi-messenger@0.15.0";' "$PI_CONFIG" &&
+   grep -Fq 'installSpec = "pi-messenger@0.15.0";' "$PI_CONFIG" &&
+   grep -Fq 'extensions = [ "./index.ts" ];' "$PI_CONFIG" &&
+   grep -Fq 'skills = [ "pi-messenger-crew" ];' "$PI_CONFIG" &&
+   grep -Fq '".pi/agent/messenger/team-profiles/pi-team.json"' "$PI_MODULE" &&
+   grep -Fq 'config/pi-team/team-profile.json $out/agent/messenger/team-profiles/pi-team.json' "$PI_CONFIG"; then
   pass "Pi module declares pi-messenger resources and the canonical pi-team profile"
 else
   fail "Pi module declares pi-messenger resources and the canonical pi-team profile"
@@ -118,11 +118,15 @@ for ref in "${AGENT_REFS[@]}"; do
   fi
 done
 
-# Pi team skills and reviewer must be installed from their generated/canonical surfaces.
-if grep -Fq '".pi/agent/skills/pi-team-plan".source = "${repoRoot}/dist/skills/pi/pi-team-plan";' "$PI_MODULE" \
-  && grep -Fq '".pi/agent/skills/pi-team-lead".source = "${repoRoot}/dist/skills/pi/pi-team-lead";' "$PI_MODULE" \
-  && grep -Fq '".pi/agent/skills/pi-team-worker".source = "${repoRoot}/dist/skills/pi/pi-team-worker";' "$PI_MODULE" \
-  && grep -Fq '".pi/agent/agents/pi-team-reviewer.md".source = "${repoRoot}/agents/pi-team-reviewer.md";' "$PI_MODULE"; then
+# Pi team skills and reviewer must be installed from their generated/canonical
+# surfaces: config.nix declares the rosters and links them into the agent
+# tree; default.nix links the tree entries into ~/.pi/agent by roster.
+if grep -Fq '"pi-team-plan"' "$PI_CONFIG" \
+  && grep -Fq '"pi-team-lead"' "$PI_CONFIG" \
+  && grep -Fq '"pi-team-worker"' "$PI_CONFIG" \
+  && grep -Fq '"pi-team-reviewer"' "$PI_CONFIG" \
+  && grep -Fq 'piAgentNames' "$PI_MODULE" \
+  && grep -Fq 'piSkillNames' "$PI_MODULE"; then
   pass "Pi module installs the Pi team skills and task reviewer"
 else
   fail "Pi module is missing Pi team skill or reviewer wiring"
