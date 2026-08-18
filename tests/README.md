@@ -37,6 +37,7 @@ bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/pi-vendor-spec.sh
 bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/wave-engine-spec.sh
+bash tests/specs/plan-check-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
 bash tests/specs/pi-startup-wrapper-spec.sh
@@ -53,6 +54,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 - **`assert-contract.sh`** — Proof-set contract assertions (facade, provenance, resources)
 - **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests
 - **`wave-engine-spec.sh`** — Wave engine graph validation, readiness, failure classification, and generated workflowScript contract
+- **`plan-check-spec.sh`** — Plan gate: tasks.json schema, verification classes, intra-wave write-set collisions, and plan.md drift
 - **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
 
@@ -102,6 +104,7 @@ tests/
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
 │   ├── compiler-contract-spec.sh    # Compile helper contract tests
 │   ├── wave-engine-spec.sh          # Code-mode wave engine contract tests
+│   ├── plan-check-spec.sh           # Plan/tasks.json gate contract tests
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 │   ├── pi-startup-wrapper-spec.sh   # Repo-owned pi wrapper contract tests

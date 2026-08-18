@@ -206,8 +206,19 @@ function buildRenderTree() {
       const rendered = renderSkill(source, harness, skill);
       tree.set(path.join(harness.id, skill, 'SKILL.md'), rendered);
       // Copy supporting files (references/, templates/, etc.) verbatim.
+      // `references.<harness>/x` overrides or adds to `references/x` for that
+      // harness only, so a shared skill can ship a harness-specific template
+      // without perturbing the other harness's bytes.
       for (const rel of walkFiles(skillDir)) {
         if (rel === 'SKILL.md') continue;
+        const segments = rel.split(path.sep);
+        const overrideMatch = /^([A-Za-z0-9_-]+)\.([a-z0-9-]+)$/.exec(segments[0]);
+        if (overrideMatch) {
+          if (overrideMatch[2] !== harness.id) continue;
+          const target = path.join(overrideMatch[1], ...segments.slice(1));
+          tree.set(path.join(harness.id, skill, target), fs.readFileSync(path.join(skillDir, rel)));
+          continue;
+        }
         tree.set(path.join(harness.id, skill, rel), fs.readFileSync(path.join(skillDir, rel)));
       }
     }

@@ -255,6 +255,27 @@ for harness in pi opencode; do
 done
 
 # ============================================================
+# references.<harness>/ overrides references/ for that harness only, so a shared
+# skill can ship a harness-specific template without perturbing the other harness.
+if [[ -f "$REPO_ROOT/dist/skills/pi/create-plan/references/tasks-schema.md" ]] \
+  && [[ ! -e "$REPO_ROOT/dist/skills/opencode/create-plan/references/tasks-schema.md" ]] \
+  && ! cmp -s "$REPO_ROOT/dist/skills/pi/create-plan/references/plan-template.md" \
+              "$REPO_ROOT/dist/skills/opencode/create-plan/references/plan-template.md" \
+  && cmp -s "$REPO_ROOT/skills/create-plan/references.pi/plan-template.md" \
+            "$REPO_ROOT/dist/skills/pi/create-plan/references/plan-template.md" \
+  && cmp -s "$REPO_ROOT/skills/create-plan/references/plan-template.md" \
+            "$REPO_ROOT/dist/skills/opencode/create-plan/references/plan-template.md"; then
+  pass "references.<harness> overrides land only in that harness tree"
+else
+  fail "references.<harness> override did not apply per harness"
+fi
+if [[ ! -e "$REPO_ROOT/dist/skills/pi/create-plan/references.pi" ]] \
+  && [[ ! -e "$REPO_ROOT/dist/skills/opencode/create-plan/references.pi" ]]; then
+  pass "raw references.<harness> directories are not emitted"
+else
+  fail "raw references.<harness> directory leaked into a rendered tree"
+fi
+
 # Every rendered Pi delegation block must be syntactically valid JavaScript.
 # Prompts are prose and may contain quotes or backslashes; raw interpolation
 # silently emitted broken snippets before the renderer encoded them properly.
