@@ -47,8 +47,10 @@ let
       source = {
         type = "git";
         packageName = "pi-subagents";
-        spec = "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206";
-        installSpec = "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206";
+        # v0.50.0 — required for `workflowScript` code-mode orchestration.
+        # Note: the pi manifest entrypoint moved to ./index.ts in this release.
+        spec = "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435";
+        installSpec = "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435";
       };
     };
 
@@ -260,10 +262,10 @@ let
   # two pi-ext packageIds). Hashes are unpacked-codeload SRI values.
   gitSources = {
     "pi-subagents" = {
-      rev = "c940fe20e86d9ba429eebcac809ec79d478ef206";
+      rev = "c091da1d9b660c1940ef5dc78cfeeace1aecd435";
       tarball = pkgs.fetchzip {
-        url = "https://github.com/nicobailon/pi-subagents/archive/c940fe20e86d9ba429eebcac809ec79d478ef206.tar.gz";
-        hash = "sha256-7QKPlmgLLMBcB8tmVAwbO+8jrF7RLOwgvGC41ZHY1Rs=";
+        url = "https://github.com/nicobailon/pi-subagents/archive/c091da1d9b660c1940ef5dc78cfeeace1aecd435.tar.gz";
+        hash = "sha256-2lv3e6s+AVXL5Da/+PhSzG4b5Hc62+2MY0mjqSPBoVo=";
         stripRoot = true;
       };
     };

@@ -16,10 +16,10 @@
     {
       "packageId": "pi-subagents",
       "sourceManifestName": "pi-subagents",
-      "sourceSpec": "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206",
+      "sourceSpec": "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435",
       "resourceExpectations": {
         "extensions": [
-          "./src/extension/index.ts"
+          "./index.ts"
         ],
         "skills": [
           "pi-subagents"

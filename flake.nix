@@ -367,7 +367,7 @@
 
           # Facade source links must resolve to reachable files.
           test -f "$tree/agent/packages/pi-messenger/_source/index.ts" || { echo "FAIL: pi-messenger _source unreachable"; exit 1; }
-          test -f "$tree/agent/packages/pi-subagents/_source/src/extension/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-subagents/_source/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-powerline-footer/_source/index.ts" || { echo "FAIL: powerline _source unreachable"; exit 1; }
 
           # Git sources carry install metadata for the staleness checker.

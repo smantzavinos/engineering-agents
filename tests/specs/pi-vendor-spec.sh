@@ -37,7 +37,11 @@ for (let i = src.indexOf("{", start); i < src.length; i++) {
   if (src[i] === "{") depth++;
   else if (src[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
 }
-const body = src.slice(start, end);
+const body = src.slice(start, end)
+  // Strip Nix line comments: a comment between fields would otherwise make the
+  // declaration regex below silently skip the whole package, letting a git
+  // source escape the immutable-pin check (pi-powerline-footer did exactly that).
+  .replace(/^[ \t]*#.*$/gm, "");
 const decls = {};
 const re = /(\S+)\s*=\s*\{\s*source\s*=\s*\{\s*type\s*=\s*"([^"]+)";\s*packageName\s*=\s*"([^"]+)";\s*spec\s*=\s*"([^"]+)";\s*installSpec\s*=\s*"([^"]+)";/g;
 let m;
@@ -48,10 +52,10 @@ console.log(JSON.stringify(decls));
 ' "$PI_CONFIG")"
 
 DECL_COUNT="$(jq 'length' <<<"$DECLS_JSON")"
-if [ "$DECL_COUNT" -ge 19 ]; then
+if [ "$DECL_COUNT" -ge 20 ]; then
   pass "managedPackages declares $DECL_COUNT packages"
 else
-  fail "managedPackages declares only $DECL_COUNT packages (expected >= 19)"
+  fail "managedPackages declares only $DECL_COUNT packages (expected >= 20)"
 fi
 
 # spec/installSpec normalization

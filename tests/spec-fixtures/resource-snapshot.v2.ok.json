@@ -126,14 +126,14 @@
         "packageId": "pi-subagents",
         "source": {
           "type": "git",
-          "spec": "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206",
+          "spec": "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435",
           "materializedKey": "src-pi-subagents"
         },
         "sourceManifestName": "pi-subagents",
         "sourceRoot": "/fixture/.pi/agent/sources/src-pi-subagents",
         "selectedResources": {
           "extensions": [
-            "./src/extension/index.ts"
+            "./index.ts"
           ],
           "skills": [
             "pi-subagents"
@@ -148,10 +148,10 @@
       "discovered": {
         "extensions": [
           {
-            "relativePath": "./_source/src/extension/index.ts",
-            "sourceRelativePath": "./src/extension/index.ts",
-            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/src/extension/index.ts",
-            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/src/extension/index.ts",
+            "relativePath": "./_source/index.ts",
+            "sourceRelativePath": "./index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/index.ts",
             "tools": [],
             "commands": [],
             "flags": []
