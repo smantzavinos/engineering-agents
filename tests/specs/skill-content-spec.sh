@@ -187,7 +187,8 @@ if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
 else
   fail "pi-team-reviewer agent is removed with team mode"
 fi
-for oc_only in execution-orchestrator execute-task create-worklog; do
+for oc_only in execution-orchestrator execute-task create-worklog \
+                create-plan review-plan review-code; do
   if grep -Fq 'harnesses: [opencode]' "$REPO_ROOT/skills/$oc_only/SKILL.md"; then
     pass "${oc_only} is retained for OpenCode only"
   else

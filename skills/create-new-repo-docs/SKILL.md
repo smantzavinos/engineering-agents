@@ -35,7 +35,7 @@ Use this when:
 
 Do NOT use this when:
 - you are planning changes in an existing repo
-- you need a change plan for already-existing code (`create-plan`)
+- you need a change plan for already-existing code ({{note:change-plan-skill}})
 - you explicitly need a charter-style greenfield execution plan with phases/tasks (`create-new-repo-project-plan`)
 - you only want a single document rather than a repo doc foundation
 

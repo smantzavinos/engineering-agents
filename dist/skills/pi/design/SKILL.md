@@ -208,5 +208,5 @@ You're done when:
 - The approach addresses all goals and constraints from the brief
 
 Tell the human:
-- For standard work: "The approach is ready. You can now start the Execution phase. Switch to: `/preset execute` and then say 'Execute the plan at [path]. Auto-continue.'"
+- For standard work: "The approach is ready. Plan it with `/create-tasks`, review with `/review-tasks`, and once you have approved the plan run `/execute-plan`."
 - For epic work: "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'"

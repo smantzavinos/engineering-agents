@@ -54,8 +54,6 @@
     "discovery-design-handoff": "This looks ready for the Design phase. Switch to the Design agent (press Tab) to research the codebase and develop the approach.",
     "design-execute-standard": "The approach is ready. Switch to the Execute agent (press Tab) and say 'Execute the plan at [path]. Auto-continue.'",
     "design-execute-epic": "The epic approach and decomposition are ready. Switch to the Execute agent (press Tab) and say 'Execute the epic at [path].'",
-    "plan-task-verification-step": "**Write TDD checklists** — Each task gets explicit Red → Green → Break-it → Verify steps",
-    "plan-verification-policy": "### TDD is non-negotiable\nEvery task must include a TDD checklist with:\n- A failing test FIRST (name the file, the behavior, the assertion)\n- The implementation to make it pass\n- A break-it check (temporarily break the invariant, confirm test fails)\n- Verification commands",
-    "plan-output-artifacts": "Write `plan.md` in the plan directory using the naming convention `YYYY_MM_DD_<slug>/plan.md`. Use the full template from [references/plan-template.md](references/plan-template.md)."
+    "change-plan-skill": "`create-plan`"
   }
 }

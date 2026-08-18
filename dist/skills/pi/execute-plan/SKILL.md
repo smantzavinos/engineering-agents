@@ -65,7 +65,7 @@ failing test. This is the red half, and it is observed once, here, with evidence
 subagent({
   agent: "planner",
   task: "Author the failing tests for the tasks listed as class \"contract\" in PLAN_DIR/tasks.json, against the interfaces in PLAN_DIR/interfaces.md. Write tests only — no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.",
-  skill: "create-plan"
+  skill: "create-tasks"
 })
 
 Confirm red yourself, then commit. This commit is the frozen baseline:
@@ -123,7 +123,7 @@ second failure is an escalation, not a third attempt.
 subagent({
   agent: "code-reviewer",
   task: "Review the diff for this wave against PLAN_DIR/plan.md. Report correctness, scope creep, and any test that cannot fail for a reason other than an edit to itself.",
-  skill: "review-code"
+  skill: "review-diff"
 })
 
 Apply fixes yourself, then:

@@ -5,10 +5,10 @@
   "delegationStyle": "pi-subagent",
   "hiddenSkills": [
     "research",
-    "create-plan",
-    "review-plan",
+    "create-tasks",
+    "review-tasks",
+    "review-diff",
     "review-approach",
-    "review-code",
     "review-epic",
     "configure-pi",
     "configure-opencode",
@@ -64,10 +64,8 @@
   "notes": {
     "ui-implementation-target": "`ui-worker`",
     "discovery-design-handoff": "This looks ready for the Design phase. You can start a Design session to research the codebase and develop the approach.",
-    "design-execute-standard": "The approach is ready. You can now start the Execution phase. Switch to: `/preset execute` and then say 'Execute the plan at [path]. Auto-continue.'",
+    "design-execute-standard": "The approach is ready. Plan it with `/create-tasks`, review with `/review-tasks`, and once you have approved the plan run `/execute-plan`.",
     "design-execute-epic": "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'",
-    "plan-task-verification-step": "**Assign a verification class per task** — `contract`, `characterization`, `check`, or `none`, per `docs/execution-patterns.md`",
-    "plan-verification-policy": "### Verification is per-task, not one ritual\n\nEvery task declares a verification class. Choose it by asking: *can this task's test fail\nbecause of a change in the behaviour or artifact the task modifies, without someone editing\nthe test?*\n\n- `contract` — new or changed observable behaviour. A failing test is authored first, **by an\n  agent other than the implementer**, and frozen. Name the file, the behaviour, the assertion.\n- `characterization` — refactor with no behaviour change. Existing tests must stay green.\n- `check` — config, wiring, generated artifacts, schema. A structural check must pass.\n- `none` — prose with no structural contract. Legitimate, but choose it explicitly.\n\nThere is no mandatory break-it step. A reviewer may demand one when a test looks like it\ncannot fail, but an implementer never self-administers it.",
-    "plan-output-artifacts": "Write two files in the plan directory (`YYYY_MM_DD_<slug>/`):\n\n1. `plan.md` — the human narrative, using [references/plan-template.md](references/plan-template.md).\n2. `tasks.json` — the executable task graph, per [references/tasks-schema.md](references/tasks-schema.md).\n\nThen run `node tools/check-plan.mjs <plan-dir>` and fix everything it reports. A plan that\ndoes not pass this gate cannot be executed."
+    "change-plan-skill": "`create-tasks`"
   }
 }

@@ -1,6 +1,7 @@
 ---
 name: create-plan
 description: Create a detailed, executable engineering plan with dependency-ordered tasks and TDD checklists from an existing brief and approach. Produces plan.md in the plan directory. Use after research and approach are complete.
+harnesses: [opencode]
 ---
 
 # Create Plan
@@ -27,7 +28,7 @@ If the brief or approach has ambiguities that would affect task decomposition, v
 1. **Read context** — Read brief.md, approach.md, relevant findings, and (for epic child plans) the parent epic context
 2. **Identify verification commands** — Read the repo's test architecture docs (referenced in AGENTS.md) to find exact verification commands
 3. **Break into tasks** — Decompose the approach into ordered, dependency-aware tasks
-4. {{note:plan-task-verification-step}}
+4. **Write TDD checklists** — Each task gets explicit Red → Green → Break-it → Verify steps
 5. **Define verification gates** — What proves each task is done, what proves the plan is complete
 6. **Map requirements where relevant** — If the repo maintains requirements, cite requirement refs per task and map approved requirement edits to explicit tasks
 7. **Write plan.md** — Using the template in [references/plan-template.md](references/plan-template.md)
@@ -52,7 +53,12 @@ Every task must name:
 **Bad:** "implement the notification service"
 **Good:** "Create `src/notifications/service.ts` with `createNotification()` and `getUnread()` methods. Add failing test in `src/notifications/service.test.ts` asserting that `createNotification()` persists to the notifications table."
 
-{{note:plan-verification-policy}}
+### TDD is non-negotiable
+Every task must include a TDD checklist with:
+- A failing test FIRST (name the file, the behavior, the assertion)
+- The implementation to make it pass
+- A break-it check (temporarily break the invariant, confirm test fails)
+- Verification commands
 
 ### Verification must reference canonical sources
 Do NOT invent verification commands. Get them from:
@@ -117,7 +123,7 @@ Missing these for tooling plans = the plan review will flag Critical issues.
 
 ## Output
 
-{{note:plan-output-artifacts}}
+Write `plan.md` in the plan directory using the naming convention `YYYY_MM_DD_<slug>/plan.md`. Use the full template from [references/plan-template.md](references/plan-template.md).
 
 After writing, update `state.json` to `{ "phase": "planned", "status": "active" }`.
 

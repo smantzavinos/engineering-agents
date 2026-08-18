@@ -100,8 +100,8 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify skills are linked
-  for skill in discovery design execute-plan research create-plan review-plan \
-               review-code review-approach review-epic \
+  for skill in discovery design execute-plan create-tasks review-tasks review-diff \
+               research review-approach review-epic \
                assess-repo create-skills create-new-repo-docs; do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
       pass "Pi module links skill: $skill"
@@ -112,6 +112,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 
   # Retired with team mode: OpenCode keeps these, Pi must not install them.
   for skill in create-worklog execute-task execution-orchestrator \
+               create-plan review-plan review-code \
                pi-team-plan pi-team-lead pi-team-worker; do
     if [[ -e "$PI_FILES/.pi/agent/skills/$skill" ]]; then
       fail "Pi module must not link retired skill: $skill"
