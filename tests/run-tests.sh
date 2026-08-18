@@ -59,6 +59,7 @@ run_specs() {
               "$SCRIPT_DIR/specs/pi-vendor-spec.sh" \
               "$SCRIPT_DIR/specs/preset-spec.sh" \
               "$SCRIPT_DIR/specs/compiler-contract-spec.sh" \
+              "$SCRIPT_DIR/specs/wave-engine-spec.sh" \
               "$SCRIPT_DIR/specs/managed-package-install-state-spec.sh" \
               "$SCRIPT_DIR/specs/managed-package-status-spec.sh" \
               "$SCRIPT_DIR/specs/pi-startup-wrapper-spec.sh" \
@@ -78,6 +79,16 @@ run_specs() {
         printf '  FAILED (exit %s)\n\n' "$normalized_status" >&2
         pass=false
       fi
+    else
+      # A listed spec that is not executable used to be skipped in silence.
+      # pi-startup-wrapper-spec.sh was skipped that way from af4ad40 until
+      # 2026-08-18. Never skip quietly again: an unrunnable spec is a failure.
+      printf '%s\n' "--- $(basename "$spec") ---"
+      printf '  FAILED (listed but not executable: %s)\n\n' "$spec" >&2
+      if [[ "$EXIT_SPEC" -gt "$overall_status" ]]; then
+        overall_status="$EXIT_SPEC"
+      fi
+      pass=false
     fi
   done
 
