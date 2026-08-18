@@ -591,6 +591,7 @@ let
     , footer ? "powerline", enabledModels ? defaultEnabledModels
     , includeGitNexus ? false
     , powerline ? defaultPowerlineConfig, powerlineShortcuts ? defaultPowerlineShortcuts
+    , subagentDefaultModel ? null, subagentOverrides ? { }
     }:
     {
       inherit defaultProvider defaultModel defaultThinkingLevel theme;
@@ -620,9 +621,19 @@ let
       packages = map (packageId: "./packages/${packageId}")
         (makePiRuntimePackageIds { inherit footer includeGitNexus; });
 
-      subagents = {
-        disableBuiltins = true;
-      };
+      # pi-subagents routing. disableBuiltins keeps the extension's bundled
+      # agents out; the shipped repo agents (agents/*.md) are custom agents.
+      # subagentDefaultModel applies only to agents WITHOUT an explicit model;
+      # subagentOverrides (subagents.agentOverrides) fields are SKIPPED for
+      # any field an agent's frontmatter already declares — use makePiConfig's
+      # agentOverrides to re-point frontmatter-declared models per consumer.
+      subagents = { disableBuiltins = true; }
+        // lib.optionalAttrs (subagentDefaultModel != null) {
+          defaultModel = subagentDefaultModel;
+        }
+        // lib.optionalAttrs (subagentOverrides != { }) {
+          agentOverrides = subagentOverrides;
+        };
     } // lib.optionalAttrs (footer == "powerline") {
       inherit powerline powerlineShortcuts;
     };
@@ -723,9 +734,11 @@ let
           baseUrl = "https://api.z.ai/api/coding/paas/v4";
           api = "openai-completions";
           models = [
+            { id = "glm-5.3"; name = "GLM 5.3"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; }
             { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; reasoning = true; }
             { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
             { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
+            { id = "glm-5-turbo"; name = "GLM 5 Turbo"; contextWindow = 200000; maxTokens = 131072; reasoning = true; }
             { id = "glm-4.7"; name = "GLM 4.7"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
             { id = "glm-4.7-flash"; name = "GLM 4.7 Flash"; contextWindow = 131072; maxTokens = 8192; }
             { id = "glm-4.6v"; name = "GLM 4.6 Vision"; contextWindow = 131072; maxTokens = 16384; input = [ "text" "image" ]; }
@@ -819,6 +832,58 @@ let
   # Repo-owned assets linked into every agent tree.
   repoRoot = "${self}";
 
+  # Patch a shipped agent definition's frontmatter at build time (the pi
+  # analogue of opencode's agentModelOverrides). Settings-level
+  # subagents.agentOverrides cannot re-point fields an agent's frontmatter
+  # already declares — per-consumer routing of frontmatter-declared models
+  # (model:, fallbackModels:, thinking:) goes through this patch instead.
+  # Unspecified fields pass through unchanged; the derivation self-verifies.
+  patchAgentMd = name: override:
+    let
+      fallbacks = lib.concatStringsSep ", " (override.fallbackModels or [ ]);
+    in
+    pkgs.runCommand "pi-agent-${name}-patched.md" {
+      model = override.model or "";
+      inherit fallbacks;
+      thinking = override.thinking or "";
+    } ''
+      set -euo pipefail
+      awk -v m="$model" -v fb="$fallbacks" -v th="$thinking" '
+        NR==1 && $0 == "---" { infm=1; print; next }
+        infm && $0 == "---" {
+          if (m != "" && !sawmodel) print "model: " m
+          if (fb != "" && !donefb) print "fallbackModels: " fb
+          infm=0; print; next
+        }
+        infm && /^model:[[:space:]]/ {
+          sawmodel=1
+          if (m != "") print "model: " m; else print
+          if (fb != "") { print "fallbackModels: " fb; donefb=1 }
+          next
+        }
+        infm && /^fallbackModels:[[:space:]]/ {
+          if (fb != "" && !donefb) { print "fallbackModels: " fb; donefb=1 }
+          else if (fb == "") print
+          next
+        }
+        infm && /^thinking:[[:space:]]/ {
+          if (th != "") print "thinking: " th; else print
+          next
+        }
+        { print }
+      ' ${repoRoot}/agents/${name}.md > $out
+
+      ${lib.optionalString (override ? model) ''
+        grep -Fqx "model: ${override.model}" $out || { echo "agentOverrides: model patch failed for ${name}" >&2; exit 1; }
+      ''}
+      ${lib.optionalString (override ? fallbackModels) ''
+        grep -Fqx "fallbackModels: ${fallbacks}" $out || { echo "agentOverrides: fallbackModels patch failed for ${name}" >&2; exit 1; }
+      ''}
+      ${lib.optionalString (override ? thinking) ''
+        grep -Fqx "thinking: ${override.thinking}" $out || { echo "agentOverrides: thinking patch failed for ${name}" >&2; exit 1; }
+      ''}
+    '';
+
   piSkills = [
     "discovery"
     "design"
@@ -889,8 +954,21 @@ in
     powerline ? defaultPowerlineConfig,
     powerlineShortcuts ? defaultPowerlineShortcuts,
     extraSkills ? {},
+    # Per-consumer agent routing: attrset of <agentName> -> { model ?,
+    # fallbackModels ? [ ... ], thinking ? } patched into the shipped agent
+    # frontmatter at build time. Wins over the shipped frontmatter (unlike
+    # subagentOverrides, which frontmatter-declared fields ignore).
+    agentOverrides ? {},
+    subagentDefaultModel ? null,
+    subagentOverrides ? {},
     ...
   }:
+  let
+    unknownAgentOverrides =
+      lib.filter (n: !lib.elem n piAgents) (lib.attrNames agentOverrides);
+  in
+  assert lib.assertMsg (unknownAgentOverrides == [])
+    "makePiConfig agentOverrides references unknown agents: ${toString unknownAgentOverrides} (known: ${toString piAgents})";
   let
     settings = makePiSettings {
       inherit
@@ -902,7 +980,9 @@ in
         enabledModels
         includeGitNexus
         powerline
-        powerlineShortcuts;
+        powerlineShortcuts
+        subagentDefaultModel
+        subagentOverrides;
     };
   in
   pkgs.runCommand "pi-agent-config" {} ''
@@ -925,7 +1005,11 @@ in
     ln -s ${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning $out/agent/extensions/startup-staleness-warning
 
     ${lib.concatMapStringsSep "\n  " (name:
-      "ln -s ${repoRoot}/agents/${name}.md $out/agent/agents/${name}.md"
+      "ln -s ${
+        if agentOverrides ? ${name}
+        then patchAgentMd name agentOverrides.${name}
+        else "${repoRoot}/agents/${name}.md"
+      } $out/agent/agents/${name}.md"
     ) piAgents}
 
     ${lib.concatMapStringsSep "\n  " (name:

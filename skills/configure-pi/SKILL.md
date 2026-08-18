@@ -47,7 +47,8 @@ Use `.pi/settings.json` for settings such as:
 - `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, and `enabledModels`.
 - `thinkingBudgets`, display settings, compaction, retry, and session settings when they must differ for this repository.
 - Project-local `extensions`, `skills`, `prompts`, and `themes` paths.
-- `subagents.agentOverrides` for repository-specific subagent model, thinking, tool, or role behavior.
+- `subagents.agentOverrides` for repository-specific subagent model, thinking, tool, fallback-chain, or role behavior.
+- `subagents.defaultModel` to give subagents without an explicit model their own default model (separate from the session model).
 
 Example: keep the project's default model and route a reviewer to a verified stronger model:
 
@@ -67,6 +68,36 @@ Example: keep the project's default model and route a reviewer to a verified str
 ```
 
 Use only model IDs available in the current environment. Keep every project configuration secret-free.
+
+### Subagent model fallback chains
+
+`pi-subagents` supports an ordered fallback chain per agent. Set it in `subagents.agentOverrides.<agent>.fallbackModels` (array) or directly in an agent definition's frontmatter (`fallbackModels: provider/id, provider/id`).
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "worker": {
+        "model": "zai-coding-plan/glm-5.2",
+        "fallbackModels": [
+          "fireworks/accounts/fireworks/models/deepseek-v4-flash",
+          "fireworks/accounts/fireworks/models/qwen3p8-max"
+        ]
+      }
+    }
+  }
+}
+```
+
+Fallback semantics (verified against the pinned pi-subagents source):
+
+- The chain is tried **in order** after the primary model fails.
+- Fallback triggers only on **provider/model failure classes**: rate limit (429), quota/billing, auth/API-key errors, timeouts, provider overloaded/unavailable, model not found/disabled, and network errors. **Ordinary task failures never trigger fallback** — a failing test or bad code output is retried by the same model, not routed to the next one.
+- Model IDs resolve fuzzily (case/separator/date-stamp tolerant); a `provider/id` reference never silently switches providers.
+
+Precedence rule — important: an override field is **skipped when the agent definition's frontmatter already declares that field**. An agent file with `model:` in frontmatter ignores `agentOverrides.<agent>.model` (same for `fallbackModels`/`thinking`). Settings-level overrides apply only to fields the agent file leaves undeclared. To re-point a frontmatter-declared model per environment, either edit the agent definition or, in engineering-agents-managed deployments, use the `agentOverrides` argument of `makePiConfig`/`engineering-agents.pi-for-user.args`, which patches the shipped agent frontmatter at build time.
+
+`subagents.defaultModel` applies only to agents **without** an explicit model (frontmatter `model:` and any per-agent override win).
 
 ### Pi-team Crew lane models
 

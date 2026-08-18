@@ -312,6 +312,44 @@
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: powerline not in runtime packages"; exit 1; }
           ${pkgs.jq}/bin/jq -e '(.packages | index("./packages/pi-zentui")) == null' \
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: zentui must not be a runtime package by default"; exit 1; }
+          for id in glm-5.3 glm-5.2 glm-5 glm-5-turbo; do
+            ${pkgs.jq}/bin/jq -e --arg id "$id" '.providers["zai-coding-plan"].models[] | select(.id == $id)' \
+              "$cfgd/agent/models.json" >/dev/null || { echo "FAIL: zai catalog missing $id"; exit 1; }
+          done
+          touch $out
+        '';
+
+        # makePiConfig agentOverrides patch shipped agent frontmatter at build
+        # time and subagent settings pass through to settings.json.
+        pi-agent-config-agent-overrides = pkgs.runCommand "pi-agent-config-agent-overrides-check" {} ''
+          cfgd=${self.lib.${system}.makePiConfig {
+            agentOverrides = {
+              worker.model = "zai-coding-plan/glm-5.3";
+              worker.fallbackModels = [ "fireworks/accounts/fireworks/models/deepseek-v4-flash" ];
+              code-reviewer.fallbackModels = [ "zai-coding-plan/glm-5.2" ];
+              oracle.thinking = "low";
+            };
+            subagentDefaultModel = "zai-coding-plan/glm-5";
+            subagentOverrides = { researcher.model = "zai-coding-plan/glm-5-turbo"; };
+          }}
+          # Patched frontmatter: model replaced, fallbacks replaced/inserted,
+          # thinking patched.
+          grep -Fqx 'model: zai-coding-plan/glm-5.3' "$cfgd/agent/agents/worker.md" \
+            || { echo "FAIL: worker model patch missing"; exit 1; }
+          grep -Fqx 'fallbackModels: fireworks/accounts/fireworks/models/deepseek-v4-flash' "$cfgd/agent/agents/worker.md" \
+            || { echo "FAIL: worker fallbackModels insert missing"; exit 1; }
+          grep -Fqx 'fallbackModels: zai-coding-plan/glm-5.2' "$cfgd/agent/agents/code-reviewer.md" \
+            || { echo "FAIL: code-reviewer fallbackModels replace missing"; exit 1; }
+          grep -Fqx 'model: zai-coding-plan/glm-5.2' "$cfgd/agent/agents/code-reviewer.md" \
+            || { echo "FAIL: unspecified fields must pass through (code-reviewer model)"; exit 1; }
+          grep -Fqx 'thinking: low' "$cfgd/agent/agents/oracle.md" \
+            || { echo "FAIL: oracle thinking patch missing"; exit 1; }
+          # Untouched agent keeps its shipped frontmatter.
+          grep -Fqx 'model: openai-codex/gpt-5.5' "$cfgd/agent/agents/planner.md" \
+            || { echo "FAIL: planner must remain unpatched without an override"; exit 1; }
+          # Settings passthrough.
+          ${pkgs.jq}/bin/jq -e '.subagents.disableBuiltins == true and .subagents.defaultModel == "zai-coding-plan/glm-5" and .subagents.agentOverrides.researcher.model == "zai-coding-plan/glm-5-turbo"' \
+            "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: subagent settings passthrough"; exit 1; }
           touch $out
         '';
 

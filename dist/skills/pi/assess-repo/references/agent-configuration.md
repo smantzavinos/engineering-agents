@@ -49,7 +49,7 @@ Agent overrides live in `.pi/settings.json` at the project root under `subagents
 |-------|-------------|
 | `model` | Override the model for this agent |
 | `thinking` | Override thinking level |
-| `fallbackModels` | Ordered backup models for provider failures |
+| `fallbackModels` | Ordered backup models for provider/model failures (rate limit, quota/billing, auth/API-key, timeout, overloaded, unavailable, network). Ordinary task failures never trigger fallback |
 | `skills` | Override injected skills |
 | `tools` | Override tool allowlist |
 | `systemPrompt` | Replace the system prompt entirely (avoid — use only if necessary) |
@@ -61,6 +61,28 @@ Agent overrides live in `.pi/settings.json` at the project root under `subagents
 ### Priority
 
 Project overrides (`.pi/settings.json`) beat user overrides (`~/.pi/agent/settings.json`).
+
+One exception: an override field is **skipped when the agent definition's frontmatter already declares that field** (`model:`, `fallbackModels:`, `thinking:`). Frontmatter-declared values win over settings overrides at every scope. Re-pointing such a field requires editing the agent definition (or, in engineering-agents-managed deployments, the build-time `agentOverrides` argument of `makePiConfig`/`pi-for-user`).
+
+### Fallback chains
+
+Give critical agents (worker, code-reviewer) an ordered `fallbackModels` chain when any provider in use has quota or reliability limits. The chain is tried in order after a provider/model failure; IDs resolve fuzzily, and a `provider/id` reference never silently switches providers:
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "worker": {
+        "model": "zai-coding-plan/glm-5.2",
+        "fallbackModels": [
+          "fireworks/accounts/fireworks/models/deepseek-v4-flash",
+          "fireworks/accounts/fireworks/models/qwen3p8-max"
+        ]
+      }
+    }
+  }
+}
+```
 
 ## Standard Agent Set
 
@@ -82,7 +104,7 @@ Project overrides (`.pi/settings.json`) beat user overrides (`~/.pi/agent/settin
 {
   "subagents": {
     "agentOverrides": {
-      "worker": { "model": "fireworks/accounts/fireworks/models/deepseek-v4-pro" },
+      "worker": { "model": "fireworks/accounts/fireworks/models/deepseek-v4-pro", "fallbackModels": ["fireworks/accounts/fireworks/models/deepseek-v4-flash"] },
       "ui-worker": { "model": "fireworks/accounts/fireworks/models/deepseek-v4-pro" },
       "planner": { "model": "openai-codex/gpt-5.4", "thinking": "high" },
       "plan-reviewer": { "model": "openai-codex/gpt-5.4", "thinking": "high" },

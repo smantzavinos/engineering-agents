@@ -71,6 +71,7 @@ Check for presence AND quality of:
 **Agent configuration:**
 - [ ] `.pi/settings.json` exists with `subagents.agentOverrides` (if repo needs non-default models)
 - [ ] Agent model overrides match the repo's tech stack (e.g., UI-strong model for frontend repos)
+- [ ] Fallback chains (`fallbackModels`) configured for critical agents (worker, code-reviewer) when any provider in use has quota/reliability limits
 - [ ] No full agent `.md` copies in `.pi/agents/` (use `.pi/settings.json` → `subagents.agentOverrides` for automatic prompt updates)
 
 ### 3. Assess Quality (not just existence)
@@ -80,7 +81,7 @@ For documents that exist, evaluate:
 - **AGENTS.md:** Does it route to deeper docs, or dump everything in one file?
 - **Architecture:** Does it describe boundaries and relationships, or just list technologies?
 - **Per-directory AGENTS.md:** Do they include patterns AND anti-patterns, or just brief descriptions?
-- **Agent config:** Do model choices match the repo's domain? (Frontend repo should have UI-strong workers)
+- **Agent config:** Do model choices match the repo's domain? (Frontend repo should have UI-strong workers) Do critical agents carry fallback chains for the providers this repo uses, and do the override fields actually apply (fields already declared in the agent file's frontmatter are skipped — see the agent configuration guide)?
 - **Operational hooks:** For each task-tracking and requirements hook, is the implementation agent-executable? A good hook names the exact file/command, ID rule, required fields, safe read operations, mutating operations, approval boundary, and fallback. A vague concept is not enough.
 - **Task tracking:** Does the repo define every required task-tracking hook from `../../references/task-tracking.md`: backlog store, create item, stable ID, reference format, source backlink format, list inbox/untriaged, list `Up next`, mark ready/done/canceled/deferred/blocked, and critical/blocking policy? Is `Up next` human-controlled or explicitly delegated? Are agents allowed to create items directly or must they ask?
 - **Requirements posture:** Is the repo's requirements posture explicit? Report one of: maintains requirements, explicitly no separate requirements system, unclear, or likely needed but missing.
@@ -342,7 +343,7 @@ When setting up or updating agent models for a repo, use `.pi/settings.json` →
 {
   "subagents": {
     "agentOverrides": {
-      "worker": { "model": "<model-id>", "thinking": "high" },
+      "worker": { "model": "<model-id>", "thinking": "high", "fallbackModels": ["<backup-model-id>"] },
       "code-reviewer": { "model": "<model-id>", "thinking": "high" }
     }
   }
@@ -351,10 +352,15 @@ When setting up or updating agent models for a repo, use `.pi/settings.json` →
 
 Only override agents where the model should differ from the global default.
 
+Fallback chains (`fallbackModels`, ordered) are tried only on provider/model failures — rate limit, quota/billing, auth/API-key, timeout, provider overloaded, model unavailable, network errors. Ordinary task failures never trigger fallback. Configure them when the repo's providers have quota or reliability limits.
+
+Precedence caveat: an override field is skipped when the agent definition's frontmatter already declares that field (`model:`, `fallbackModels:`, `thinking:`). If a needed override does not take effect, check the agent file's frontmatter; re-pointing a frontmatter-declared model requires editing the agent definition or the deployment's build-time agent overrides.
+
 Ask the user about:
 - Preferred providers (cost constraints, API access)
 - Whether they have provider-specific API keys
 - Any model preferences based on past experience with this codebase
+- Whether critical agents (worker, code-reviewer) should carry fallback chains, and to which alternate providers
 
 ## Test Level Mapping
 
