@@ -1,13 +1,13 @@
 ---
-name: write-plan
-description: Write a Pi code-mode plan from an approved approach — both plan.md for humans and tasks.json for the wave engine, with a verification class and write-set per task. Use after design is complete and before execution.
+name: dynamic-create-plan
+description: Write a dynamic-workflow plan from an approved approach — both plan.md for humans and tasks.json for the wave engine, with a verification class and write-set per task. Use after design is complete and before execution.
 compatibility: pi
 disable-model-invocation: true
 ---
 
-# Write Plan
+# Dynamic: Create Plan
 
-Produce the two artifacts code-mode execution needs:
+Produce the two artifacts dynamic-workflow execution needs:
 
 1. `plan.md` — the narrative a human reads and approves.
 2. `tasks.json` — the graph the wave engine runs.

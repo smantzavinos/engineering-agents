@@ -1,10 +1,10 @@
 ---
-name: execute-plan
-description: Execute an approved plan with the code-mode wave engine. Validates the task graph, freezes contracts, then drives waves of parallel implementers with host-run verification and a checkpoint commit per wave. Use after plan review passes and the human has approved.
+name: dynamic-execute-plan
+description: Execute an approved plan with the dynamic wave engine. Validates the task graph, freezes contracts, then drives waves of parallel implementers with host-run verification and a checkpoint commit per wave. Use after plan review passes and the human has approved.
 harnesses: [pi]
 ---
 
-# Execute Plan
+# Dynamic: Execute Plan
 
 Drive an approved plan to a verified, reviewed implementation. **You own the loop.** You
 compute readiness, invoke one `workflowScript` per wave, run verification yourself on the
@@ -61,7 +61,7 @@ Review the result yourself. A wrong interface here multiplies across every wave.
 For every task of class `contract`, a **different agent than the implementer** authors the
 failing test. This is the red half, and it is observed once, here, with evidence.
 
-{{delegate:planner skill=write-plan}}
+{{delegate:planner skill=dynamic-create-plan}}
 Author the failing tests for the tasks listed as class "contract" in PLAN_DIR/tasks.json, against the interfaces in PLAN_DIR/interfaces.md. Write tests only — no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.
 {{/delegate}}
 
@@ -117,7 +117,7 @@ second failure is an escalation, not a third attempt.
 
 **5. Review, then checkpoint.**
 
-{{delegate:codeReview skill=review-diff}}
+{{delegate:codeReview skill=dynamic-review-code}}
 Review the diff for this wave against PLAN_DIR/plan.md. Report correctness, scope creep, and any test that cannot fail for a reason other than an edit to itself.
 {{/delegate}}
 

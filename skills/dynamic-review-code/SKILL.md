@@ -1,11 +1,10 @@
 ---
-name: review-diff
-description: Post-implementation review of a code-mode diff against the plan. Checks that the work delivers what tasks.json specified, that tests genuinely constrain, and that frozen contracts were not edited. Produces code_review.md. Called per wave and again at the final gate.
-compatibility: pi
-disable-model-invocation: true
+name: dynamic-review-code
+description: Post-implementation review of a dynamic-workflow diff against the plan. Checks that the work delivers what tasks.json specified, that tests genuinely constrain, and that frozen contracts were not edited. Produces code_review.md. Called per wave and again at the final gate.
+harnesses: [pi]
 ---
 
-# Review Diff
+# Dynamic: Review Code
 
 Review what was actually written against what the plan asked for.
 

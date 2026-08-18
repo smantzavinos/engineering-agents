@@ -1,8 +1,23 @@
-# Execution Patterns (Code Mode)
+# Execution Patterns (Dynamic Workflow)
 
 How implementation work is executed in this repo. Orchestration is **code**, not prose
 instructions an agent must obey: scheduling, readiness, retry, and escalation are ordinary
 JavaScript in a `workflowScript`, run through the `subagent` tool.
+
+The workflow is **dynamic**: the composition of each wave is computed at run time from the
+task graph and what has actually completed, rather than following a fixed pipeline decided in
+advance. That is the distinction from the sequential OpenCode pipeline, and it is why the Pi
+skills carry a `dynamic-` prefix:
+
+| Sequential (OpenCode) | Dynamic (Pi) |
+|---|---|
+| `create-plan` | `dynamic-create-plan` |
+| `review-plan` | `dynamic-review-plan` |
+| `review-code` | `dynamic-review-code` |
+| `execution-orchestrator` | `dynamic-execute-plan` |
+
+"Code mode" is the underlying mechanism (`workflowScript`); "dynamic workflow" is what this
+repo calls the process built on it. Both pipelines are supported; they do not share files.
 
 This replaces the retired team mode (`pi-messenger` Crew). See
 `docs/investigations/2026-08-18-code-mode-process/` for the review, the proposal, and the

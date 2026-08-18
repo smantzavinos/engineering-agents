@@ -1,10 +1,11 @@
 ---
-name: review-tasks
-description: Review a Pi code-mode plan (plan.md + tasks.json) for correctness, execution readiness, and honest verification. Produces plan_review.md. Called iteratively until clean, before the human approval gate.
-harnesses: [pi]
+name: dynamic-review-plan
+description: Review a dynamic-workflow plan (plan.md + tasks.json) for correctness, execution readiness, and honest verification. Produces plan_review.md. Called iteratively until clean, before the human approval gate.
+compatibility: pi
+disable-model-invocation: true
 ---
 
-# Review Tasks
+# Dynamic: Review Plan
 
 Find the problems in a plan *before* anything executes. A bad task graph does not fail
 loudly — it produces a wave of confidently wrong work in parallel.
