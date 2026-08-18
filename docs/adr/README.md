@@ -25,5 +25,6 @@ When a decision becomes stale, add a superseding ADR instead of deleting the old
 
 ## Index
 - `0001-repo-operational-contracts.md` — adopt repo-local operational contracts, readiness checks, and centralized `agentOverrides` guidance.
-- `0002-split-team-planning-pipeline.md` — branch after approach review into sequential and role-based team planning pipelines.
-- `0003-restore-team-mode-throughput-scheduling.md` — restore DAG/lane-based throughput scheduling, Turn-Exit Contract, bounded-cheap routing, and compact wave ledger in team mode.
+- `0002-split-team-planning-pipeline.md` — *(superseded by 0004)* branch after approach review into sequential and role-based team planning pipelines.
+- `0003-restore-team-mode-throughput-scheduling.md` — *(superseded by 0004)* restore DAG/lane-based throughput scheduling, Turn-Exit Contract, bounded-cheap routing, and compact wave ledger in team mode.
+- `0004-replace-team-mode-with-code-mode.md` — retire team mode; adopt the code-mode dynamic workflow with a wave engine, machine-readable task graph, and per-task verification classes. OpenCode keeps the sequential pipeline.

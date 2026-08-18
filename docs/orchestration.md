@@ -343,123 +343,110 @@ Each sub-agent starts with **fresh context**. This is critical:
 
 ---
 
-## Team-Mode Role Execution (Fast Lane)
+## Dynamic Role Execution (Fast Lane)
 
-The Execution Orchestrator above is deliberately sequential. Team mode is a separate
-post-approach planning pipeline optimized for role separation and wall-clock speed.
+The Execution Orchestrator above is deliberately sequential and is what OpenCode runs. Pi runs
+the **dynamic workflow**: a separate post-approach pipeline where orchestration is code rather
+than prose, and wave composition is computed at run time.
 
 ```text
-reviewed approach
-  ├─ create-plan → review-plan → sequential execution
-  └─ create-team-plan → review-team-plan → role-based team execution
+approach + approach review
+  └─ dynamic-create-plan → dynamic-review-plan → [human approval] → wave execution
 ```
 
-The team plan is created directly from the reviewed approach. It is not compiled from the
-sequential plan.
+`plan.md` and `tasks.json` are created directly from the reviewed approach and gated by
+`node tools/check-plan.mjs`. Planning, review, the approval gate, host verification, commits,
+and the final review all stay with the orchestrating parent.
 
-### What stays lead-driven vs. what parallelizes
-
-Team planning/review, team-worklog creation, broad gates, commits, lifecycle, and fresh final
-review remain lead-driven. Acceptance contracts, implementation, live review, remediation,
-and targeted verification overlap by readiness event:
-
-```
-create team plan -> review -> approval -> team worklog
-contract/verifier + fast implementers -> live review/remediation
-lead integration gate/commit -> close team -> fresh strong review -> complete
+```text
+create plan + task graph -> review -> approval
+-> freeze interfaces -> freeze contracts (different agent than implementers)
+-> [ compute ready set -> one workflowScript per wave -> host verification
+     -> review -> fix -> checkpoint commit ]*
+-> final gate -> fresh strong review -> complete
 ```
 
-### Roles and active slots
+#### Dynamic execution roles
 
-The default roster is three implementation slots, one or two contract/verifier lanes, one
-cost-controlled live reviewer, and the primary-chat lead. The Strong rescue implementer is
-created only when escalation fires or a planned high-risk packet becomes ready. If the team
-plan contains UI, styling, accessibility, interaction, or visual-validation packets, a
-`visual-engineering` member replaces one of the three general implementation slots. Declared
-membership may exceed four, but no more than four members work concurrently.
-
-#### Team execution roles
-
-| Role | Responsibilities |
+| Role | Responsibility |
 |---|---|
-| Lead | Select roster, pre-create the full task DAG with `blockedBy` and lane tags, enforce the Turn-Exit Contract, run broad gates, commit, restart failed members, and commission final review. |
-| Cheap implementer | Speed-run packets classified mechanical or bounded-cheap; edit only owned files; run the minimal check; hand off files, assumptions, result, and risks; claim the next ready task in its lane. |
-| Standard implementer | Implement normal backend/tooling packets classified standard with the same bounded ownership, minimal-check, and lane-claim contract. |
-| Complex implementer | Implement packets classified complex (cross-module, non-trivial design, subtle correctness) with the same bounded ownership, minimal-check, and lane-claim contract. |
-| Visual implementer | Replace one general implementation slot when UI work exists; own frontend/UI, styling, interaction, accessibility, responsive, and visual-validation packets. |
-| Strong rescue implementer | Created on escalation; diagnose/fix failed retries and cross-cutting defects. |
-| Contract/verifier (1–2 lanes) | Read acceptance contracts before implementation; author executable tests early on disjoint test files; publish each contract family immediately; later run targeted evidence, classify failures, and report remediation needs without fixing production code; may serve as a second reviewer within its domain when idle. |
-| Live reviewer | Review each implementation handoff immediately in arrival order; create remediation tasks; authorize integration readiness; give one local retry before escalation. |
-| Final reviewer | Start fresh after team closure; independently review the complete diff against `team_plan.md` and evidence. |
+| Parent orchestrator | Owns the loop. Computes readiness, invokes one `workflowScript` per wave, runs all verification on the host, classifies failures, applies fixes, commits checkpoints. |
+| Contract author | Freezes the interface surface and authors failing tests for `contract` tasks. Never an implementer of those tasks. |
+| Implementer | Makes a frozen test pass inside its declared write-set. Runs only its own task-scoped check. |
+| Wave reviewer | Reviews each wave diff; may demand a break-it demonstration on a specific suspect test. |
+| Final reviewer | Starts fresh after the last wave and reviews the complete diff against `plan.md`. |
+
+| Role | Agent |
+|---|---|
+| Parent orchestrator | primary Pi session with the `execute` preset |
+| Contract author | `planner` |
+| Implementer | `worker`, or `ui-worker` for frontend work |
+| Wave reviewer | `code-reviewer` with the `dynamic-review-code` skill |
+| Final reviewer | `oracle`, fresh context |
 
 #### Role-to-runtime mapping
 
-| Role | Agent type/category | Team membership |
-|---|---|---|
-| Lead | primary Execute agent/chat | team lead |
-| Cheap implementer (mechanical/bounded-cheap) | category `unspecified-low` | category member (Sisyphus-Junior runtime) |
-| Standard implementer | category `unspecified-high` | category member (Sisyphus-Junior runtime) |
-| Visual implementer | category `visual-engineering` | category member replacing one implementer slot |
-| Planned complex implementer | category `deep` | category member for explicitly high-complexity packets |
-| Strong rescue implementer | direct `subagent_type="hephaestus"` | created only when escalation fires |
-| Contract/verifier | category `unspecified-high` or packet domain category | category member |
-| Live reviewer | category `unspecified-high` | category member |
-| Final reviewer | external category `deep` with `review-code` (escalate to `ultrabrain` for unusually hard/unique reviews) | not retained in implementation team |
+Pi resolves these to named subagents; OpenCode's sequential pipeline resolves the equivalent
+roles to categories. Repository/user overrides remain the source of truth.
 
-Each implementation packet declares its implementer class at plan time (mechanical,
-bounded-cheap, standard, or complex) and carries a matching lane tag on the task board.
-Routing follows lanes: members claim only ready, file-disjoint tasks within their own lane
-and never claim outside it, so a cheap-lane member only ever receives cheap-classified
-packets. Bounded-cheap packets must be decision-complete — frozen design, explicit write set,
-existing acceptance evidence — and may span multiple tightly related files.
+| Role | Pi agent | OpenCode agent type/category |
+|---|---|---|
+| Parent orchestrator | primary session (`execute` preset) | primary Execute agent/chat |
+| Planner / contract author | `planner` | category `deep` |
+| Standard implementer | `worker` | category `unspecified-high` |
+| Mechanical / bounded-cheap implementer | `worker` on the cheap model | category `unspecified-low` |
+| Visual implementer | `ui-worker` | category `visual-engineering` |
+| Plan reviewer | `plan-reviewer` | category `deep` |
+| Wave / code reviewer | `code-reviewer` | category `unspecified-high` |
+| Fresh final reviewer | `oracle` | external category `deep` |
+| Escalation / hard debugging | `oracle` | `ultrabrain` |
+
+In the dynamic workflow, a task's class (`cheap`, standard, `complex`) and its `ui` flag pick
+the agent and model at wave-build time; there are no lanes or claims, because the parent
+computes the ready set directly from the graph.
 
 #### Suggested model mapping
 
-These are recommendations, not hard requirements. Repository/user category overrides remain
-the source of truth.
+These are recommendations, not hard requirements. Repository/user overrides remain the source
+of truth.
 
 | Agent type/category | Intended work | General model suggestion | GitHub Copilot suggestion |
 |---|---|---|---|
 | Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/claude-opus-4.8` |
-| `unspecified-low` | mechanical isolated edits and bounded-cheap decision-complete packets | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
-| `unspecified-high` | standard implementation, contract/verifier, live review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
+| `unspecified-low` | mechanical isolated edits and decision-complete cheap tasks | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
+| `unspecified-high` | standard implementation, contract authoring, wave review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Gemini 3.5 Flash | `github-copilot/gemini-3.5-flash` |
 | `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/claude-opus-4.8` |
-| direct `hephaestus` | rescue implementation and hard fixes | GPT-5.5/5.6-class high-reasoning coding model | `github-copilot/claude-opus-4.8` |
-| `ultrabrain` | escalation-only: unusually hard or unique final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/claude-opus-4.8` |
+| `ultrabrain` | escalation-only: unusually hard final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/claude-opus-4.8` |
 
-`ultrabrain` and direct `hephaestus` are escalation-only/low-volume by design, so `github-copilot/claude-fable-5`
-(priciest, smartest) is a reasonable per-repo swap-in for either when cost is not the binding constraint.
-
-### Packets, remediation, and verification
-
-Acceptance contracts start before or alongside implementation. Fast implementers own coherent
-write-sets and run only minimal checks. The live reviewer creates remediation tasks; the
-original implementer receives one local retry, then failed/high-risk work routes to the
-Strong rescue implementer. The verifier owns targeted evidence; the lead owns broad gates
-and integration-group commits.
+`ultrabrain` is escalation-only/low-volume by design, so `github-copilot/claude-fable-5`
+(priciest, smartest) is a reasonable per-repo swap-in when cost is not the binding constraint.
 
 ### Rigor tradeoffs (explicit)
 
-| Guarantee | Sequential | Team-mode |
-|-----------|------------|-----------|
-| Per-task break-it check | yes | dropped by default (reviewer test-adequacy gate compensates) |
-| Commit granularity | per task | per integration group |
-| Review context | fresh per pass | cost-controlled live review + fresh strong final review |
+| Guarantee | Sequential | Dynamic |
+|-----------|------------|---------|
+| Per-task break-it check | yes | removed; reviewer-initiated on suspicion instead |
+| Test authorship | implementer writes its own test | different agent, frozen before implementation, diff-checked |
+| Commit granularity | per task | per verified wave |
+| Review context | fresh per pass | per-wave review plus a fresh strong final review |
+| Verification location | inside the task | on the host, by the parent, at wave boundaries |
 
-### Event-driven coordination
+### Runtime constraints
 
-Timer polling is prohibited; an event-triggered board check once after completing a task is
-required. The lead pre-creates the full task DAG with `blockedBy` and lane tags, members
-claim ready file-disjoint tasks within their own lane, and completing members message their
-relay-dispatch successors directly. The Turn-Exit Contract makes the lead the dispatcher of
-last resort: never end a turn with a ready task undispatched, nudge a member silent across
-two turns, and restart the member (not the team) on a third. Per-member restart is the
-supported recovery; team recreation is reserved for wave-commit boundaries when a fresh
-context or changed role/model mix is cheaper.
+These are properties of the runtime, not preferences:
 
-See [Team-Mode Execution](team-mode-execution.md) and the
-`execution-orchestrator-team` skill for the full protocol.
+- Use `runs.all`, never `runs.run` — `runs.run` throws and aborts in-flight siblings.
+- Result objects expose `ok`; there is no `status` field.
+- Every child needs an explicit `model`.
+- A child `gate:` cannot carry verification: acceptance evidence is validated before the gate
+  command's result is consulted.
+- There is no `worktree.apply`, so waves share the tree and write-set collisions must be
+  prevented at plan time.
+- A run allows 64 spawns and never refunds them; per-child default timeout is 30 minutes.
+
+See [Execution Patterns](execution-patterns.md) and the `dynamic-execute-plan` skill for the
+full protocol.
 
 ---
 

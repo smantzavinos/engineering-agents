@@ -1,7 +1,13 @@
 # Proposal: Code-Mode Execution Process
 
+> **Status: implemented, 2026-08-18.** This document is the point-in-time proposal and is kept
+> as a historical record. The accepted decision is recorded in
+> [ADR 0004](../../adr/0004-replace-team-mode-with-code-mode.md); the operating contract is
+> [docs/execution-patterns.md](../../execution-patterns.md). Skill names below predate the
+> final `dynamic-*` naming where not otherwise corrected.
+
 - Date: 2026-08-18
-- Status: draft for discussion (no implementation yet)
+- Status: implemented (see banner above)
 - Supersedes (if accepted): `docs/team-mode-execution.md`, `docs/pi-team-setup.md`, ADR 0002, ADR 0003
 
 ---
@@ -204,7 +210,7 @@ OpenCode, add a per-harness `hiddenSkills: [...]` key to `harnesses/pi.json`; th
 injects `disable-model-invocation: true` only for harnesses that list the skill. ~15 lines in
 `tools/render-skills.mjs` plus a `skill-content-spec.sh` assertion.
 
-**Pi discoverable (4):** `discovery`, `design`, `execute-plan` (new), `assess-repo`
+**Pi discoverable (4):** `discovery`, `design`, `dynamic-execute-plan` (new), `assess-repo`
 
 **Pi slash-only (`/skill:<name>`):** `research`, `create-plan`, `review-plan`,
 `review-approach`, `review-code`, `review-epic`, `configure-pi`, `configure-opencode`,
@@ -451,7 +457,7 @@ inspectable rollback point (`git reset --hard` to the last checkpoint).
 
 Three mitigations, all required:
 
-1. `execute-plan` performs **resume-time reconciliation**: check `git status` before
+1. `dynamic-execute-plan` performs **resume-time reconciliation**: check `git status` before
    relaunching a wave, and apply a stated discard/keep policy for uncommitted partial edits.
    Default is discard-to-last-checkpoint, since the wave will be re-run in full.
 2. Record completed task IDs to `state` at each wave boundary as a cross-check against the
@@ -620,7 +626,7 @@ wiring tasks the first draft silently assumed, and moved the integration decisio
 | T5 | Retag 7 skills `harnesses: [opencode]`; delete 3 `pi-team-*` skills | T4 | check |
 | **T5b** | **Wiring:** update the `piSkills` roster in `config.nix` (17 explicit names; retagged skills would otherwise become dangling symlinks that `ln -s` creates without error) | T5 | check |
 | T6 | Wave engine + `docs/execution-patterns.md`: parent-driven loop, per-wave `workflowScript` invocation, `runs.all` + `!r.ok`, explicit per-child model, parent-run host verification, error-classification table, documented 30-min/64-spawn limits | T0 | contract |
-| T7 | New `execute-plan` skill (discoverable): reads `tasks.json`, embeds via `JSON.stringify`, Phase 0 baseline, per-wave verify + commit, resume-time `git status` reconciliation | T6 | check |
+| T7 | New `dynamic-execute-plan` skill (discoverable): reads `tasks.json`, embeds via `JSON.stringify`, Phase 0 baseline, per-wave verify + commit, resume-time `git status` reconciliation | T6 | check |
 | T8 | Slim `plan-template.md` 201 → ~50 lines; `tasks.json` schema; update `create-plan` | — | check |
 | **T8b** | **Drift check:** spec asserting `plan.md` task IDs ≡ `tasks.json` IDs | T8 | contract |
 | T9 | Rewrite `docs/testing-strategy.md` verification classes; remove mandatory break-it | — | check |
