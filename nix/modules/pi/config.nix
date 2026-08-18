@@ -317,6 +317,7 @@ let
     "openai-codex/gpt-5.6-terra"
     "openai-codex/gpt-5.6-sol"
     "zai-coding-plan/glm-5.2"
+    "zai-coding-plan/glm-5.3"
     "xai/grok-4.5"
     "xai/grok-4.6"
     "fireworks/accounts/fireworks/models/deepseek-v4-flash-0731"
