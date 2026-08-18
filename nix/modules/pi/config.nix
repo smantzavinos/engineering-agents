@@ -313,17 +313,22 @@ let
   # Default configuration values
   # ============================================================
   defaultEnabledModels = [
+    "openai-codex/gpt-5.6-luna"
     "openai-codex/gpt-5.6-terra"
     "openai-codex/gpt-5.6-sol"
-    "openai-codex/gpt-5.5"
-    "openai-codex/gpt-5.3-codex"
     "zai-coding-plan/glm-5.2"
     "xai/grok-4.5"
-    "fireworks/accounts/fireworks/models/deepseek-v4-pro"
-    "fireworks/accounts/fireworks/models/kimi-k2p7-code"
-    "fireworks/accounts/fireworks/models/minimax-m3"
+    "xai/grok-4.6"
+    "fireworks/accounts/fireworks/models/deepseek-v4-flash-0731"
+    "fireworks/accounts/fireworks/models/deepseek-v4-pro-0813"
     "fireworks/accounts/fireworks/models/qwen3p7-plus"
+    "fireworks/accounts/fireworks/models/qwen3p8-max"
+    "fireworks/accounts/fireworks/models/kimi-k2p7-code"
+    "fireworks/accounts/fireworks/models/kimi-k3"
+    "fireworks/accounts/fireworks/models/minimax-m3"
     "fireworks/accounts/fireworks/models/glm-5p2"
+    "fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"
+    "fireworks/accounts/fireworks/models/muse-glimmer-30b"
     "google-gemini-cli/gemini-3.5-flash-preview"
   ];
 
