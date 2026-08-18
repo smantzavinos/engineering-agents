@@ -22,7 +22,7 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - Canonical skills are harness-neutral; never hand-edit `dist/`. After changing a skill, run `node tools/render-skills.mjs --write` and commit `dist/`.
 
 ## Coding Rules
-- `docs/coding-rules.md` — repo-wide editing, shell, documentation, and verification rules.
+- `docs/coding-rules.md` — repo-wide editing, shell, documentation, and verification rules, including the per-task verification classes.
 
 ## Development Environment
 - `docs/development-environment.md` — required tooling, setup/apply flow, and verification entry points.

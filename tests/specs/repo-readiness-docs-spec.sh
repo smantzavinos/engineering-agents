@@ -136,7 +136,9 @@ assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "## Scope, Timing, an
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "task completion gate" "Testing strategy doc identifies the task gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "final plan gate" "Testing strategy doc identifies the final gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "bash tests/specs/proof-set-runtime-spec.sh" "Testing strategy doc lists targeted proof-set feedback"
-assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Team-mode ownership" "Testing strategy assigns team verification roles"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Ownership in the dynamic workflow" "Testing strategy assigns dynamic-workflow verification roles"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Verification classes" "Testing strategy defines the verification classes"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "no mandatory break-it step" "Testing strategy records that break-it is reviewer-initiated only"
 
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "# Backlog" "Backlog doc has title"
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "## System" "Backlog doc explains the system"
