@@ -329,7 +329,6 @@ let
     "fireworks/accounts/fireworks/models/glm-5p2"
     "fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"
     "fireworks/accounts/fireworks/models/muse-glimmer-30b"
-    "google-gemini-cli/gemini-3.5-flash-preview"
   ];
 
   footerPackageIds = [ "pi-powerline-footer" "pi-zentui" ];
