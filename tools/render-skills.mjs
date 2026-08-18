@@ -66,6 +66,14 @@ function normalizePrompt(body) {
     .join(' ');
 }
 
+// Delegation prompts are authored prose and may legitimately contain quotes,
+// backslashes or newlines. Interpolating them raw produced syntactically invalid
+// delegation snippets, so every embedded prompt goes through a real string-literal
+// encoder.
+function jsString(value) {
+  return JSON.stringify(String(value));
+}
+
 function renderDelegate(harness, skillName, role, skill, prompt) {
   const def = harness.roles?.[role];
   if (!def) {
@@ -75,31 +83,31 @@ function renderDelegate(harness, skillName, role, skill, prompt) {
     if (def.kind !== 'agent') {
       fail(`skill "${skillName}": harness "${harness.id}" role "${role}" must map to an agent for pi-subagent style`);
     }
-    const lines = ['subagent({', `  agent: "${def.agent}",`];
+    const lines = ['subagent({', `  agent: ${jsString(def.agent)},`];
     if (skill) {
-      lines.push(`  task: "${prompt}",`);
-      lines.push(`  skill: "${skill}"`);
+      lines.push(`  task: ${jsString(prompt)},`);
+      lines.push(`  skill: ${jsString(skill)}`);
     } else {
-      lines.push(`  task: "${prompt}"`);
+      lines.push(`  task: ${jsString(prompt)}`);
     }
     lines.push('})');
     return lines.join('\n');
   }
   if (harness.delegationStyle === 'opencode-task') {
     if (def.kind === 'category') {
-      const loadSkills = skill ? `["${skill}"]` : '[]';
-      return `task(category="${def.category}", load_skills=${loadSkills}, prompt="${prompt}")`;
+      const loadSkills = skill ? `[${jsString(skill)}]` : '[]';
+      return `task(category=${jsString(def.category)}, load_skills=${loadSkills}, prompt=${jsString(prompt)})`;
     }
     if (def.kind === 'subagent_type') {
-      const loadSkills = skill ? `["${skill}"]` : '[]';
-      return `task(subagent_type="${def.subagent_type}", load_skills=${loadSkills}, prompt="${prompt}")`;
+      const loadSkills = skill ? `[${jsString(skill)}]` : '[]';
+      return `task(subagent_type=${jsString(def.subagent_type)}, load_skills=${loadSkills}, prompt=${jsString(prompt)})`;
     }
     if (def.kind === 'agent') {
       let message = prompt;
       if (skill) {
         message += ` Read your skill file at ${harness.skillPathPrefix}${skill}/SKILL.md and follow its process.`;
       }
-      return ['task({', `  agent: "${def.agent}",`, `  message: "${message}"`, '})'].join('\n');
+      return ['task({', `  agent: ${jsString(def.agent)},`, `  message: ${jsString(message)}`, '})'].join('\n');
     }
     fail(`skill "${skillName}": harness "${harness.id}" role "${role}" has unknown kind "${def.kind}"`);
   }

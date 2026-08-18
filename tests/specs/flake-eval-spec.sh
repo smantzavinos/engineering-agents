@@ -100,8 +100,8 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify skills are linked
-  for skill in discovery design research create-plan review-plan \
-               review-code review-approach \
+  for skill in discovery design execute-plan research create-plan review-plan \
+               review-code review-approach review-epic \
                assess-repo create-skills create-new-repo-docs; do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
       pass "Pi module links skill: $skill"

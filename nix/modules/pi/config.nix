@@ -844,11 +844,13 @@ let
   piSkills = [
     "discovery"
     "design"
+    "execute-plan"
     "research"
     "create-plan"
     "review-plan"
     "review-code"
     "review-approach"
+    "review-epic"
     "assess-repo"
     "create-skills"
     "configure-pi"

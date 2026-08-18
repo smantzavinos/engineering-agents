@@ -255,6 +255,30 @@ for harness in pi opencode; do
 done
 
 # ============================================================
+# Every rendered Pi delegation block must be syntactically valid JavaScript.
+# Prompts are prose and may contain quotes or backslashes; raw interpolation
+# silently emitted broken snippets before the renderer encoded them properly.
+if node -e '
+const fs = require("fs"), path = require("path");
+let bad = 0, n = 0;
+const root = path.join(process.argv[1], "dist", "skills", "pi");
+for (const d of fs.readdirSync(root)) {
+  const f = path.join(root, d, "SKILL.md");
+  if (!fs.existsSync(f)) continue;
+  for (const m of fs.readFileSync(f, "utf8").matchAll(/^subagent\(\{[\s\S]*?^\}\)$/gm)) {
+    n += 1;
+    try { new Function("subagent", "return " + m[0]); }
+    catch (e) { bad += 1; console.error(`invalid subagent block in ${d}: ${e.message}`); }
+  }
+}
+if (n === 0) { console.error("no subagent blocks found to check"); process.exit(1); }
+process.exit(bad === 0 ? 0 : 1);
+' "$REPO_ROOT"; then
+  pass "every rendered Pi subagent block is valid JavaScript"
+else
+  fail "a rendered Pi subagent block is not valid JavaScript"
+fi
+
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"
 if [[ "$FAIL" -gt 0 ]]; then
