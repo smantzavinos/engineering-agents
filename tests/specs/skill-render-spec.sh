@@ -199,7 +199,7 @@ done
 
 # Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
 # disable-model-invocation for Pi only, never for OpenCode.
-for hidden in create-tasks review-tasks review-diff research; do
+for hidden in write-plan review-tasks review-diff research; do
   if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
     pass "${hidden} is hidden from the Pi system prompt"
   else

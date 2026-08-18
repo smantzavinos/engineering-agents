@@ -1,15 +1,20 @@
 ---
-name: create-tasks
-description: Turn an approved approach into a Pi code-mode plan — plan.md for humans plus tasks.json for the wave engine, with a verification class per task. Use after design/approach is complete and before execution.
+name: write-plan
+description: Write a Pi code-mode plan from an approved approach — both plan.md for humans and tasks.json for the wave engine, with a verification class and write-set per task. Use after design is complete and before execution.
 harnesses: [pi]
 ---
 
-# Create Tasks
+# Write Plan
 
 Produce the two artifacts code-mode execution needs:
 
 1. `plan.md` — the narrative a human reads and approves.
 2. `tasks.json` — the graph the wave engine runs.
+
+Both are **outputs of this skill**, written together in one pass. They are not separate
+authoring steps: a task's verification class and write-set are plan decisions, and `plan.md`'s
+Task Overview displays them. Splitting the two would mean deciding half here and half
+elsewhere, then policing the drift that split created.
 
 They are different documents with different audiences. Do not put the executable graph in
 prose, and do not put rationale in JSON.
@@ -19,7 +24,8 @@ Read `docs/execution-patterns.md` for what the engine does with it.
 
 ## Inputs
 
-- `brief.md`, `approach.md`, and `findings/` in the plan directory.
+- `brief.md`, `approach.md`, and `findings/` in the plan directory. **`plan.md` is not an
+  input** — you are writing it.
 - The repo's verification commands, from the docs `AGENTS.md` points to. **Do not invent
   them.** If you cannot find them, ask.
 - The repo's requirements and backlog policy, if it has one.

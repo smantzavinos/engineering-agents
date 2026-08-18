@@ -845,7 +845,7 @@ let
     "discovery"
     "design"
     "execute-plan"
-    "create-tasks"
+    "write-plan"
     "review-tasks"
     "review-diff"
     "research"

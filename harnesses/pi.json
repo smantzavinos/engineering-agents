@@ -5,7 +5,7 @@
   "delegationStyle": "pi-subagent",
   "hiddenSkills": [
     "research",
-    "create-tasks",
+    "write-plan",
     "review-tasks",
     "review-diff",
     "review-approach",
@@ -64,8 +64,8 @@
   "notes": {
     "ui-implementation-target": "`ui-worker`",
     "discovery-design-handoff": "This looks ready for the Design phase. You can start a Design session to research the codebase and develop the approach.",
-    "design-execute-standard": "The approach is ready. Plan it with `/create-tasks`, review with `/review-tasks`, and once you have approved the plan run `/execute-plan`.",
+    "design-execute-standard": "The approach is ready. Write the plan with `/write-plan`, review it with `/review-tasks`, and once you have approved it run `/execute-plan`.",
     "design-execute-epic": "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'",
-    "change-plan-skill": "`create-tasks`"
+    "change-plan-skill": "`write-plan`"
   }
 }

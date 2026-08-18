@@ -65,7 +65,7 @@ failing test. This is the red half, and it is observed once, here, with evidence
 subagent({
   agent: "planner",
   task: "Author the failing tests for the tasks listed as class \"contract\" in PLAN_DIR/tasks.json, against the interfaces in PLAN_DIR/interfaces.md. Write tests only — no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.",
-  skill: "create-tasks"
+  skill: "write-plan"
 })
 
 Confirm red yourself, then commit. This commit is the frozen baseline:
