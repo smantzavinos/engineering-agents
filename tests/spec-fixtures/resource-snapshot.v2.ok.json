@@ -126,7 +126,7 @@
         "packageId": "pi-subagents",
         "source": {
           "type": "git",
-          "spec": "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435",
+          "spec": "github:nicobailon/pi-subagents#3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b",
           "materializedKey": "src-pi-subagents"
         },
         "sourceManifestName": "pi-subagents",

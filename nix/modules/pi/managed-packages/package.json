@@ -2,7 +2,7 @@
   "name": "pi-managed-vendor",
   "version": "0.0.0",
   "private": true,
-  "description": "Vendor bundle for engineering-agents Pi managed packages. Built by nix/modules/pi (npm ci from package-lock.json), combined with fetchFromGitHub-pinned git packages, and compiled into local facades at build time. Maintained by nix/modules/pi/config.nix \u2014 do not add ad-hoc dependencies here.",
+  "description": "Vendor bundle for engineering-agents Pi managed packages. Built by nix/modules/pi (npm ci from package-lock.json), combined with fetchFromGitHub-pinned git packages, and compiled into local facades at build time. Maintained by nix/modules/pi/config.nix — do not add ad-hoc dependencies here.",
   "dependencies": {
     "@aliou/pi-guardrails": "0.9.5",
     "@benvargas/pi-claude-code-use": "^1.0.1",
@@ -13,6 +13,7 @@
     "@tintinweb/pi-tasks": "^0.4.2",
     "@tmustier/pi-agent-guidance": "0.1.5",
     "@xterm/xterm": "^5.0.0",
+    "acorn": "8.18.0",
     "jiti": "2.7.0",
     "pi-btw": "0.4.1",
     "pi-ding": "0.2.2",
@@ -25,7 +26,8 @@
     "pi-taskflow": "^0.1.5",
     "pi-web-access": "0.13.0",
     "shell-quote": "^1.8.3",
-    "vscode-languageserver-protocol": "^3.17.5"
+    "vscode-languageserver-protocol": "^3.17.5",
+    "yaml": "2.8.3"
   },
-  "note-git-package-dependencies": "Git-sourced managed packages (fetched by Nix, not npm) ship without their own node_modules. Their registry dependencies that pi does NOT inject are declared here: jiti (pi-subagents), shell-quote + vscode-languageserver-protocol (pi-hooks), pi-taskflow + @benvargas/pi-claude-code-use + @sting8k/pi-vcc + @tintinweb/pi-tasks (pi-ext), @richardgill/pi-config (pi-preset peer), @xterm/xterm (pi-interactive-shell peer closure). pi's injected core (@earendil-works/*, legacy @mariozechner/* aliases, typebox) is deliberately NOT vendored."
+  "note-git-package-dependencies": "Git-sourced managed packages (fetched by Nix, not npm) ship without their own node_modules. Their registry dependencies that pi does NOT inject are declared here: jiti + yaml + acorn (pi-subagents; acorn parses workflowScript), shell-quote + vscode-languageserver-protocol (pi-hooks), pi-taskflow + @benvargas/pi-claude-code-use + @sting8k/pi-vcc + @tintinweb/pi-tasks (pi-ext), @richardgill/pi-config (pi-preset peer), @xterm/xterm (pi-interactive-shell peer closure). pi's injected core (@earendil-works/*, legacy @mariozechner/* aliases, typebox) is deliberately NOT vendored."
 }

@@ -47,10 +47,16 @@ let
       source = {
         type = "git";
         packageName = "pi-subagents";
-        # v0.50.0 — required for `workflowScript` code-mode orchestration.
-        # Note: the pi manifest entrypoint moved to ./index.ts in this release.
-        spec = "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435";
-        installSpec = "github:nicobailon/pi-subagents#c091da1d9b660c1940ef5dc78cfeeace1aecd435";
+        # Post-0.50.0 main — required for `workflowScript` code-mode orchestration.
+        # The v0.50.0 tag CANNOT be used: its workflow engine hard-requires
+        # node:v8 promiseHooks.createHook, which Bun-built Pi does not implement
+        # ("NotImplementedError: node:v8 createHook is not yet implemented in Bun"),
+        # so every workflowScript run fails. This pin includes 19a4e60 (Bun
+        # promise-hook fallback, switches script parsing to acorn) and b6a69ec
+        # (acorn manifest resolution). Revisit when 0.51.0 ships.
+        # Note: the pi manifest entrypoint moved to ./index.ts in 0.50.0.
+        spec = "github:nicobailon/pi-subagents#3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b";
+        installSpec = "github:nicobailon/pi-subagents#3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b";
       };
     };
 
@@ -262,10 +268,10 @@ let
   # two pi-ext packageIds). Hashes are unpacked-codeload SRI values.
   gitSources = {
     "pi-subagents" = {
-      rev = "c091da1d9b660c1940ef5dc78cfeeace1aecd435";
+      rev = "3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b";
       tarball = pkgs.fetchzip {
-        url = "https://github.com/nicobailon/pi-subagents/archive/c091da1d9b660c1940ef5dc78cfeeace1aecd435.tar.gz";
-        hash = "sha256-2lv3e6s+AVXL5Da/+PhSzG4b5Hc62+2MY0mjqSPBoVo=";
+        url = "https://github.com/nicobailon/pi-subagents/archive/3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b.tar.gz";
+        hash = "sha256-jHphHR90W3WimQj6WMufG8CS37/tr63g/HCbrLxxwqQ=";
         stripRoot = true;
       };
     };
@@ -390,7 +396,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-tecgw8PUTn0QApeBn8kJfuTy+6Jd5VJlZeiQ9dNIRN0=";
+      hash = "sha256-70xGwG8Yf1l49ry6iz/YieVbpMYuF3MquyUcAIyksmk=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
