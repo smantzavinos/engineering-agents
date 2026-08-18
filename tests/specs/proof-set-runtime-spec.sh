@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Verify proof-set runtime namespace resolution, deterministic output, and environment-failure propagation.
+# Verify proof-set runtime snapshot behavior, deterministic output, and environment-failure propagation.
 # Requirement: FR-006
+#
+# The snapshot generator enumerates facades from the filesystem and facade
+# manifests (no Pi module import — Pi >=0.80.8 ships as a compiled bundle).
+# These cases stub a fake agent directory with real facades, sources, and
+# manifests, then assert the generator's snapshot shape, ordering,
+# determinism, diagnostics, and environment-failure contract.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -77,7 +83,7 @@ write_fixture() {
 EOF
 }
 
-write_theme_collision_fixture() {
+write_theme_override_fixture() {
   local fixture_path="$1"
   cat >"$fixture_path" <<'EOF'
 {
@@ -100,22 +106,61 @@ write_theme_collision_fixture() {
 EOF
 }
 
+# Build a fake activated agent directory: real facades with `pi` manifests,
+# meta/source.json provenance, _source symlinks into materialized sources,
+# and real resource files — the same layout compile-managed-packages.mjs
+# produces (and the FS snapshot generator consumes).
 prepare_fake_home() {
   local home_dir="$1"
   local agent_dir="$home_dir/.pi/agent"
 
   mkdir -p "$agent_dir/packages" "$agent_dir/sources"
-  printf '{}\n' >"$agent_dir/settings.json"
 
-  mkdir -p "$agent_dir/sources/src-alpha" "$agent_dir/sources/src-beta"
+  mkdir -p \
+    "$agent_dir/sources/src-alpha/extensions" \
+    "$agent_dir/sources/src-alpha/skills/alpha-skill-a" \
+    "$agent_dir/sources/src-alpha/skills/alpha-skill-z" \
+    "$agent_dir/sources/src-beta/extensions" \
+    "$agent_dir/sources/src-beta/themes"
+
+  printf '// alpha extension\n' >"$agent_dir/sources/src-alpha/extensions/alpha.ts"
+  printf '// zeta extension\n' >"$agent_dir/sources/src-alpha/extensions/zeta.ts"
+  printf '# alpha skill a\n' >"$agent_dir/sources/src-alpha/skills/alpha-skill-a/SKILL.md"
+  printf '# alpha skill z\n' >"$agent_dir/sources/src-alpha/skills/alpha-skill-z/SKILL.md"
+  printf '// beta extension\n' >"$agent_dir/sources/src-beta/extensions/beta.ts"
+  printf '{ "name": "beta-theme" }\n' >"$agent_dir/sources/src-beta/themes/beta-theme.json"
 
   mkdir -p "$agent_dir/packages/alpha/meta" "$agent_dir/packages/beta/meta"
 
+  ln -s ../../sources/src-alpha "$agent_dir/packages/alpha/_source"
+  ln -s ../../sources/src-beta "$agent_dir/packages/beta/_source"
+
   cat >"$agent_dir/packages/alpha/package.json" <<'EOF'
-{ "name": "alpha" }
+{
+  "name": "alpha",
+  "private": true,
+  "version": "0.0.0-generated",
+  "pi": {
+    "extensions": ["./_source/extensions/alpha.ts", "./_source/extensions/zeta.ts"],
+    "skills": ["./_source/skills/alpha-skill-a/SKILL.md", "./_source/skills/alpha-skill-z/SKILL.md"],
+    "prompts": [],
+    "themes": []
+  }
+}
 EOF
+
   cat >"$agent_dir/packages/beta/package.json" <<'EOF'
-{ "name": "beta" }
+{
+  "name": "beta",
+  "private": true,
+  "version": "0.0.0-generated",
+  "pi": {
+    "extensions": ["./_source/extensions/beta.ts"],
+    "skills": [],
+    "prompts": [],
+    "themes": ["./_source/themes/beta-theme.json"]
+  }
+}
 EOF
 
   cat >"$agent_dir/packages/alpha/meta/source.json" <<EOF
@@ -157,137 +202,16 @@ EOF
   }
 }
 EOF
+
+  write_fake_settings "$agent_dir" 'null'
 }
 
-write_fake_pi_module() {
-  local prefix_dir="$1" namespace="$2"
-  local module_root="$prefix_dir/lib/node_modules/$namespace/pi-coding-agent"
-
-  mkdir -p "$prefix_dir/bin" "$module_root/dist"
-
-  cat >"$prefix_dir/bin/pi" <<'EOF'
-#!/usr/bin/env bash
-exit 0
-EOF
-  chmod +x "$prefix_dir/bin/pi"
-
-  cat >"$module_root/package.json" <<'EOF'
-{ "type": "module" }
-EOF
-
-  cat >"$module_root/dist/index.js" <<'EOF'
-import path from 'node:path';
-
-function packageRoot(agentDir, packageId) {
-  return path.join(agentDir, 'packages', packageId);
-}
-
-function sourceRoot(agentDir, materializedKey) {
-  return path.join(agentDir, 'sources', materializedKey);
-}
-
-function configuredPackage(agentDir, packageId) {
-  return {
-    source: `./packages/${packageId}`,
-    scope: 'user',
-    filtered: false,
-    installedPath: packageRoot(agentDir, packageId),
-  };
-}
-
-function extension(packageId, relativePath, tools, commands, flags) {
-  return {
-    path: path.join(packageRoot(this.agentDir, packageId), '_source', relativePath),
-    resolvedPath: path.join('/resolved', packageId, relativePath),
-    sourceInfo: { source: `./packages/${packageId}` },
-    tools: new Map(tools.map((name) => [name, {}])),
-    commands: new Map(commands.map((name) => [name, {}])),
-    flags: new Map(flags.map((name) => [name, {}])),
-  };
-}
-
-function skill(packageId, name) {
-  return {
-    name,
-    filePath: path.join(packageRoot(this.agentDir, packageId), '_source', 'skills', name, 'SKILL.md'),
-    sourceInfo: { source: `./packages/${packageId}` },
-  };
-}
-
-function theme(packageId, name) {
-  return {
-    name,
-    sourcePath: path.join(packageRoot(this.agentDir, packageId), '_source', 'themes', `${name}.json`),
-    sourceInfo: { source: `./packages/${packageId}` },
-  };
-}
-
-export class SettingsManager {
-  constructor(cwd, agentDir) {
-    this.cwd = cwd;
-    this.agentDir = agentDir;
-  }
-
-  static create(cwd, agentDir) {
-    return new SettingsManager(cwd, agentDir);
-  }
-
-  async reload() {}
-
-  getTheme() {
-    return null;
-  }
-}
-
-export class DefaultPackageManager {
-  constructor({ agentDir }) {
-    this.agentDir = agentDir;
-  }
-
-  listConfiguredPackages() {
-    return [
-      configuredPackage(this.agentDir, 'beta'),
-      configuredPackage(this.agentDir, 'alpha'),
-    ];
-  }
-}
-
-export class DefaultResourceLoader {
-  constructor({ agentDir }) {
-    this.agentDir = agentDir;
-  }
-
-  async reload() {}
-
-  getExtensions() {
-    return {
-      extensions: [
-        extension.call(this, 'beta', path.join('extensions', 'beta.ts'), ['tool-b', 'tool-a'], ['cmd-b', 'cmd-a'], ['flag-b', 'flag-a']),
-        extension.call(this, 'alpha', path.join('extensions', 'zeta.ts'), ['tool-z', 'tool-a'], ['cmd-z', 'cmd-a'], ['flag-z', 'flag-a']),
-        extension.call(this, 'alpha', path.join('extensions', 'alpha.ts'), ['tool-c', 'tool-b'], ['cmd-c', 'cmd-b'], ['flag-c', 'flag-b']),
-      ],
-      errors: [],
-    };
-  }
-
-  getSkills() {
-    return {
-      skills: [
-        skill.call(this, 'alpha', 'alpha-skill-z'),
-        skill.call(this, 'alpha', 'alpha-skill-a'),
-      ],
-      diagnostics: [],
-    };
-  }
-
-  getThemes() {
-    return {
-      themes: [
-        theme.call(this, 'beta', 'beta-theme'),
-      ],
-      diagnostics: [],
-    };
-  }
+write_fake_settings() {
+  local agent_dir="$1" theme="$2"
+  cat >"$agent_dir/settings.json" <<EOF
+{
+  "packages": ["./packages/alpha", "./packages/beta"],
+  "theme": ${theme}
 }
 EOF
 }
@@ -304,134 +228,20 @@ EOF
   chmod +x "$wrapper_prefix/bin/pi"
 }
 
-write_fake_theme_override_pi_module() {
-  local prefix_dir="$1" namespace="$2"
-  local module_root="$prefix_dir/lib/node_modules/$namespace/pi-coding-agent"
-
-  mkdir -p "$prefix_dir/bin" "$module_root/dist"
-
-  cat >"$prefix_dir/bin/pi" <<'EOF'
-#!/usr/bin/env bash
-exit 0
-EOF
-  chmod +x "$prefix_dir/bin/pi"
-
-  cat >"$module_root/package.json" <<'EOF'
-{ "type": "module" }
-EOF
-
-  cat >"$module_root/dist/index.js" <<'EOF'
-import path from 'node:path';
-
-function packageRoot(agentDir, packageId) {
-  return path.join(agentDir, 'packages', packageId);
-}
-
-function configuredPackage(agentDir, packageId) {
-  return {
-    source: `./packages/${packageId}`,
-    scope: 'user',
-    filtered: false,
-    installedPath: packageRoot(agentDir, packageId),
-  };
-}
-
-export class SettingsManager {
-  constructor(cwd, agentDir) {
-    this.cwd = cwd;
-    this.agentDir = agentDir;
-  }
-
-  static create(cwd, agentDir) {
-    return new SettingsManager(cwd, agentDir);
-  }
-
-  async reload() {}
-
-  getTheme() {
-    return 'beta-theme';
-  }
-}
-
-export class DefaultPackageManager {
-  constructor({ agentDir }) {
-    this.agentDir = agentDir;
-  }
-
-  listConfiguredPackages() {
-    return [configuredPackage(this.agentDir, 'beta')];
-  }
-}
-
-export class DefaultResourceLoader {
-  constructor({ agentDir }) {
-    this.agentDir = agentDir;
-  }
-
-  async reload() {}
-
-  getExtensions() {
-    return { extensions: [], errors: [] };
-  }
-
-  getSkills() {
-    return { skills: [], diagnostics: [] };
-  }
-
-  getThemes() {
-    const topLevelPath = path.join(this.agentDir, 'themes', 'beta-theme.json');
-    const packageThemePath = path.join(packageRoot(this.agentDir, 'beta'), '_source', 'themes', 'beta-theme.json');
-
-    return {
-      themes: [
-        {
-          name: 'beta-theme',
-          sourcePath: topLevelPath,
-          sourceInfo: {
-            path: topLevelPath,
-            source: 'auto',
-            scope: 'user',
-            origin: 'top-level',
-            baseDir: this.agentDir,
-          },
-        },
-      ],
-      diagnostics: [
-        {
-          type: 'collision',
-          message: 'name "beta-theme" collision',
-          path: packageThemePath,
-          collision: {
-            resourceType: 'theme',
-            name: 'beta-theme',
-            winnerPath: topLevelPath,
-            loserPath: packageThemePath,
-          },
-        },
-      ],
-    };
-  }
-}
-EOF
-}
-
 assert_snapshot_case() {
-  local namespace="$1" label="$2"
+  local label="$1"
   local tmp_dir
   tmp_dir="$(mktemp -d)"
   local home_dir="$tmp_dir/home"
-  local prefix_dir="$tmp_dir/prefix"
   local fixture_path="$tmp_dir/proof-set.json"
   local snapshot_a="$tmp_dir/snapshot-a.json"
   local snapshot_b="$tmp_dir/snapshot-b.json"
   local stderr_path="$tmp_dir/stderr.txt"
-  local expected_module_path="$prefix_dir/lib/node_modules/$namespace/pi-coding-agent/dist/index.js"
 
   prepare_fake_home "$home_dir"
   write_fixture "$fixture_path"
-  write_fake_pi_module "$prefix_dir" "$namespace"
 
-  if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_a" 2>"$stderr_path"; then
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_a" 2>"$stderr_path"; then
     pass "$label snapshot succeeds"
   else
     fail "$label snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
@@ -439,7 +249,7 @@ assert_snapshot_case() {
     return
   fi
 
-  if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_b" 2>>"$stderr_path"; then
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_b" 2>>"$stderr_path"; then
     pass "$label repeated snapshot succeeds"
   else
     fail "$label repeated snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
@@ -447,9 +257,9 @@ assert_snapshot_case() {
     return
   fi
 
-  local actual_module_path
-  actual_module_path="$(jq -r '.host.piModulePath' "$snapshot_a")"
-  assert_equals "$actual_module_path" "$expected_module_path" "$label selects the expected Pi module path"
+  local snapshot_mode
+  snapshot_mode="$(jq -r '.host.snapshotMode' "$snapshot_a")"
+  assert_equals "$snapshot_mode" 'fs-manifest' "$label enumerates from the filesystem manifest"
 
   local configured_ids
   configured_ids="$(jq -r '[.settings.configuredPackages[].packageId] | join(",")' "$snapshot_a")"
@@ -459,9 +269,27 @@ assert_snapshot_case() {
   alpha_extensions="$(jq -r '.proofSet[] | select(.packageId == "alpha") | [.discovered.extensions[].sourceRelativePath] | join(",")' "$snapshot_a")"
   assert_equals "$alpha_extensions" './extensions/alpha.ts,./extensions/zeta.ts' "$label sorts discovered extensions deterministically"
 
-  local alpha_tools
-  alpha_tools="$(jq -r '.proofSet[] | select(.packageId == "alpha") | .discovered.extensions[0].tools | join(",")' "$snapshot_a")"
-  assert_equals "$alpha_tools" 'tool-b,tool-c' "$label sorts extension tools deterministically"
+  local alpha_skills
+  alpha_skills="$(jq -r '.proofSet[] | select(.packageId == "alpha") | [.discovered.skills[].name] | join(",")' "$snapshot_a")"
+  assert_equals "$alpha_skills" 'alpha-skill-a,alpha-skill-z' "$label derives skill names from SKILL.md parents"
+
+  local beta_theme
+  beta_theme="$(jq -r '.proofSet[] | select(.packageId == "beta") | [.discovered.themes[].name] | join(",")' "$snapshot_a")"
+  assert_equals "$beta_theme" 'beta-theme' "$label derives theme names from manifest paths"
+
+  local alpha_resolved
+  alpha_resolved="$(jq -r '.proofSet[] | select(.packageId == "alpha") | .discovered.extensions[0].resolvedPath' "$snapshot_a")"
+  if [[ "$alpha_resolved" == *"/sources/src-alpha/extensions/"* ]]; then
+    pass "$label resolves facade _source links to source roots"
+  else
+    fail "$label resolves facade _source links to source roots (got: $alpha_resolved)"
+  fi
+
+  local contract_status=0
+  bash "$REPO_ROOT/tests/scripts/assert-contract.sh" \
+    --fixture "$fixture_path" \
+    --snapshot "$snapshot_a" >/dev/null 2>&1 || contract_status=$?
+  assert_equals "$contract_status" '0' "$label snapshot satisfies assert-contract"
 
   if diff -u <(jq -S 'del(.generatedAt)' "$snapshot_a") <(jq -S 'del(.generatedAt)' "$snapshot_b") >/dev/null; then
     pass "$label produces deterministic snapshots across repeated runs"
@@ -473,7 +301,6 @@ assert_snapshot_case() {
 }
 
 assert_wrapped_snapshot_case() {
-  local namespace="$1" label="$2"
   local tmp_dir
   tmp_dir="$(mktemp -d)"
   local home_dir="$tmp_dir/home"
@@ -483,91 +310,117 @@ assert_wrapped_snapshot_case() {
   local snapshot_path="$tmp_dir/snapshot.json"
   local stderr_path="$tmp_dir/stderr.txt"
   local expected_pi_binary="$real_pi_prefix/bin/pi"
-  local expected_module_path="$real_pi_prefix/lib/node_modules/$namespace/pi-coding-agent/dist/index.js"
-
-  prepare_fake_home "$home_dir"
-  write_fixture "$fixture_path"
-  write_fake_pi_module "$real_pi_prefix" "$namespace"
-  write_fake_pi_wrapper "$wrapper_prefix" "$expected_pi_binary"
-
-  if HOME="$home_dir" PATH="$wrapper_prefix/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
-    pass "$label wrapper snapshot succeeds"
-  else
-    fail "$label wrapper snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
-    rm -rf "$tmp_dir"
-    return
-  fi
-
-  local actual_pi_binary actual_module_path
-  actual_pi_binary="$(jq -r '.host.piBinary' "$snapshot_path")"
-  actual_module_path="$(jq -r '.host.piModulePath' "$snapshot_path")"
-  assert_equals "$actual_pi_binary" "$expected_pi_binary" "$label wrapper resolves the real Pi binary"
-  assert_equals "$actual_module_path" "$expected_module_path" "$label wrapper selects the real Pi module path"
-
-  rm -rf "$tmp_dir"
-}
-
-assert_missing_module_fails() {
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
-  local home_dir="$tmp_dir/home"
-  local prefix_dir="$tmp_dir/prefix"
-  local fixture_path="$tmp_dir/proof-set.json"
-  local stdout_path="$tmp_dir/stdout.txt"
-  local stderr_path="$tmp_dir/stderr.txt"
-  local status=0
-
-  prepare_fake_home "$home_dir"
-  write_fixture "$fixture_path"
-  mkdir -p "$prefix_dir/bin"
-  cat >"$prefix_dir/bin/pi" <<'EOF'
-#!/usr/bin/env bash
-exit 0
-EOF
-  chmod +x "$prefix_dir/bin/pi"
-
-  if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$stdout_path" 2>"$stderr_path"; then
-    status=0
-  else
-    status=$?
-  fi
-
-  assert_equals "$status" '2' 'Missing Pi module entrypoint exits with environment failure'
-  assert_file_contains "$stderr_path" 'Unable to locate Pi module entrypoint' 'Missing Pi module entrypoint reports an explicit error'
-
-  rm -rf "$tmp_dir"
-}
-
-assert_wrapped_missing_module_fails() {
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
-  local home_dir="$tmp_dir/home"
-  local wrapper_prefix="$tmp_dir/wrapper-prefix"
-  local real_pi_prefix="$tmp_dir/real-pi-prefix"
-  local fixture_path="$tmp_dir/proof-set.json"
-  local stdout_path="$tmp_dir/stdout.txt"
-  local stderr_path="$tmp_dir/stderr.txt"
-  local real_pi_binary="$real_pi_prefix/bin/pi"
-  local status=0
 
   prepare_fake_home "$home_dir"
   write_fixture "$fixture_path"
   mkdir -p "$real_pi_prefix/bin"
-  cat >"$real_pi_binary" <<'EOF'
+  cat >"$expected_pi_binary" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
-  chmod +x "$real_pi_binary"
-  write_fake_pi_wrapper "$wrapper_prefix" "$real_pi_binary"
+  chmod +x "$expected_pi_binary"
+  write_fake_pi_wrapper "$wrapper_prefix" "$expected_pi_binary"
 
-  if HOME="$home_dir" PATH="$wrapper_prefix/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$stdout_path" 2>"$stderr_path"; then
+  if HOME="$home_dir" PATH="$wrapper_prefix/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
+    pass 'Wrapped Pi snapshot succeeds'
+  else
+    fail "Wrapped Pi snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
+    rm -rf "$tmp_dir"
+    return
+  fi
+
+  local actual_pi_binary
+  actual_pi_binary="$(jq -r '.host.piBinary' "$snapshot_path")"
+  assert_equals "$actual_pi_binary" "$expected_pi_binary" 'Wrapped Pi host block reports the unwrapped real Pi binary'
+
+  rm -rf "$tmp_dir"
+}
+
+assert_invalid_settings_fails() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local stderr_path="$tmp_dir/stderr.txt"
+  local status=0
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  printf 'this is not json\n' >"$home_dir/.pi/agent/settings.json"
+
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >/dev/null 2>"$stderr_path"; then
     status=0
   else
     status=$?
   fi
 
-  assert_equals "$status" '2' 'Wrapper without a direct or target Pi module exits with environment failure'
-  assert_file_contains "$stderr_path" 'Unable to locate Pi module entrypoint' 'Wrapper without a Pi module reports an explicit error'
+  assert_equals "$status" '2' 'Invalid settings.json exits with environment failure'
+  assert_file_contains "$stderr_path" 'Unable to read Pi settings' 'Invalid settings.json reports an explicit error'
+
+  rm -rf "$tmp_dir"
+}
+
+assert_non_array_packages_fails() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local stderr_path="$tmp_dir/stderr.txt"
+  local status=0
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  printf '{ "packages": "nope" }\n' >"$home_dir/.pi/agent/settings.json"
+
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >/dev/null 2>"$stderr_path"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  assert_equals "$status" '2' 'Non-array settings packages exits with environment failure'
+  assert_file_contains "$stderr_path" 'packages must be an array' 'Non-array settings packages reports an explicit error'
+
+  rm -rf "$tmp_dir"
+}
+
+assert_missing_resource_surfaces_diagnostics() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  local home_dir="$tmp_dir/home"
+  local fixture_path="$tmp_dir/proof-set.json"
+  local snapshot_path="$tmp_dir/snapshot.json"
+  local stderr_path="$tmp_dir/stderr.txt"
+  local contract_status=0
+
+  prepare_fake_home "$home_dir"
+  write_fixture "$fixture_path"
+  rm "$home_dir/.pi/agent/sources/src-alpha/extensions/zeta.ts"
+
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
+    pass 'Missing resource snapshot still succeeds'
+  else
+    fail "Missing resource snapshot still succeeds (exit $?, stderr: $(cat "$stderr_path"))"
+    rm -rf "$tmp_dir"
+    return
+  fi
+
+  local alpha_diag_count
+  alpha_diag_count="$(jq -r '[.proofSet[] | select(.packageId == "alpha") | .diagnostics.extensions[]?] | length' "$snapshot_path")"
+  assert_equals "$alpha_diag_count" '1' 'Missing extension surfaces a per-package diagnostic'
+
+  local diag_message
+  diag_message="$(jq -r '.proofSet[] | select(.packageId == "alpha") | .diagnostics.extensions[0].message' "$snapshot_path")"
+  if [[ "$diag_message" == *"zeta.ts"* ]]; then
+    pass 'Missing extension diagnostic names the missing resource'
+  else
+    fail "Missing extension diagnostic names the missing resource (got: $diag_message)"
+  fi
+
+  bash "$REPO_ROOT/tests/scripts/assert-contract.sh" \
+    --fixture "$fixture_path" \
+    --snapshot "$snapshot_path" >/dev/null 2>&1 || contract_status=$?
+  assert_equals "$contract_status" '1' 'Missing resource fails the assert-contract gate'
 
   rm -rf "$tmp_dir"
 }
@@ -576,7 +429,6 @@ assert_theme_override_collision_preserves_proof_theme() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
   local home_dir="$tmp_dir/home"
-  local prefix_dir="$tmp_dir/prefix"
   local fixture_path="$tmp_dir/proof-set.json"
   local snapshot_path="$tmp_dir/snapshot.json"
   local stderr_path="$tmp_dir/stderr.txt"
@@ -585,28 +437,34 @@ assert_theme_override_collision_preserves_proof_theme() {
   local contract_status=0
 
   prepare_fake_home "$home_dir"
-  write_theme_collision_fixture "$fixture_path"
-  write_fake_theme_override_pi_module "$prefix_dir" '@earendil-works'
+  write_theme_override_fixture "$fixture_path"
 
-  if HOME="$home_dir" PATH="$prefix_dir/bin:$PATH" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
-    pass 'Theme override collision snapshot succeeds'
+  # A local (top-level) theme with the same name as the proof-set package
+  # theme: the snapshot must still discover the package theme and must not
+  # emit a local-theme-override warning for a proof-set theme.
+  mkdir -p "$home_dir/.pi/agent/themes"
+  printf '{ "name": "beta-theme" }\n' >"$home_dir/.pi/agent/themes/beta-theme.json"
+  write_fake_settings "$home_dir/.pi/agent" '"beta-theme"'
+
+  if HOME="$home_dir" node "$REPO_ROOT/tests/scripts/resource-snapshot.mjs" --fixture "$fixture_path" >"$snapshot_path" 2>"$stderr_path"; then
+    pass 'Theme override snapshot succeeds'
   else
-    fail "Theme override collision snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
+    fail "Theme override snapshot succeeds (exit $?, stderr: $(cat "$stderr_path"))"
     rm -rf "$tmp_dir"
     return
   fi
 
   local beta_themes
   beta_themes="$(jq -r '.proofSet[] | select(.packageId == "beta") | [.discovered.themes[].name] | join(",")' "$snapshot_path")"
-  assert_equals "$beta_themes" 'beta-theme' 'Theme override collision preserves proof-set theme discovery'
+  assert_equals "$beta_themes" 'beta-theme' 'Theme override preserves proof-set theme discovery'
 
   local override_warning_count
   override_warning_count="$(jq -r '[.warnings[] | select(.code == "PI_VERIFY_WARN_LOCAL_THEME_OVERRIDE")] | length' "$snapshot_path")"
-  assert_equals "$override_warning_count" '0' 'Theme override collision does not emit a false local-theme warning'
+  assert_equals "$override_warning_count" '0' 'Theme override does not emit a false local-theme warning'
 
   local beta_theme_diagnostic_count
   beta_theme_diagnostic_count="$(jq -r '[.proofSet[] | select(.packageId == "beta") | .diagnostics.themes[]?] | length' "$snapshot_path")"
-  assert_equals "$beta_theme_diagnostic_count" '0' 'Theme override collision does not leave per-package theme diagnostics behind'
+  assert_equals "$beta_theme_diagnostic_count" '0' 'Theme override does not leave per-package theme diagnostics behind'
 
   if bash "$REPO_ROOT/tests/scripts/assert-contract.sh" \
     --fixture "$fixture_path" \
@@ -617,8 +475,8 @@ assert_theme_override_collision_preserves_proof_theme() {
     contract_status=$?
   fi
 
-  assert_equals "$contract_status" '0' 'Theme override collision snapshot passes assert-contract helper'
-  assert_file_contains "$contract_stdout" 'Pi proof-set contract ok' 'Theme override collision contract run reports proof-set success'
+  assert_equals "$contract_status" '0' 'Theme override snapshot passes assert-contract helper'
+  assert_file_contains "$contract_stdout" 'Pi proof-set contract ok' 'Theme override contract run reports proof-set success'
 
   rm -rf "$tmp_dir"
 }
@@ -627,16 +485,16 @@ assert_test_fast_propagates_environment_failures() {
   local tmp_dir
   tmp_dir="$(mktemp -d)"
   local home_dir="$tmp_dir/home"
-  local snapshot_stub="$tmp_dir/snapshot-stub.mjs"
-  local assert_stub="$tmp_dir/assert-stub.sh"
   local stdout_path="$tmp_dir/stdout.txt"
   local stderr_path="$tmp_dir/stderr.txt"
+  local snapshot_stub="$tmp_dir/snapshot-stub.mjs"
+  local assert_stub="$tmp_dir/assert-stub.sh"
   local status=0
 
-  mkdir -p "$home_dir/.pi/agent"
-  printf '{}\n' >"$home_dir/.pi/agent/settings.json"
+  mkdir -p "$home_dir"
 
   cat >"$snapshot_stub" <<'EOF'
+console.error('stubbed snapshot failure');
 process.exit(2);
 EOF
 
@@ -646,7 +504,11 @@ exit 0
 EOF
   chmod +x "$assert_stub"
 
-  if HOME="$home_dir" PI_SNAPSHOT_SCRIPT_PATH="$snapshot_stub" PI_ASSERT_CONTRACT_SCRIPT_PATH="$assert_stub" bash "$REPO_ROOT/tests/test-fast.sh" >"$stdout_path" 2>"$stderr_path"; then
+  if HOME="$home_dir" \
+    PI_SNAPSHOT_SCRIPT_PATH="$snapshot_stub" \
+    PI_ASSERT_CONTRACT_SCRIPT_PATH="$assert_stub" \
+    PI_DOCTOR_COMMAND="true" \
+    bash "$REPO_ROOT/tests/test-fast.sh" >"$stdout_path" 2>"$stderr_path"; then
     status=0
   else
     status=$?
@@ -704,12 +566,11 @@ printf '==============================\n\n'
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' 'Proof-set runtime spec uses the documented requirement citation format'
 assert_proof_set_messenger_contract
 
-assert_snapshot_case '@earendil-works' 'Current namespace'
-assert_snapshot_case '@mariozechner' 'Legacy namespace'
-assert_wrapped_snapshot_case '@earendil-works' 'Current namespace'
-assert_wrapped_snapshot_case '@mariozechner' 'Legacy namespace'
-assert_missing_module_fails
-assert_wrapped_missing_module_fails
+assert_snapshot_case 'Fake home'
+assert_wrapped_snapshot_case
+assert_invalid_settings_fails
+assert_non_array_packages_fails
+assert_missing_resource_surfaces_diagnostics
 assert_theme_override_collision_preserves_proof_theme
 assert_test_fast_propagates_environment_failures
 assert_contract_script_accepts_valid_snapshot_fixture

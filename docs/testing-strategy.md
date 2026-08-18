@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | Fast feedback | `bash tests/specs/repo-readiness-docs-spec.sh` or `bash tests/specs/proof-set-runtime-spec.sh` | touched-files | During TDD loops | seconds | The touched readiness docs or proof-set helper behavior changed as intended without waiting for the whole suite |
 | Integration / task completion gate | `./tests/run-tests.sh fast` | package-wide | Before marking a task complete | under a minute | The repo-local shell spec suite, runner wiring, and doc/helper contracts still agree |
-| Local Pi deployment verification | `./scripts/pi-dev.sh --verify` | current checkout | Before pushing Pi-module, package, skill, or extension changes | minutes; network on first run | The sandboxed Home Manager activation, generated facades, and live Pi proof-set work from the working tree |
+| Local Pi deployment verification | `./scripts/pi-dev.sh --verify` | current checkout | Before pushing Pi-module, package, skill, or extension changes | minutes; network on first run | The sandboxed Home Manager activation, generated facades, snapshot contract, and behavioral `pi doctor` load pass work from the working tree |
 | Build / final plan gate | `./tests/run-tests.sh all` | repo-wide | Before declaring the plan complete | minutes | Repo-local specs, flake evaluation, and Pi proof-set verification are all trustworthy together |
 | Full verification | `./tests/run-tests.sh full` | repo-wide | Optional release smoke after the final gate | minutes | Everything in `all` plus live Pi CLI smoke coverage still works |
 
@@ -24,7 +24,7 @@
 - **Scope:** touched-files
 - **When to run:** During TDD loops for proof-set verification helpers
 - **Prerequisites:** `bash`, `jq`, `node`
-- **What it catches:** current-vs-legacy Pi module path resolution, deterministic snapshot ordering, and explicit non-zero proof-set environment failures
+- **What it catches:** facade-manifest snapshot enumeration (extensions/skills/themes, provenance, `_source` resolution), missing-resource diagnostics, deterministic snapshot ordering, and explicit non-zero proof-set environment failures
 
 ### `./tests/run-tests.sh fast`
 - **Standard level:** Integration / task completion gate
@@ -38,7 +38,7 @@
 - **Scope:** current checkout
 - **When to run:** before pushing changes to the Pi module, managed packages, extensions, skills, or their activation wiring
 - **Prerequisites:** `nix`; network access on the first sandbox activation
-- **What it catches:** generated-facade, managed-package installation, and live proof-set failures using the current working tree under `.pi-dev/`
+- **What it catches:** generated-facade, managed-package installation, snapshot contract failures, and behavioral load failures (`pi doctor`) using the current working tree under `.pi-dev/`
 - **Boundary:** this is an isolated sandbox and does not replace `./tests/run-tests.sh all`, which verifies the active Home Manager installation and its production wrapper path
 
 ### `./tests/run-tests.sh all`

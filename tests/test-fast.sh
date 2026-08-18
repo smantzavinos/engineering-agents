@@ -74,4 +74,27 @@ done <<<"$proof_paths"
 
 # Run contract assertions
 bash "$ASSERT_SCRIPT" --fixture "$FIXTURE_PATH" --snapshot "$SNAPSHOT_PATH"
+
+# ── Behavioral load smoke ─────────────────────────────────────────────
+# The FS snapshot proves facades/provenance/resources are well-formed; this
+# proves pi actually LOADS them. Pi hard-fails startup when any extension
+# fails to load, so `pi doctor` exit 0 means every configured facade loaded.
+# Output content is version-dependent prose — assert the exit code only.
+DOCTOR_STATUS=0
+if [[ -n "${PI_DOCTOR_COMMAND:-}" ]]; then
+  # Test seam: specs stub the doctor invocation (same pattern as
+  # PI_SNAPSHOT_SCRIPT_PATH / PI_ASSERT_CONTRACT_SCRIPT_PATH).
+  PI_OFFLINE=1 bash -c "${PI_DOCTOR_COMMAND}" >/dev/null 2>&1 || DOCTOR_STATUS=$?
+else
+  PI_BIN="$(command -v pi 2>/dev/null || true)"
+  if [[ -z "$PI_BIN" ]]; then
+    fail_environment "pi is not on PATH; the live proof-set requires an activated Pi installation"
+  fi
+  PI_OFFLINE=1 "$PI_BIN" doctor >/dev/null 2>&1 || DOCTOR_STATUS=$?
+fi
+if [[ "$DOCTOR_STATUS" -ne 0 ]]; then
+  fail_contract "pi doctor exited $DOCTOR_STATUS — an extension or agent resource failed to load; run: pi doctor"
+fi
+printf 'Pi behavioral load smoke ok (pi doctor)\n'
+
 printf 'Pi read-only verification ok\n'

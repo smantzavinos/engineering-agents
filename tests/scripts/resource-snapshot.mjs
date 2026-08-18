@@ -1,19 +1,39 @@
 #!/usr/bin/env node
 
+// Live proof-set snapshot generator.
+//
+// Enumerates the activated Pi agent state from the filesystem and facade
+// manifests — NOT by importing Pi's module. Pi >=0.80.8 ships as a compiled
+// bundle (libexec/pi) with no importable module entrypoint, so loader-based
+// enumeration stopped working when the llmAgents pin moved past 0.80.7.
+// Behavioral load verification (extensions actually parse/import) lives in
+// the runner's `pi doctor` smoke: pi hard-fails startup when any extension
+// fails to load, so doctor exit 0 proves every facade loads.
+//
+// Snapshot shape is schemaVersion 2 (unchanged from the loader-based
+// generator) so tests/scripts/assert-contract.sh and the static spec
+// fixtures remain valid.
+//
+// Inputs:
+//   ~/.pi/agent/settings.json      configured packages + selected theme
+//   ~/.pi/agent/packages/<id>/     generated facades (package.json pi.* lists,
+//                                  meta/source.json provenance)
+//   ~/.pi/agent/sources/src-*      materialized source roots
+//   ~/.pi/agent/managed-packages.report.json   compiler warnings
+//   ~/.pi/agent/themes/*.json      local theme overrides
+//
+// Output: v2 snapshot JSON on stdout. Exit codes: 0 success,
+// 2 environment failure, 3 internal failure.
+
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
 
 const EXIT_SUCCESS = 0;
 const EXIT_ENVIRONMENT = 2;
 const EXIT_INTERNAL = 3;
-const PI_MODULE_ENTRYPOINTS = [
-  '@earendil-works/pi-coding-agent/dist/index.js',
-  '@mariozechner/pi-coding-agent/dist/index.js',
-];
 const WARNING_CODES = new Set([
   'PI_VERIFY_WARN_EXTRA_INSTALLED_PACKAGE',
   'PI_VERIFY_WARN_UNRELATED_PI_HELP_WARNING',
@@ -56,14 +76,6 @@ function environmentFailure(message, error) {
   return error;
 }
 
-function inspectSettingsPath(settingsPath) {
-  try {
-    return lstatSync(settingsPath);
-  } catch (error) {
-    throw environmentFailure('Unable to inspect Pi settings path', error);
-  }
-}
-
 function asRelativePath(rootPath, targetPath) {
   if (!rootPath || !targetPath) {
     return undefined;
@@ -77,18 +89,18 @@ function asRelativePath(rootPath, targetPath) {
   return relative.startsWith('.') ? relative : `./${relative.replace(/\\/g, '/')}`;
 }
 
-function facadeRelativeToSourceRelative(relativePath, absoluteResourcePath, sourceRoot) {
+function facadeRelativeToSourceRelative(relativePath, sourceRoot) {
   if (relativePath?.startsWith('./_source/')) {
     return `./${relativePath.slice('./_source/'.length)}`;
   }
 
-  const candidate = absolutePath(absoluteResourcePath);
-  const normalizedSourceRoot = absolutePath(sourceRoot);
-  if (!candidate || !normalizedSourceRoot) {
+  if (!sourceRoot) {
     return undefined;
   }
 
-  const relative = path.relative(normalizedSourceRoot, candidate);
+  const packageRootGuess = path.resolve(sourceRoot, '..', '..');
+  const candidate = path.resolve(packageRootGuess, relativePath ?? '');
+  const relative = path.relative(sourceRoot, candidate);
   if (!relative || relative.startsWith('..')) {
     return undefined;
   }
@@ -190,73 +202,33 @@ function validateFixture(fixture) {
   }
 }
 
-function piModuleCandidatePaths(piBinary) {
-  const prefixDir = path.dirname(path.dirname(piBinary));
-  return PI_MODULE_ENTRYPOINTS.map((entrypoint) => path.join(prefixDir, 'lib/node_modules', entrypoint));
-}
-
-function findPiModulePath(piBinary) {
-  return piModuleCandidatePaths(piBinary).find((candidatePath) => existsSync(candidatePath));
-}
-
-function wrapperRealPiBinary(wrapperPath) {
-  let wrapperContents;
-
-  try {
-    wrapperContents = readFileSync(wrapperPath, 'utf8');
-  } catch {
-    return undefined;
-  }
-
-  const match = wrapperContents.match(/^export PI_WRAPPER_REAL_PI_BIN=(?:"([^"\n]+)"|'([^'\n]+)')\s*$/m);
-  const configuredPath = match?.[1] ?? match?.[2];
-  if (!configuredPath || !path.isAbsolute(configuredPath)) {
-    return undefined;
-  }
-
-  try {
-    return realpathSync(configuredPath);
-  } catch {
-    return undefined;
-  }
-}
-
-function buildPiModulePath() {
+// Best-effort Pi binary resolution for the host block. Informational only:
+// the snapshot no longer imports Pi's module (see header). A wrapper's
+// PI_WRAPPER_REAL_PI_BIN export is unwrapped when present.
+function resolvePiBinary() {
   let piBinary;
 
   try {
     piBinary = realpathSync(execFileSync('which', ['pi'], { encoding: 'utf8' }).trim());
   } catch (error) {
-    error.exitCode = EXIT_ENVIRONMENT;
-    error.message = `Unable to locate pi on PATH: ${error.message}`;
-    throw error;
+    const notFound = new Error(`Unable to locate pi on PATH: ${error.message}`);
+    notFound.exitCode = EXIT_ENVIRONMENT;
+    throw notFound;
   }
 
-  const directCandidatePaths = piModuleCandidatePaths(piBinary);
-  let modulePath = findPiModulePath(piBinary);
-  if (modulePath) {
-    return {
-      piBinary,
-      modulePath: absolutePath(modulePath),
-    };
-  }
-
-  const realPiBinary = wrapperRealPiBinary(piBinary);
-  const wrapperCandidatePaths = realPiBinary ? piModuleCandidatePaths(realPiBinary) : [];
-  if (realPiBinary) {
-    modulePath = findPiModulePath(realPiBinary);
-    if (modulePath) {
-      return {
-        piBinary: realPiBinary,
-        modulePath: absolutePath(modulePath),
-      };
+  let realPiBinary = piBinary;
+  try {
+    const wrapperContents = readFileSync(piBinary, 'utf8');
+    const match = wrapperContents.match(/^export PI_WRAPPER_REAL_PI_BIN=(?:"([^"\n]+)"|'([^'\n]+)')\s*$/m);
+    const configuredPath = match?.[1] ?? match?.[2];
+    if (configuredPath && path.isAbsolute(configuredPath)) {
+      realPiBinary = realpathSync(configuredPath);
     }
+  } catch {
+    // Not a wrapper or unreadable — report the resolved PATH binary.
   }
 
-  const candidatePaths = [...new Set([...directCandidatePaths, ...wrapperCandidatePaths])];
-  const error = new Error(`Unable to locate Pi module entrypoint. Tried: ${candidatePaths.join(', ')}`);
-  error.exitCode = EXIT_ENVIRONMENT;
-  throw error;
+  return realPiBinary;
 }
 
 function fallbackPackageIdForSource(source) {
@@ -292,32 +264,58 @@ function readFacadeProvenance(packageRoot) {
   }
 }
 
-function normalizeConfiguredPackages(configuredPackages) {
-  return stableSort(
-    configuredPackages.map((configuredPackage) => ({
-      packageId: configuredPackage.packageId,
-      source: configuredPackage.source,
-      scope: configuredPackage.scope,
-      filtered: configuredPackage.filtered,
-      installedPath: configuredPackage.installedPath ?? null,
-    })),
-    (entry) => `${entry.packageId ?? ''}\u0000${entry.source}`,
-  );
-}
-
-function buildConfiguredPackageIndex(configuredPackages) {
-  const packageIdIndex = new Map();
-  const sourceIndex = new Map();
-
-  for (const configuredPackage of configuredPackages) {
-    if (configuredPackage.packageId) {
-      packageIdIndex.set(configuredPackage.packageId, configuredPackage);
-    }
-
-    sourceIndex.set(configuredPackage.source, configuredPackage);
+function normalizeResourceList(value, field, packageId) {
+  if (value == null) {
+    return [];
   }
 
-  return { packageIdIndex, sourceIndex };
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string' && entry.length > 0)) {
+    throw malformedFixture(`facade manifest pi.${field} for ${packageId} must be an array of non-empty strings`);
+  }
+
+  return value;
+}
+
+// Enumerate every configured package's declared resources from its facade
+// manifest. Each entry records the literal facade-relative path plus the
+// symlink-resolved target; a null resolvedPath means the declared resource
+// is missing or its _source link is broken (surfaced as a diagnostic).
+function enumeratePackageResources(packageId, facadeRoot) {
+  const manifestPath = path.join(facadeRoot, 'package.json');
+  if (!existsSync(manifestPath)) {
+    return null;
+  }
+
+  const manifest = readJsonFile(manifestPath, EXIT_INTERNAL, `Unable to read package manifest for ${packageId}`);
+  const declared = manifest?.pi ?? {};
+
+  const extensions = normalizeResourceList(declared.extensions, 'extensions', packageId);
+  const skills = normalizeResourceList(declared.skills, 'skills', packageId);
+  const prompts = normalizeResourceList(declared.prompts, 'prompts', packageId);
+  const themes = normalizeResourceList(declared.themes, 'themes', packageId);
+
+  return { manifest, extensions, skills, prompts, themes };
+}
+
+function resourceTargets(packageId, resourceType, declaredPaths, facadeRoot) {
+  return declaredPaths.map((declaredPath) => {
+    const normalized = declaredPath.startsWith('.') ? declaredPath : `./${declaredPath}`;
+    const literalPath = path.resolve(facadeRoot, normalized.slice(2));
+    let resolvedPath = null;
+    try {
+      resolvedPath = realpathSync(literalPath);
+    } catch {
+      resolvedPath = null;
+    }
+
+    return {
+      packageId,
+      resourceType,
+      relativePath: normalized,
+      literalPath,
+      resolvedPath,
+    };
+  });
 }
 
 function normalizeWarning(warning) {
@@ -349,6 +347,150 @@ function mergeWarnings(...warningSets) {
   }
 
   return stableSort([...warnings.values()], (warning) => `${warning.code}\u0000${warning.packageId ?? ''}\u0000${warning.path ?? ''}\u0000${warning.message}`);
+}
+
+function readCompileReportWarnings(agentDir) {
+  const reportPath = path.join(agentDir, 'managed-packages.report.json');
+  if (!existsSync(reportPath)) {
+    return [];
+  }
+
+  let report;
+  try {
+    report = readJsonFile(reportPath, EXIT_INTERNAL, `Unable to read managed package report at ${reportPath}`);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(report.warnings)) {
+    return [];
+  }
+
+  return report.warnings.filter((warning) => warning && typeof warning.code === 'string' && typeof warning.message === 'string');
+}
+
+// Local (top-level) themes under agentDir/themes are user overrides; they
+// shadow package themes by name. The loader reported these with origin
+// 'top-level'; the FS enumeration discovers the same files directly.
+function collectTopLevelThemes(agentDir) {
+  const themesDir = path.join(agentDir, 'themes');
+  if (!existsSync(themesDir)) {
+    return [];
+  }
+
+  const entries = readdirSync(themesDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => ({
+      name: entry.name.replace(/\.json$/u, ''),
+      packageId: null,
+      path: absolutePath(path.join(themesDir, entry.name)),
+    }));
+
+  return stableSort(entries, (entry) => entry.name);
+}
+
+function skillNameFromRelativePath(relativePath) {
+  const parentName = path.posix.basename(path.posix.dirname(relativePath));
+  if (parentName && parentName !== '.' && parentName !== '/') {
+    return parentName;
+  }
+
+  return relativePath;
+}
+
+function buildPackageSnapshot({ fixtureEntry, configuredPackage, resourceEnumeration }) {
+  const packageId = fixtureEntry.packageId;
+  const facadeRoot = configuredPackage?.installedPath ?? null;
+  const sourceProvenance = configuredPackage?.sourceProvenance ?? null;
+  const sourceRoot = sourceProvenance?.sourceRoot ? literalAbsolutePath(sourceProvenance.sourceRoot) : null;
+
+  const extensionTargets = facadeRoot && resourceEnumeration
+    ? resourceTargets(packageId, 'extension', resourceEnumeration.extensions, facadeRoot)
+    : [];
+  const skillTargets = facadeRoot && resourceEnumeration
+    ? resourceTargets(packageId, 'skill', resourceEnumeration.skills, facadeRoot)
+    : [];
+  const themeTargets = facadeRoot && resourceEnumeration
+    ? resourceTargets(packageId, 'theme', resourceEnumeration.themes, facadeRoot)
+    : [];
+
+  const extensionEntries = stableSort(
+    extensionTargets.map((target) => ({
+      relativePath: target.relativePath,
+      sourceRelativePath: facadeRelativeToSourceRelative(target.relativePath, sourceRoot),
+      path: literalAbsolutePath(target.literalPath),
+      resolvedPath: target.resolvedPath ? absolutePath(target.resolvedPath) : null,
+      tools: [],
+      commands: [],
+      flags: [],
+    })),
+    (entry) => `${entry.relativePath ?? ''}\u0000${entry.path}`,
+  );
+
+  const skillEntries = stableSort(
+    skillTargets.map((target) => ({
+      name: skillNameFromRelativePath(target.relativePath),
+      relativePath: target.relativePath,
+      sourceRelativePath: facadeRelativeToSourceRelative(target.relativePath, sourceRoot),
+      path: literalAbsolutePath(target.literalPath),
+    })),
+    (entry) => `${entry.name}\u0000${entry.path}`,
+  );
+
+  const themeEntries = stableSort(
+    themeTargets.map((target) => ({
+      name: path.posix.basename(target.relativePath).replace(/\.json$/u, ''),
+      relativePath: target.relativePath,
+      sourceRelativePath: facadeRelativeToSourceRelative(target.relativePath, sourceRoot),
+      path: absolutePath(target.literalPath),
+    })),
+    (entry) => `${entry.name}\u0000${entry.path}`,
+  );
+
+  const missingResourceDiagnostic = (resourceType, singularLabel) => (target) => {
+    if (target.resolvedPath) {
+      return null;
+    }
+
+    return {
+      packageId,
+      resourceType,
+      type: 'error',
+      message: `Referenced ${singularLabel} is missing or unreadable: ${target.relativePath}`,
+      path: literalAbsolutePath(target.literalPath),
+      relativePath: target.relativePath,
+    };
+  };
+
+  const diagnostics = {
+    extensions: stableSort(
+      extensionTargets.map(missingResourceDiagnostic('extension', 'extension')).filter(Boolean),
+      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
+    ),
+    skills: stableSort(
+      skillTargets.map(missingResourceDiagnostic('skill', 'skill')).filter(Boolean),
+      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
+    ),
+    themes: stableSort(
+      themeTargets.map(missingResourceDiagnostic('theme', 'theme')).filter(Boolean),
+      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
+    ),
+  };
+
+  return {
+    packageId,
+    configuredPackagePath: configuredPackage?.source ?? `./packages/${packageId}`,
+    facadePath: facadeRoot,
+    sourceRoot,
+    sourceManifestName: sourceProvenance?.sourceManifestName ?? null,
+    sourceProvenance,
+    discovered: {
+      extensions: extensionEntries,
+      skills: skillEntries,
+      themes: themeEntries,
+    },
+    diagnostics,
+  };
 }
 
 function buildWarnings({ configuredPackages, proofPackageIds, selectedTheme, availableThemes, compileReportWarnings }) {
@@ -385,273 +527,24 @@ function buildWarnings({ configuredPackages, proofPackageIds, selectedTheme, ava
   return mergeWarnings(warnings, compileReportWarnings);
 }
 
-function normalizeExtensionEntry(extension, packageRoot, sourceRoot) {
-  const packageRelativePath = asRelativePath(packageRoot, absolutePath(extension.path));
+function readSettingsFile(settingsPath) {
+  let raw;
 
-  return {
-    relativePath: packageRelativePath,
-    sourceRelativePath: facadeRelativeToSourceRelative(packageRelativePath, extension.resolvedPath ?? extension.path, sourceRoot),
-    path: absolutePath(extension.path),
-    resolvedPath: absolutePath(extension.resolvedPath),
-    tools: stableSort([...extension.tools.keys()], (value) => value),
-    commands: stableSort([...extension.commands.keys()], (value) => value),
-    flags: stableSort([...extension.flags.keys()], (value) => value),
-  };
-}
-
-function normalizeSkillEntry(skill, packageRoot, sourceRoot) {
-  const packageRelativePath = asRelativePath(packageRoot, absolutePath(skill.filePath));
-
-  return {
-    name: skill.name,
-    relativePath: packageRelativePath,
-    sourceRelativePath: facadeRelativeToSourceRelative(packageRelativePath, skill.filePath, sourceRoot),
-    path: absolutePath(skill.filePath),
-  };
-}
-
-function normalizeThemePathEntry(themeName, themePath, packageRoot, sourceRoot) {
-  const literalThemePath = literalAbsolutePath(themePath);
-  const normalizedThemePath = absolutePath(themePath);
-  const packageRelativePath = asRelativePath(packageRoot, literalThemePath);
-
-  return {
-    name: themeName,
-    relativePath: packageRelativePath,
-    sourceRelativePath: facadeRelativeToSourceRelative(packageRelativePath, literalThemePath, sourceRoot),
-    path: normalizedThemePath,
-  };
-}
-
-function normalizeThemeEntry(theme, packageRoot, sourceRoot) {
-  return normalizeThemePathEntry(theme.name, theme.sourcePath, packageRoot, sourceRoot);
-}
-
-function normalizeDiagnostic(resourceType, packageId, diagnostic, packageRoot) {
-  const normalized = {
-    packageId,
-    resourceType,
-    type: diagnostic.type,
-    message: diagnostic.message,
-  };
-
-  if (diagnostic.path) {
-    normalized.path = absolutePath(diagnostic.path);
-    normalized.relativePath = asRelativePath(packageRoot, normalized.path);
-  }
-
-  if (diagnostic.collision) {
-    normalized.collision = {
-      resourceType: diagnostic.collision.resourceType,
-      name: diagnostic.collision.name,
-      winnerPath: absolutePath(diagnostic.collision.winnerPath),
-      loserPath: absolutePath(diagnostic.collision.loserPath),
-      winnerSource: diagnostic.collision.winnerSource,
-      loserSource: diagnostic.collision.loserSource,
-    };
-  }
-
-  return normalized;
-}
-
-function normalizeExtensionLoadError(packageId, error, packageRoot) {
-  return {
-    packageId,
-    resourceType: 'extension',
-    type: 'error',
-    message: error.error,
-    path: absolutePath(error.path),
-    relativePath: asRelativePath(packageRoot, absolutePath(error.path)),
-  };
-}
-
-function isSuppressedThemeOverrideCollision(diagnostic, configuredPackage, configuredPackages) {
-  if (diagnostic?.type !== 'collision' || diagnostic?.collision?.resourceType !== 'theme') {
-    return false;
-  }
-
-  if (!isPathWithinPackage(configuredPackage?.installedPath, diagnostic.collision?.loserPath)) {
-    return false;
-  }
-
-  return !findConfiguredPackageByPath(configuredPackages, diagnostic.collision?.winnerPath);
-}
-
-function gatherPackageDiagnostics({
-  packageId,
-  configuredPackage,
-  configuredPackages,
-  extensionLoadErrors,
-  extensionDiagnostics,
-  skillDiagnostics,
-  themeDiagnostics,
-}) {
-  const packageRoot = configuredPackage?.installedPath;
-  const packageSource = configuredPackage?.source;
-
-  const matchesPackagePath = (diagnosticPath) => {
-    if (!packageRoot || !diagnosticPath) {
-      return false;
-    }
-
-    const normalizedPath = absolutePath(diagnosticPath);
-    return normalizedPath === packageRoot || normalizedPath.startsWith(`${packageRoot}${path.sep}`);
-  };
-
-  const matchesPackageDiagnostic = (diagnostic) => {
-    if (matchesPackagePath(diagnostic.path)) {
-      return true;
-    }
-
-    if (diagnostic.collision) {
-      return diagnostic.collision.winnerSource === packageSource || diagnostic.collision.loserSource === packageSource;
-    }
-
-    return false;
-  };
-
-  return {
-    extensions: stableSort(
-      [
-        ...extensionLoadErrors
-          .filter((error) => matchesPackagePath(error.path))
-          .map((error) => normalizeExtensionLoadError(packageId, error, packageRoot)),
-        ...extensionDiagnostics
-          .filter((diagnostic) => matchesPackageDiagnostic(diagnostic))
-          .map((diagnostic) => normalizeDiagnostic('extension', packageId, diagnostic, packageRoot)),
-      ],
-      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
-    ),
-    skills: stableSort(
-      skillDiagnostics
-        .filter((diagnostic) => matchesPackageDiagnostic(diagnostic))
-        .map((diagnostic) => normalizeDiagnostic('skill', packageId, diagnostic, packageRoot)),
-      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
-    ),
-    themes: stableSort(
-      themeDiagnostics
-        .filter((diagnostic) => matchesPackageDiagnostic(diagnostic))
-        .filter((diagnostic) => !isSuppressedThemeOverrideCollision(diagnostic, configuredPackage, configuredPackages))
-        .map((diagnostic) => normalizeDiagnostic('theme', packageId, diagnostic, packageRoot)),
-      (entry) => `${entry.type}\u0000${entry.relativePath ?? ''}\u0000${entry.message}`,
-    ),
-  };
-}
-
-function readCompileReportWarnings(agentDir) {
-  const reportPath = path.join(agentDir, 'managed-packages.report.json');
-  if (!existsSync(reportPath)) {
-    return [];
-  }
-
-  let report;
   try {
-    report = readJsonFile(reportPath, EXIT_INTERNAL, `Unable to read managed package report at ${reportPath}`);
-  } catch {
-    return [];
+    raw = readFileSync(settingsPath, 'utf8');
+  } catch (error) {
+    error.exitCode = EXIT_ENVIRONMENT;
+    error.message = `Unable to read Pi settings: ${error.message}`;
+    throw error;
   }
 
-  if (!Array.isArray(report.warnings)) {
-    return [];
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    error.exitCode = EXIT_ENVIRONMENT;
+    error.message = `Unable to read Pi settings: invalid JSON at ${settingsPath}`;
+    throw error;
   }
-
-  return report.warnings.filter((warning) => warning && typeof warning.code === 'string' && typeof warning.message === 'string');
-}
-
-function isPathWithinPackage(packageRoot, candidatePath) {
-  const normalizedPackageRoot = literalAbsolutePath(packageRoot);
-  const normalizedCandidate = literalAbsolutePath(candidatePath);
-
-  if (!normalizedPackageRoot || !normalizedCandidate) {
-    return false;
-  }
-
-  return normalizedCandidate === normalizedPackageRoot || normalizedCandidate.startsWith(`${normalizedPackageRoot}${path.sep}`);
-}
-
-function findConfiguredPackageByPath(configuredPackages, candidatePath) {
-  return configuredPackages.find((configuredPackage) => isPathWithinPackage(configuredPackage.installedPath, candidatePath));
-}
-
-function resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages) {
-  return sourceIndex.get(theme.sourceInfo?.source)
-    ?? findConfiguredPackageByPath(configuredPackages, theme.sourcePath ?? theme.sourceInfo?.path);
-}
-
-function collectCollisionThemeEntries(themeDiagnostics, configuredPackage, sourceRoot) {
-  return themeDiagnostics
-    .filter((diagnostic) => diagnostic?.type === 'collision' && diagnostic?.collision?.resourceType === 'theme')
-    .filter((diagnostic) => isPathWithinPackage(configuredPackage?.installedPath, diagnostic.collision?.loserPath))
-    .map((diagnostic) => normalizeThemePathEntry(diagnostic.collision.name, diagnostic.collision.loserPath, configuredPackage?.installedPath, sourceRoot));
-}
-
-function mergeThemeEntries(...themeEntrySets) {
-  const entries = new Map();
-
-  for (const themeEntrySet of themeEntrySets) {
-    for (const entry of themeEntrySet) {
-      const key = `${entry.name}\u0000${entry.path}`;
-      entries.set(key, entry);
-    }
-  }
-
-  return stableSort([...entries.values()], (entry) => `${entry.name}\u0000${entry.path}`);
-}
-
-function collectAvailableThemes(themes, themeDiagnostics, sourceIndex, configuredPackages) {
-  const directThemes = themes.map((theme) => {
-    const configuredPackage = resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages);
-    return {
-      name: theme.name,
-      packageId: configuredPackage?.packageId,
-      path: absolutePath(theme.sourcePath),
-    };
-  });
-
-  const collisionThemes = themeDiagnostics
-    .filter((diagnostic) => diagnostic?.type === 'collision' && diagnostic?.collision?.resourceType === 'theme')
-    .map((diagnostic) => {
-      const configuredPackage = findConfiguredPackageByPath(configuredPackages, diagnostic.collision?.loserPath);
-      return {
-        name: diagnostic.collision.name,
-        packageId: configuredPackage?.packageId,
-        path: absolutePath(diagnostic.collision.loserPath),
-      };
-    })
-    .filter((theme) => theme.path);
-
-  return mergeThemeEntries(directThemes, collisionThemes);
-}
-
-function createPackageSnapshot({
-  fixtureEntry,
-  configuredPackage,
-  sourceProvenance,
-  extensionEntries,
-  skillEntries,
-  themeEntries,
-  extensionDiagnostics,
-  skillDiagnostics,
-  themeDiagnostics,
-}) {
-  return {
-    packageId: fixtureEntry.packageId,
-    configuredPackagePath: configuredPackage?.source ?? `./packages/${fixtureEntry.packageId}`,
-    facadePath: configuredPackage?.installedPath ?? null,
-    sourceRoot: sourceProvenance?.sourceRoot ? literalAbsolutePath(sourceProvenance.sourceRoot) : null,
-    sourceManifestName: sourceProvenance?.sourceManifestName ?? null,
-    sourceProvenance: sourceProvenance ?? null,
-    discovered: {
-      extensions: extensionEntries,
-      skills: skillEntries,
-      themes: themeEntries,
-    },
-    diagnostics: {
-      extensions: extensionDiagnostics,
-      skills: skillDiagnostics,
-      themes: themeDiagnostics,
-    },
-  };
 }
 
 async function main() {
@@ -661,112 +554,92 @@ async function main() {
 
   const agentDir = path.join(process.env.HOME ?? os.homedir(), '.pi', 'agent');
   const settingsPath = path.join(agentDir, 'settings.json');
-  const settingsStat = inspectSettingsPath(settingsPath);
-  const { piBinary, modulePath } = buildPiModulePath();
-  const piModule = await import(pathToFileURL(modulePath).href);
-  const { DefaultPackageManager, DefaultResourceLoader, SettingsManager } = piModule;
 
-  const cwd = process.cwd();
-  const settingsManager = SettingsManager.create(cwd, agentDir);
-
+  let settingsStat;
   try {
-    await settingsManager.reload();
+    settingsStat = lstatSync(settingsPath);
   } catch (error) {
-    throw environmentFailure('Unable to load Pi settings', error);
+    throw environmentFailure('Unable to inspect Pi settings path', error);
   }
 
-  const packageManager = new DefaultPackageManager({
-    cwd,
-    agentDir,
-    settingsManager,
-  });
-  const resourceLoader = new DefaultResourceLoader({
-    cwd,
-    agentDir,
-    settingsManager,
-  });
+  const settings = readSettingsFile(settingsPath);
 
-  await resourceLoader.reload();
+  if (!Array.isArray(settings.packages)) {
+    const error = new Error('Pi settings packages must be an array of configured package sources');
+    error.exitCode = EXIT_ENVIRONMENT;
+    throw error;
+  }
 
-  const extensionsResult = resourceLoader.getExtensions();
-  const skillsResult = resourceLoader.getSkills();
-  const themesResult = resourceLoader.getThemes();
+  const configuredPackages = settings.packages.map((source) => {
+    if (typeof source !== 'string' || source.length === 0) {
+      const error = new Error(`Pi settings packages entries must be strings: ${JSON.stringify(source)}`);
+      error.exitCode = EXIT_ENVIRONMENT;
+      throw error;
+    }
 
-  const configuredPackages = packageManager.listConfiguredPackages().map((entry) => {
-    const installedPath = entry.installedPath ? literalAbsolutePath(entry.installedPath) : undefined;
-    const manifestPath = installedPath ? path.join(installedPath, 'package.json') : undefined;
-    const manifest = manifestPath && existsSync(manifestPath)
-      ? readJsonFile(manifestPath, EXIT_INTERNAL, `Unable to read package manifest for ${entry.source}`)
+    const installedPath = literalAbsolutePath(path.resolve(agentDir, source));
+    const manifest = existsSync(path.join(installedPath, 'package.json'))
+      ? readJsonFile(path.join(installedPath, 'package.json'), EXIT_INTERNAL, `Unable to read package manifest for ${source}`)
       : undefined;
-    const packageId = typeof manifest?.name === 'string' && manifest.name.length > 0
-      ? manifest.name
-      : fallbackPackageIdForSource(entry.source);
 
     return {
-      ...entry,
+      source,
+      scope: 'user',
+      filtered: false,
       installedPath,
-      packageId,
+      packageId: typeof manifest?.name === 'string' && manifest.name.length > 0
+        ? manifest.name
+        : fallbackPackageIdForSource(source),
       sourceProvenance: readFacadeProvenance(installedPath),
     };
   });
 
-  const normalizedConfiguredPackages = normalizeConfiguredPackages(configuredPackages);
-  const { packageIdIndex, sourceIndex } = buildConfiguredPackageIndex(configuredPackages);
+  const normalizedConfiguredPackages = stableSort(
+    configuredPackages.map((configuredPackage) => ({
+      packageId: configuredPackage.packageId,
+      source: configuredPackage.source,
+      scope: configuredPackage.scope,
+      filtered: configuredPackage.filtered,
+      installedPath: configuredPackage.installedPath,
+    })),
+    (entry) => `${entry.packageId ?? ''}\u0000${entry.source}`,
+  );
+
+  const packageIdIndex = new Map();
+  for (const configuredPackage of configuredPackages) {
+    packageIdIndex.set(configuredPackage.packageId, configuredPackage);
+  }
+
   const proofPackageIds = new Set(fixture.packages.map((entry) => entry.packageId));
 
-  const availableThemes = collectAvailableThemes(themesResult.themes, themesResult.diagnostics, sourceIndex, configuredPackages);
+  const availableThemes = [
+    ...collectTopLevelThemes(agentDir),
+    ...configuredPackages.flatMap((configuredPackage) => {
+      const enumeration = enumeratePackageResources(configuredPackage.packageId, configuredPackage.installedPath);
+      if (!enumeration) {
+        return [];
+      }
+
+      return resourceTargets(configuredPackage.packageId, 'theme', enumeration.themes, configuredPackage.installedPath)
+        .filter((target) => target.resolvedPath)
+        .map((target) => ({
+          name: path.posix.basename(target.relativePath).replace(/\.json$/u, ''),
+          packageId: configuredPackage.packageId,
+          path: absolutePath(target.literalPath),
+        }));
+    }),
+  ];
+
   const compileReportWarnings = readCompileReportWarnings(agentDir);
+  const selectedTheme = typeof settings.theme === 'string' ? settings.theme : null;
 
   const proofSet = fixture.packages.map((fixtureEntry) => {
-    const configuredPackage = packageIdIndex.get(fixtureEntry.packageId)
-      ?? sourceIndex.get(`./packages/${fixtureEntry.packageId}`);
-    const packageRoot = configuredPackage?.installedPath;
-    const sourceProvenance = configuredPackage?.sourceProvenance ?? null;
-    const sourceRoot = sourceProvenance?.sourceRoot ? literalAbsolutePath(sourceProvenance.sourceRoot) : null;
-    const packageSource = configuredPackage?.source;
+    const configuredPackage = packageIdIndex.get(fixtureEntry.packageId);
+    const resourceEnumeration = configuredPackage
+      ? enumeratePackageResources(fixtureEntry.packageId, configuredPackage.installedPath)
+      : null;
 
-    const extensionEntries = stableSort(
-      extensionsResult.extensions
-        .filter((extension) => extension.sourceInfo.source === packageSource)
-        .map((extension) => normalizeExtensionEntry(extension, packageRoot, sourceRoot)),
-      (entry) => `${entry.relativePath ?? ''}\u0000${entry.path}`,
-    );
-
-    const skillEntries = stableSort(
-      skillsResult.skills
-        .filter((skill) => skill.sourceInfo.source === packageSource)
-        .map((skill) => normalizeSkillEntry(skill, packageRoot, sourceRoot)),
-      (entry) => `${entry.name}\u0000${entry.path}`,
-    );
-
-    const themeEntries = mergeThemeEntries(
-      themesResult.themes
-        .filter((theme) => resolveThemeConfiguredPackage(theme, sourceIndex, configuredPackages)?.packageId === fixtureEntry.packageId)
-        .map((theme) => normalizeThemeEntry(theme, packageRoot, sourceRoot)),
-      collectCollisionThemeEntries(themesResult.diagnostics, configuredPackage, sourceRoot),
-    );
-
-    const diagnostics = gatherPackageDiagnostics({
-      packageId: fixtureEntry.packageId,
-      configuredPackage,
-      configuredPackages,
-      extensionLoadErrors: extensionsResult.errors,
-      extensionDiagnostics: [],
-      skillDiagnostics: skillsResult.diagnostics,
-      themeDiagnostics: themesResult.diagnostics,
-    });
-
-    return createPackageSnapshot({
-      fixtureEntry,
-      configuredPackage,
-      sourceProvenance,
-      extensionEntries,
-      skillEntries,
-      themeEntries,
-      extensionDiagnostics: diagnostics.extensions,
-      skillDiagnostics: diagnostics.skills,
-      themeDiagnostics: diagnostics.themes,
-    });
+    return buildPackageSnapshot({ fixtureEntry, configuredPackage, resourceEnumeration });
   });
 
   const diagnostics = stableSort(
@@ -778,14 +651,21 @@ async function main() {
     (entry) => `${entry.packageId}\u0000${entry.resourceType}\u0000${entry.message}\u0000${entry.path ?? ''}`,
   );
 
+  let piBinary = null;
+  try {
+    piBinary = resolvePiBinary();
+  } catch {
+    piBinary = null;
+  }
+
   const output = {
     schemaVersion: 2,
     host: {
       hostname: os.hostname(),
-      cwd: absolutePath(cwd),
+      cwd: absolutePath(process.cwd()),
       agentDir: absolutePath(agentDir),
       piBinary,
-      piModulePath: modulePath,
+      snapshotMode: 'fs-manifest',
       nodeVersion: process.version,
       npmConfigPrefix: process.env.NPM_CONFIG_PREFIX ?? null,
       offline: process.env.PI_OFFLINE === '1',
@@ -795,26 +675,27 @@ async function main() {
       path: literalAbsolutePath(settingsPath),
       isRegularFile: settingsStat.isFile(),
       isSymlink: settingsStat.isSymbolicLink(),
-      theme: settingsManager.getTheme() ?? null,
+      theme: selectedTheme,
       configuredPackages: normalizedConfiguredPackages,
     },
     proofSet,
     diagnostics,
     secondarySmoke: {
       offline: process.env.PI_OFFLINE === '1',
-      resourceLoader: {
-        implementation: 'DefaultResourceLoader.reload()',
+      resourceEnumeration: {
+        implementation: 'fs-manifest',
         configuredPackageCount: normalizedConfiguredPackages.length,
       },
       cli: {
         list: { status: 'not-run' },
         help: { status: 'not-run' },
+        doctor: { status: 'runner-responsibility' },
       },
     },
     warnings: buildWarnings({
       configuredPackages: normalizedConfiguredPackages,
       proofPackageIds,
-      selectedTheme: settingsManager.getTheme() ?? null,
+      selectedTheme,
       availableThemes,
       compileReportWarnings,
     }),

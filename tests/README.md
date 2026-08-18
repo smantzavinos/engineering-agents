@@ -9,8 +9,8 @@ Use this README for the current suite inventory, file layout, and adaptation not
 |------|------|----------|--------|
 | **Repo-local specs** | File structure, readiness docs, frontmatter, skill/agent refs, compiler, presets | `bash`, `jq`, `node` | `tests/run-tests.sh fast` |
 | **Flake eval** | Nix module evaluation, package builds | `nix` | `tests/run-tests.sh all` |
-| **Sandboxed Pi proof-set** | Current-checkout activation plus live facade/provenance verification in `.pi-dev` | `nix`; network on first install | `scripts/pi-dev.sh --verify` |
-| **Pi proof-set** | Live facade/provenance verification | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
+| **Sandboxed Pi proof-set** | Current-checkout activation, facade/provenance snapshot, and behavioral `pi doctor` load smoke in `.pi-dev` | `nix`; network on first install | `scripts/pi-dev.sh --verify` |
+| **Pi proof-set** | Live facade/provenance snapshot plus behavioral load smoke (`pi doctor`) | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
 | **CLI smoke** | `pi --help`, `pi list` output | Pi installed | `tests/run-tests.sh full` |
 
 ## Quick Commands
@@ -50,7 +50,7 @@ bash tests/specs/pi-startup-warning-contract-spec.sh
 
 This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 
-- **`resource-snapshot.mjs`** — Live Pi state snapshot using Pi's `DefaultResourceLoader`
+- **`resource-snapshot.mjs`** — Live Pi state snapshot from the filesystem and facade manifests (Pi >=0.80.8 ships as a compiled bundle with no importable module; schemaVersion 2 output unchanged)
 - **`assert-contract.sh`** — Proof-set contract assertions (facade, provenance, resources)
 - **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests
 - **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
@@ -60,7 +60,7 @@ New tests specific to this repo:
 
 - **`repo-structure-spec.sh`** — All required files/dirs exist, README has key content
 - **`repo-readiness-docs-spec.sh`** — Root AGENTS routing and canonical contributor docs exist with required anchors
-- **`proof-set-runtime-spec.sh`** — Proof-set namespace resolution, deterministic ordering, and environment-failure propagation
+- **`proof-set-runtime-spec.sh`** — Snapshot generator facade-manifest enumeration, deterministic ordering, missing-resource diagnostics, and environment-failure propagation
 - **`pi-team-config-spec.sh`** — Pi Messenger package/profile/config declaration, symlink, and runtime-ignore policy
 - **`pi-team-tool-spec.sh`** — Deterministic team-plan compiler, board initializer, and review-bundle contracts
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
