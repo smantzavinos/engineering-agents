@@ -244,10 +244,10 @@ Selection is by **shape of the work**, not by "how fast do I want it":
 | P4 Fan-in analysis | research, multi-angle review, option comparison | wide, read-only |
 | P5 Council | one hard decision, want adversarial pressure | wide + `steer` |
 
-### API correction (oracle review, verified against source)
+### API facts (verified by execution in T0 — see `spike.md`)
 
-The first draft of these sketches was written against an imagined API. Verified against
-`pi-subagents@c091da1` (`src/workflows/scripted-workflow.ts:464-476`):
+The first draft of these sketches was written against an imagined API. Corrected against source
+and then **confirmed by running it** on the pinned build:
 
 ```ts
 interface WorkflowScriptChildResult {
@@ -257,14 +257,15 @@ interface WorkflowScriptChildResult {
 }
 ```
 
-- There is **no `status` field**. The success flag is `ok`.
-- `runs.run` **throws** on failure (`scripted-workflow.ts:845-849`: `deliver` wraps with
-  `collectFailure` false and raises ``Run '<key>' failed: …``). An uncaught throw ends the
-  workflow and aborts in-flight siblings.
-- `runs.all` sets `collectFailure: true` per item, so each child resolves independently as
-  `{ ok: false }`. **One failure does not reject the batch or harm siblings.**
+- There is **no `status` field**. The success flag is `ok`. Observed keys at runtime:
+  `artifactPaths, error, key, ok, output, results`.
+- `runs.run` **throws** on failure — observed: `Run 'solo' failed: …`, with no value returned.
+- `runs.all` collects `{ ok: false }` per child. **One failure does not reject the batch or harm
+  siblings** — observed both children returning independently.
 - Every launched promise must be awaited before return, or the workflow rejects
   (`scripted-workflow.ts:664`).
+- Mission `state.set` / `state.get` round-trips. Missing keys return `undefined` and drop out of
+  JSON serialization — read them defensively.
 
 Consequence: **the engine uses `runs.all` for everything, including single tasks**, because it
 is the only call shape that yields inspectable failures instead of an exception. `runs.run` is
@@ -272,8 +273,10 @@ reserved for steps where a throw genuinely should abort the run.
 
 Agent names: this repo sets `subagents.disableBuiltins: true`, so the roster is
 `worker`, `ui-worker`, `code-reviewer`, `plan-reviewer`, `planner`, `researcher`, `oracle`,
-`vision`. There is no `reviewer`. Per-item `context` is not in the documented item shape
-`{agent, task, worktree?, gate?}` — set `context` at the top level only.
+`vision`. There is no `reviewer`. Every child needs an **explicit `model`** — the flake default
+is `zai-coding-plan/glm-5.2`, and an unresolvable model fails the child before it starts. Per-item
+`context` is not in the documented item shape `{agent, task, worktree?, gate?}` — set `context`
+at the top level only.
 
 ### P1 — Solo-gated (replaces "simple change")
 
@@ -281,22 +284,7 @@ A one-task graph through the same engine. No separate code path.
 
 ### P2 — Pipeline (replaces sequential plan execution)
 
-The wave engine with `maxWidth: 1`. Tasks run in dependency order, each gated, each reviewed,
-with one bounded retry:
-
-```js
-const [r] = await runs.all([{
-  key: "t" + t.id, agent: t.agent, task: t.brief, gate: t.gate
-}]);
-if (!r.ok) {
-  const [retry] = await runs.all([{
-    key: "t" + t.id + "-retry", agent: "worker", model: STRONG,
-    task: "Previous attempt failed:\n" + (r.error ?? r.output) + "\n\nTask:\n" + t.brief,
-    gate: t.gate
-  }]);
-  if (!retry.ok) { emit({ task: t.id, escalate: true }); break; }
-}
-```
+The wave engine with `maxWidth: 1`. Same parent-driven loop as P3, one task per wave.
 
 **Red-before-green in P2/P1.** P3 gets it free from a separate contract author. P2 does not,
 and that is exactly the sequential work this repo does most. So P2 keeps a **mini contract
@@ -306,71 +294,66 @@ author their own acceptance in any pattern.
 
 ### P3 — Wave swarm (replaces team mode)
 
-Four phases. **Phase 0 is new** — without a recorded baseline, a pre-existing red gate is
-discovered mid-wave and misattributed to a child.
+**The wave loop lives in the parent, not inside one script.** T0 established two independent
+reasons (see `spike.md` F5 and §5b): host verification cannot be delegated to a child `gate:`,
+and any worktree patch application must happen between waves. Both require the parent to act
+between waves, which a single long-running script cannot pause for.
 
-**Phase 0 — Baseline.** Parent runs the final gate on the host and records status. A red
-baseline stops the run or is explicitly accepted.
+So the engine is a parent-driven loop over **wave-sized workflow invocations**:
 
-**Phase 1 — Freeze (1 strong agent, serial).** Architect child returns structured output: the
-interface surface, the task graph with write-sets, acceptance per task. Expensive thinking,
-done once.
-
-**Phase 2 — Contract (1–2 strong agents, parallel).** Test authors write executable acceptance
-into test files nobody else owns, run them, record red. **The parent then commits the red
-tests before Phase 3 launches.** Uncommitted contract tests are invisible to worktree children
-and poison gate memoization in shared-tree mode.
-
-**Phase 3 — Waves (N cheap agents, parallel).** Ready set from the DAG, launched with
-`runs.all`, each child file-owned and gated on its own contract command.
-
-```js
-const done = new Set(await state.get("done") ?? []);   // resume
-let remaining = TASKS.filter(t => !done.has(t.id));
-
-while (remaining.length) {
-  const ready = remaining.filter(t => t.deps.every(d => done.has(d)));
-  if (!ready.length) throw new Error("stuck: " + remaining.map(t => t.id).join(","));
-
-  const wave = ready.slice(0, MAX_WIDTH);
-  const results = await runs.all(wave.map(t => ({
-    key: "impl-" + t.id,
-    agent: t.ui ? "ui-worker" : "worker",
-    model: t.class === "complex" ? STRONG : CHEAP,
-    task: t.brief,
-    gate: t.gate,                 // self-defending; see 5b
-    timeoutMs: t.timeoutMs        // default is 30 min per child; long tasks must opt up
-  })));
-
-  const ok = results.filter(r => r.ok);
-  const failed = results.filter(r => !r.ok);
-
-  const reviews = await runs.all(ok.map((r, i) => ({
-    key: "rev-" + wave[i].id, agent: "code-reviewer",
-    task: "Review against acceptance:\n" + wave[i].acceptance + "\n\n" + r.output
-  })));
-
-  for (const r of ok) done.add(r.key.replace("impl-", ""));
-  await state.set("done", [...done]);        // per-wave checkpoint
-  await state.set("artifacts", ARTIFACTS);   // per-child paths, for crash recovery
-
-  if (failed.length) { /* one STRONG retry each, then escalate */ }
-  remaining = remaining.filter(t => !done.has(t.id));
-  emit({ done: done.size, failed: failed.length });
-}
+```
+parent: Phase 0 — baseline gate on the host           (real bash, real exit code)
+parent: Phase 1 — freeze         (one workflowScript invocation, 1 strong child)
+parent: Phase 2 — contract       (one workflowScript invocation, 1–2 strong children)
+parent: commit the red tests
+loop:
+  parent: compute ready set from the DAG + committed state
+  parent: Phase 3 — ONE workflowScript invocation for that wave
+  parent: run verification on the host
+  parent: review + fix
+  parent: commit wave checkpoint
+parent: Phase 4 — final gate + fresh strong full-diff review
 ```
 
-**Phase 4 — Integration.** Parent runs the final gate on the host, launches one fresh strong
-reviewer over the full diff, and commits. Children never commit.
+Each wave invocation is a small script. All it does is fan out and return:
 
-Why this beats team mode: the ready set is computed, not negotiated. No board, no claim
+```js
+return runs.all(WAVE.map(t => ({
+  key: "impl-" + t.id,
+  agent: t.ui ? "ui-worker" : "worker",
+  model: t.class === "complex" ? STRONG : CHEAP,   // explicit; no flake default
+  task: t.brief,
+  timeoutMs: t.timeoutMs                            // default is 30 min per child
+})));
+```
+
+The parent then, in ordinary tool calls:
+
+```
+for each result:  r.ok ? accept : classify(r.error)
+run the wave's verification command on the host
+git commit the wave checkpoint
+```
+
+**Failure classification is the parent's job.** `r.ok === false` conflates several causes, and
+the parent must separate them before spending a STRONG retry:
+
+| `error` begins | Meaning | Action |
+|---|---|---|
+| `Acceptance rejected:` | paperwork, not necessarily bad work | inspect the diff before retrying |
+| `Unknown subagent model` | config error | fix routing, do not retry |
+| `Run fan-out: N/64` near cap | spawn ceiling | stop, escalate |
+| anything else | real failure | one STRONG retry, then escalate |
+
+Why this still beats team mode: the ready set is computed, not negotiated. No board, no claim
 protocol, no lane discipline, no nudge policy. A stuck child is `{ ok: false }`, not a silent
-member.
+member. What is given up versus the original sketch is fire-and-forget autonomy — the parent
+stays in the loop. What is gained is verification by real host execution the parent observes
+directly, continuous integration, and commits at every wave boundary.
 
-**Known limits** (verified): per-child default timeout is 30 minutes
-(`async-execution.ts:139`); `maxSubagentSpawnsPerRun` defaults to 64 and claims are never
-refunded, so at ~4 spawns/task a run caps near 16 tasks. Both must be documented in
-`docs/execution-patterns.md`.
+**Known limits** (verified): per-child default timeout is 30 minutes; `maxSubagentSpawnsPerRun`
+defaults to 64, is never refunded, and is reported per run (`Run fan-out: 2/64 used`). Both must
+be documented in `docs/execution-patterns.md`.
 
 ---
 
@@ -403,20 +386,35 @@ state. Worktrees stay available as an opt-in for genuinely risky wide waves, and
 ever taken it becomes one workflow invocation per wave with a parent apply+commit step — a
 different architecture that must be costed separately.
 
-### Self-defending gates
+### Verification is parent-run, not a child `gate:`
 
-The gate is host-run and a child cannot fake its result (`acceptance.ts:164`). But nothing
-stops a cheap worker from **editing the contract test** until it passes. File ownership stated
-in a task brief is prose an LLM must obey — precisely the failure mode §1.1 diagnoses in team
-mode, reintroduced at the one boundary that matters most.
+The first draft made per-child `gate:` the proof-of-done. **T0 proved that does not work.**
 
-So every `contract`-class gate is compiled as:
+`gate:` normalizes to `acceptance: { level: "verified", … }`, and the acceptance layer
+validates the child's structured evidence report and short-circuits *before* the host gate
+result is consulted. `gate: "true"` and `gate: "false"` were indistinguishable across three
+successive rejection layers (`Structured acceptance report not found` → `Required criterion
+'criterion-1' was not reported` → `commands-run evidence missing from child report`). It is not
+tunable: `acceptance.ts:384` computes evidence as the *union* of the level minimum and anything
+explicit, so `evidence: []` cannot reduce it.
+
+The practical failure mode: a cheap worker that does the work correctly but writes a sloppy
+report fails the run, and the parent cannot tell that apart from bad code without
+string-matching the error.
+
+So the parent runs verification itself, on the host, between waves — real bash, real exit
+codes, directly observed. Child `gate:` may still be used opportunistically on high-value
+single children, but nothing in the process depends on it.
+
+**Frozen-test protection moves with it.** The concern is unchanged — a cheap worker can edit the
+contract test until it passes — but the check now runs where it actually executes, as part of
+the parent's wave verification:
 
 ```
-git diff --exit-code <contract-commit> -- <test-paths> && <test command>
+git diff --exit-code <contract-commit> -- <test-paths> && <wave verification command>
 ```
 
-and "diff test files against the frozen baseline" goes on the reviewer checklist.
+and "diff test files against the frozen baseline" stays on the reviewer checklist.
 
 ---
 
@@ -428,9 +426,14 @@ The worklog existed to make a ralph loop resumable and observable. Both needs su
 prose file does not. Three mechanisms replace it, and each is strictly more durable because
 none of them depend on an agent remembering to write a file:
 
+**Revised after T0.** With the wave loop in the parent, the primary resume mechanism is the
+**wave-boundary git commit**, not mission `state`. State is a useful secondary record (verified
+working: `set`/`get` round-trips, mission-scoped JSON on disk, 256 KiB cap) but it is no longer
+load-bearing, which removes the partial-work hazard below as a single point of failure.
+
 | Worklog job | Replacement | Durability |
 |---|---|---|
-| "what is done, what is next" across a crash | `state.set("done", [...])` after each wave; on restart `state.get("done")` and skip completed tasks | mission-scoped JSON on disk, survives session loss, 256 KiB cap |
+| "what is done, what is next" across a crash | the last wave checkpoint commit; `state.set("done", [...])` as a secondary cross-check | git, plus mission-scoped JSON |
 | live progress during the loop | `emit({ wave, done, failed })` streams to the parent; FleetView shows children | in-flight |
 | durable record of what happened | parent writes `run-summary.md` **once at the end** and commits it with the work | git |
 | per-task evidence | `gate` results recorded as `evidenceStatus: verified` by the runtime | run artifacts |
@@ -440,21 +443,20 @@ mission state is genuinely durable — atomic write per `set` under a file lock,
 256 KiB cap (`src/missions/workflow-state.ts:13,222,251-253`), stored under
 `~/.pi/agent/missions/projects/<hash>/<id>/state.json`, so it survives session loss.
 
-**The partial-work hazard the first draft missed.** State resumes at wave boundaries; the
-*working tree does not*. On a mid-wave crash, in-flight children are aborted but their edits
-are already on disk, while `state` still says the wave is unfinished. Resume then relaunches
-those tasks on top of their own orphaned partial edits — and a retry can pass its gate against
-a predecessor's half-work. Gate memoization makes this worse: "an unchanged tree does not
-rerun the same command", so a no-op retry can be marked verified.
+**The partial-work hazard.** A mid-wave crash aborts in-flight children but leaves their edits
+on disk. Resuming would relaunch those tasks on top of their own orphaned partial edits, and a
+retry could pass verification against a predecessor's half-work. Per-wave invocation bounds
+this to a single wave's worth of damage, and the wave-boundary commit gives an exact,
+inspectable rollback point (`git reset --hard` to the last checkpoint).
 
 Three mitigations, all required:
 
-1. Record **per-child** completion to `state` as each child resolves, not per-wave.
-2. `execute-plan` performs **resume-time reconciliation**: check `git status` before
-   relaunching, and apply a stated discard/keep policy for uncommitted partial edits.
-3. The engine must actually call `state.get("done")` at startup. The first draft's skeleton
-   declared `const done = new Set()` and never read state — the headline durability claim
-   existed only in prose.
+1. `execute-plan` performs **resume-time reconciliation**: check `git status` before
+   relaunching a wave, and apply a stated discard/keep policy for uncommitted partial edits.
+   Default is discard-to-last-checkpoint, since the wave will be re-run in full.
+2. Record completed task IDs to `state` at each wave boundary as a cross-check against the
+   commit log.
+3. Never resume into a dirty tree without an explicit decision.
 
 One real loss to accept: the worklog's free-text "issues encountered / deviations" narrative.
 That moves into `run-summary.md` and, when it should outlive the plan, `docs/issues_learnings.md`.
@@ -558,9 +560,10 @@ Rules:
 3. **Break-it is removed as a mandatory per-task step.** It survives only as a *reviewer-
    initiated, risk-triggered* option when a reviewer suspects a test does not constrain
    anything. It is never self-administered by the implementer.
-4. **The gate is host-run and self-defending.** `gate:` executes on the host and child-reported
-   success does not count (`acceptance.ts:164`). `contract`-class gates additionally assert the
-   test files are unchanged from the frozen baseline — see §5b.
+4. **The gate is host-run by the parent.** Verification executes in the parent's own shell
+   between waves, not through a child `gate:` — see §5b for why the child-side mechanism cannot
+   carry this. `contract`-class verification additionally asserts the test files are unchanged
+   from the frozen baseline.
 5. **`none` is a legitimate answer** and must be explicitly chosen, not defaulted into.
 
 Consequence for this repo specifically: doc-only tasks stop generating tests. The existing
@@ -573,13 +576,17 @@ which is a real check — it fails when a route is missing, not when prose chang
 
 | Item | Detail |
 |---|---|
-| **Version bump required** | `nix/modules/pi/config.nix` pins `pi-subagents` at commit `c940fe20` (v0.34.0). `workflowScript` requires ≥ 0.50.0. This is the gating prerequisite for everything above. |
-| **Breaking API change** | 0.50 removed top-level `chain` / `tasks` / `parallel`. The `{{delegate:...}}` macro and `harnesses/pi.json` role map must be re-expressed. Single `{agent, task}` still works, so the minimum migration is small; the recommended migration is workflowScript everywhere. |
-| **OpenCode divergence** | `workflowScript` is Pi-only. The render pipeline currently produces both. Either OpenCode skills keep the prose orchestration (drift), or OpenCode support for execution patterns is explicitly dropped and `harnesses/opencode.json` covers only the content skills. **Needs your decision.** |
-| **Script trust** | `workflowScript` is trusted inline JS with no fs/shell. Scripts must be repo-reviewed artifacts under `workflows/`, not model-improvised strings, or the determinism benefit is lost. |
-| **Worktree cost** | `worktree: true` requires clean git state and branches per child. Good for wide waves, overhead for narrow ones. Default it off; enable when the plan declares colliding write-sets. |
-| **Cheap-model ceiling** | The swarm assumes a frozen contract makes tasks decision-complete. Where it isn't, cheap workers fail the gate and cost a strong retry. Mitigate by making phase 1 return the interface surface explicitly, and by classing tasks `mechanical` / `standard` / `complex` in `tasks.json`. |
-| **Budget guidance** | Per upstream docs: do **not** set `turnBudget` / hard `toolBudget` / tight `usageBudget` on writers. Bound writers with `timeoutMs` and narrow tasks. Hard caps only on read-only children (P4). |
+| **Version pin — DONE (T1 + T0)** | Pinned to `3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b` (main). **Not the v0.50.0 tag**: that release's workflow engine hard-requires `node:v8 promiseHooks.createHook`, which Bun-built Pi 0.84.2 does not implement, so every `workflowScript` call fails outright. The pin carries `19a4e60` (Bun fallback) and `b6a69ec` (acorn manifest resolution). Accepted risk: unreleased main; revisit at 0.51.0. |
+| **Vendored deps — DONE** | 0.50.0 added `yaml@2.8.3`; the Bun fix added `acorn@8.18.0`. Both now in `managed-packages/package.json`. Without `yaml` the extension does not load at all. The pi manifest entrypoint also moved to `./index.ts`. |
+| **Peer compatibility** | requires `@earendil-works/pi-ai >= 0.80.0`; the flake ships Pi 0.84.2. Verified by a clean `pi doctor` load in the sandbox. |
+| **`gate:` cannot carry verification** | Verified negative in T0. Acceptance-evidence validation short-circuits before the gate command result is consulted, and is not tunable. Verification is parent-run on the host between waves — see §5b. |
+| **Breaking API change** | 0.50 removed top-level `chain` / `tasks` / `parallel`. Single `{agent, task}` **is still supported**, so the `{{delegate:...}}` macro and `harnesses/pi.json` role map keep working unchanged. Only the new engine uses `workflowScript`. Much smaller than first assessed. |
+| **OpenCode** | **DECIDED: untouched.** Enforced by `harnesses: [opencode]` retagging plus per-harness `hiddenSkills` in the renderer, so `dist/skills/opencode/**` stays byte-identical. T13 asserts this against `main`. |
+| **Script trust** | `workflowScript` is trusted inline JS with no fs/shell/host globals. Scripts must be repo-reviewed artifacts, not model-improvised strings, or the determinism benefit is lost. |
+| **Worktrees** | Default off. Nothing applies patches back (`worktree.discard` exists, `worktree.apply` does not), and the script cannot. See §5b. |
+| **Cheap-model ceiling** | Two mechanisms: a task that is not decision-complete, and a child that does the work but fails the acceptance-report contract. The parent must classify `Acceptance rejected:` separately from real failure before spending a STRONG retry. Frequency is unmeasured — instrument during the first real wave (`spike.md` F7). |
+| **Budget guidance** | Do **not** set `turnBudget` / hard `toolBudget` / tight `usageBudget` on writers. Bound writers with `timeoutMs` and narrow tasks. Hard caps only on read-only children. Per-child default timeout is 30 min; `maxSubagentSpawnsPerRun` is 64 and never refunded. |
+| **Model routing** | Every engine child needs an explicit `model`. The flake default (`zai-coding-plan/glm-5.2`) is not resolvable in every environment and fails the child before it starts. |
 
 ---
 
@@ -604,16 +611,16 @@ wiring tasks the first draft silently assumed, and moved the integration decisio
 
 | # | Task | Deps | Class |
 |---|---|---|---|
-| T1 | Bump `pi-subagents` pin to v0.50.0+ (`c091da1…`, or a post-release commit carrying the acorn parser-entry fix), update `installSpec` + hashes | — | check |
-| **T0** | **SPIKE — execute a real `workflowScript` on the pinned install.** Verify: `runs.run` throw shape, `runs.all` `{ok:false}` collection, gate pass/fail → `evidenceStatus`, mission `state` kill/resume, per-child timeout, spawn budget. Write findings to `spike.md`. **T6 does not start until this exists.** | T1 | — |
+| ~~T1~~ **done** | Pin → `3847dee`; vendor `yaml` + `acorn`; entrypoint `./index.ts`; fix `pi-vendor-spec` comment-blindness | — | check |
+| ~~T0~~ **done** | SPIKE — findings in `spike.md`. Changed the pin and moved verification to the parent. | T1 | — |
 | T2 | Remove 4 extensions from `config.nix`; update `flake.nix` shape checks + `pi-module-content-spec.sh` | — | check |
 | T3 | Delete `.pi/messenger/`, `config/pi-team/team-profile.json`, `agents/pi-team-reviewer.md`, `docs/pi-team-setup.md` | T2 | check |
 | **T3b** | **Wiring:** remove the messenger/team-profile symlink from `makePiConfig`; drop `pi-team-reviewer` from the `piAgents` roster; rewrite the `pi-module-content-spec.sh` assertions that currently *require* those (lines ~43–56) | T3 | check |
 | T4 | Renderer: per-harness `hiddenSkills` → inject `disable-model-invocation` | — | contract |
 | T5 | Retag 7 skills `harnesses: [opencode]`; delete 3 `pi-team-*` skills | T4 | check |
 | **T5b** | **Wiring:** update the `piSkills` roster in `config.nix` (17 explicit names; retagged skills would otherwise become dangling symlinks that `ln -s` creates without error) | T5 | check |
-| T6 | Wave engine `workflows/wave.js` + `docs/execution-patterns.md`; shared-tree default, self-defending gates, per-child state, documented 30-min/64-spawn limits | T0 | contract |
-| T7 | New `execute-plan` skill (discoverable): reads `tasks.json`, embeds via `JSON.stringify`, runs Phase 0 baseline, performs resume-time `git status` reconciliation | T6 | check |
+| T6 | Wave engine + `docs/execution-patterns.md`: parent-driven loop, per-wave `workflowScript` invocation, `runs.all` + `!r.ok`, explicit per-child model, parent-run host verification, error-classification table, documented 30-min/64-spawn limits | T0 | contract |
+| T7 | New `execute-plan` skill (discoverable): reads `tasks.json`, embeds via `JSON.stringify`, Phase 0 baseline, per-wave verify + commit, resume-time `git status` reconciliation | T6 | check |
 | T8 | Slim `plan-template.md` 201 → ~50 lines; `tasks.json` schema; update `create-plan` | — | check |
 | **T8b** | **Drift check:** spec asserting `plan.md` task IDs ≡ `tasks.json` IDs | T8 | contract |
 | T9 | Rewrite `docs/testing-strategy.md` verification classes; remove mandatory break-it | — | check |
@@ -624,5 +631,5 @@ wiring tasks the first draft silently assumed, and moved the integration decisio
 | T13 | `node tools/render-skills.mjs --write`; commit `dist/`; assert OpenCode dist unchanged vs `main` | T5b, T7, T10 | check |
 | T14 | Final gate `./tests/run-tests.sh all` + `./scripts/pi-dev.sh --verify` | all | — |
 
-18 tasks. T1→T0 is a hard serial prefix; T2/T4/T8/T9 are independent after that. Dogfood the
-engine on T8–T12 only if T0 and T6 both came back clean.
+18 tasks; **T0 and T1 are complete**. T2/T4/T8/T9 are independent. Dogfood the engine on
+T8–T12 only after T6 lands clean.
