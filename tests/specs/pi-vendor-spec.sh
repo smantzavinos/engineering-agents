@@ -52,10 +52,10 @@ console.log(JSON.stringify(decls));
 ' "$PI_CONFIG")"
 
 DECL_COUNT="$(jq 'length' <<<"$DECLS_JSON")"
-if [ "$DECL_COUNT" -ge 20 ]; then
+if [ "$DECL_COUNT" -ge 16 ]; then
   pass "managedPackages declares $DECL_COUNT packages"
 else
-  fail "managedPackages declares only $DECL_COUNT packages (expected >= 20)"
+  fail "managedPackages declares only $DECL_COUNT packages (expected >= 16)"
 fi
 
 # spec/installSpec normalization

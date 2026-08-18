@@ -69,22 +69,6 @@ let
       };
     };
 
-    pi-messenger = {
-      source = {
-        type = "npm";
-        packageName = "pi-messenger";
-        spec = "pi-messenger@0.15.0";
-        installSpec = "pi-messenger@0.15.0";
-        version = "0.15.0";
-      };
-      expose = {
-        extensions = [ "./index.ts" ];
-        skills = [ "pi-messenger-crew" ];
-        prompts = [ ];
-        themes = [ ];
-      };
-    };
-
     pi-agent-guidance = {
       source = {
         type = "npm";
@@ -131,16 +115,6 @@ let
         packageName = "pi-zentui";
         spec = "github:lmilojevicc/pi-zentui#d22f4f302f19682a7adc8d6cedd55e1f0d38149a";
         installSpec = "github:lmilojevicc/pi-zentui#d22f4f302f19682a7adc8d6cedd55e1f0d38149a";
-      };
-    };
-
-    pi-interactive-shell = {
-      source = {
-        type = "npm";
-        packageName = "pi-interactive-shell";
-        spec = "pi-interactive-shell@0.13.0";
-        installSpec = "pi-interactive-shell@0.13.0";
-        version = "0.13.0";
       };
     };
 
@@ -199,21 +173,6 @@ let
       };
     };
 
-    pi-ext-review = {
-      source = {
-        type = "git";
-        packageName = "pi-ext";
-        spec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
-        installSpec = "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303";
-      };
-      expose = {
-        extensions = [ "./extensions/review/review.ts" ];
-        skills = [ ];
-        prompts = [ ];
-        themes = [ ];
-      };
-    };
-
     pi-guardrails = {
       source = {
         type = "npm";
@@ -231,16 +190,6 @@ let
         spec = "@richardgill/pi-preset@0.0.8";
         installSpec = "@richardgill/pi-preset@0.0.8";
         version = "0.0.8";
-      };
-    };
-
-    pi-prompt-template-model = {
-      source = {
-        type = "npm";
-        packageName = "pi-prompt-template-model";
-        spec = "pi-prompt-template-model@0.10.0";
-        installSpec = "pi-prompt-template-model@0.10.0";
-        version = "0.10.0";
       };
     };
 
@@ -396,7 +345,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-70xGwG8Yf1l49ry6iz/YieVbpMYuF3MquyUcAIyksmk=";
+      hash = "sha256-fZXjE5LLDwsN1qtTL0PDdgwqUlTqpvEjN84l6OEkCJA=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
@@ -898,18 +847,12 @@ let
     "research"
     "create-plan"
     "review-plan"
-    "create-worklog"
-    "execute-task"
-    "execution-orchestrator"
     "review-code"
     "review-approach"
     "assess-repo"
     "create-skills"
     "configure-pi"
     "create-new-repo-docs"
-    "pi-team-plan"
-    "pi-team-lead"
-    "pi-team-worker"
   ];
 
   piAgents = [
@@ -921,7 +864,6 @@ let
     "researcher"
     "vision"
     "oracle"
-    "pi-team-reviewer"
   ];
 
 in
@@ -994,7 +936,7 @@ in
     };
   in
   pkgs.runCommand "pi-agent-config" {} ''
-    mkdir -p $out/agent/{themes,agents,skills,messenger/team-profiles,extensions}
+    mkdir -p $out/agent/{themes,agents,skills,extensions}
 
     cp ${pkgs.writeText "pi-settings-nix.json" (builtins.toJSON settings)} $out/agent/settings.json
     cp ${pkgs.writeText "pi-keybindings.json" piStaticFiles.keybindings} $out/agent/keybindings.json
@@ -1009,7 +951,6 @@ in
     cp ${repoRoot}/nix/modules/pi/guardrails.json $out/agent/guardrails.json
 
     ln -s ${repoRoot}/agents/preset.jsonc $out/agent/preset.jsonc
-    ln -s ${repoRoot}/config/pi-team/team-profile.json $out/agent/messenger/team-profiles/pi-team.json
     ln -s ${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning $out/agent/extensions/startup-staleness-warning
 
     ${lib.concatMapStringsSep "\n  " (name:

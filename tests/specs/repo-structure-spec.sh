@@ -109,7 +109,7 @@ assert_file_contains "$REPO_ROOT/flake.nix" "homeManagerModules" "Flake exposes 
 assert_file_contains "$REPO_ROOT/flake.nix" "llmAgents" "Flake references llmAgents input"
 assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references OpenCode module"
 assert_file_contains "$REPO_ROOT/docs/process.md" "team_plan.md" "Process documents the team planning branch"
-assert_file_contains "$REPO_ROOT/docs/team-mode-execution.md" "Strong rescue implementer" "Team-mode doc defines the rescue role"
+assert_file_contains "$REPO_ROOT/docs/execution-patterns.md" "The loop lives in the parent" "Execution patterns doc defines the parent-driven loop"
 
 # ============================================================
 printf '\n'

@@ -40,59 +40,29 @@ fi
 
 PI_MODULE="$REPO_ROOT/nix/modules/pi/default.nix"
 PI_CONFIG="$REPO_ROOT/nix/modules/pi/config.nix"
-if grep -Fq 'pi-messenger = {' "$PI_CONFIG" &&
-   grep -Fq 'packageName = "pi-messenger";' "$PI_CONFIG" &&
-   grep -Fq 'spec = "pi-messenger@0.15.0";' "$PI_CONFIG" &&
-   grep -Fq 'installSpec = "pi-messenger@0.15.0";' "$PI_CONFIG" &&
-   grep -Fq 'extensions = [ "./index.ts" ];' "$PI_CONFIG" &&
-   grep -Fq 'skills = [ "pi-messenger-crew" ];' "$PI_CONFIG" &&
-   grep -Fq '".pi/agent/messenger/team-profiles/pi-team.json"' "$PI_MODULE" &&
-   grep -Fq 'config/pi-team/team-profile.json $out/agent/messenger/team-profiles/pi-team.json' "$PI_CONFIG"; then
-  pass "Pi module declares pi-messenger resources and the canonical pi-team profile"
+# Team mode was replaced by code-mode execution. pi-messenger, the pi-team
+# profile, and the pi-team PATH command must stay removed.
+if ! grep -Fq 'pi-messenger' "$PI_CONFIG" &&
+   ! grep -Fq 'messenger/team-profiles' "$PI_CONFIG" &&
+   ! grep -Fq 'messenger/team-profiles' "$PI_MODULE"; then
+  pass "Pi module declares no pi-messenger or pi-team profile wiring"
 else
-  fail "Pi module declares pi-messenger resources and the canonical pi-team profile"
+  fail "Pi module declares no pi-messenger or pi-team profile wiring"
 fi
 
-# The global Pi team skills invoke pi-team, so the module must install a real PATH
-# command backed by the checked-in tool and its Node/git runtime dependencies.
-# Inspect only the home.packages list: a declaration elsewhere must not satisfy this gate.
-home_packages_contains_pi_team_pkg() {
-  local module="$1" packages
-  packages="$(awk '
-    /^[[:space:]]*home\.packages[[:space:]]*=[[:space:]]*\[/ { collecting = 1 }
-    collecting { print }
-    collecting && /^[[:space:]]*\][[:space:]]*\+\+/ { exit }
-  ' "$module")"
-  grep -Eq '^[[:space:]]*piTeamPkg[[:space:]]*$' <<<"$packages"
-}
-
-if grep -Fq 'piTeamPkg = pkgs.writeShellApplication {' "$PI_MODULE" \
-  && grep -Fq 'name = "pi-team";' "$PI_MODULE" \
-  && grep -Fq 'runtimeInputs = [ pkgs.nodejs pkgs.git ];' "$PI_MODULE" \
-  && grep -Fq 'exec node ${repoRoot}/tools/pi-team.mjs "$@"' "$PI_MODULE" \
-  && home_packages_contains_pi_team_pkg "$PI_MODULE"; then
-  pass "Pi module installs pi-team from the repo tool with Node and git runtime"
+# The pi-team PATH command and its repo tool were removed with team mode.
+if ! grep -Fq 'piTeamPkg' "$PI_MODULE" && [[ ! -e "$REPO_ROOT/tools/pi-team.mjs" ]]; then
+  pass "Pi module no longer installs the removed pi-team command"
 else
-  fail "Pi module is missing the pi-team PATH command or its home.packages wiring"
-fi
-
-# Prove the previous assertion cannot be satisfied by the piTeamPkg declaration alone.
-MODULE_WITHOUT_PACKAGE="$TMP/default-without-pi-team-package.nix"
-sed '/^[[:space:]]*piTeamPkg[[:space:]]*$/d' "$PI_MODULE" >"$MODULE_WITHOUT_PACKAGE"
-if home_packages_contains_pi_team_pkg "$MODULE_WITHOUT_PACKAGE"; then
-  fail "Pi module home.packages assertion passed after piTeamPkg was removed from the package list"
-else
-  pass "Pi module pi-team assertion rejects a declaration without home.packages installation"
+  fail "Pi module no longer installs the removed pi-team command"
 fi
 
 # Verify the module references skills that actually exist
 SKILL_REFS=(
   "skills/discovery" "skills/design" "skills/research"
-  "skills/create-plan" "skills/review-plan" "skills/create-worklog"
-  "skills/execute-task" "skills/execution-orchestrator"
+  "skills/create-plan" "skills/review-plan"
   "skills/review-code" "skills/review-approach" "skills/assess-repo"
   "skills/create-skills" "skills/configure-pi" "skills/create-new-repo-docs"
-  "skills/pi-team-plan" "skills/pi-team-lead" "skills/pi-team-worker"
 )
 for ref in "${SKILL_REFS[@]}"; do
   skill_name="$(basename "$ref")"
@@ -107,7 +77,7 @@ done
 AGENT_REFS=(
   "agents/planner.md" "agents/plan-reviewer.md" "agents/code-reviewer.md"
   "agents/worker.md" "agents/ui-worker.md" "agents/researcher.md"
-  "agents/vision.md" "agents/oracle.md" "agents/pi-team-reviewer.md"
+  "agents/vision.md" "agents/oracle.md"
 )
 for ref in "${AGENT_REFS[@]}"; do
   agent_name="$(basename "$ref" .md)"
@@ -118,18 +88,17 @@ for ref in "${AGENT_REFS[@]}"; do
   fi
 done
 
-# Pi team skills and reviewer must be installed from their generated/canonical
-# surfaces: config.nix declares the rosters and links them into the agent
-# tree; default.nix links the tree entries into ~/.pi/agent by roster.
-if grep -Fq '"pi-team-plan"' "$PI_CONFIG" \
-  && grep -Fq '"pi-team-lead"' "$PI_CONFIG" \
-  && grep -Fq '"pi-team-worker"' "$PI_CONFIG" \
-  && grep -Fq '"pi-team-reviewer"' "$PI_CONFIG" \
-  && grep -Fq 'piAgentNames' "$PI_MODULE" \
-  && grep -Fq 'piSkillNames' "$PI_MODULE"; then
-  pass "Pi module installs the Pi team skills and task reviewer"
+# Rosters remain the single source for what is linked into ~/.pi/agent, and
+# the retired team surfaces must not reappear in them.
+if grep -Fq 'piAgentNames' "$PI_MODULE" \
+  && grep -Fq 'piSkillNames' "$PI_MODULE" \
+  && ! grep -Fq '"pi-team-plan"' "$PI_CONFIG" \
+  && ! grep -Fq '"pi-team-lead"' "$PI_CONFIG" \
+  && ! grep -Fq '"pi-team-worker"' "$PI_CONFIG" \
+  && ! grep -Fq '"pi-team-reviewer"' "$PI_CONFIG"; then
+  pass "Pi module rosters are roster-driven and free of retired team surfaces"
 else
-  fail "Pi module is missing Pi team skill or reviewer wiring"
+  fail "Pi module rosters are roster-driven and free of retired team surfaces"
 fi
 
 # Verify preset.jsonc is valid JSONC (stripping comments and trailing commas)

@@ -519,24 +519,15 @@ EOF
   rm -rf "$tmp_dir"
 }
 
-assert_proof_set_messenger_contract() {
+assert_proof_set_excludes_retired_packages() {
   if jq -e '
-    [ .packages[] | select(.packageId == "pi-messenger") ] == [
-      {
-        "packageId": "pi-messenger",
-        "sourceManifestName": "pi-messenger",
-        "sourceSpec": "pi-messenger@0.15.0",
-        "resourceExpectations": {
-          "extensions": ["./index.ts"],
-          "skills": ["pi-messenger-crew"],
-          "themes": []
-        }
-      }
-    ]
+    [ .packages[].packageId ]
+    | all(. != "pi-messenger" and . != "pi-prompt-template-model"
+          and . != "pi-ext-review" and . != "pi-interactive-shell")
   ' "$REPO_ROOT/tests/fixtures/proof-set.json" >/dev/null; then
-    pass 'Proof set declares exact pi-messenger extension, skill, and no-theme contract'
+    pass 'Proof set excludes the packages retired with team mode'
   else
-    fail 'Proof set declares exact pi-messenger extension, skill, and no-theme contract'
+    fail 'Proof set excludes the packages retired with team mode'
   fi
 }
 
@@ -564,7 +555,7 @@ printf 'Proof-set runtime verification\n'
 printf '==============================\n\n'
 
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' 'Proof-set runtime spec uses the documented requirement citation format'
-assert_proof_set_messenger_contract
+assert_proof_set_excludes_retired_packages
 
 assert_snapshot_case 'Fake home'
 assert_wrapped_snapshot_case

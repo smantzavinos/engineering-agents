@@ -3,6 +3,18 @@
   "compatibility": "pi",
   "skillPathPrefix": "~/.pi/agent/skills/",
   "delegationStyle": "pi-subagent",
+  "hiddenSkills": [
+    "research",
+    "create-plan",
+    "review-plan",
+    "review-approach",
+    "review-code",
+    "review-epic",
+    "configure-pi",
+    "configure-opencode",
+    "create-skills",
+    "create-new-repo-docs"
+  ],
   "roles": {
     "planner": { "kind": "agent", "agent": "planner" },
     "planReview": { "kind": "agent", "agent": "plan-reviewer" },

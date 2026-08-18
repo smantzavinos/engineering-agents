@@ -2,6 +2,7 @@
 name: review-epic
 description: Review an epic decomposition (`epic.md`) for workstream completeness, child-plan boundaries, sequencing, preparatory work, and first-child-plan readiness. Produces `epic_review.md` findings. Designed to be called iteratively until zero significant issues remain.
 compatibility: pi
+disable-model-invocation: true
 ---
 
 # Review Epic Decomposition

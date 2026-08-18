@@ -2,6 +2,7 @@
 name: configure-pi
 description: Configure Pi safely for the current repository through `.pi/settings.json` and the Pi-team profile, including project-specific models, resources, subagent role overrides, and Crew lane routing. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
 compatibility: pi
+disable-model-invocation: true
 metadata:
   domain: pi
 ---

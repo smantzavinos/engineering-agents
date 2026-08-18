@@ -172,139 +172,28 @@ else
   fail "Team orchestrator should not duplicate docs/orchestration.md's model suggestion table"
 fi
 
-# The additive Pi team flow is isolated from the shared/OpenCode pipeline and carries
-# its reviewed plan, transaction, review, and worker-safety contracts directly.
-for pi_skill in pi-team-plan pi-team-lead pi-team-worker; do
-  skill_path="$REPO_ROOT/skills/$pi_skill/SKILL.md"
-  if [[ -f "$skill_path" ]] && grep -Fq 'harnesses: [pi]' "$skill_path"; then
-    pass "${pi_skill} is a Pi-only canonical skill"
+# Team mode was replaced by code-mode execution: the Pi-only team skills and the
+# team task reviewer are removed, and the retired orchestration skills are kept
+# for OpenCode only so the Pi surface stays small.
+for gone in pi-team-plan pi-team-lead pi-team-worker; do
+  if [[ ! -e "$REPO_ROOT/skills/$gone" ]]; then
+    pass "${gone} is removed with team mode"
   else
-    fail "${pi_skill} is missing or not restricted to Pi"
+    fail "${gone} is removed with team mode"
   fi
 done
-
-if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && grep -Fq 'human-triggered' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && ! grep -Fq 'do not invoke a model to write, review, or approve the plan' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && grep -Fq 'Plan schema: 1' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && grep -Fq 'pi-team check <plan-path> --json' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && grep -Fq 'fresh semantic review' "$REPO_ROOT/skills/pi-team-plan/SKILL.md" \
-  && grep -Fq 'Never waive risk approval' "$REPO_ROOT/skills/pi-team-plan/SKILL.md"; then
-  pass "pi-team-plan preserves human-triggered planning and semantic/risk-review gates"
+if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
+  pass "pi-team-reviewer agent is removed with team mode"
 else
-  fail "pi-team-plan is missing its human-triggered, semantic-review, or risk gate"
+  fail "pi-team-reviewer agent is removed with team mode"
 fi
-
-if grep -Fq 'pi_messenger({ action: "join" })' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'team.profile.use' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'stable topological order' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'plan-ID→Crew-ID map' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'task.approve' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'PI_MESSENGER_TEAM_PROFILE_DIR' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'config/pi-team/pi-team.json' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq '.pi/messenger/crew/agents/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'config/pi-team/crew-worker.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'before dispatch' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'no `tools` frontmatter' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq '**SUB-12**' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'HEAD == BASE' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'pi-team init-board' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'pi-team review-wave' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'fresh `pi-team-reviewer`' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'two remediation revisions' "$REPO_ROOT/skills/pi-team-lead/SKILL.md" \
-  && grep -Fq 'telemetry.md' "$REPO_ROOT/skills/pi-team-lead/SKILL.md"; then
-  pass "pi-team-lead encodes Messenger join, profile, transaction, review, remediation, and closure protocol"
-else
-  fail "pi-team-lead is missing required Messenger join or execution protocol anchors"
-fi
-
-lead="$REPO_ROOT/skills/pi-team-lead/SKILL.md"
-if [[ "$(grep -nF 'pi_messenger({ action: "join" })' "$lead" | head -n1 | cut -d: -f1)" \
-    -lt "$(grep -nF 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$lead" | head -n1 | cut -d: -f1)" ]]; then
-  pass "pi-team-lead joins Messenger before activating the team profile"
-else
-  fail "pi-team-lead must join Messenger before activating the team profile"
-fi
-if grep -Fq 'PLAN="$REPO/plans/YYYY_MM_DD_<slug>/plan.md"' "$lead" \
-  && grep -Fq 'CREW="$REPO/.pi/messenger/crew"' "$lead" \
-  && grep -Fq 'BASE="$(git -C "$REPO" rev-parse HEAD)"' "$lead" \
-  && grep -Fq 'WAVE_IDS="T1,T2"' "$lead" \
-  && grep -Fq 'RETRY_IDS="T1"' "$lead" \
-  && grep -Fq 'pi-team check "$PLAN" --json' "$lead" \
-  && grep -Fq 'pi-team init-board "$PLAN" --crew-dir "$CREW" --repo-root "$REPO"' "$lead" \
-  && grep -Fq -- '--scope "$WAVE_IDS" --bundle "$WAVE_IDS" --repo-root "$REPO" --base "$BASE" --output-dir "$WAVE_OUTPUT_DIR"' "$lead" \
-  && grep -Fq -- '--scope "$WAVE_IDS" --bundle "$RETRY_IDS" --repo-root "$REPO" --base "$BASE" --output-dir "$RETRY_OUTPUT_DIR"' "$lead" \
-  && grep -Fq 'before.get(id) !== sha256' "$lead" \
-  && grep -Fq 'task IDs, never paths' "$lead"; then
-  pass "pi-team-lead supplies executable check, board, wave, retry, and remediation commands"
-else
-  fail "pi-team-lead is missing executable commands or retry/remediation bundle semantics"
-fi
-
-if grep -Fq 'task.unblock' "$lead" \
-  && grep -Fq 'task.start' "$lead" \
-  && grep -Fq 'task.done' "$lead" \
-  && grep -Fq 'summary and review evidence' "$lead" \
-  && grep -Fq 'rescue failure remains blocked' "$lead" \
-  && grep -Fq 'github-copilot/gpt-5.6-sol' "$lead" \
-  && grep -Fq 'fresh full-diff review' "$lead" \
-  && grep -Fq 'same new HEAD commit' "$lead" \
-  && grep -Fq 'at most two fresh remediation passes' "$lead"; then
-  pass "pi-team-lead closes rescue state and requires a fresh clean final review on the new HEAD"
-else
-  fail "pi-team-lead is missing rescue closure or final same-commit review requirements"
-fi
-
-plan_skill="$REPO_ROOT/skills/pi-team-plan/SKILL.md"
-plan_contract="$REPO_ROOT/skills/pi-team-plan/references/plan-contract.md"
-if grep -Fq 'Read `references/plan-contract.md` before authoring or validating a plan.' "$plan_skill" \
-  && [[ -s "$plan_contract" ]] \
-  && grep -Fq 'Exact v1 grammar' "$plan_contract" \
-  && grep -Fq 'T[1-9][0-9]*' "$plan_contract" \
-  && grep -Fq 'cheap, std, complex, visual, visual-complex' "$plan_contract" \
-  && grep -Fq 'migration, destructive, auth, api-contract' "$plan_contract" \
-  && grep -Fq 'integration:G<n>' "$plan_contract" \
-  && grep -Fq 'Wave = dependency depth' "$plan_contract" \
-  && grep -Fq 'critical path <= 60% of serial estimate' "$plan_contract" \
-  && grep -Fq 'estimate <= max(20 minutes, 20% of critical path)' "$plan_contract" \
-  && grep -Fq 'do not add artificial dependency' "$plan_contract" \
-  && grep -Fq '# <title>' "$plan_contract"; then
-  pass "pi-team-plan loads a self-contained v1 grammar, rules, and template reference"
-else
-  fail "pi-team-plan is missing its installed self-contained plan-contract reference or exact critical-path thresholds"
-fi
-
-if grep -Fq 'Modify only the declared write set' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'minimal check' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'Do not commit' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'broad gates' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'do not mutate files through bash' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'handoff' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'declared write set remains the authority' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'even if a malformed packet lists them' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'authored `plan.md`' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'generated board/runtime state' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'Crew/project config' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'telemetry' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'review records' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && grep -Fq 'Stop and report the invalid packet' "$REPO_ROOT/skills/pi-team-worker/SKILL.md" \
-  && ! grep -Fq 'durable policy documents' "$REPO_ROOT/skills/pi-team-worker/SKILL.md"; then
-  pass "pi-team-worker preserves write-set authority, immutable control artifacts, and bounded handoff"
-else
-  fail "pi-team-worker is missing immutable control-artifact protection or retains a blanket durable-policy prohibition"
-fi
-
-reviewer="$REPO_ROOT/agents/pi-team-reviewer.md"
-if [[ -f "$reviewer" ]] \
-  && grep -Fq 'model: github-copilot/gpt-5.6-terra' "$reviewer" \
-  && grep -Fq 'read-only' "$reviewer" \
-  && grep -Fq 'SHIP|NEEDS_WORK|MAJOR_RETHINK' "$reviewer" \
-  && grep -Fq 'Do not inspect peer write sets' "$reviewer"; then
-  pass "pi-team-reviewer is read-only with the exact task-review verdict contract"
-else
-  fail "pi-team-reviewer is missing model, read-only, verdict, or scope boundaries"
-fi
+for oc_only in execution-orchestrator execute-task create-worklog; do
+  if grep -Fq 'harnesses: [opencode]' "$REPO_ROOT/skills/$oc_only/SKILL.md"; then
+    pass "${oc_only} is retained for OpenCode only"
+  else
+    fail "${oc_only} must be restricted to OpenCode after the Pi code-mode switch"
+  fi
+done
 
 if grep -Fq 'General model suggestion' "$REPO_ROOT/docs/orchestration.md" \
   && grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/docs/orchestration.md" \

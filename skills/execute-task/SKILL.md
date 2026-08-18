@@ -1,6 +1,7 @@
 ---
 name: execute-task
 description: Execute exactly one plan task using strict TDD. Read the worklog to determine the current task, implement it with Red-Green-Break-Verify, update the worklog, and commit all task changes atomically. One task per invocation.
+harnesses: [opencode]
 ---
 
 # Execute Task

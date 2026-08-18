@@ -40,6 +40,11 @@ assert_file_not_contains() {
   if grep -Fq "$needle" "$path"; then fail "$desc (unexpected: $needle in $path)"; else pass "$desc"; fi
 }
 
+assert_file_absent() {
+  local path="$1" desc="$2"
+  if [[ -e "$path" ]]; then fail "$desc (still present: $path)"; else pass "$desc"; fi
+}
+
 printf 'Repo readiness docs verification\n'
 printf '================================\n\n'
 
@@ -55,7 +60,7 @@ assert_file_exists "$REPO_ROOT/docs/issues_learnings.md" "Issues and learnings l
 assert_file_exists "$REPO_ROOT/docs/adr/README.md" "ADR index exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Initial ADR exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Team planning ADR exists"
-assert_file_exists "$REPO_ROOT/docs/team-mode-execution.md" "Team-mode execution doc exists"
+assert_file_exists "$REPO_ROOT/docs/execution-patterns.md" "Code-mode execution patterns doc exists"
 assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
 assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
 assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
@@ -81,7 +86,7 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "## Requirements" "AGENTS routes req
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/requirements.md" "AGENTS points to the canonical requirements doc"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Planning Artifacts" "AGENTS routes planning artifacts section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "plans/README.md" "AGENTS points to the plans guidance doc"
-assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/team-mode-execution.md" "AGENTS routes to team-mode execution"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/execution-patterns.md" "AGENTS routes to code-mode execution patterns"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Operational Memory" "AGENTS routes operational memory section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/issues_learnings.md" "AGENTS points to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/adr/README.md" "AGENTS points to the ADR index"
@@ -289,128 +294,15 @@ assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requi
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-004' "Readiness docs spec cites the requirements-system contract"
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' "Proof-set runtime spec cites its functional requirement"
 
-SETUP_DOC="$REPO_ROOT/docs/pi-team-setup.md"
-assert_file_exists "$SETUP_DOC" "Pi team setup/preflight doc exists"
-assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/pi-team-setup.md" "AGENTS routes Pi team setup without changing canonical policy"
-assert_file_contains "$SETUP_DOC" "# Pi Team Setup and Preflight" "Pi team setup doc has title"
-assert_file_contains "$SETUP_DOC" "additive and non-canonical" "Pi team setup doc preserves its rollout boundary"
-assert_file_contains "$SETUP_DOC" "pi-messenger@0.15.0" "Pi team setup pins the proven messenger package version"
-assert_file_contains "$SETUP_DOC" "nix/modules/pi/default.nix" "Pi team setup identifies Nix package provenance"
-assert_file_contains "$SETUP_DOC" "pi-team check" "Pi team setup documents the installed pi-team PATH command"
-assert_file_contains "$SETUP_DOC" "config/pi-team/team-profile.json" "Pi team setup identifies the canonical profile source"
-assert_file_contains "$SETUP_DOC" "config/pi-team/pi-team.json" "Pi team setup identifies the repository profile entry"
-assert_file_contains "$SETUP_DOC" "PI_MESSENGER_TEAM_PROFILE_DIR" "Pi team setup documents repository-local profile selection"
-assert_file_contains "$SETUP_DOC" "~/.pi/agent/messenger/team-profiles/pi-team.json" "Pi team setup identifies the global fallback profile path"
-assert_file_contains "$SETUP_DOC" "config/pi-team/crew-config.json" "Pi team setup identifies the canonical project Crew source"
-assert_file_contains "$SETUP_DOC" ".pi/messenger/crew/config.json" "Pi team setup identifies the tracked project config symlink"
-assert_file_contains "$SETUP_DOC" "config/pi-team/crew-worker.md" "Pi team setup identifies the canonical Crew worker override"
-assert_file_contains "$SETUP_DOC" ".pi/messenger/crew/agents/crew-worker.md" "Pi team setup identifies the tracked project worker symlink"
-assert_file_contains "$SETUP_DOC" "bundled worker requires a commit" "Pi team setup explains why the project worker override is required"
-assert_file_contains "$SETUP_DOC" 'pi_messenger({ action: "join" })' "Pi team setup documents Pi structured Messenger registration"
-assert_file_contains "$SETUP_DOC" 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "Pi team setup documents Pi structured profile activation"
-assert_file_contains "$SETUP_DOC" "Registration is ephemeral to the Pi session" "Pi team setup explains session-local registration"
-assert_file_contains "$SETUP_DOC" "every other Crew action requires registered state [SUB-10]" "Pi team setup documents the Crew registration prerequisite"
-assert_file_contains "$SETUP_DOC" "worker-cheap" "Pi team setup verifies all lane roles"
-assert_file_contains "$SETUP_DOC" "worker-visual-complex" "Pi team setup verifies the complex visual lane"
-assert_file_contains "$SETUP_DOC" "risk-labels" "Pi team setup verifies risk-label approval mode"
-assert_file_contains "$SETUP_DOC" "migration, destructive, auth," "Pi team setup verifies migration, destructive, and auth risk labels"
-assert_file_contains "$SETUP_DOC" "api-contract" "Pi team setup verifies the api-contract risk label"
-assert_file_contains "$SETUP_DOC" "plan.json" "Pi team setup identifies board runtime state"
-assert_file_contains "$SETUP_DOC" ".pi/messenger/crew-runs/<UTC-basic-timestamp>/" "Pi team setup documents runtime-only board recovery"
-assert_file_contains "$SETUP_DOC" 'missing-`plan.md`' "Pi team setup documents the sole allowed validation warning"
-assert_file_contains "$SETUP_DOC" "any other warning" "Pi team setup rejects all other validation warnings"
-assert_file_contains "$SETUP_DOC" "pi-team init-board" "Pi team setup documents exact board initialization"
-assert_file_contains "$SETUP_DOC" "pi-team review-wave" "Pi team setup documents exact wave review"
-assert_file_contains "$SETUP_DOC" "bash tests/specs/repo-readiness-docs-spec.sh" "Pi team setup lists the targeted readiness gate"
-assert_file_contains "$SETUP_DOC" "./tests/run-tests.sh fast" "Pi team setup lists the task gate"
-assert_file_contains "$SETUP_DOC" "./scripts/pi-dev.sh --verify" "Pi team setup lists the current-checkout deployment gate"
-assert_file_contains "$SETUP_DOC" "home-manager switch --flake .#<hostname>" "Pi team setup lists the active-install deployment gate"
-assert_file_contains "$SETUP_DOC" "command -v pi-team" "Pi team setup proves the installed pi-team command"
-assert_file_contains "$SETUP_DOC" 'jq -e '\''.packages | index("./packages/pi-messenger") != null'\''' "Pi team setup proves pi-messenger is configured as a package"
-assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-plan/SKILL.md"' "Pi team setup proves the pi-team-plan skill is installed"
-assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-lead/SKILL.md"' "Pi team setup proves the pi-team-lead skill is installed"
-assert_file_contains "$SETUP_DOC" 'test -f "$HOME/.pi/agent/skills/pi-team-worker/SKILL.md"' "Pi team setup proves the pi-team-worker skill is installed"
-assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"' "Pi team setup proves the installed reviewer matches canonical"
-assert_file_contains "$SETUP_DOC" 'cmp -s "$REPO/config/pi-team/team-profile.json" "$HOME/.pi/agent/messenger/team-profiles/pi-team.json"' "Pi team setup proves the fallback profile matches canonical"
-assert_file_contains "$SETUP_DOC" 'test "$(readlink -f "$REPO/config/pi-team/pi-team.json")" = "$(readlink -f "$REPO/config/pi-team/team-profile.json")"' "Pi team setup proves the repository profile entry resolves to canonical"
-assert_file_contains "$SETUP_DOC" 'test "$(readlink -f "$PROJECT_CONFIG")" = "$(readlink -f "$REPO/config/pi-team/crew-config.json")"' "Pi team setup proves the project config resolves to canonical"
-assert_file_contains "$SETUP_DOC" 'test "$(readlink -f "$PROJECT_WORKER")" = "$(readlink -f "$REPO/config/pi-team/crew-worker.md")"' "Pi team setup proves the project worker resolves to canonical"
-assert_file_contains "$SETUP_DOC" '! grep -Eq '\''git (add|commit)|commits:'\'' "$PROJECT_WORKER"' "Pi team setup proves bundled-style commit instructions are absent"
-assert_file_contains "$SETUP_DOC" '! grep -Eq '\''^tools[[:space:]]*:'\'' "$PROJECT_WORKER"' "Pi team setup proves the worker override omits tools frontmatter"
-assert_file_contains "$SETUP_DOC" '[SUB-12]' "Pi team setup cites the Crew worker tool-exposure constraint"
-assert_file_contains "$SETUP_DOC" 'node "$REPO/tests/scripts/resource-snapshot.mjs" --fixture "$REPO/tests/fixtures/proof-set.json" >"$SNAPSHOT"' "Pi team setup runs the resource snapshot without a model call"
-assert_file_contains "$SETUP_DOC" '. as $root' "Pi team setup binds the resource snapshot root for nested checks"
-assert_file_contains "$SETUP_DOC" 'any($root.settings.configuredPackages[]; .source == "./packages/pi-messenger")' "Pi team setup proves the snapshot contains pi-messenger"
-assert_file_contains "$SETUP_DOC" '$root.proofSet[]' "Pi team setup retains the resource snapshot root while locating pi-messenger"
-assert_file_contains "$SETUP_DOC" 'select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))' "Pi team setup proves pi_messenger is registered from the messenger extension"
+# Team mode was removed in favour of code-mode execution. These assert the
+# teardown stays torn down; see docs/investigations/2026-08-18-code-mode-process/.
+assert_file_absent "$REPO_ROOT/docs/pi-team-setup.md" "Pi team setup doc is removed with team mode"
+assert_file_absent "$REPO_ROOT/config/pi-team/team-profile.json" "Pi team profile is removed with team mode"
+assert_file_absent "$REPO_ROOT/tools/pi-team.mjs" "pi-team tool is removed with team mode"
+assert_file_not_contains "$REPO_ROOT/AGENTS.md" "docs/pi-team-setup.md" "AGENTS no longer routes the removed Pi team setup doc"
+assert_file_not_contains "$REPO_ROOT/nix/modules/pi/config.nix" "pi-messenger" "Pi module no longer declares pi-messenger"
+assert_file_not_contains "$REPO_ROOT/nix/modules/pi/default.nix" "piTeamPkg" "Pi module no longer installs the pi-team command"
 
-active_resource_proof_is_valid() {
-  local snapshot="$1"
-  jq -e '
-    . as $root |
-    any($root.settings.configuredPackages[]; .source == "./packages/pi-messenger") and
-    any(
-      $root.proofSet[]
-      | select(.packageId == "pi-messenger")
-      | .discovered.extensions[]
-      | select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))
-    )
-  ' "$snapshot" >/dev/null
-}
-
-if active_resource_proof_is_valid "$REPO_ROOT/tests/spec-fixtures/resource-snapshot.v2.ok.json"; then
-  pass "Pi team setup active-resource predicate accepts the pi-messenger snapshot"
-else
-  fail "Pi team setup active-resource predicate accepts the pi-messenger snapshot"
-fi
-
-registration_preflight_is_valid() {
-  local document="$1" join_line profile_line
-  join_line="$(grep -nF 'pi_messenger({ action: "join" })' "$document" | head -n1 | cut -d: -f1 || true)"
-  profile_line="$(grep -nF 'pi_messenger({ action: "team.profile.use", name: "pi-team" })' "$document" | head -n1 | cut -d: -f1 || true)"
-  [[ "$join_line" =~ ^[0-9]+$ ]] && [[ "$profile_line" =~ ^[0-9]+$ ]] &&
-    [[ "$join_line" -lt "$profile_line" ]] &&
-    grep -Fq 'Registration is ephemeral to the Pi session' "$document" &&
-    grep -Fq 'every other Crew action requires registered state [SUB-10]' "$document"
-}
-
-if registration_preflight_is_valid "$SETUP_DOC"; then
-  pass "Pi team setup registers Messenger before profile activation"
-else
-  fail "Pi team setup must register Messenger before profile activation"
-fi
-
-registration_mutation="$(mktemp)"
-sed '/pi_messenger({ action: "join" })/d' "$SETUP_DOC" >"$registration_mutation"
-if registration_preflight_is_valid "$SETUP_DOC" && ! registration_preflight_is_valid "$registration_mutation"; then
-  pass "Pi team setup registration preflight mutation rejects a missing join"
-else
-  fail "Pi team setup registration preflight mutation rejects a missing join"
-fi
-rm -f "$registration_mutation"
-
-active_install_proofs_present() {
-  local document="$1"
-  grep -Fq 'command -v pi-team' "$document" &&
-    grep -Fq 'test -f "$HOME/.pi/agent/skills/pi-team-plan/SKILL.md"' "$document" &&
-    grep -Fq 'cmp -s "$REPO/agents/pi-team-reviewer.md" "$HOME/.pi/agent/agents/pi-team-reviewer.md"' "$document" &&
-    grep -Fq 'select(.sourceRelativePath == "./index.ts" and (.tools | index("pi_messenger")))' "$document"
-}
-
-proof_mutation="$(mktemp)"
-trap 'rm -f "$proof_mutation"' EXIT
-sed '/test -f "\$HOME\/\.pi\/agent\/skills\/pi-team-plan\/SKILL.md"/d' "$SETUP_DOC" >"$proof_mutation"
-if active_install_proofs_present "$SETUP_DOC" && ! active_install_proofs_present "$proof_mutation"; then
-  pass "Pi team setup readiness mutation rejects a missing active-install proof"
-else
-  fail "Pi team setup readiness mutation rejects a missing active-install proof"
-fi
-
-assert_file_contains "$SETUP_DOC" "./tests/run-tests.sh all" "Pi team setup lists the final plan gate"
-assert_file_contains "$SETUP_DOC" "Baseline failures" "Pi team setup documents baseline-failure comparison"
-assert_file_contains "$SETUP_DOC" "OpenCode" "Pi team setup preserves the OpenCode boundary"
-assert_file_not_contains "$SETUP_DOC" "pi-messenger@0.15.1" "Pi team setup rejects a stale messenger version"
-assert_file_not_contains "$SETUP_DOC" "Runtime board state is tracked" "Pi team setup rejects tracked runtime-board claims"
 
 INVESTIGATION="$REPO_ROOT/docs/investigations/2026-07-31-plan-execution-efficiency"
 NOTES="$INVESTIGATION/notes/README.md"

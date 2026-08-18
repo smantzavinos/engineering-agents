@@ -82,10 +82,10 @@ if grep -rn 'task(category=\|task({' "$REPO_ROOT/dist/skills/pi/" >/dev/null 2>&
 else
   pass "Pi tree uses only Pi-style delegation"
 fi
-if grep -rln 'subagent({' "$REPO_ROOT/dist/skills/pi/execution-orchestrator/SKILL.md" >/dev/null 2>&1; then
-  pass "Pi execution-orchestrator renders subagent({...}) delegation"
+if grep -rln 'subagent({' "$REPO_ROOT/dist/skills/pi/design/SKILL.md" >/dev/null 2>&1; then
+  pass "Pi design renders subagent({...}) delegation"
 else
-  fail "Pi execution-orchestrator is missing subagent({...}) delegation"
+  fail "Pi design is missing subagent({...}) delegation"
 fi
 
 # OpenCode tree must not contain Pi-style subagent() calls
@@ -174,35 +174,50 @@ else
   pass "configure-pi is excluded from the OpenCode tree"
 fi
 
-# Pi team execution is additive and Pi-only: all canonical skills render to Pi,
-# never OpenCode, and the generated tree must retain their protocol anchors.
-for pi_only in pi-team-plan pi-team-lead pi-team-worker; do
-  if [[ -f "$REPO_ROOT/dist/skills/pi/${pi_only}/SKILL.md" ]]; then
-    pass "${pi_only} is present in the Pi tree"
+# Team mode was replaced by code-mode execution: the Pi-only team skills are gone,
+# and the retired orchestration skills render for OpenCode only.
+for gone in pi-team-plan pi-team-lead pi-team-worker; do
+  if [[ ! -e "$REPO_ROOT/dist/skills/pi/${gone}" ]]; then
+    pass "${gone} is absent from the Pi tree"
   else
-    fail "${pi_only} is missing from the Pi tree"
-  fi
-  if [[ -e "$REPO_ROOT/dist/skills/opencode/${pi_only}" ]]; then
-    fail "${pi_only} (pi-only) leaked into the OpenCode tree"
-  else
-    pass "${pi_only} is excluded from the OpenCode tree"
+    fail "${gone} must be absent from the Pi tree"
   fi
 done
-if grep -Fq 'compatibility: pi' "$REPO_ROOT/dist/skills/pi/pi-team-lead/SKILL.md" \
-  && grep -Fq 'HEAD == BASE' "$REPO_ROOT/dist/skills/pi/pi-team-lead/SKILL.md"; then
-  pass "rendered Pi team lead retains Pi compatibility and transaction isolation"
-else
-  fail "rendered Pi team lead is incomplete"
-fi
+for oc_only in execution-orchestrator execute-task create-worklog; do
+  if [[ ! -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
+    pass "${oc_only} is excluded from the Pi tree"
+  else
+    fail "${oc_only} (opencode-only) leaked into the Pi tree"
+  fi
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${oc_only}/SKILL.md" ]]; then
+    pass "${oc_only} is retained in the OpenCode tree"
+  else
+    fail "${oc_only} is missing from the OpenCode tree"
+  fi
+done
 
-if cmp -s "$REPO_ROOT/skills/pi-team-plan/references/plan-contract.md" \
-    "$REPO_ROOT/dist/skills/pi/pi-team-plan/references/plan-contract.md" \
-  && grep -Fq 'Read `references/plan-contract.md` before authoring or validating a plan.' \
-    "$REPO_ROOT/dist/skills/pi/pi-team-plan/SKILL.md"; then
-  pass "renderer installs the Pi team plan contract reference verbatim"
-else
-  fail "renderer did not install the Pi team plan contract reference"
-fi
+# Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
+# disable-model-invocation for Pi only, never for OpenCode.
+for hidden in create-plan review-plan review-code research; do
+  if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
+    pass "${hidden} is hidden from the Pi system prompt"
+  else
+    fail "${hidden} should be hidden from the Pi system prompt"
+  fi
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${hidden}/SKILL.md" ]] \
+     && grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/opencode/${hidden}/SKILL.md"; then
+    fail "${hidden} discoverability must not leak into the OpenCode tree"
+  else
+    pass "${hidden} discoverability does not leak into the OpenCode tree"
+  fi
+done
+for shown in discovery design assess-repo; do
+  if grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/pi/${shown}/SKILL.md"; then
+    fail "${shown} must remain discoverable in Pi"
+  else
+    pass "${shown} remains discoverable in Pi"
+  fi
+done
 
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
 for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do

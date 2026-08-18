@@ -2,6 +2,7 @@
 name: review-plan
 description: Review an engineering plan for completeness, consistency, logic bugs, and execution readiness. Produces plan_review.md findings. Designed to be called iteratively until zero significant issues remain.
 compatibility: pi
+disable-model-invocation: true
 ---
 
 # Review Plan

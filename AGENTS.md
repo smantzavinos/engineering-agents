@@ -5,9 +5,9 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Rules
 - Keep this file short and routing-oriented; put detailed policy in the linked docs.
 - Prefer small, focused changes that preserve the existing command surface.
-- Follow the selected execution contract: strict Red → Green → Break-it → Verify for
-  sequential plans; contract-first tests, minimal implementer checks, independent
-  verification, and fresh final review for team plans.
+- Follow the execution contract in `docs/execution-patterns.md`: contract-first tests authored
+  by a different agent than the implementer, parent-run host verification at wave boundaries,
+  and a fresh final review.
 
 ## Tech Stack
 - Markdown docs define the process and contributor contract.
@@ -27,9 +27,6 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Development Environment
 - `docs/development-environment.md` — required tooling, setup/apply flow, and verification entry points.
 
-## Experimental Pi Team Setup
-- `docs/pi-team-setup.md` — additive Pi-only setup and preflight for the reviewed calibration rollout; it does not supersede canonical process, requirements, team policy, or OpenCode documentation.
-
 ## Test Infrastructure
 - `docs/testing-strategy.md` — canonical testing levels, task/final gates, scope, timing, and prerequisites.
 - `tests/README.md` — suite inventory, individual spec entry points, and file-layout details.
@@ -48,7 +45,7 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 
 ## Planning Artifacts
 - `plans/README.md` — repo-specific planning guidance, canonical verification sources, and plan/worklog constraints for this repo.
-- `docs/team-mode-execution.md` — separate post-approach team planning pipeline, role contracts, model routing, escalation, and event-driven execution.
+- `docs/execution-patterns.md` — code-mode execution patterns, the wave engine, and the parent-driven verification loop.
 - Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
 
 ## Operational Memory

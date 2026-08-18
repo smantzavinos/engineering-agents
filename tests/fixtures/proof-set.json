@@ -28,20 +28,6 @@
       }
     },
     {
-      "packageId": "pi-messenger",
-      "sourceManifestName": "pi-messenger",
-      "sourceSpec": "pi-messenger@0.15.0",
-      "resourceExpectations": {
-        "extensions": [
-          "./index.ts"
-        ],
-        "skills": [
-          "pi-messenger-crew"
-        ],
-        "themes": []
-      }
-    },
-    {
       "packageId": "pi-powerline-footer",
       "sourceManifestName": "pi-powerline-footer",
       "sourceSpec": "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784",
@@ -61,19 +47,6 @@
       "resourceExpectations": {
         "extensions": [
           "./extensions/leader-key/index.ts"
-        ],
-        "skills": [],
-        "themes": []
-      }
-    },
-    {
-      "packageId": "pi-ext-review",
-      "sourceManifestName": "pi-ext",
-      "sourceSpec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
-      "sharedSourceKey": "src-6dae48d0004d3335",
-      "resourceExpectations": {
-        "extensions": [
-          "./extensions/review/review.ts"
         ],
         "skills": [],
         "themes": []

@@ -2,6 +2,7 @@
 name: research
 description: Investigate a specific topic within a codebase and produce a focused findings file. Used as a sub-agent by the Design agent or Execution orchestrator to explore code structure, current state, dependencies, or library options.
 compatibility: pi
+disable-model-invocation: true
 ---
 
 # Research

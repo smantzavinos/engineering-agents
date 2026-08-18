@@ -29,8 +29,6 @@ Use this README for the current suite inventory, file layout, and adaptation not
 bash tests/specs/repo-structure-spec.sh
 bash tests/specs/repo-readiness-docs-spec.sh
 bash tests/specs/proof-set-runtime-spec.sh
-bash tests/specs/pi-team-config-spec.sh
-bash tests/specs/pi-team-tool-spec.sh
 bash tests/specs/skill-content-spec.sh
 bash tests/specs/skill-render-spec.sh
 bash tests/specs/flake-eval-spec.sh
@@ -61,8 +59,6 @@ New tests specific to this repo:
 - **`repo-structure-spec.sh`** — All required files/dirs exist, README has key content
 - **`repo-readiness-docs-spec.sh`** — Root AGENTS routing and canonical contributor docs exist with required anchors
 - **`proof-set-runtime-spec.sh`** — Snapshot generator facade-manifest enumeration, deterministic ordering, missing-resource diagnostics, and environment-failure propagation
-- **`pi-team-config-spec.sh`** — Pi Messenger package/profile/config declaration, symlink, and runtime-ignore policy
-- **`pi-team-tool-spec.sh`** — Deterministic team-plan compiler, board initializer, and review-bundle contracts
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
 - **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`)
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
@@ -87,7 +83,6 @@ tests/
 │   └── resource-snapshot.mjs        # Live Pi state snapshot generator
 ├── spec-fixtures/
 │   ├── compiler/                    # compile-managed-packages.mjs test inputs
-│   ├── pi-team/                     # Versioned team-plan compiler fixtures
 │   ├── managed-package-install-state/ # install-state helper test inputs
 │   ├── managed-package-status/      # shared status engine + check-updates fixtures
 │   ├── pi-startup-wrapper/          # repo-owned pi wrapper fixtures
@@ -98,8 +93,6 @@ tests/
 │   ├── repo-structure-spec.sh       # File/dir existence checks
 │   ├── repo-readiness-docs-spec.sh  # Root routing and core contributor docs
 │   ├── proof-set-runtime-spec.sh    # Proof-set runtime contract regression checks
-│   ├── pi-team-config-spec.sh       # Pi Messenger team config contract checks
-│   ├── pi-team-tool-spec.sh         # Team-plan compiler and review bundle checks
 │   ├── skill-content-spec.sh        # Skill quality checks
 │   ├── skill-render-spec.sh         # Skill render pipeline drift + delegation checks
 │   ├── pi-module-content-spec.sh    # Module content integrity

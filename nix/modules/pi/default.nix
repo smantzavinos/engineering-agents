@@ -37,14 +37,6 @@ let
   piPkg = llmAgents.packages.${pkgs.system}.pi;
   checkUpdatesPkg = self.packages.${pkgs.system}.check-updates;
   piWrapperPkg = lib.hiPrio self.packages.${pkgs.system}.pi-launch-wrapper;
-  piTeamPkg = pkgs.writeShellApplication {
-    name = "pi-team";
-    runtimeInputs = [ pkgs.nodejs pkgs.git ];
-    text = ''
-      exec node ${repoRoot}/tools/pi-team.mjs "$@"
-    '';
-  };
-
   # Static agent tree (settings.json here is the declarative body; the
   # activation merges it into the user's writable settings.json).
   piConfigTree = makePiConfig {
@@ -154,7 +146,6 @@ in
     home.packages = [
       checkUpdatesPkg
       piWrapperPkg
-      piTeamPkg
       piPkg
       pkgs.ast-grep
     ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;
@@ -178,20 +169,16 @@ in
       # Repo-owned startup notifier extension
       ".pi/agent/extensions/startup-staleness-warning/index.ts".source =
         "${piConfigTree}/agent/extensions/startup-staleness-warning/index.ts";
-
-      # Canonical Pi Messenger team profile
-      ".pi/agent/messenger/team-profiles/pi-team.json".source =
-        "${piConfigTree}/agent/messenger/team-profiles/pi-team.json";
     } // builtins.listToAttrs (map (name:
       lib.nameValuePair ".pi/agent/agents/${name}.md" {
         source = "${piConfigTree}/agent/agents/${name}.md";
       }
-    ) [ "planner" "plan-reviewer" "code-reviewer" "worker" "ui-worker" "researcher" "vision" "oracle" "pi-team-reviewer" ]
+    ) [ "planner" "plan-reviewer" "code-reviewer" "worker" "ui-worker" "researcher" "vision" "oracle" ]
     ) // builtins.listToAttrs (map (name:
       lib.nameValuePair ".pi/agent/skills/${name}" {
         source = "${piConfigTree}/agent/skills/${name}";
       }
-    ) [ "discovery" "design" "research" "create-plan" "review-plan" "create-worklog" "execute-task" "execution-orchestrator" "review-code" "review-approach" "assess-repo" "create-skills" "configure-pi" "create-new-repo-docs" "pi-team-plan" "pi-team-lead" "pi-team-worker" ]
+    ) [ "discovery" "design" "research" "create-plan" "review-plan" "review-code" "review-approach" "assess-repo" "create-skills" "configure-pi" "create-new-repo-docs" ]
     );
 
     # ============================================================

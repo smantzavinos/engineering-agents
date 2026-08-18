@@ -49,6 +49,9 @@ function loadHarnesses() {
     if (!file.endsWith('.json')) continue;
     const profile = JSON.parse(fs.readFileSync(path.join(HARNESS_DIR, file), 'utf8'));
     if (!profile.id) fail(`harness profile ${file} is missing "id"`);
+    if (profile.hiddenSkills !== undefined && !Array.isArray(profile.hiddenSkills)) {
+      fail(`harness profile ${file} has a non-array "hiddenSkills"`);
+    }
     harnesses.push(profile);
   }
   if (harnesses.length === 0) fail('no harness profiles found in harnesses/');
@@ -139,11 +142,21 @@ function injectCompatibility(source, harness, skillName) {
   for (const line of fmLines) {
     if (/^compatibility:/.test(line)) continue; // renderer owns compatibility
     if (/^harnesses:/.test(line)) continue; // applicability is build-time only
+    if (/^disable-model-invocation:/.test(line)) continue; // renderer owns discoverability
     kept.push(line);
     if (/^description:/.test(line)) descIndex = kept.length - 1;
   }
   if (descIndex === -1) fail(`skill "${skillName}": frontmatter missing "description"`);
-  kept.splice(descIndex + 1, 0, `compatibility: ${harness.compatibility}`);
+  const injected = [`compatibility: ${harness.compatibility}`];
+  // Per-harness discoverability. A skill listed in a harness profile's
+  // `hiddenSkills` is kept out of that harness's system prompt but stays
+  // loadable via `/skill:<name>`. Declared per harness rather than in canonical
+  // frontmatter so hiding a skill from one harness cannot alter another
+  // harness's rendered output.
+  if (Array.isArray(harness.hiddenSkills) && harness.hiddenSkills.includes(skillName)) {
+    injected.push('disable-model-invocation: true');
+  }
+  kept.splice(descIndex + 1, 0, ...injected);
   // kept ends with a trailing empty string from the split; rebuild cleanly.
   const fmText = kept.filter((line, idx) => !(idx === kept.length - 1 && line === '')).join('\n');
   return `---\n${fmText}\n---\n${rest}`;

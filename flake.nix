@@ -357,16 +357,19 @@
         # patched, git metadata present, install-state is well-formed.
         pi-managed-packages-shape = pkgs.runCommand "pi-managed-packages-shape-check" {} ''
           tree=${self.packages.${system}.pi-managed-packages}
-          for id in pi-subagents pi-hooks pi-messenger pi-agent-guidance pi-mcp-adapter \
-                    pi-web-access pi-powerline-footer pi-zentui pi-interactive-shell \
+          for id in pi-subagents pi-hooks pi-agent-guidance pi-mcp-adapter \
+                    pi-web-access pi-powerline-footer pi-zentui \
                     pi-subdir-context pi-ding pi-notify pi-auto-rename pi-ext-leader-key \
-                    pi-ext-review pi-guardrails pi-preset pi-prompt-template-model pi-btw; do
+                    pi-guardrails pi-preset pi-btw; do
             test -f "$tree/agent/packages/$id/package.json" || { echo "MISSING facade: $id"; exit 1; }
           done
           test ! -e "$tree/agent/packages/pi-gitnexus" || { echo "FAIL: pi-gitnexus must be excluded by default"; exit 1; }
+          # Removed with team mode / code-mode consolidation; must not come back.
+          for id in pi-messenger pi-prompt-template-model pi-ext-review pi-interactive-shell; do
+            test ! -e "$tree/agent/packages/$id" || { echo "FAIL: $id must not be installed"; exit 1; }
+          done
 
           # Facade source links must resolve to reachable files.
-          test -f "$tree/agent/packages/pi-messenger/_source/index.ts" || { echo "FAIL: pi-messenger _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-subagents/_source/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-powerline-footer/_source/index.ts" || { echo "FAIL: powerline _source unreachable"; exit 1; }
 

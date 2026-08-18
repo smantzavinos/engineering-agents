@@ -1,1 +1,0 @@
-{"concurrency":{"workers":4},"artifacts":{"enabled":true},"review":{"enabled":false,"maxIterations":2},"work":{"maxAttemptsPerTask":2,"maxWaves":1,"stopOnBlock":true},"dependencies":"strict","coordination":"minimal"}
