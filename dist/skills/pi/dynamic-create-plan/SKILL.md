@@ -86,6 +86,43 @@ two such tasks declare overlapping writes, they will race in the shared tree. `c
 rejects this. When it fires, either add the missing dependency or merge the tasks — do not
 widen a glob to make the message go away.
 
+## Decomposing for parallel execution
+
+Wave and dataflow engines run the same `tasks.json`; what differs is what serialization
+costs. A wave engine merely tolerates an over-serialized graph (it wastes width); a DAG
+dataflow run is built to exploit a well-shaped one (every unnecessary dependency is a
+barrier). Shape every graph as if it will be executed as a DAG.
+
+**Every dependency must be real coupling.** Audit each edge against these tests:
+
+- **Real** — the dependent cannot type, compile, or run without the dep's artifact: schema
+  before mutations typed against it; contract specs before the code they execute; a
+  component before its mount point.
+- **Accidental** — treat as a design smell and restructure instead of linking:
+  - tasks *share* a component that one of them builds → extract the shared component into
+    its own task, so consumers depend on the component, never on each other;
+  - a task exists only to avoid a write collision across files several tasks touch → give
+    each task complete ownership of its files instead;
+  - "this felt like the natural order" → not a dependency.
+
+**Ownership patterns:**
+
+- **One file, one task.** If two tasks would write the same file, either merge them (when
+  the changes are cohesive — e.g. one surface's filter and its chips) or extract the shared
+  piece. A `check-plan.mjs` write collision is a design signal about your decomposition,
+  not an obstacle to route around with a serialization dependency.
+- **Shared components are standalone tasks** preceding all their consumers. Bundling a
+  shared component with the first consumer's integration task serializes every other
+  consumer on work that has nothing to do with them.
+- **Collectors merge last.** Tasks that aggregate (requirements regeneration, worklog,
+  final docs) naturally depend on everything and run last; never let them fan dependencies
+  backwards.
+
+**Anti-patterns seen in practice:** bundling shared components with an integration task; a
+trailing "polish" task that touches all surface files after parallel surface tasks (merge
+the polish into each surface's ownership); dependency chains between tasks whose files are
+disjoint (they serialize nothing but the clock).
+
 ## Quality rules
 
 **Tasks must be specific.** Name concrete files, specific behaviours, exact commands.

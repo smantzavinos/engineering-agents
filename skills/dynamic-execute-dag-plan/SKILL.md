@@ -1,10 +1,10 @@
 ---
-name: create-dag-plan
-description: Author a branch-aware DAG task plan and execute it as one attended dataflow run — parallel branches as promise chains in a single workflowScript, no wave barriers. Use when a human is supervising the session, branches have cross-branch file dependencies, and wall-clock speed matters more than per-wave checkpoints. For unattended runs use dynamic-execute-plan instead.
-compatibility: pi
+name: dynamic-execute-dag-plan
+description: Execute an approved plan's task graph as one attended dataflow run — parallel branches as promise chains in a single workflowScript, no wave barriers. Use when a human is supervising the session, branches have cross-branch file dependencies, and wall-clock speed matters more than per-wave checkpoints. For unattended runs use dynamic-execute-plan instead.
+harnesses: [pi]
 ---
 
-# Create DAG Plan (attended dataflow)
+# Dynamic: Execute DAG Plan (attended dataflow)
 
 Take an approved plan's task graph and run it at full parallelism in one attended
 session: parallel branches execute concurrently as promise chains inside a single
@@ -21,9 +21,11 @@ that presence is what licenses the weaker checkpointing (see rule classes below)
 ## Relationship to the other dynamic skills
 
 - **Plan authoring is unchanged**: the plan is authored and gated with
-  `dynamic-create-plan` (`plan.md` + `tasks.json`, same schema, same gate). This
-  skill adds two things: branch-aware shaping guidance, and a different execution
-  contract for the graph.
+  `dynamic-create-plan` (`plan.md` + `tasks.json`, same schema, same gate) — including
+  its "Decomposing for parallel execution" guidance, which every plan should follow.
+  This skill changes only the execution contract for the graph: a wave engine merely
+  tolerates an over-serialized graph, while this one is built to exploit a well-shaped
+  one.
 - **`dynamic-execute-plan` remains the engine for unattended runs.** Its wave
   barriers (per-wave host verification, checkpoint commits, per-wave review)
   exist to make long unsupervised runs safe. This skill deliberately drops them
@@ -97,16 +99,19 @@ signatures, paths, data shapes) into `<plan-dir>/interfaces.md`. Then a
 `contract` task, runs them, and reports the exact red output. Confirm red
 yourself, then **you** commit the freeze. This commit is the immutable oracle.
 
-subagent({
-  agent: "planner",
-  task: "Read <plan-dir>/plan.md and tasks.json. Produce the interface surface the tasks share: exact function/type signatures, file paths, and data shapes crossing task boundaries. Write it to <plan-dir>/interfaces.md. Do not implement anything."
-})
+{{delegate:planner}}
+Read <plan-dir>/plan.md and tasks.json. Produce the interface surface the tasks
+share: exact function/type signatures, file paths, and data shapes crossing task
+boundaries. Write it to <plan-dir>/interfaces.md. Do not implement anything.
+{{/delegate}}
 
-subagent({
-  agent: "planner",
-  task: "Author the failing tests for the tasks listed as class \"contract\" in <plan-dir>/tasks.json, against the interfaces in <plan-dir>/interfaces.md. Write tests only — no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.",
-  skill: "dynamic-create-plan"
-})
+{{delegate:planner skill=dynamic-create-plan}}
+Author the failing tests for the tasks listed as class "contract" in
+<plan-dir>/tasks.json, against the interfaces in <plan-dir>/interfaces.md. Write
+tests only — no implementation. Each test must be able to fail because of a
+change in the behaviour it covers, without a manual edit of the test. Run them
+and report the exact red output.
+{{/delegate}}
 
 ### Phase 2 — Dataflow execution
 
@@ -128,7 +133,7 @@ Every child brief carries, verbatim from `tasks.json`:
   commands.
 
 Children paste evidence; the parent does not trust it, it *checks* it in Phase 3.
-Routing: `ui: true` tasks go to the ui worker (`ui-worker`);
+Routing: `ui: true` tasks go to the ui worker ({{note:ui-implementation-target}});
 every child carries an explicit `model` (strong for `contract`-heavy or
 architecture-adjacent work, cheap for mechanical work); bound writers with
 `timeoutMs` and narrow briefs, never with `turnBudget` or hard `toolBudget`.
@@ -162,10 +167,11 @@ documents are redundant — do not ask children to keep them.
 
 1. One fresh-context strong review of the whole diff — an agent that watched no
    waves:
-subagent({
-  agent: "oracle",
-  task: "Review the complete diff <baseline>..HEAD against <plan-dir>/plan.md. You have not seen this work before. Report anything unfinished, unsafe, or inconsistent with the plan's intent."
-})
+   {{delegate:oracle}}
+   Review the complete diff <baseline>..HEAD against <plan-dir>/plan.md. You have
+   not seen this work before. Report anything unfinished, unsafe, or inconsistent
+   with the plan's intent.
+   {{/delegate}}
 2. Apply review fixes yourself, re-run affected verification slices.
 3. Commit as a logical series (one commit per branch or coherent concern, not
    one blob), then report to the human: what shipped, what was skipped, residual
