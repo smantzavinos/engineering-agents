@@ -844,6 +844,7 @@ let
   piSkills = [
     "discovery"
     "design"
+    "discover-and-design"
     "dynamic-execute-plan"
     "dynamic-create-plan"
     "dynamic-review-plan"

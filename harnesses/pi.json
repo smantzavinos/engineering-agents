@@ -4,6 +4,9 @@
   "skillPathPrefix": "~/.pi/agent/skills/",
   "delegationStyle": "pi-subagent",
   "hiddenSkills": [
+    "discovery",
+    "design",
+    "discover-and-design",
     "research",
     "dynamic-create-plan",
     "dynamic-review-plan",

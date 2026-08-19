@@ -1,6 +1,8 @@
 # Execution Approaches
 
-After a reviewed `approach.md`, pick an execution approach. Discovery and Design are shared.
+After a reviewed `approach.md`, pick an execution approach. Front door is
+`/discovery` then `/design`, or `/discover-and-design` when the work is already
+well-posed. The model does not auto-invoke those skills.
 Planning, execution, and verification are not.
 
 | Approach | Pi | Notes |

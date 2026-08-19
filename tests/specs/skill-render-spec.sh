@@ -222,7 +222,7 @@ done
 
 # Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
 # disable-model-invocation for Pi only, never for OpenCode.
-for hidden in dynamic-create-plan dynamic-review-plan dynamic-review-code research; do
+for hidden in discovery design discover-and-design dynamic-create-plan dynamic-review-plan dynamic-review-code research; do
   if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
     pass "${hidden} is hidden from the Pi system prompt"
   else
@@ -235,7 +235,7 @@ for hidden in dynamic-create-plan dynamic-review-plan dynamic-review-code resear
     pass "${hidden} discoverability does not leak into the OpenCode tree"
   fi
 done
-for shown in discovery design assess-repo; do
+for shown in assess-repo; do
   if grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/pi/${shown}/SKILL.md"; then
     fail "${shown} must remain discoverable in Pi"
   else
