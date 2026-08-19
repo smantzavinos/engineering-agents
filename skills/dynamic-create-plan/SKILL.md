@@ -20,7 +20,8 @@ They are different documents with different audiences. Do not put the executable
 prose, and do not put rationale in JSON.
 
 Read [references/tasks-schema.md](references/tasks-schema.md) before writing `tasks.json`.
-Read `docs/execution-patterns.md` for what the engine does with it.
+Read [docs/execution-patterns.md](docs/execution-patterns.md) for what the engine does with it.
+These are installed skill resources, not files the target repository must provide.
 
 ## Inputs
 
@@ -45,8 +46,11 @@ Read `docs/execution-patterns.md` for what the engine does with it.
 7. **Map requirements** if the repo maintains them.
 8. **Write `plan.md`** from [references/plan-template.md](references/plan-template.md).
 9. **Write `tasks.json`** per the schema.
-10. **Run the gate:** `node tools/check-plan.mjs <plan-dir>`. Fix everything it reports. A
-    plan that does not pass cannot be executed.
+10. **Run the gate:**
+    `node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" <plan-dir>`.
+    Fix everything it reports. A plan that does not pass cannot be executed. Use the installed
+    checker; do not create framework tooling in the target repository. If the checker is missing,
+    stop and report an installation error.
 
 ## Verification classes
 

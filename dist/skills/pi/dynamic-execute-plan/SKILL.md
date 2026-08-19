@@ -11,8 +11,10 @@ compute readiness, invoke one `workflowScript` per wave, run verification yourse
 host, and commit a checkpoint. You never delegate verification and never hand the whole plan
 to one script.
 
-Read `docs/execution-patterns.md` before starting. It carries the runtime constraints and the
-reasons behind each rule; this skill is the procedure.
+Read [docs/execution-patterns.md](docs/execution-patterns.md) before starting. It carries the
+runtime constraints and the reasons behind each rule; this skill is the procedure. The document
+and runtime modules are installed skill resources, not files the target repository must provide.
+If any are missing, stop and report an installation error; do not recreate them in the target.
 
 ## Inputs
 
@@ -26,14 +28,15 @@ Run these before anything else. Do not skip on the assumption they passed earlie
 
 ```bash
 PLAN_DIR="plans/<slug>"
+WAVE_MODULE="$HOME/.pi/agent/skills/dynamic-execute-plan/workflows/wave.mjs"
 git status --porcelain            # must be clean; refuse to start on a dirty tree
 node -e '
-  const { validateGraph } = await import("./workflows/wave.mjs");
-  const tasks = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).tasks;
+  const { validateGraph } = await import(process.argv[1]);
+  const tasks = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8")).tasks;
   const errors = validateGraph(tasks);
   if (errors.length) { console.error(errors.join("\n")); process.exit(1); }
   console.log(`graph ok: ${tasks.length} tasks`);
-' "$PLAN_DIR/tasks.json"
+' "$WAVE_MODULE" "$PLAN_DIR/tasks.json"
 ```
 
 Then record the **baseline**: run the repo's verification command and note what already fails.
@@ -84,12 +87,13 @@ Repeat until every task is done or you escalate.
 **1. Compute the ready set.**
 
 ```bash
+WAVE_MODULE="$HOME/.pi/agent/skills/dynamic-execute-plan/workflows/wave.mjs"
 node -e '
-  const { readySet } = await import("./workflows/wave.mjs");
-  const { tasks } = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-  const done = new Set(JSON.parse(process.argv[2]));
-  console.log(JSON.stringify(readySet(tasks, done, Number(process.argv[3])), null, 2));
-' "$PLAN_DIR/tasks.json" '["<done ids>"]' "$MAX_WIDTH"
+  const { readySet } = await import(process.argv[1]);
+  const { tasks } = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8"));
+  const done = new Set(JSON.parse(process.argv[3]));
+  console.log(JSON.stringify(readySet(tasks, done, Number(process.argv[4])), null, 2));
+' "$WAVE_MODULE" "$PLAN_DIR/tasks.json" '["<done ids>"]' "$MAX_WIDTH"
 ```
 
 `MAX_WIDTH` is `1` for a pipeline and the plan's declared width for a wave swarm.

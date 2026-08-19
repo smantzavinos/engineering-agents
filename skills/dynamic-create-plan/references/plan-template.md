@@ -7,7 +7,7 @@
 
 The executable task graph lives in `tasks.json` beside this file, not in prose here.
 This document explains *why* and *what*; `tasks.json` defines *what runs*. Keep them
-consistent — `node tools/check-plan.mjs <plan-dir>` enforces it.
+consistent — the installed `dynamic-create-plan/tools/check-plan.mjs` gate enforces it.
 
 ---
 
@@ -67,7 +67,8 @@ there must appear here.
 | T1 | <task> | — | contract | `<command>` |
 | T2 | <task> | T1 | check | `<command>` |
 
-Verification classes are defined in `docs/execution-patterns.md`. Choose per task:
+Verification classes are defined in [../docs/execution-patterns.md](../docs/execution-patterns.md).
+Choose per task:
 
 - `contract` — new or changed observable behaviour; a failing test is authored first,
   by someone other than the implementer.

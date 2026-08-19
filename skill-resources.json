@@ -1,0 +1,30 @@
+{
+  "dynamic-create-plan": [
+    {
+      "source": "docs/execution-patterns.md",
+      "target": "docs/execution-patterns.md"
+    },
+    {
+      "source": "tools/check-plan.mjs",
+      "target": "tools/check-plan.mjs"
+    },
+    {
+      "source": "workflows/wave.mjs",
+      "target": "workflows/wave.mjs"
+    }
+  ],
+  "dynamic-execute-plan": [
+    {
+      "source": "docs/execution-patterns.md",
+      "target": "docs/execution-patterns.md"
+    },
+    {
+      "source": "tools/check-plan.mjs",
+      "target": "tools/check-plan.mjs"
+    },
+    {
+      "source": "workflows/wave.mjs",
+      "target": "workflows/wave.mjs"
+    }
+  ]
+}

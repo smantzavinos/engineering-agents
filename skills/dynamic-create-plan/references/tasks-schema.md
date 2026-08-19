@@ -2,7 +2,8 @@
 
 `plan.md` is the human narrative. `tasks.json` is what the wave engine actually runs.
 Every plan directory that will be executed must contain both, and they must agree:
-`node tools/check-plan.mjs <plan-dir>` is the gate.
+`node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" <plan-dir>` is the gate.
+The checker is an installed skill resource; do not add it to the target repository.
 
 ## Shape
 

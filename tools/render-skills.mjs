@@ -9,6 +9,7 @@
 //
 // Harness profiles live in `harnesses/<id>.json` and map semantic roles to a concrete
 // implementation (named subagent vs category) plus harness-specific notes.
+// `skill-resources.json` maps shared canonical files into self-contained rendered skills.
 //
 // Output is written to `dist/skills/<harness-id>/<name>/` (checked in, drift-tested).
 //
@@ -25,6 +26,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'skills');
 const HARNESS_DIR = path.join(REPO_ROOT, 'harnesses');
 const DIST_DIR = path.join(REPO_ROOT, 'dist', 'skills');
+const RESOURCE_MANIFEST = path.join(REPO_ROOT, 'skill-resources.json');
 
 const DELEGATE_RE = /^[ \t]*\{\{delegate:([A-Za-z0-9_-]+)(?:\s+skill=([A-Za-z0-9_-]+))?\}\}[ \t]*\n([\s\S]*?)\n[ \t]*\{\{\/delegate\}\}[ \t]*$/gm;
 const NOTE_RE = /\{\{note:([A-Za-z0-9_-]+)\}\}/g;
@@ -41,6 +43,47 @@ function listDirs(dir) {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
+}
+
+function loadSkillResources(skills) {
+  if (!fs.existsSync(RESOURCE_MANIFEST)) return new Map();
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(RESOURCE_MANIFEST, 'utf8'));
+  } catch (error) {
+    fail(`cannot parse skill-resources.json: ${error.message}`);
+  }
+  if (!manifest || Array.isArray(manifest) || typeof manifest !== 'object') {
+    fail('skill-resources.json must be an object keyed by skill name');
+  }
+
+  const resources = new Map();
+  for (const [skill, entries] of Object.entries(manifest)) {
+    if (!skills.includes(skill)) fail(`skill-resources.json references unknown skill "${skill}"`);
+    if (!Array.isArray(entries)) fail(`skill-resources.json entry "${skill}" must be an array`);
+
+    const targets = new Set();
+    resources.set(skill, entries.map((entry, index) => {
+      if (!entry || typeof entry.source !== 'string' || typeof entry.target !== 'string') {
+        fail(`skill-resources.json entry "${skill}"[${index}] needs string source and target paths`);
+      }
+      const source = path.normalize(entry.source);
+      const target = path.normalize(entry.target);
+      const unsafe = (value) => path.isAbsolute(value) || value === '..' || value.startsWith(`..${path.sep}`);
+      if (!source || unsafe(source)) fail(`skill-resources.json has unsafe source path "${entry.source}"`);
+      if (!target || unsafe(target)) fail(`skill-resources.json has unsafe target path "${entry.target}"`);
+      if (targets.has(target)) fail(`skill-resources.json repeats target "${entry.target}" for "${skill}"`);
+      targets.add(target);
+
+      const sourcePath = path.join(REPO_ROOT, source);
+      if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+        fail(`skill-resources.json source does not exist: ${entry.source}`);
+      }
+      return { sourcePath, target };
+    }));
+  }
+  return resources;
 }
 
 function loadHarnesses() {
@@ -196,6 +239,7 @@ function buildRenderTree() {
   const skills = listDirs(SKILLS_DIR).filter((name) =>
     fs.existsSync(path.join(SKILLS_DIR, name, 'SKILL.md')),
   );
+  const skillResources = loadSkillResources(skills);
   const tree = new Map();
   for (const harness of harnesses) {
     for (const skill of skills) {
@@ -209,6 +253,14 @@ function buildRenderTree() {
       for (const rel of walkFiles(skillDir)) {
         if (rel === 'SKILL.md') continue;
         tree.set(path.join(harness.id, skill, rel), fs.readFileSync(path.join(skillDir, rel)));
+      }
+      // Materialize shared framework-owned resources into self-contained skill trees.
+      for (const resource of skillResources.get(skill) ?? []) {
+        const outputPath = path.join(harness.id, skill, resource.target);
+        if (tree.has(outputPath)) {
+          fail(`skill "${skill}" resource target collides with a local file: ${resource.target}`);
+        }
+        tree.set(outputPath, fs.readFileSync(resource.sourcePath));
       }
     }
   }

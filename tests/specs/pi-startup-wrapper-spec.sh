@@ -160,7 +160,12 @@ fi
 assert_not_exists 'wrapper does not resolve node from poisoned PATH' "$SUCCESS_NODE_MARKER"
 assert_not_exists 'wrapper does not rediscover pi from poisoned PATH' "$SUCCESS_PI_MARKER"
 assert_contains 'interactive launch invokes the injected real pi binary' "$SUCCESS_REAL_LOG" 'argc=0'
-assert_contains 'interactive launch exports the repository Team profile directory' "$SUCCESS_REAL_LOG" "team_profile_dir=$REPO_ROOT/config/pi-team"
+assert_contains 'interactive launch does not export the retired Team profile directory' "$SUCCESS_REAL_LOG" 'team_profile_dir=<unset>'
+if grep -Fq 'PI_MESSENGER_TEAM_PROFILE_DIR' "$WRAPPER_PATH"; then
+  fail 'wrapper retains retired Team profile environment wiring'
+else
+  printf 'PASS: wrapper contains no retired Team profile environment wiring\n'
+fi
 assert_contains 'interactive launch exports a startup snapshot path to the child pi process' "$SUCCESS_REAL_LOG" 'startup_status_path='
 assert_json \
   'interactive launch invokes the helper through the injected absolute node/helper paths with startup-mode arguments' \

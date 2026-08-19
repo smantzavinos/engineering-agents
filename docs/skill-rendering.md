@@ -19,7 +19,8 @@ Hand-maintaining a copy per harness let these drift apart in prose and even sema
 |------|------|
 | `skills/<name>/SKILL.md` | Canonical, harness-neutral skill template (the single source you edit) |
 | `harnesses/<id>.json` | Per-harness profile: `compatibility`, `skillPathPrefix`, role→implementation map, and `notes` |
-| `tools/render-skills.mjs` | Deterministic renderer: canonical skills × harness profiles → `dist/` |
+| `skill-resources.json` | Canonical source→installed target mappings for shared framework resources |
+| `tools/render-skills.mjs` | Deterministic renderer: canonical skills × harness profiles + shared resources → `dist/` |
 | `dist/skills/<id>/<name>/` | Generated per-harness skill trees (committed, drift-tested, never hand-edited) |
 
 The Nix modules link the generated trees: Pi from `dist/skills/pi/*`, OpenCode from `dist/skills/opencode/*`.
@@ -30,6 +31,17 @@ Canonical `SKILL.md` files are normal Markdown with YAML frontmatter, plus two r
 
 1. **Do not include a `compatibility:` line.** The renderer injects the correct value per harness.
 2. Use macros for anything harness-specific.
+
+### Shared framework resources
+
+Use `skill-resources.json` when multiple installed skills need the same framework-owned file.
+Each entry maps a canonical repository `source` to a path inside the rendered skill tree. The
+renderer materializes the file for every harness that receives that skill and rejects unknown
+skills, missing or unsafe sources, duplicate targets, and collisions with local skill files.
+
+Keep target-repository inputs out of this manifest. For example, the dynamic workflow packages
+its execution reference and runtime modules, while each target repository still owns its testing
+strategy and verification commands.
 
 ### Macros
 
@@ -134,8 +146,10 @@ The renderer fails hard on an unknown role, an unknown note, or any unexpanded `
 1. Edit (or create) `skills/<name>/SKILL.md` as harness-neutral content. Use `{{delegate:…}}` / `{{note:…}}` for any harness-specific delegation or phrasing. Do not add `compatibility:`.
 2. If a delegation introduces a new role, add it to `harnesses/pi.json` and `harnesses/opencode.json`. If it needs a new note, add it to both profiles' `notes`.
 3. If the skill is harness-specific, add `harnesses: [..]` to its frontmatter.
-4. Run `node tools/render-skills.mjs --write` and commit the updated `dist/`.
-5. If the skill is newly installed for a harness, add it to the appropriate Nix list (`nix/modules/pi/default.nix` and/or `openCodeSkills` in `nix/modules/opencode/config.nix`).
-6. Run `./tests/run-tests.sh fast` (and `all` when a Nix host is available).
+4. If it needs a shared framework-owned file, add a source→target mapping in
+   `skill-resources.json`; do not hand-copy a second canonical source into the skill.
+5. Run `node tools/render-skills.mjs --write` and commit the updated `dist/`.
+6. If the skill is newly installed for a harness, add it to the appropriate Nix list (`nix/modules/pi/default.nix` and/or `openCodeSkills` in `nix/modules/opencode/config.nix`).
+7. Run `./tests/run-tests.sh fast` (and `all` when a Nix host is available).
 
 Never hand-edit anything under `dist/` — it is generated.

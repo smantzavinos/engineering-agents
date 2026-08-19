@@ -158,6 +158,20 @@ check(
   `status ${validText.status}; stdout ${JSON.stringify(validText.stdout)}`,
 );
 
+for (const skill of ["dynamic-create-plan", "dynamic-execute-plan"]) {
+  const packagedChecker = join(repoRoot, "dist", "skills", "pi", skill, "tools", "check-plan.mjs");
+  const result = spawnSync(process.execPath, [packagedChecker, "--json", validDirectory], {
+    cwd: tempDir,
+    encoding: "utf8",
+  });
+  const parsed = parsePayload(result);
+  check(
+    `${skill} packaged checker runs outside the framework repository`,
+    result.status === 0 && parsed.value?.ok === true,
+    parsed.error ?? `status ${result.status}; stderr ${result.stderr}`,
+  );
+}
+
 expectInvalid("duplicate task id", fixture("duplicate-id", {
   planIds: ["duplicate"],
   data: data([task("duplicate"), task("duplicate", { title: "second duplicate" })]),

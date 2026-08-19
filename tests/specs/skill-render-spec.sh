@@ -47,6 +47,18 @@ else
   fail "dist/skills/ is stale — run: node tools/render-skills.mjs --write"
 fi
 
+# Dynamic workflow resources are rendered from one canonical source into each
+# self-contained Pi skill tree.
+for skill in dynamic-create-plan dynamic-execute-plan; do
+  for resource in docs/execution-patterns.md tools/check-plan.mjs workflows/wave.mjs; do
+    if cmp -s "$REPO_ROOT/$resource" "$REPO_ROOT/dist/skills/pi/$skill/$resource"; then
+      pass "$skill packages canonical $resource"
+    else
+      fail "$skill is missing or has drifted from canonical $resource"
+    fi
+  done
+done
+
 # Canonical sources must NOT hardcode compatibility in their frontmatter block
 # (the renderer injects it per harness). Body documentation may still mention it.
 if node -e '
