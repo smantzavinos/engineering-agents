@@ -845,6 +845,7 @@ let
     "discovery"
     "design"
     "dynamic-execute-plan"
+    "dynamic-execute-dag-plan"
     "dynamic-create-plan"
     "dynamic-review-plan"
     "dynamic-review-code"

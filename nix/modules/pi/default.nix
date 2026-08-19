@@ -178,7 +178,7 @@ in
       lib.nameValuePair ".pi/agent/skills/${name}" {
         source = "${piConfigTree}/agent/skills/${name}";
       }
-    ) [ "discovery" "design" "dynamic-execute-plan" "dynamic-create-plan" "dynamic-review-plan" "dynamic-review-code" "research" "review-approach" "review-epic" "assess-repo" "create-skills" "configure-pi" "create-new-repo-docs" ]
+    ) [ "discovery" "design" "dynamic-execute-plan" "dynamic-execute-dag-plan" "dynamic-create-plan" "dynamic-review-plan" "dynamic-review-code" "research" "review-approach" "review-epic" "assess-repo" "create-skills" "configure-pi" "create-new-repo-docs" ]
     );
 
     # ============================================================
