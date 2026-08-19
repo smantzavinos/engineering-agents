@@ -64,7 +64,7 @@
   "notes": {
     "ui-implementation-target": "`ui-worker`",
     "discovery-design-handoff": "This looks ready for the Design phase. You can start a Design session to research the codebase and develop the approach.",
-    "design-execute-standard": "The approach is ready. Write the plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan`.",
+    "design-execute-standard": "The approach is ready. Write the Parallel plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan` (DAG per fence group).",
     "design-execute-epic": "The epic approach and decomposition are ready. Start execution at the child-plan level: `/dynamic-create-plan` for a child plan, then `/dynamic-execute-plan`.",
     "change-plan-skill": "`dynamic-create-plan`"
   }

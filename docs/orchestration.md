@@ -343,45 +343,42 @@ Each sub-agent starts with **fresh context**. This is critical:
 
 ---
 
-## Dynamic Role Execution (Fast Lane)
+## Parallel Role Execution (Pi)
 
-The Execution Orchestrator above is deliberately sequential and is what OpenCode runs. Pi runs
-the **dynamic workflow**: a separate post-approach pipeline where orchestration is code rather
-than prose, and wave composition is computed at run time.
+The Execution Orchestrator above is the frozen sequential path (OpenCode). Pi runs
+**Parallel**: a DAG per planned fence group. See [Parallel Approach](approaches/parallel.md).
 
 ```text
 approach + approach review
-  └─ dynamic-create-plan → dynamic-review-plan → [human approval] → wave execution
+  └─ dynamic-create-plan → dynamic-review-plan → [human approval] → fence-group execution
 ```
 
-`plan.md` and `tasks.json` are created directly from the reviewed approach and gated by
-`node tools/check-plan.mjs`. Planning, review, the approval gate, host verification, commits,
-and the final review all stay with the orchestrating parent.
+`plan.md` and `tasks.json` are gated by `node tools/check-plan.mjs`. The parent owns
+planning, approval, host verification, commits, and final review.
 
 ```text
 create plan + task graph -> review -> approval
 -> freeze interfaces -> freeze contracts (different agent than implementers)
--> [ compute ready set -> one workflowScript per wave -> host verification
-     -> review -> fix -> checkpoint commit ]*
+-> [ generate dataflow.<group>.js -> host verification -> review -> checkpoint ]*
 -> final gate -> fresh strong review -> complete
 ```
 
-#### Dynamic execution roles
+#### Parallel execution roles
 
 | Role | Responsibility |
 |---|---|
-| Parent orchestrator | Owns the loop. Computes readiness, invokes one `workflowScript` per wave, runs all verification on the host, classifies failures, applies fixes, commits checkpoints. |
+| Parent orchestrator | Owns the loop. Generates one DAG script per fence group, runs host verification, classifies failures, applies fixes, commits checkpoints. |
 | Contract author | Freezes the interface surface and authors failing tests for `contract` tasks. Never an implementer of those tasks. |
 | Implementer | Makes a frozen test pass inside its declared write-set. Runs only its own task-scoped check. |
-| Wave reviewer | Reviews each wave diff; may demand a break-it demonstration on a specific suspect test. |
-| Final reviewer | Starts fresh after the last wave and reviews the complete diff against `plan.md`. |
+| Group reviewer | Reviews each fence-group diff; may demand a break-it demonstration on a specific suspect test. |
+| Final reviewer | Starts fresh after the last group and reviews the complete diff against `plan.md`. |
 
 | Role | Agent |
 |---|---|
 | Parent orchestrator | primary Pi session with the `execute` preset |
 | Contract author | `planner` |
 | Implementer | `worker`, or `ui-worker` for frontend work |
-| Wave reviewer | `code-reviewer` with the `dynamic-review-code` skill |
+| Group reviewer | `code-reviewer` with the `dynamic-review-code` skill |
 | Final reviewer | `oracle`, fresh context |
 
 #### Role-to-runtime mapping
@@ -397,13 +394,12 @@ roles to categories. Repository/user overrides remain the source of truth.
 | Mechanical / bounded-cheap implementer | `worker` on the cheap model | category `unspecified-low` |
 | Visual implementer | `ui-worker` | category `visual-engineering` |
 | Plan reviewer | `plan-reviewer` | category `deep` |
-| Wave / code reviewer | `code-reviewer` | category `unspecified-high` |
+| Group / code reviewer | `code-reviewer` | category `unspecified-high` |
 | Fresh final reviewer | `oracle` | external category `deep` |
 | Escalation / hard debugging | `oracle` | `ultrabrain` |
 
-In the dynamic workflow, a task's class (`cheap`, standard, `complex`) and its `ui` flag pick
-the agent and model at wave-build time; there are no lanes or claims, because the parent
-computes the ready set directly from the graph.
+In Parallel execution, `class: contract` and the `ui` flag pick the model and agent when the
+group script is generated. There are no lanes or claims.
 
 #### Suggested model mapping
 
@@ -414,7 +410,7 @@ of truth.
 |---|---|---|---|
 | Primary lead | orchestration and decisions | GPT-5.5 or Claude Opus-class reasoning model | `github-copilot/claude-opus-4.8` |
 | `unspecified-low` | mechanical isolated edits and decision-complete cheap tasks | GLM-5.2 or a fast coding model | `github-copilot/kimi-k2.7-code` |
-| `unspecified-high` | standard implementation, contract authoring, wave review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
+| `unspecified-high` | standard implementation, contract authoring, group review | Claude Sonnet 5 or GLM-5.2 | `github-copilot/claude-sonnet-5` |
 | `visual-engineering` | UI, accessibility, interaction, visual work | Gemini 3.5 Flash | `github-copilot/gemini-3.5-flash` |
 | `deep` | planned complex implementation and fresh authoritative final review | GPT-5.5 or Claude Opus-class coding/review model | `github-copilot/claude-opus-4.8` |
 | `ultrabrain` | escalation-only: unusually hard final reviews and difficult debugging | GPT-5.5/5.6 or Claude Opus-class highest-reasoning model | `github-copilot/claude-opus-4.8` |
@@ -424,13 +420,13 @@ of truth.
 
 ### Rigor tradeoffs (explicit)
 
-| Guarantee | Sequential | Dynamic |
+| Guarantee | Sequential | Parallel |
 |-----------|------------|---------|
 | Per-task break-it check | yes | removed; reviewer-initiated on suspicion instead |
 | Test authorship | implementer writes its own test | different agent, frozen before implementation, diff-checked |
-| Commit granularity | per task | per verified wave |
-| Review context | fresh per pass | per-wave review plus a fresh strong final review |
-| Verification location | inside the task | on the host, by the parent, at wave boundaries |
+| Commit granularity | per task | per verified fence group |
+| Review context | fresh per pass | per-group review plus a fresh strong final review |
+| Verification location | inside the task | on the host, by the parent, at fence boundaries |
 
 ### Runtime constraints
 
@@ -441,8 +437,8 @@ These are properties of the runtime, not preferences:
 - Every child needs an explicit `model`.
 - A child `gate:` cannot carry verification: acceptance evidence is validated before the gate
   command's result is consulted.
-- There is no `worktree.apply`, so waves share the tree and write-set collisions must be
-  prevented at plan time.
+- There is no `worktree.apply`, so groups share the tree and write-set collisions must be
+  prevented at plan time inside a fence group.
 - A run allows 64 spawns and never refunds them; per-child default timeout is 30 minutes.
 
 See [Execution Patterns](execution-patterns.md) and the `dynamic-execute-plan` skill for the

@@ -4,13 +4,13 @@
 //   node check-plan.mjs <plan-dir> [--json]
 //
 // Exit 0 when the plan is executable, 1 when it is not. Rules are documented in
-// the dynamic-create-plan skill's references/tasks-schema.md. Graph validation is
-// shared with workflows/wave.mjs so a plan cannot pass this gate and fail at execution.
+// docs/approaches/parallel.md and the create-plan skill tasks schema. Graph and
+// fence validation is shared with workflows/wave.mjs.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateGraph } from '../workflows/wave.mjs';
+import { resolveFenceGroups, validateFenceGroups, validateGraph } from '../workflows/wave.mjs';
 
 const VALID_CLASSES = ['contract', 'characterization', 'check', 'none'];
 const SCHEMA_VERSION = 1;
@@ -128,6 +128,7 @@ export function checkPlan(planDir) {
 
   // Rule 1 — shared with the execution engine.
   for (const message of validateGraph(tasks)) push(message);
+  for (const message of validateFenceGroups(doc)) push(message);
 
   for (const [index, t] of tasks.entries()) {
     const id = typeof t?.id === 'string' && t.id ? t.id : `task at index ${index}`;
@@ -159,20 +160,25 @@ export function checkPlan(planDir) {
     }
   }
 
-  // Rule 4 — the check that makes shared-tree parallelism safe. Two tasks may run
-  // concurrently unless one transitively depends on the other.
+  // Rule 4 — shared-tree safety. Two tasks may run concurrently only when they
+  // share a fence group and neither transitively depends on the other.
   const identified = tasks.filter((t) => typeof t?.id === 'string' && t.id);
   const ancestors = ancestorMap(identified);
+  const groupOf = new Map();
+  for (const group of resolveFenceGroups(doc)) {
+    for (const id of group.tasks) groupOf.set(id, group.id);
+  }
   for (let i = 0; i < identified.length; i += 1) {
     for (let j = i + 1; j < identified.length; j += 1) {
       const a = identified[i];
       const b = identified[j];
+      if (groupOf.get(a.id) !== groupOf.get(b.id)) continue;
       if (ancestors.get(a.id)?.has(b.id) || ancestors.get(b.id)?.has(a.id)) continue;
       for (const wa of a.writes ?? []) {
         for (const wb of b.writes ?? []) {
           if (writesCollide(wa, wb)) {
             push(
-              `tasks "${a.id}" and "${b.id}" can run in the same wave and both write ${wa === wb ? wa : `${wa} / ${wb}`}; add a dependency or merge them`,
+              `tasks "${a.id}" and "${b.id}" can run concurrently in fence group "${groupOf.get(a.id)}" and both write ${wa === wb ? wa : `${wa} / ${wb}`}; add a dependency, split fence groups, or merge them`,
             );
           }
         }

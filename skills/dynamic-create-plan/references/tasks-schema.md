@@ -1,17 +1,24 @@
 # `tasks.json` — the executable task graph
 
-`plan.md` is the human narrative. `tasks.json` is what the wave engine actually runs.
-Every plan directory that will be executed must contain both, and they must agree:
-`node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" <plan-dir>` is the gate.
-The checker is an installed skill resource; do not add it to the target repository.
+`plan.md` is the human narrative. `tasks.json` is what the Parallel executor
+runs. Every plan directory that will be executed must contain both, and they
+must agree:
+
+`node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" <plan-dir>`
+
+The checker is an installed skill resource; do not add it to the target
+repository. Direction lives in [docs/approaches/parallel.md](../docs/approaches/parallel.md).
 
 ## Shape
 
 ```json
 {
   "schema": 1,
-  "maxWidth": 3,
   "models": { "cheap": "<provider/model>", "strong": "<provider/model>" },
+  "fenceGroups": [
+    { "id": "shared", "tasks": ["T1", "T2", "T3", "T4"] },
+    { "id": "collect", "tasks": ["T5"] }
+  ],
   "tasks": [
     {
       "id": "T1",
@@ -30,63 +37,47 @@ The checker is an installed skill resource; do not add it to the target reposito
 }
 ```
 
+Omit `fenceGroups` for the default: one group containing every task.
+
+`maxWidth` is ignored if present. Do not use it to invent fences.
+
 ## Fields
 
 | Field | Required | Meaning |
 |---|---|---|
 | `schema` | yes | Format version. Currently `1`. |
-| `maxWidth` | yes | Max tasks per wave. `1` makes it a pipeline. |
-| `models.cheap` / `models.strong` | yes | Explicit models. There is no usable default — an unresolved model fails the child before it starts. |
+| `models.cheap` / `models.strong` | yes | Explicit models. An unresolved model fails the child before it starts. |
+| `fenceGroups` | no | Ordered verify+commit cuts. Each group runs as a DAG, then the parent host-verifies. |
+| `fenceGroups[].id` | when groups present | Unique group name. Becomes `dataflow.<id>.js`. |
+| `fenceGroups[].tasks` | when groups present | Task ids in this group. Every task id appears in exactly one group. |
 | `id` | yes | Unique, `T<n>` by convention. |
 | `title` | yes | Short label, used in the plan's Task Overview. |
-| `brief` | yes | The actual prompt. Carries **paths, never file contents** — the implementer reads files itself. |
-| `deps` | yes | IDs that must complete first. `[]` for wave-1 tasks. |
+| `brief` | yes | The actual prompt. Carries **paths, never file contents**. |
+| `deps` | yes | IDs that must complete first. Intra-group deps are promise joins. |
 | `writes` | yes | The task's write-set, using the limited path dialect below. |
 | `class` | yes | `contract` \| `characterization` \| `check` \| `none`. |
 | `verify` | unless `class: none` | The command that proves this task is done. |
-| `testPaths` | when `class: contract` | The frozen test files. Verification asserts they are unchanged from the contract commit. |
+| `testPaths` | when `class: contract` | The frozen test files. |
 | `ui` | no | `true` routes to `ui-worker`. |
 | `timeoutMs` | no | Overrides the 30-minute per-child default. |
 | `requirements` | no | Requirement IDs this task satisfies. |
 
 ## Write-set path dialect
 
-Write specs are repository-relative POSIX paths. A literal path owns that path and its
-descendants. The only wildcard is `*`; it must occupy a whole path segment and matches any one
-segment. A matched path also owns its descendants, so `src/components/*` overlaps
-`src/components/menu/item.ts`. The checker rejects absolute paths, parent traversal, `**`,
-partial-segment patterns such as `*.ts`, `?`, character classes, and brace expansion.
-
-Use a literal directory when a task owns an entire subtree. Prefer explicit paths over broad
-wildcards.
+Write specs are repository-relative POSIX paths. A literal path owns that path
+and its descendants. The only wildcard is `*`; it must occupy a whole path
+segment. The checker rejects absolute paths, parent traversal, `**`,
+partial-segment patterns such as `*.ts`, `?`, character classes, and braces.
 
 ## Rules the checker enforces
 
-1. **The graph is valid** — unique IDs, no unknown dependencies, no cycles, every task has
-   an `id` and a `brief`. Shared with the wave engine, so the plan cannot pass here and
-   fail at execution.
-2. **`contract` tasks declare `testPaths`.** Without them there is nothing to freeze, and
-   the implementer could satisfy the task by editing the test.
-3. **Every task except `class: none` declares `verify`.** "Done" must be a command.
-4. **Write-sets do not collide inside a wave.** Two tasks that can run concurrently and
-   write the same path will race in the shared tree. This is the check that makes parallel
-   execution safe — if it fires, add a dependency or merge the tasks.
-5. **`plan.md` and `tasks.json` agree.** Every ID in the plan's Task Overview exists in
-   `tasks.json`, and every task in `tasks.json` appears in the overview. Drift between the
-   document a human approved and the graph a machine runs is the failure mode this
-   prevents.
-6. **Declared models are non-empty strings**, because the engine sets `model` explicitly on
-   every child.
-
-## Choosing a class
-
-Ask: *can this task's test fail because of a change in the behaviour or artifact the task
-modifies, without someone editing the test?*
-
-- Yes, and the behaviour is new or changed → `contract`.
-- Yes, but the behaviour should not change at all → `characterization`.
-- Not really — the artifact is config, wiring, generated output, or a schema → `check`.
-- No, it is prose with no structural contract → `none`.
-
-A test that only asserts a document contains a sentence someone just wrote is not a test.
-Call it `none` and let the repo's existing docs spec cover the structure.
+1. **The graph is valid** — unique IDs, no unknown dependencies, no cycles,
+   every task has an `id` and a `brief`.
+2. **`fenceGroups`, when present** — unique group ids, every task in exactly
+   one group, no unknown ids, no dependency on a task in a later group.
+3. **`contract` tasks declare `testPaths`.**
+4. **Every task except `class: none` declares `verify`.**
+5. **Write-sets do not collide inside a fence group** unless one task
+   transitively depends on the other. Different groups may share a path.
+6. **`plan.md` and `tasks.json` agree** on task IDs.
+7. **Declared models are non-empty strings.**

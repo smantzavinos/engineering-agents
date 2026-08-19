@@ -29,7 +29,7 @@
 ### `./tests/run-tests.sh fast`
 - **Standard level:** Integration / task completion gate
 - **Scope:** package-wide
-- **When to run:** at a wave boundary, or before recording a sequential task completion gate
+- **When to run:** at a fence-group boundary, or before recording a sequential task completion gate
 - **Prerequisites:** `bash`, `jq`, `node`
 - **What it catches:** shell-spec aggregation drift, broken runner wiring, doc/test contract mismatches, and repo-local packaging contract regressions
 
@@ -63,7 +63,7 @@
 - `bash tests/specs/pi-module-content-spec.sh` — Pi module content integrity
 - `bash tests/specs/preset-spec.sh` — preset configuration validation
 - `bash tests/specs/compiler-contract-spec.sh` — compile helper and fixture contract validation
-- `bash tests/specs/wave-engine-spec.sh` — dynamic wave engine: graph validation, readiness, failure classification, generated workflowScript
+- `bash tests/specs/wave-engine-spec.sh` — Parallel graph helpers: validation, fence groups, failure classification, generated DAG workflowScript
 - `bash tests/specs/plan-check-spec.sh` — plan gate: tasks.json schema, verification classes, intra-wave write-set collisions, plan drift
 - `bash tests/specs/flake-eval-spec.sh` — Nix flake evaluation (included by `./tests/run-tests.sh all`)
 - `bash tests/specs/pi-dev-spec.sh` — repo-local Pi sandbox isolation and credential-copy contract
@@ -107,12 +107,13 @@ A passing test therefore cannot mean an edited test.
 ### Ownership in the dynamic workflow
 - **Contract author:** writes failing tests before implementation, observes red once, with evidence. Never the implementer.
 - **Implementer:** makes the frozen test pass within its declared write-set. Runs its own task-scoped check only.
-- **Parent orchestrator:** runs all verification on the host at wave boundaries, classifies failures, commits checkpoints. Verification is never delegated to a child.
-- **Reviewer (`dynamic-review-code`):** per-wave and final-diff review; may demand a break-it demonstration on a specific test.
-- **Fresh final reviewer:** full-diff review with no knowledge of how the waves went.
+- **Parent orchestrator:** runs all verification on the host at fence-group boundaries, classifies failures, commits checkpoints. Verification is never delegated to a child.
+- **Reviewer (`dynamic-review-code`):** per-group and final-diff review; may demand a break-it demonstration on a specific test.
+- **Fresh final reviewer:** full-diff review with no knowledge of how the groups went.
 
 ## Related Docs
-- `docs/execution-patterns.md` — the dynamic workflow, wave engine, and full definition of the verification classes.
+- `docs/approaches/parallel.md` — Parallel scheduler, fences, and verification classes.
+- `docs/execution-patterns.md` — runtime sandbox constraints and the parent-driven loop.
 - `plans/README.md` — tells plans where to source these commands and gate roles.
 - `tests/README.md` — suite inventory, file layout, and individual spec entry points.
 - `docs/issues_learnings.md` — place recurring verification surprises or lessons here when they should stay visible.

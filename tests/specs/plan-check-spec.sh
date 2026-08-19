@@ -230,7 +230,7 @@ expectInvalid("non-none task without verify", fixture("no-verify", {
   data: data([task("no-verify", { verify: "" })]),
 }), ["no-verify"]);
 
-expectInvalid("same-wave write collision", fixture("same-wave-collision", {
+expectInvalid("same-fence-group write collision", fixture("same-wave-collision", {
   planIds: ["writer-a", "writer-b"],
   data: data([
     task("writer-a", { writes: ["src/a.ts"] }),
@@ -244,6 +244,45 @@ expectInvalid("whole-segment glob overlaps a nested descendant", fixture("glob-d
     task("nested-writer", { writes: ["src/components/menu/item.ts"] }),
   ]),
 }), ["src/components"]);
+const crossFenceWriteDirectory = fixture("cross-fence-same-write", {
+  planIds: ["writer-a", "writer-b"],
+  data: data([
+    task("writer-a", { writes: ["src/a.ts"] }),
+    task("writer-b", { writes: ["src/a.ts"] }),
+  ], {
+    fenceGroups: [
+      { id: "first", tasks: ["writer-a"] },
+      { id: "second", tasks: ["writer-b"] },
+    ],
+  }),
+});
+const crossFenceWrite = run(crossFenceWriteDirectory);
+const crossFenceWritePayload = parsePayload(crossFenceWrite);
+check(
+  "cross-fence-group shared write exits zero",
+  crossFenceWrite.status === 0,
+  `got ${crossFenceWrite.status}`,
+);
+check(
+  "cross-fence-group shared write reports ok JSON",
+  crossFenceWritePayload.value?.ok === true && Array.isArray(crossFenceWritePayload.value.errors) && crossFenceWritePayload.value.errors.length === 0,
+  crossFenceWritePayload.error ?? crossFenceWrite.stdout,
+);
+
+expectInvalid("unknown fence group task", fixture("unknown-fence-task", {
+  planIds: ["only"],
+  data: data([task("only")], {
+    fenceGroups: [{ id: "g1", tasks: ["only", "missing"] }],
+  }),
+}), ["missing"]);
+
+expectInvalid("task omitted from fence groups", fixture("omitted-fence-task", {
+  planIds: ["kept", "omitted"],
+  data: data([task("kept"), task("omitted")], {
+    fenceGroups: [{ id: "g1", tasks: ["kept"] }],
+  }),
+}), ["omitted"]);
+
 const sequentialWriteDirectory = fixture("different-wave-same-write", {
   planIds: ["writer-a", "writer-b"],
   data: data([

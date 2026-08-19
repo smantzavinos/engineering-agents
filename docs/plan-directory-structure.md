@@ -308,13 +308,13 @@ These belong on a dynamic plan after the human has approved `plan.md` + `tasks.j
 
 | File | Written by | Purpose |
 |---|---|---|
-| `tasks.json` | `dynamic-create-plan` | Executable task graph |
+| `tasks.json` | `dynamic-create-plan` | Executable task graph, optional `fenceGroups` |
 | `interfaces.md` | execute-plan freeze | Shared signatures and data shapes |
-| `dataflow.js` | `dynamic-execute-dag-plan`, before launch | Exact attended DAG `workflowScript` body |
-| `dataflow.retry-N.js` / `dataflow.resume.js` | same skill, later rounds | Replacement scripts; do not silently overwrite an approved `dataflow.js` |
-| `waves/wave-NN.js` | `dynamic-execute-plan`, before each wave | Exact per-wave `workflowScript` body |
+| `dataflow.<group>.js` | `dynamic-execute-plan`, before each fence group | Exact DAG `workflowScript` body for that group |
 
-`dataflow.js` and `waves/wave-NN.js` are raw JavaScript (no markdown fence). The parent launches by reading that file and passing its contents as `workflowScript`. Do not keep a second hand-authored inline copy.
+Scripts are raw JavaScript (no markdown fence). The parent launches by reading that file
+and passing its contents as `workflowScript`. Do not keep a second hand-authored inline copy.
+See [Parallel Approach](approaches/parallel.md).
 
 ### code_review.md
 

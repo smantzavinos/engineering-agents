@@ -35,8 +35,7 @@ _No entries yet._
   A fence is a planned verify+commit cut. Default is one fence at the end. Ready-set waves
   and “human is watching” are the wrong axes. Sequential is frozen; team is abandoned; Pi
   develops only Parallel. See `docs/approaches/parallel.md`.
-- Follow-up: fold `dynamic-execute-plan` / `dynamic-execute-dag-plan` into one executor;
-  put `fenceGroups` on `tasks.json`
+- Follow-up: done in ADR 0005 — one executor, `fenceGroups` on `tasks.json`
 
 ### Inline workflowScript is not a reviewable record
 - Date: 2026-08-19

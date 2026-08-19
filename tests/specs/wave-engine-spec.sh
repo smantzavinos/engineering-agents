@@ -53,13 +53,31 @@ try {
   process.exit();
 }
 
-const { validateGraph, readySet, classifyFailure, buildWaveScript } = wave;
-const hasAllExports = [validateGraph, readySet, classifyFailure, buildWaveScript]
-  .every((exported) => typeof exported === "function");
+const {
+  validateGraph,
+  readySet,
+  classifyFailure,
+  buildWaveScript,
+  resolveFenceGroups,
+  validateFenceGroups,
+  buildGroupScript,
+} = wave;
+const hasAllExports = [
+  validateGraph,
+  readySet,
+  classifyFailure,
+  buildWaveScript,
+  resolveFenceGroups,
+  validateFenceGroups,
+  buildGroupScript,
+].every((exported) => typeof exported === "function");
 check("wave engine exports validateGraph", typeof validateGraph === "function");
 check("wave engine exports readySet", typeof readySet === "function");
 check("wave engine exports classifyFailure", typeof classifyFailure === "function");
 check("wave engine exports buildWaveScript", typeof buildWaveScript === "function");
+check("wave engine exports resolveFenceGroups", typeof resolveFenceGroups === "function");
+check("wave engine exports validateFenceGroups", typeof validateFenceGroups === "function");
+check("wave engine exports buildGroupScript", typeof buildGroupScript === "function");
 if (!hasAllExports) {
   finish();
   process.exit();
@@ -214,6 +232,49 @@ if (Array.isArray(children)) {
     model: children[1].model,
   }, { agent: "ui-worker", model: options.strongModel });
 }
+
+equal(
+  "resolveFenceGroups defaults to one group of every task",
+  resolveFenceGroups({ tasks: validTasks }),
+  [{ id: "all", tasks: ["foundation", "api", "ui"] }],
+);
+equal(
+  "validateFenceGroups accepts omitted groups",
+  validateFenceGroups({ tasks: validTasks }),
+  [],
+);
+check(
+  "validateFenceGroups rejects a task listed twice",
+  validateFenceGroups({
+    tasks: validTasks,
+    fenceGroups: [
+      { id: "a", tasks: ["foundation", "api"] },
+      { id: "b", tasks: ["api", "ui"] },
+    ],
+  }).some((error) => error.includes("api")),
+);
+
+const dagTasks = [
+  { id: "T1", brief: adversarialBrief, class: "check", writes: ["src/t1.ts"], verify: "true" },
+  { id: "T2", brief: "second", deps: ["T1"], class: "contract", testPaths: ["t2.spec.ts"], writes: ["src/t2.ts"], verify: "true" },
+  { id: "T3", brief: "third", class: "check", ui: true, writes: ["src/t3.ts"], verify: "true" },
+];
+const groupScript = buildGroupScript(dagTasks, options);
+check("buildGroupScript returns a string", typeof groupScript === "string");
+check("buildGroupScript fans out with runs.all", groupScript.includes("runs.all("));
+check("buildGroupScript never uses runs.run", !groupScript.includes("runs.run("));
+check("buildGroupScript omits gate configuration", !groupScript.includes("gate:"));
+check("buildGroupScript omits non-portable async function helpers", !groupScript.includes("async function"));
+check("buildGroupScript joins T2 on T1", /p\["T2"\] = p\["T1"\]\.then/.test(groupScript));
+check("buildGroupScript launches independent T3 without waiting for T1", /p\["T3"\] = launch/.test(groupScript));
+let parsedGroup = true;
+try {
+  new Function(groupScript);
+} catch (error) {
+  parsedGroup = false;
+  console.error(`Group script syntax error: ${error.message}`);
+}
+check("buildGroupScript escapes adversarial task briefs into valid JavaScript", parsedGroup);
 
 finish();
 NODE

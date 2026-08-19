@@ -6,12 +6,12 @@ This document defines the full lifecycle for each workflow type. The orchestrato
 
 Agents should not accumulate large uncommitted work. Human-reviewed planning artifacts are
 committed at approval boundaries. Sequential implementation commits every completed task
-with its tests and `worklog.md` update; dynamic implementation commits each verified, reviewed
-wave checkpoint, and that commit is the resume point if a wave crashes.
+with its tests and `worklog.md` update; Parallel implementation commits each verified, reviewed
+fence-group checkpoint, and that commit is the resume point if a group crashes.
 
 ## Task Tracking and Backlog Capture
 
-Current-plan tasks live in `plan.md` and, depending on the pipeline, `worklog.md` (sequential) or `tasks.json` (dynamic). Work discovered during a plan that is useful but outside the current scope belongs in the repo backlog, not silently added to the current task list.
+Current-plan tasks live in `plan.md` and, depending on the pipeline, `worklog.md` (sequential) or `tasks.json` (Parallel). Work discovered during a plan that is useful but outside the current scope belongs in the repo backlog, not silently added to the current task list.
 
 Each repo defines its own backlog implementation, but it must document the hooks described in [Task Tracking](./references/task-tracking.md): where backlog items live, how to create them, how IDs are assigned, how to list `Up next` work, and how to reference created items from worklogs or reviews.
 
@@ -45,8 +45,8 @@ The standard workflow for implementing new capabilities, enhancements, refactors
 
 ```
 brief → research → approach → approach review
-                              ├─ sequential: plan → plan review → worklog → execute → code review
-                              └─ dynamic:    plan + tasks.json → plan review → [approval] → waves → fresh final review
+                              ├─ sequential (frozen): plan → plan review → worklog → execute → code review
+                              └─ parallel (Pi):       plan + tasks.json → plan review → [approval] → fence groups → fresh final review
 ```
 
 #### 1. Brief
@@ -267,40 +267,23 @@ This does NOT replace the final code review — it supplements it. The final rev
 
 ---
 
-#### 4B–8B. Dynamic Planning and Execution
+#### 4B–8B. Parallel Planning and Execution
 
-The dynamic workflow is a parallel pipeline after the reviewed approach, not a transformation
-of the sequential plan. Orchestration is code: readiness, retry, and escalation are JavaScript
-in a `workflowScript`, and the wave composition is computed at run time from the task graph
-and what has actually completed.
+Pi's post-approach path. Sequential TDD remains documented above as the frozen original.
+Team / Crew is abandoned.
+
+The scheduler, fence groups, planning rules, and verification classes live in
+[Parallel Approach](approaches/parallel.md). Do not restate them here.
 
 ```text
 plan.md + tasks.json → plan_review.md → [human approval]
-→ freeze interfaces → freeze contracts → wave loop → fresh final review
+→ freeze interfaces → freeze contracts → for each fence group: DAG script → host verify → commit
+→ fresh final review
 ```
 
-- `dynamic-create-plan` writes `plan.md` and `tasks.json` from the reviewed approach: a
-  dependency graph, a verification class per task, a declared write-set per task, and explicit
-  models. `node tools/check-plan.mjs <plan-dir>` is the gate; a plan that fails it does not run.
-- `dynamic-review-plan` runs that gate first, then spends its effort on what a machine cannot
-  check: whether each task's verification can actually fail, whether classes are honest, and
-  whether write-sets are declared truthfully.
-- The human approval gate is unchanged and not optional.
-- A strong child freezes the shared interface surface; a different agent than the implementers
-  authors the failing tests for `contract` tasks. Red is observed once, by the author, with
-  evidence, and the tests are frozen at a commit.
-- The parent then loops: compute the ready set, write the wave or DAG script into the plan
-  directory, run **one** `workflowScript` sourced from that file, run verification itself on
-  the host, review, fix, and commit a wave checkpoint. Persist-then-launch is what makes the
-  orchestration reviewable; an inline-only script is not a record. Verification is
-  never delegated to a child, because a child `gate:` validates acceptance evidence before it
-  consults the command result.
-- `dynamic-review-code` reviews each wave diff and may demand a break-it demonstration on a
-  specific test it suspects cannot fail. There is no routine self-administered break-it step.
-- A fresh-context strong reviewer performs the authoritative final review of the whole diff.
-
-See [Execution Patterns](execution-patterns.md) for the wave engine, runtime constraints, and
-the full definition of the verification classes.
+Skills: `dynamic-create-plan`, `dynamic-review-plan`, `dynamic-execute-plan`,
+`dynamic-review-code`. There is no separate DAG skill. Runtime sandbox limits are in
+[Execution Patterns](execution-patterns.md).
 
 ---
 

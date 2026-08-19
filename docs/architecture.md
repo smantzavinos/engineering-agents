@@ -18,8 +18,8 @@ This repository packages a reusable autonomous software-delivery process. It com
 ## Core Flows
 1. **Consume the repo**: import the flake module, enable the Pi/OpenCode modules, apply with Home Manager, then use the installed agents and skills.
 2. **Read the process**: start in `README.md`, then move into `docs/` for workflow, orchestration, setup, and references.
-3. **Change the repo safely**: after a reviewed approach, choose sequential planning or the
-   separate role-based team planning pipeline. For Pi-module changes, run
+3. **Change the repo safely**: after a reviewed approach, Pi uses the Parallel path
+   (`docs/approaches/parallel.md`). Sequential is frozen; team is abandoned. For Pi-module changes, run
    `scripts/pi-dev.sh --verify` against the current checkout before the active-install final gate
    through `tests/run-tests.sh`.
 

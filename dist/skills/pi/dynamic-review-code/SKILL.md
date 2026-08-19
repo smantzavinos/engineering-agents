@@ -1,19 +1,19 @@
 ---
 name: dynamic-review-code
-description: Post-implementation review of a dynamic-workflow diff against the plan. Checks that the work delivers what tasks.json specified, that tests genuinely constrain, and that frozen contracts were not edited. Produces code_review.md. Called per wave and again at the final gate.
+description: Post-implementation review of a Parallel-plan diff against the plan. Checks that the work delivers what tasks.json specified, that tests genuinely constrain, and that frozen contracts were not edited. Produces code_review.md. Called per fence group and again at the final gate.
 compatibility: pi
 disable-model-invocation: true
 ---
 
-# Dynamic: Review Code
+# Parallel: Review Code
 
 Review what was actually written against what the plan asked for.
 
 You are called in two situations, and they are different jobs:
 
-- **Per wave** — review this wave's diff with the plan in hand.
+- **Per fence group** — review this group's diff with the plan in hand.
 - **Final gate** — review the whole diff `BASE..HEAD` with fresh eyes. If you are the final
-  reviewer, you have not watched the waves, and that is the point: you are the check on
+  reviewer, you have not watched the groups, and that is the point: you are the check on
   everyone who convinced themselves along the way.
 
 ## Inputs
@@ -35,7 +35,7 @@ You are called in two situations, and they are different jobs:
 
 ### 1. Frozen contracts were not edited
 For every `contract` task, the files in `testPaths` must be unchanged since the contract
-commit. If a test was modified in the same wave that made it pass, that is **Critical**,
+commit. If a test was modified in the same fence group that made it pass, that is **Critical**,
 regardless of how reasonable the modification looks. The whole value of freezing is that this
 is not a judgement call.
 
@@ -80,7 +80,7 @@ by a reviewer, on a specific suspicion. It is never a routine self-administered 
 | **Minor** | Style, naming, or a non-blocking improvement. |
 
 Calibration:
-- A frozen test file modified by the implementing wave: **Critical**.
+- A frozen test file modified by the implementing fence group: **Critical**.
 - A `contract` task whose test cannot fail: **Critical** — it is worse than no test, because
   it reports success.
 - Behaviour changed with no corresponding test change: **Major**.

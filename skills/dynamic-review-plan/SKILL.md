@@ -1,13 +1,13 @@
 ---
 name: dynamic-review-plan
-description: Review a dynamic-workflow plan (plan.md + tasks.json) for correctness, execution readiness, and honest verification. Produces plan_review.md. Called iteratively until clean, before the human approval gate.
+description: Review a Parallel plan (plan.md + tasks.json) for correctness, honest verification, real dependency edges, and honest fence groups. Produces plan_review.md. Called iteratively until clean, before the human approval gate.
 harnesses: [pi]
 ---
 
-# Dynamic: Review Plan
+# Parallel: Review Plan
 
 Find the problems in a plan *before* anything executes. A bad task graph does not fail
-loudly — it produces a wave of confidently wrong work in parallel.
+loudly — it produces confidently wrong work in parallel.
 
 ## Inputs
 
@@ -34,8 +34,9 @@ review log is the audit trail.
 ## What the gate already covers
 
 Unique IDs, unknown dependencies, cycles, missing `brief`, `contract` tasks without
-`testPaths`, non-`none` tasks without `verify`, missing models, intra-wave write-set
-collisions, and `plan.md` ↔ `tasks.json` drift. **Do not spend review effort there.**
+`testPaths`, non-`none` tasks without `verify`, missing models, fence-group membership,
+intra-group write-set collisions, and `plan.md` ↔ `tasks.json` drift. **Do not spend
+review effort there.**
 
 ## Quality criteria
 
@@ -56,12 +57,15 @@ a change in the behaviour or artifact the task modifies, without someone editing
   finding about the plan, not the class.
 - Everything marked `none` — the plan is not executable.
 
-### Decomposition and parallelism
+### Decomposition, DAG edges, and fences
 - Write-sets are declared honestly. A task that will obviously touch a file it does not
   declare is a latent race the gate cannot see.
 - Globs are not widened to dodge collision detection.
-- Dependencies reflect real ordering, not convenience. A missing dependency is a race; a
-  spurious one serialises the plan for nothing.
+- Dependencies reflect real coupling, not story order. A missing edge is a race; a
+  spurious one serialises the DAG for nothing.
+- Fence groups cut where later work must not start on a lie. Extra groups that only
+  recreate ready-set waves are a finding. Missing groups before a wide fan-out that is
+  expensive to rewind are a finding.
 - Task size is plausible against the 30-minute default child timeout.
 - Total task count is plausible against the 64-spawn run ceiling (~16 tasks at four spawns
   each, including review and retries).
@@ -83,7 +87,7 @@ a change in the behaviour or artifact the task modifies, without someone editing
 Write `plan_review.md` with severity-ordered findings:
 
 - **Critical** — will produce wrong or unsafe work. Must be fixed before approval.
-- **Major** — will cause rework or a failed wave.
+- **Major** — will cause rework or a failed fence group.
 - **Minor** — worth fixing, not blocking.
 
 Each finding names the task ID, what is wrong, and what would make it right. End with an

@@ -9,4 +9,5 @@ Planning, execution, and verification are not.
 | Sequential | Frozen | Original TDD checklist. Installed on OpenCode only. Do not extend. |
 | Team / Crew | Abandoned | Do not use. Do not mention in new Pi process. |
 
-OpenCode trees stay on disk unchanged. New process work is Pi + Parallel only.
+Pi skills keep the historical `dynamic-*` names. They implement Parallel.
+`dynamic-execute-dag-plan` is removed. OpenCode trees stay on disk unchanged.

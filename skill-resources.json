@@ -1,6 +1,10 @@
 {
   "dynamic-create-plan": [
     {
+      "source": "docs/approaches/parallel.md",
+      "target": "docs/approaches/parallel.md"
+    },
+    {
       "source": "docs/execution-patterns.md",
       "target": "docs/execution-patterns.md"
     },
@@ -14,6 +18,10 @@
     }
   ],
   "dynamic-execute-plan": [
+    {
+      "source": "docs/approaches/parallel.md",
+      "target": "docs/approaches/parallel.md"
+    },
     {
       "source": "docs/execution-patterns.md",
       "target": "docs/execution-patterns.md"

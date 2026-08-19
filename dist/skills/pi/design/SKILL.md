@@ -208,5 +208,5 @@ You're done when:
 - The approach addresses all goals and constraints from the brief
 
 Tell the human:
-- For standard work: "The approach is ready. Write the plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan`."
+- For standard work: "The approach is ready. Write the Parallel plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan` (DAG per fence group)."
 - For epic work: "The epic approach and decomposition are ready. Start execution at the child-plan level: `/dynamic-create-plan` for a child plan, then `/dynamic-execute-plan`."

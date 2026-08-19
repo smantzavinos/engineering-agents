@@ -50,7 +50,7 @@ fi
 # Dynamic workflow resources are rendered from one canonical source into each
 # self-contained Pi skill tree.
 for skill in dynamic-create-plan dynamic-execute-plan; do
-  for resource in docs/execution-patterns.md tools/check-plan.mjs workflows/wave.mjs; do
+  for resource in docs/approaches/parallel.md docs/execution-patterns.md tools/check-plan.mjs workflows/wave.mjs; do
     if cmp -s "$REPO_ROOT/$resource" "$REPO_ROOT/dist/skills/pi/$skill/$resource"; then
       pass "$skill packages canonical $resource"
     else

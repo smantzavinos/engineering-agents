@@ -6,8 +6,9 @@
 **Related:** <brief.md, approach.md, findings/>
 
 The executable task graph lives in `tasks.json` beside this file, not in prose here.
-This document explains *why* and *what*; `tasks.json` defines *what runs*. Keep them
-consistent — the installed `dynamic-create-plan/tools/check-plan.mjs` gate enforces it.
+This document explains *why* and *what*; `tasks.json` defines *what runs*, including
+optional fence groups. The installed `dynamic-create-plan/tools/check-plan.mjs` gate
+enforces agreement.
 
 ---
 
@@ -67,7 +68,17 @@ there must appear here.
 | T1 | <task> | — | contract | `<command>` |
 | T2 | <task> | T1 | check | `<command>` |
 
-Verification classes are defined in [../docs/execution-patterns.md](../docs/execution-patterns.md).
+## Fence Groups
+
+Default: one implicit group (the whole graph). Name extra groups only where later
+work must wait for a host verify.
+
+| Group | Tasks | Why this cut |
+|-------|-------|--------------|
+| shared | T1–T4 | later collect must not start on an unverified tree |
+| collect | T5 | — |
+
+Verification classes are defined in [docs/approaches/parallel.md](../docs/approaches/parallel.md).
 Choose per task:
 
 - `contract` — new or changed observable behaviour; a failing test is authored first,
@@ -81,7 +92,7 @@ Choose per task:
 | Command | Scope | When | What it proves |
 |---------|-------|------|----------------|
 | `<fast command>` | touched files | during a task | the change works |
-| `<gate command>` | package-wide | at a wave boundary | no cross-module drift |
+| `<gate command>` | package-wide | at a fence | no cross-module drift |
 | `<final command>` | repo-wide | before completion | full repo integrity |
 
 **Baseline:** record what already fails before starting, so a pre-existing failure is
@@ -103,6 +114,6 @@ never mistaken for a regression.
 
 ---
 
-Execution progress is not tracked in this file. Wave checkpoint commits and `git log`
-are the durable record; deviations and follow-ups belong in the repo backlog with
-stable IDs.
+Execution progress is not tracked in this file. Fence-group checkpoint commits and
+`git log` are the durable record; deviations and follow-ups belong in the repo
+backlog with stable IDs.

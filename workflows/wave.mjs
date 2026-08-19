@@ -1,12 +1,11 @@
-// Wave engine for code-mode execution.
+// Parallel execution helpers.
 //
-// Pure, dependency-free helpers plus a builder that emits a `workflowScript`
-// body for one wave. The parent owns the loop: it computes the ready set,
-// invokes ONE workflowScript per wave, runs verification on the host, reviews,
-// and commits a checkpoint. See docs/execution-patterns.md for why the loop
-// cannot live inside a single script.
+// The scheduler is a DAG. The parent runs one generated workflowScript per
+// planned fence group, then host-verifies and commits. See
+// docs/approaches/parallel.md. readySet / buildWaveScript remain for older
+// tests; new execution uses resolveFenceGroups + buildGroupScript.
 //
-// Every rule encoded here was verified against the real runtime; see
+// Runtime constraints were verified in
 // docs/investigations/2026-08-18-code-mode-process/spike.md.
 
 /** Agent used for UI-facing work. */
@@ -133,4 +132,222 @@ export function buildWaveScript(tasks, opts = {}) {
   });
 
   return `return runs.all(${JSON.stringify(children, null, 2)});`;
+}
+
+/**
+ * Planned fence groups, or one implicit group of every task.
+ * @returns {Array<{id: string, tasks: string[]}>}
+ */
+export function resolveFenceGroups(doc) {
+  const tasks = Array.isArray(doc?.tasks) ? doc.tasks : [];
+  const ids = tasks
+    .filter((task) => task && typeof task.id === 'string' && task.id)
+    .map((task) => task.id);
+  if (!Array.isArray(doc?.fenceGroups) || doc.fenceGroups.length === 0) {
+    return [{ id: 'all', tasks: ids }];
+  }
+  return doc.fenceGroups.map((group, index) => ({
+    id: typeof group?.id === 'string' && group.id ? group.id : `group-${index}`,
+    tasks: Array.isArray(group?.tasks) ? group.tasks.slice() : [],
+  }));
+}
+
+/**
+ * Validate optional fenceGroups on a tasks.json document.
+ * @returns {string[]} error strings; empty means valid or omitted.
+ */
+export function validateFenceGroups(doc) {
+  const errors = [];
+  if (doc?.fenceGroups === undefined) return errors;
+  if (!Array.isArray(doc.fenceGroups) || doc.fenceGroups.length === 0) {
+    errors.push('fenceGroups must be a non-empty array when present');
+    return errors;
+  }
+
+  const known = new Set(
+    (Array.isArray(doc.tasks) ? doc.tasks : [])
+      .filter((task) => task && typeof task.id === 'string' && task.id)
+      .map((task) => task.id),
+  );
+  const seenGroup = new Set();
+  const seenTask = new Map();
+
+  doc.fenceGroups.forEach((group, index) => {
+    const label = group && typeof group.id === 'string' && group.id
+      ? `fence group "${group.id}"`
+      : `fence group at index ${index}`;
+    if (typeof group?.id !== 'string' || group.id === '') {
+      errors.push(`${label} is missing a string "id"`);
+    } else if (seenGroup.has(group.id)) {
+      errors.push(`duplicate fence group id "${group.id}"`);
+    } else {
+      seenGroup.add(group.id);
+    }
+    if (!Array.isArray(group?.tasks) || group.tasks.length === 0) {
+      errors.push(`${label} must list at least one task`);
+      return;
+    }
+    for (const id of group.tasks) {
+      if (typeof id !== 'string' || id === '') {
+        errors.push(`${label} contains a non-string task id`);
+        continue;
+      }
+      if (!known.has(id)) errors.push(`${label} references unknown task "${id}"`);
+      if (seenTask.has(id)) {
+        errors.push(`task "${id}" appears in fence groups "${seenTask.get(id)}" and "${group.id}"`);
+      } else {
+        seenTask.set(id, group?.id ?? label);
+      }
+    }
+  });
+
+  for (const id of known) {
+    if (!seenTask.has(id)) errors.push(`task "${id}" is not in any fence group`);
+  }
+
+  const groupIndex = new Map();
+  doc.fenceGroups.forEach((group, index) => {
+    for (const id of group?.tasks ?? []) groupIndex.set(id, index);
+  });
+  for (const task of Array.isArray(doc.tasks) ? doc.tasks : []) {
+    if (!task || typeof task.id !== 'string') continue;
+    const here = groupIndex.get(task.id);
+    if (here === undefined) continue;
+    for (const dep of task.deps ?? []) {
+      const there = groupIndex.get(dep);
+      if (there !== undefined && there > here) {
+        errors.push(
+          `task "${task.id}" in an earlier fence group depends on "${dep}" in a later group`,
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+function intraDeps(task, groupIds) {
+  return (task.deps ?? []).filter((dep) => groupIds.has(dep));
+}
+
+function topoTasks(tasks) {
+  const groupIds = new Set(tasks.map((task) => task.id));
+  const remaining = new Map(tasks.map((task) => [task.id, task]));
+  const ordered = [];
+  while (remaining.size > 0) {
+    const ready = [...remaining.values()].filter((task) =>
+      intraDeps(task, groupIds).every((dep) => !remaining.has(dep)),
+    );
+    if (ready.length === 0) {
+      ordered.push(...remaining.values());
+      break;
+    }
+    for (const task of ready) {
+      ordered.push(task);
+      remaining.delete(task.id);
+    }
+  }
+  return ordered;
+}
+
+function childSpec(task, cheapModel, strongModel) {
+  const spec = {
+    key: `impl-${task.id}`,
+    agent: task.ui ? UI_AGENT : DEFAULT_AGENT,
+    model: task.class === 'contract' ? strongModel : cheapModel,
+    task: task.brief,
+  };
+  if (Number.isInteger(task.timeoutMs) && task.timeoutMs > 0) {
+    spec.timeoutMs = task.timeoutMs;
+  }
+  return spec;
+}
+
+/**
+ * Build a DAG workflowScript for one fence group.
+ * Intra-group deps become promise joins; a task starts when those deps finish,
+ * not when the whole group is ready.
+ */
+export function buildGroupScript(tasks, opts = {}) {
+  const { cheapModel, strongModel, freezeCommit = '' } = opts;
+  if (typeof cheapModel !== 'string' || cheapModel === '') {
+    throw new Error('buildGroupScript requires opts.cheapModel');
+  }
+  if (typeof strongModel !== 'string' || strongModel === '') {
+    throw new Error('buildGroupScript requires opts.strongModel');
+  }
+  if (!Array.isArray(tasks) || tasks.length === 0) {
+    throw new Error('buildGroupScript requires a non-empty tasks array');
+  }
+
+  const payload = tasks.map((task) => ({
+    id: task.id,
+    brief: task.brief,
+    deps: intraDeps(task, new Set(tasks.map((item) => item.id))),
+    writes: task.writes ?? [],
+    class: task.class,
+    verify: task.verify,
+    testPaths: task.testPaths ?? [],
+    ui: !!task.ui,
+    timeoutMs: task.timeoutMs,
+    child: childSpec(task, cheapModel, strongModel),
+  }));
+
+  const ordered = topoTasks(tasks);
+  const lines = [
+    `const FREEZE = ${JSON.stringify(freezeCommit)};`,
+    `const TASKS = ${JSON.stringify(payload, null, 2)};`,
+    'const byId = {};',
+    'for (const t of TASKS) byId[t.id] = t;',
+    'function footer(t) {',
+    '  var lines = ["", "WRITE-SET (you may modify only these): " + JSON.stringify(t.writes)];',
+    '  if (t.verify) lines.push("After implementing, run exactly: " + t.verify);',
+    '  if (t.class === "contract" && t.testPaths.length && FREEZE) {',
+    '    lines.push("and: git diff --exit-code " + FREEZE + " -- " + t.testPaths.join(" "));',
+    '    lines.push("Do not edit frozen test files; report a mismatch instead.");',
+    '  }',
+    '  lines.push("Never run git commit or any state-changing git command.");',
+    '  return lines.join("\\n");',
+    '}',
+    'function child(t) {',
+    '  var spec = {};',
+    '  for (var key in t.child) spec[key] = t.child[key];',
+    '  spec.task = t.brief + footer(t);',
+    '  return spec;',
+    '}',
+    'function launch(t) { return runs.all([child(t)]); }',
+    'function ok(r) {',
+    '  if (Array.isArray(r)) return !!(r[0] && r[0].ok === true);',
+    '  if (r && r.results) {',
+    '    var keys = Object.keys(r.results);',
+    '    return keys.length > 0 && keys.every(function (k) { return r.results[k] && r.results[k].ok; });',
+    '  }',
+    '  return !!(r && r.ok === true);',
+    '}',
+    'var p = {};',
+  ];
+
+  const groupIds = new Set(tasks.map((task) => task.id));
+  for (const task of ordered) {
+    const deps = intraDeps(task, groupIds);
+    const launchCall = `launch(byId[${JSON.stringify(task.id)}])`;
+    if (deps.length === 0) {
+      lines.push(`p[${JSON.stringify(task.id)}] = ${launchCall};`);
+    } else if (deps.length === 1) {
+      lines.push(
+        `p[${JSON.stringify(task.id)}] = p[${JSON.stringify(deps[0])}].then(function (r) { return ok(r) ? ${launchCall} : r; });`,
+      );
+    } else {
+      const list = deps.map((dep) => `p[${JSON.stringify(dep)}]`).join(', ');
+      lines.push(
+        `p[${JSON.stringify(task.id)}] = Promise.all([${list}]).then(function (rs) { return rs.every(ok) ? ${launchCall} : rs.find(function (r) { return !ok(r); }); });`,
+      );
+    }
+  }
+
+  const all = ordered.map((task) => `p[${JSON.stringify(task.id)}]`).join(', ');
+  lines.push(`return Promise.all([${all}]).then(function (rs) {`);
+  lines.push('  return { ok: rs.every(ok), results: rs };');
+  lines.push('});');
+  return `${lines.join('\n')}\n`;
 }

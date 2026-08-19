@@ -292,7 +292,7 @@ When uncertain about the level, **start at Standard**. The brief and research st
   "level": "simple | standard | epic",
   "phase": "draft | researching | researched | designing | planning | reviewing | ready | executing | reviewing_code | complete | blocked",
   "status": "active | paused | complete | blocked",
-  "mode": "sequential | team"
+  "mode": "sequential | parallel"
 }
 ```
 
@@ -303,5 +303,5 @@ The extension uses this only for:
 
 All workflow intelligence lives in the skills and orchestrator, not in the extension.
 
-`mode` is optional for legacy/sequential state. Team planning reuses `planned`, `reviewed`,
+`mode` is optional for legacy/sequential state. Parallel planning reuses `planned`, `reviewed`,
 `ready`, `executing`, and `reviewing_code`; it does not introduce a second phase vocabulary.
