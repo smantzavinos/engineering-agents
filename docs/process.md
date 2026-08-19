@@ -289,8 +289,10 @@ plan.md + tasks.json → plan_review.md → [human approval]
 - A strong child freezes the shared interface surface; a different agent than the implementers
   authors the failing tests for `contract` tasks. Red is observed once, by the author, with
   evidence, and the tests are frozen at a commit.
-- The parent then loops: compute the ready set, run **one** `workflowScript` per wave, run
-  verification itself on the host, review, fix, and commit a wave checkpoint. Verification is
+- The parent then loops: compute the ready set, write the wave or DAG script into the plan
+  directory, run **one** `workflowScript` sourced from that file, run verification itself on
+  the host, review, fix, and commit a wave checkpoint. Persist-then-launch is what makes the
+  orchestration reviewable; an inline-only script is not a record. Verification is
   never delegated to a child, because a child `gate:` validates acceptance evidence before it
   consults the command result.
 - `dynamic-review-code` reviews each wave diff and may demand a break-it demonstration on a

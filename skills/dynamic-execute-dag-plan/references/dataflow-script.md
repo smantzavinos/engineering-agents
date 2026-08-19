@@ -80,6 +80,14 @@ return JSON.stringify(flat.map(({ key, ok, error }) => ({ key, ok, error: error 
    the runtime rejects scripts with floating promises.
 6. **Read-only children may use stronger tooling bounds**; writers never do.
 
+## Persist before launch
+
+Write this body to `<plan-dir>/dataflow.js` (raw JavaScript, no fence). Commit it.
+Stop and give the human that path unless they have already approved this file.
+Launch by reading the file and passing its contents as `workflowScript`. Do not
+keep a second hand-authored inline copy. Later rounds use `dataflow.retry-N.js`
+or `dataflow.resume.js`.
+
 ## After the script returns
 
 The parent (never a child) then runs, on the host:

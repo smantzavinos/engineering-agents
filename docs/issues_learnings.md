@@ -27,6 +27,17 @@ _No entries yet._
 
 ## Confirmed Learnings
 
+### Inline workflowScript is not a reviewable record
+- Date: 2026-08-19
+- Type: learning
+- Source: Atlas requirement-labels closeout DAG run; human asked where the script was stored
+- Summary: An attended `dynamic-execute-dag-plan` run inlined the DAG `workflowScript` only
+  on the `subagent` tool call. After the run, the script existed only inside the session
+  JSONL, so it could not be reviewed before launch or kept with the plan. Persist the exact
+  body as `<plan-dir>/dataflow.js` (or `waves/wave-NN.js`) and launch that file.
+- Follow-up: `docs/plan-directory-structure.md`, `docs/execution-patterns.md`,
+  `skills/dynamic-execute-dag-plan/SKILL.md`, `skills/dynamic-execute-plan/SKILL.md`
+
 ### Dogfood small plans before locking proportional packet gates
 - Date: 2026-07-31
 - Type: learning

@@ -54,12 +54,28 @@ parent: contract        — 1–2 strong children author failing tests
 parent: commit the red tests
 loop:
   parent: compute the ready set from the DAG
-  parent: ONE workflowScript invocation for that wave
+  parent: write the wave script under <plan-dir>/waves/ (or dataflow.js for a DAG run)
+  parent: ONE workflowScript invocation, sourced from that file
   parent: run verification on the host
   parent: review, then fix
   parent: commit the wave checkpoint
 parent: final gate + fresh strong full-diff review
 ```
+
+## Orchestration scripts are plan artifacts
+
+An inline `workflowScript` argument is not a record. Before every launch, the parent writes
+the exact script body into the plan directory and launches that file:
+
+| Engine | Path |
+|---|---|
+| Attended DAG (`dynamic-execute-dag-plan`) | `<plan-dir>/dataflow.js` |
+| Wave loop (`dynamic-execute-plan`) | `<plan-dir>/waves/wave-NN.js` |
+| DAG fix/resume rounds | `<plan-dir>/dataflow.retry-N.js` or `dataflow.resume.js` |
+
+Do not launch until that file exists. If the human has not approved this script, stop and
+give them the path. Do not invent a second inline copy that can drift from the file.
+See [Plan Directory Structure](plan-directory-structure.md) for the artifact list.
 
 ## The wave invocation
 

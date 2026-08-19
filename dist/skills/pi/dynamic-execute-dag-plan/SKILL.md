@@ -110,15 +110,25 @@ subagent({
   skill: "dynamic-create-plan"
 })
 
-### Phase 2 — Dataflow execution
+### Phase 2 — Persist, then execute
 
-One `workflowScript`. The DAG is expressed as promise chains: a task's children
-launch in its `.then()` only when it resolved `ok`; joins are `Promise.all` over
-the branches that feed them. There is no `readySet`, no `maxWidth`, no barrier —
-readiness is structural. Sandbox constraints apply (no imports, no nested async
-function declarations or async arrows — use plain helpers and Promise chains;
-embed task data with exact `JSON.stringify`; `runs.all` only). A full skeleton
-with the failure-propagation pattern is in [references/dataflow-script.md](references/dataflow-script.md).
+Write the DAG as one `workflowScript` body to **`<plan-dir>/dataflow.js`** before
+any launch. The file is the record; the tool argument is a copy of that file.
+
+1. Author the script from [references/dataflow-script.md](references/dataflow-script.md):
+   promise chains, no `readySet`, no `maxWidth`, no barrier. Sandbox constraints
+   apply (no imports, no nested async function declarations or async arrows —
+   use plain helpers and Promise chains; embed task data with exact
+   `JSON.stringify`; `runs.all` only). The file is raw JavaScript, no markdown fence.
+2. Commit `<plan-dir>/dataflow.js` as an orchestration record, separate from the
+   contract freeze.
+3. Tell the human the path. **Do not launch until they approve this script.**
+   Approving the plan is not approval of the script.
+4. Launch by reading `dataflow.js` and passing its contents as `workflowScript`.
+   Do not hand-author a second inline copy.
+5. Fix or resume rounds write `<plan-dir>/dataflow.retry-N.js` or
+   `dataflow.resume.js`. Do not silently overwrite an approved `dataflow.js`.
+   Announce the new path and wait unless that file was already approved.
 
 Every child brief carries, verbatim from `tasks.json`:
 

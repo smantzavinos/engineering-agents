@@ -96,8 +96,10 @@ node -e '
 
 `MAX_WIDTH` is `1` for a pipeline and the plan's declared width for a wave swarm.
 
-**2. Build and run the wave.** Generate the script with `buildWaveScript`, then pass it as
-`workflowScript` in a single `subagent` call. Every child carries an explicit `model`.
+**2. Persist, then run the wave.** Generate the script with `buildWaveScript`, write it to
+`<plan-dir>/waves/wave-NN.js` (raw JavaScript, 01-based, no markdown fence), then pass **that
+file's contents** as `workflowScript` in a single `subagent` call. Do not launch a script that
+exists only as an inline argument. Every child carries an explicit `model`.
 
 **3. Verify on the host.** You run this, not a child.
 
