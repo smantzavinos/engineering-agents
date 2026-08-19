@@ -76,7 +76,10 @@ the behaviour or artifact the task modifies, without someone editing the test?*
 
 ## Write-sets and parallelism
 
-Each task declares `writes`: the paths or globs it may modify.
+Each task declares `writes`: repository-relative POSIX paths in the limited dialect documented
+in [references/tasks-schema.md](references/tasks-schema.md). `*` is the only wildcard and must
+occupy a whole path segment. Do not use `**`, `?`, character classes, braces, or partial-segment
+patterns.
 
 Two tasks can be scheduled in the same wave unless one transitively depends on the other. If
 two such tasks declare overlapping writes, they will race in the shared tree. `check-plan.mjs`
@@ -117,6 +120,6 @@ plan directory tracks state, set `state.json` to `{ "phase": "planned", "status"
 - Do not implement anything or modify source files.
 - Do not invent verification commands without a canonical source.
 - Do not leave placeholder tokens (`<...>`) in the final artifacts.
-- Do not add unrelated follow-up work to the task graph; put it in the backlog with a stable
-  ID.
+- Do not add unrelated follow-up work to the task graph. Use the repo's documented follow-up
+  mechanism and ID scheme; if none is documented, ask rather than inventing one.
 - Do not use this skill for greenfield repo planning.

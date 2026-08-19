@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Plan gate: validate <plan-dir>/tasks.json and its agreement with plan.md.
 //
-//   node tools/check-plan.mjs <plan-dir> [--json]
+//   node check-plan.mjs <plan-dir> [--json]
 //
 // Exit 0 when the plan is executable, 1 when it is not. Rules are documented in
 // the dynamic-create-plan skill's references/tasks-schema.md. Graph validation is
@@ -9,31 +9,46 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { validateGraph } from '../workflows/wave.mjs';
 
 const VALID_CLASSES = ['contract', 'characterization', 'check', 'none'];
 const SCHEMA_VERSION = 1;
 
-/** Expand a declared write path into a matcher. Globs are supported loosely. */
-function toMatcher(spec) {
-  const normalized = String(spec).replace(/^\.\//, '').replace(/\/+$/, '');
-  const source = normalized
-    .split('*')
-    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('[^/]*');
-  return { normalized, re: new RegExp(`^${source}$`) };
+/** Parse the deliberately small write-set glob dialect. */
+function parseWriteSpec(spec) {
+  if (typeof spec !== 'string' || spec.trim() === '') {
+    return { error: 'must be a non-empty repository-relative path' };
+  }
+  const normalized = spec.replace(/^\.\//, '').replace(/\/+$/, '');
+  if (path.posix.isAbsolute(normalized) || normalized.includes('\\')) {
+    return { error: 'must be a repository-relative POSIX path' };
+  }
+  const parts = normalized.split('/');
+  if (parts.some((part) => part === '' || part === '.' || part === '..')) {
+    return { error: 'must stay within the repository as a repository-relative path' };
+  }
+  if (parts.some((part) => part.includes('*') && part !== '*')) {
+    return { error: 'supports wildcard * only as a whole path segment; ** and partial-segment globs are unsupported' };
+  }
+  if (/[?\[\]{}]/.test(normalized)) {
+    return { error: 'supports only the whole path segment wildcard *; ?, [], and {} are unsupported' };
+  }
+  return { normalized, parts };
 }
 
-/** Two write specs conflict if either matches the other, or one contains the other. */
+/** Two write specs conflict when their paths or possible descendant paths overlap. */
 function writesCollide(a, b) {
-  const ma = toMatcher(a);
-  const mb = toMatcher(b);
-  if (ma.normalized === mb.normalized) return true;
-  if (ma.re.test(mb.normalized) || mb.re.test(ma.normalized)) return true;
-  return (
-    mb.normalized.startsWith(`${ma.normalized}/`) ||
-    ma.normalized.startsWith(`${mb.normalized}/`)
-  );
+  const pa = parseWriteSpec(a);
+  const pb = parseWriteSpec(b);
+  if (pa.error || pb.error) return false;
+  const sharedLength = Math.min(pa.parts.length, pb.parts.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const sa = pa.parts[index];
+    const sb = pb.parts[index];
+    if (sa !== sb && sa !== '*' && sb !== '*') return false;
+  }
+  return true;
 }
 
 /** Map every task to the set of tasks it transitively depends on. */
@@ -59,12 +74,15 @@ function ancestorMap(tasks) {
 /** Task IDs referenced by the plan's Task Overview table. */
 function planTaskIds(markdown) {
   const ids = new Set();
-  for (const line of markdown.split('\n')) {
-    const m = line.match(/^\s*\|\s*([A-Za-z][A-Za-z0-9_-]*)\s*\|/);
-    if (!m) continue;
-    const id = m[1];
-    if (id === 'ID' || /^-+$/.test(id)) continue;
-    ids.add(id);
+  const lines = markdown.split('\n');
+  const heading = lines.findIndex((line) => /^##\s+Task Overview\s*#*\s*$/i.test(line));
+  if (heading === -1) return ids;
+
+  for (const line of lines.slice(heading + 1)) {
+    if (/^#{1,2}\s+/.test(line)) break;
+    const match = line.match(/^\s*\|\s*([A-Za-z][A-Za-z0-9_-]*)\s*\|/);
+    if (!match || match[1] === 'ID') continue;
+    ids.add(match[1]);
   }
   return ids;
 }
@@ -133,6 +151,11 @@ export function checkPlan(planDir) {
     }
     if (t.writes !== undefined && !Array.isArray(t.writes)) {
       push(`task "${id}" writes must be an array of paths`);
+    } else {
+      for (const spec of t.writes ?? []) {
+        const parsed = parseWriteSpec(spec);
+        if (parsed.error) push(`task "${id}" write spec ${JSON.stringify(spec)} ${parsed.error}`);
+      }
     }
   }
 
@@ -170,8 +193,15 @@ export function checkPlan(planDir) {
   return errors;
 }
 
-const invokedDirectly = process.argv[1] &&
-  path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname);
+let invokedDirectly = false;
+if (process.argv[1]) {
+  try {
+    invokedDirectly = fs.realpathSync(path.resolve(process.argv[1])) ===
+      fs.realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    invokedDirectly = false;
+  }
+}
 
 if (invokedDirectly) {
   const args = process.argv.slice(2);

@@ -1,8 +1,8 @@
 # Execution Patterns (Dynamic Workflow)
 
-How implementation work is executed in this repo. Orchestration is **code**, not prose
-instructions an agent must obey: scheduling, readiness, retry, and escalation are ordinary
-JavaScript in a `workflowScript`, run through the `subagent` tool.
+How implementation work is executed by the installed dynamic-workflow skills. Orchestration
+is **code**, not prose instructions an agent must obey: scheduling, readiness, retry, and
+escalation are ordinary JavaScript in a `workflowScript`, run through the `subagent` tool.
 
 The workflow is **dynamic**: the composition of each wave is computed at run time from the
 task graph and what has actually completed, rather than following a fixed pipeline decided in
@@ -19,13 +19,13 @@ skills carry a `dynamic-` prefix:
 "Code mode" is the underlying mechanism (`workflowScript`); "dynamic workflow" is what this
 repo calls the process built on it. Both pipelines are supported; they do not share files.
 
-This replaces the retired team mode (`pi-messenger` Crew). See
-`docs/investigations/2026-08-18-code-mode-process/` for the review, the proposal, and the
-runtime spike that produced these rules.
+This replaces the retired team mode (`pi-messenger` Crew). Its design investigation remains
+in the engineering-agents source repository; it is provenance, not a target-repository input.
 
 ## The one engine
 
-There is a single wave engine. Patterns are configurations of it, not separate code paths:
+There is a single wave engine. It is packaged alongside each dynamic skill and is not expected
+in the target repository. Patterns are configurations of it, not separate code paths:
 
 | Pattern | Configuration | Use when |
 |---|---|---|
@@ -130,8 +130,9 @@ default policy is to reset to the last checkpoint, since the wave re-runs in ful
 
 ## Verification classes
 
-Tasks declare a verification class instead of a uniform TDD checklist. See
-`docs/testing-strategy.md` for the repo's commands and gate roles.
+Tasks declare a verification class instead of a uniform TDD checklist. Read the target
+repository's `AGENTS.md` routes to find its actual verification commands and gate roles; do not
+assume a particular documentation path.
 
 | Class | When | Implementer does | Verification |
 |---|---|---|---|
@@ -158,8 +159,14 @@ Rules:
    `git diff --exit-code <contract-commit> -- <test-paths> && <command>`.
 5. **`none` is a legitimate answer** and must be chosen explicitly, not defaulted into.
 
-## Related
+## Target-repository integration
 
-- `docs/testing-strategy.md` — the repo's commands, gate roles, and levels.
-- `docs/process.md` — where execution sits in the overall lifecycle.
-- `plans/README.md` — plan and task-graph artifact expectations.
+Use the target repository's `AGENTS.md` routes for verification commands, plan locations,
+requirements, and follow-up tracking. Those policies override examples or conventions from the
+engineering-agents source repository.
+
+## Framework source references
+
+The engineering-agents source checkout contains `docs/testing-strategy.md`, `docs/process.md`,
+`plans/README.md`, and the design investigation. These explain and verify the framework itself;
+they do not need to exist in a target repository.

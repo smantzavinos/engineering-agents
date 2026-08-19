@@ -59,6 +59,17 @@ for skill in dynamic-create-plan dynamic-execute-plan; do
   done
 done
 
+if grep -Fq 'canonical docs `AGENTS.md` points to' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
+  && grep -Fq "repo's documented follow-up mechanism" \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
+  && grep -Fq 'do not need to exist in a target repository' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md"; then
+  pass "dynamic workflow resources defer target paths and policies to AGENTS.md"
+else
+  fail "dynamic workflow resources leak framework paths or follow-up policy into target repos"
+fi
+
 # Canonical sources must NOT hardcode compatibility in their frontmatter block
 # (the renderer injects it per harness). Body documentation may still mention it.
 if node -e '

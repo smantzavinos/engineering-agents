@@ -41,13 +41,24 @@ The checker is an installed skill resource; do not add it to the target reposito
 | `title` | yes | Short label, used in the plan's Task Overview. |
 | `brief` | yes | The actual prompt. Carries **paths, never file contents** — the implementer reads files itself. |
 | `deps` | yes | IDs that must complete first. `[]` for wave-1 tasks. |
-| `writes` | yes | The task's write-set. Paths or globs. |
+| `writes` | yes | The task's write-set, using the limited path dialect below. |
 | `class` | yes | `contract` \| `characterization` \| `check` \| `none`. |
 | `verify` | unless `class: none` | The command that proves this task is done. |
 | `testPaths` | when `class: contract` | The frozen test files. Verification asserts they are unchanged from the contract commit. |
 | `ui` | no | `true` routes to `ui-worker`. |
 | `timeoutMs` | no | Overrides the 30-minute per-child default. |
 | `requirements` | no | Requirement IDs this task satisfies. |
+
+## Write-set path dialect
+
+Write specs are repository-relative POSIX paths. A literal path owns that path and its
+descendants. The only wildcard is `*`; it must occupy a whole path segment and matches any one
+segment. A matched path also owns its descendants, so `src/components/*` overlaps
+`src/components/menu/item.ts`. The checker rejects absolute paths, parent traversal, `**`,
+partial-segment patterns such as `*.ts`, `?`, character classes, and brace expansion.
+
+Use a literal directory when a task owns an entire subtree. Prefer explicit paths over broad
+wildcards.
 
 ## Rules the checker enforces
 

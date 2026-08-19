@@ -15,7 +15,7 @@ export PLAN_CHECK_REPO_ROOT="$REPO_ROOT"
 export PLAN_CHECK_TMP_DIR="$TMP_DIR"
 
 node --input-type=module <<'NODE'
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -170,7 +170,32 @@ for (const skill of ["dynamic-create-plan", "dynamic-execute-plan"]) {
     result.status === 0 && parsed.value?.ok === true,
     parsed.error ?? `status ${result.status}; stderr ${result.stderr}`,
   );
+
+  const symlinkedChecker = join(tempDir, `${skill}-check-plan.mjs`);
+  symlinkSync(packagedChecker, symlinkedChecker);
+  const symlinkedResult = spawnSync(process.execPath, [symlinkedChecker, "--json", validDirectory], {
+    cwd: tempDir,
+    encoding: "utf8",
+  });
+  const symlinkedParsed = parsePayload(symlinkedResult);
+  check(
+    `${skill} checker validates when invoked through a symlink`,
+    symlinkedResult.status === 0 && symlinkedParsed.value?.ok === true,
+    symlinkedParsed.error ?? `status ${symlinkedResult.status}; stderr ${symlinkedResult.stderr}`,
+  );
 }
+
+const templateTablesDirectory = fixture("template-tables", {
+  planIds: ["T1"],
+  planContents: `${plan(["T1"])}\n## Open Questions\n\n| Question | Owner | Due | Status |\n|----------|-------|-----|--------|\n| None | — | — | closed |\n\n## Risks\n\n| Risk | Likelihood | Impact | Mitigation |\n|------|------------|--------|------------|\n| None | low | low | none |\n\n## Decisions\n\n| Decision | Chosen | Rationale | Revisit If |\n|----------|--------|-----------|------------|\n| Mode | dynamic | safe | never |\n\n## Verification Plan\n\n| Command | Scope | When | What it proves |\n|---------|-------|------|----------------|\n| npm test | repo | final | integrity |\n`,
+  data: data([task("T1")]),
+});
+const templateTables = run(templateTablesDirectory);
+check(
+  "official plan-template tables are not parsed as task IDs",
+  templateTables.status === 0,
+  `status ${templateTables.status}; stderr ${templateTables.stderr}`,
+);
 
 expectInvalid("duplicate task id", fixture("duplicate-id", {
   planIds: ["duplicate"],
@@ -212,6 +237,13 @@ expectInvalid("same-wave write collision", fixture("same-wave-collision", {
     task("writer-b", { writes: ["src/a.ts"] }),
   ]),
 }), ["src/a.ts"]);
+expectInvalid("whole-segment glob overlaps a nested descendant", fixture("glob-descendant-collision", {
+  planIds: ["glob-writer", "nested-writer"],
+  data: data([
+    task("glob-writer", { writes: ["src/components/*"] }),
+    task("nested-writer", { writes: ["src/components/menu/item.ts"] }),
+  ]),
+}), ["src/components"]);
 const sequentialWriteDirectory = fixture("different-wave-same-write", {
   planIds: ["writer-a", "writer-b"],
   data: data([
@@ -249,6 +281,17 @@ expectInvalid("empty strong model", fixture("empty-strong-model", {
   planIds: ["model-task"],
   data: data([task("model-task")], { models: { cheap: "cheap-model", strong: "" } }),
 }), ["strong"]);
+
+for (const [name, writes, identifier] of [
+  ["recursive-glob", ["src/**"], "whole path segment"],
+  ["partial-segment-glob", ["src/file*.ts"], "whole path segment"],
+  ["parent-write-path", ["../outside"], "repository-relative"],
+]) {
+  expectInvalid(`unsupported write-set ${name}`, fixture(`writes-${name}`, {
+    planIds: [name],
+    data: data([task(name, { writes })]),
+  }), [identifier]);
+}
 
 expectInvalid("invalid class", fixture("invalid-class", {
   planIds: ["invalid-class"],

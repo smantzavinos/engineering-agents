@@ -19,7 +19,8 @@ If any are missing, stop and report an installation error; do not recreate them 
 ## Inputs
 
 - A plan directory containing `plan.md` and `tasks.json`.
-- The repo's verification commands (`docs/testing-strategy.md`).
+- The repo's verification commands, from the canonical docs `AGENTS.md` points to. Paths vary
+  by repository; do not assume a particular testing-document location.
 - Confirmation that the human approved the plan. If unclear, **stop and ask**.
 
 ## Preconditions
@@ -155,5 +156,6 @@ Review the complete diff BASE..HEAD against PLAN_DIR/plan.md. You have not seen 
 - **Stop for the human** on: a `spawn-budget` failure, a second failure of the same task, any
   destructive or irreversible operation, or a discovery that contradicts the plan's premise.
 - **Do not edit the plan to match the implementation.** If they disagree, that is a finding.
-- Non-critical follow-ups go to `docs/backlog.md` with a `TASK-XXXX` ID. Critical discoveries
-  are raised immediately, never deferred into the backlog.
+- Record non-critical follow-ups through the repo's documented follow-up mechanism and ID
+  scheme. If none is documented, ask before creating one. Raise critical discoveries
+  immediately; never defer them into a tracker.
