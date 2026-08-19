@@ -45,7 +45,8 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 
 ## Planning Artifacts
 - `plans/README.md` — repo-specific planning guidance, canonical verification sources, and plan/worklog constraints for this repo.
-- `docs/execution-patterns.md` — the dynamic workflow: wave engine, parent-driven verification loop, and per-task verification classes. Pi uses the `dynamic-*` skills; OpenCode keeps the sequential pipeline.
+- `docs/approaches/parallel.md` — intended Pi execution approach: DAG scheduler, planned fence groups, planning rules. Installed `dynamic-*` skills still implement the older wave/DAG split.
+- `docs/execution-patterns.md` — current installed dynamic runners (wave engine and parent-driven loop). Superseded as direction by the Parallel approach note; keep until the skills fold.
 - Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
 
 ## Operational Memory

@@ -27,6 +27,17 @@ _No entries yet._
 
 ## Confirmed Learnings
 
+### Parallel is one approach: DAG plus planned fences
+- Date: 2026-08-19
+- Type: learning
+- Source: process clarification after the requirement-labels closeout DAG run
+- Summary: Waves and “attended DAG” are not separate lanes. The scheduler is always a DAG.
+  A fence is a planned verify+commit cut. Default is one fence at the end. Ready-set waves
+  and “human is watching” are the wrong axes. Sequential is frozen; team is abandoned; Pi
+  develops only Parallel. See `docs/approaches/parallel.md`.
+- Follow-up: fold `dynamic-execute-plan` / `dynamic-execute-dag-plan` into one executor;
+  put `fenceGroups` on `tasks.json`
+
 ### Inline workflowScript is not a reviewable record
 - Date: 2026-08-19
 - Type: learning
