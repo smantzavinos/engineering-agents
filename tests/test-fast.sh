@@ -78,23 +78,26 @@ bash "$ASSERT_SCRIPT" --fixture "$FIXTURE_PATH" --snapshot "$SNAPSHOT_PATH"
 # ── Behavioral load smoke ─────────────────────────────────────────────
 # The FS snapshot proves facades/provenance/resources are well-formed; this
 # proves pi actually LOADS them. Pi hard-fails startup when any extension
-# fails to load, so `pi doctor` exit 0 means every configured facade loaded.
-# Output content is version-dependent prose — assert the exit code only.
-DOCTOR_STATUS=0
-if [[ -n "${PI_DOCTOR_COMMAND:-}" ]]; then
-  # Test seam: specs stub the doctor invocation (same pattern as
+# fails to load, so `pi list` exit 0 means every configured facade loaded.
+# `pi list` is non-interactive and makes no model call — do NOT use a bare
+# `pi <word>` here: unknown words are parsed as a PROMPT and burn an LLM turn
+# while exiting 0 (false green).
+# Output content is version-dependent — assert the exit code only.
+LOAD_SMOKE_STATUS=0
+if [[ -n "${PI_LOAD_SMOKE_COMMAND:-}" ]]; then
+  # Test seam: specs stub the load-smoke invocation (same pattern as
   # PI_SNAPSHOT_SCRIPT_PATH / PI_ASSERT_CONTRACT_SCRIPT_PATH).
-  PI_OFFLINE=1 bash -c "${PI_DOCTOR_COMMAND}" >/dev/null 2>&1 || DOCTOR_STATUS=$?
+  PI_OFFLINE=1 bash -c "${PI_LOAD_SMOKE_COMMAND}" >/dev/null 2>&1 || LOAD_SMOKE_STATUS=$?
 else
   PI_BIN="$(command -v pi 2>/dev/null || true)"
   if [[ -z "$PI_BIN" ]]; then
     fail_environment "pi is not on PATH; the live proof-set requires an activated Pi installation"
   fi
-  PI_OFFLINE=1 "$PI_BIN" doctor >/dev/null 2>&1 || DOCTOR_STATUS=$?
+  PI_OFFLINE=1 "$PI_BIN" list >/dev/null 2>&1 || LOAD_SMOKE_STATUS=$?
 fi
-if [[ "$DOCTOR_STATUS" -ne 0 ]]; then
-  fail_contract "pi doctor exited $DOCTOR_STATUS — an extension or agent resource failed to load; run: pi doctor"
+if [[ "$LOAD_SMOKE_STATUS" -ne 0 ]]; then
+  fail_contract "pi list exited $LOAD_SMOKE_STATUS — an extension or agent resource failed to load; run: pi list"
 fi
-printf 'Pi behavioral load smoke ok (pi doctor)\n'
+printf 'Pi behavioral load smoke ok (pi list)\n'
 
 printf 'Pi read-only verification ok\n'

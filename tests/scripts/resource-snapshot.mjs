@@ -7,8 +7,8 @@
 // bundle (libexec/pi) with no importable module entrypoint, so loader-based
 // enumeration stopped working when the llmAgents pin moved past 0.80.7.
 // Behavioral load verification (extensions actually parse/import) lives in
-// the runner's `pi doctor` smoke: pi hard-fails startup when any extension
-// fails to load, so doctor exit 0 proves every facade loads.
+// the runner's `pi list` load smoke: pi hard-fails startup when any extension
+// fails to load, so `pi list` exit 0 proves every facade loads.
 //
 // Snapshot shape is schemaVersion 2 (unchanged from the loader-based
 // generator) so tests/scripts/assert-contract.sh and the static spec
@@ -689,7 +689,7 @@ async function main() {
       cli: {
         list: { status: 'not-run' },
         help: { status: 'not-run' },
-        doctor: { status: 'runner-responsibility' },
+        loadSmoke: { status: 'runner-responsibility' },
       },
     },
     warnings: buildWarnings({

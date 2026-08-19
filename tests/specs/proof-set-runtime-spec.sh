@@ -507,7 +507,7 @@ EOF
   if HOME="$home_dir" \
     PI_SNAPSHOT_SCRIPT_PATH="$snapshot_stub" \
     PI_ASSERT_CONTRACT_SCRIPT_PATH="$assert_stub" \
-    PI_DOCTOR_COMMAND="true" \
+    PI_LOAD_SMOKE_COMMAND="true" \
     bash "$REPO_ROOT/tests/test-fast.sh" >"$stdout_path" 2>"$stderr_path"; then
     status=0
   else

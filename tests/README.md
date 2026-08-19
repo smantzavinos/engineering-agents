@@ -9,8 +9,8 @@ Use this README for the current suite inventory, file layout, and adaptation not
 |------|------|----------|--------|
 | **Repo-local specs** | File structure, readiness docs, frontmatter, skill/agent refs, compiler, presets | `bash`, `jq`, `node` | `tests/run-tests.sh fast` |
 | **Flake eval** | Nix module evaluation, package builds | `nix` | `tests/run-tests.sh all` |
-| **Sandboxed Pi proof-set** | Current-checkout activation, facade/provenance snapshot, and behavioral `pi doctor` load smoke in `.pi-dev` | `nix`; network on first install | `scripts/pi-dev.sh --verify` |
-| **Pi proof-set** | Live facade/provenance snapshot plus behavioral load smoke (`pi doctor`) | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
+| **Sandboxed Pi proof-set** | Current-checkout activation, facade/provenance snapshot, and behavioral `pi list` load smoke in `.pi-dev` | `nix`; network on first install | `scripts/pi-dev.sh --verify` |
+| **Pi proof-set** | Live facade/provenance snapshot plus behavioral load smoke (`pi list`) | Pi installed, `home-manager switch` run | `tests/run-tests.sh all` |
 | **CLI smoke** | `pi --help`, `pi list` output | Pi installed | `tests/run-tests.sh full` |
 
 ## Quick Commands
