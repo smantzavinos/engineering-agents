@@ -104,6 +104,34 @@ the same group so the DAG can start a dependent as soon as *its* deps finish.
 Do not place a fence after every currently-ready independent task. That is the
 old wave engine.
 
+**What a fence verify includes is a per-plan decision.** The union of the
+group's task verifies plus frozen diffs, a scoped suite, or the full suite —
+there is deliberately no universal default. Record the choice in `plan.md`'s
+Verification Plan so the executor and the reviewer know what each fence proved.
+
+**Shared-spec partitioning**
+
+One frozen spec file can back several concurrent tasks when it is partitioned
+by selectors the tasks verify against independently — per-task describe titles
+grepped by scope. The scopes must obey a **no-cross-substring rule** (no test
+title inside one task's scope may contain another task's grep string), and the
+titles are pinned in `interfaces.md`. Partition selectors, not files, whenever
+the alternative is duplicating a contract across specs.
+
+**Anti-patterns** — recognize these in a draft plan:
+
+- A shared component bundled into its first consumer's integration task —
+  serializes every other consumer on work that has nothing to do with them.
+- A trailing "polish" task that re-touches all the surface files after
+  parallel surface tasks — give each surface task complete ownership instead.
+- Dependency edges between tasks whose write-sets are disjoint — they serialize
+  nothing but the clock.
+- Edges added only to dodge a checker collision the dialect cannot express —
+  use the scheduling-only escape and label it, so it is not mistaken for
+  coupling.
+- Story-order fences. A fence that exists because "these tasks feel like they
+  go together" recreates the wave engine.
+
 ## Quality rules
 
 - Tasks name concrete files, behaviours, and commands.

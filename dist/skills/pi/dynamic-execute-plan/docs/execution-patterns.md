@@ -58,6 +58,7 @@ hand-author a second inline copy. Do not compute ready-set waves or `maxWidth`.
 |---|---|---|
 | `Acceptance rejected:` | paperwork | inspect the diff before retrying |
 | `Unknown subagent model` | configuration | fix routing; do not retry |
+| `429`, `usage limit`, or `rate limit` | provider quota exhaustion | reroute to a different provider or wait for the reset; never retry the same provider; this does not consume the one strong retry |
 | `Run fan-out: N/64` near the cap | spawn ceiling | stop and escalate |
 | anything else | real failure | retry the failed branch once, then escalate |
 
@@ -70,9 +71,41 @@ hand-author a second inline copy. Do not compute ready-set waves or `maxWidth`.
 
 ## Resume
 
-The **fence-group checkpoint commit** is the resume point. Before relaunching a
-group, check `git status`. Default: reset to the last checkpoint and re-run the
-group.
+The **fence-group checkpoint commit** is the resume point — but a crashed group
+usually leaves intact, partially verified work in the tree, and that work is
+not waste. Resume from the tree, not from the checkpoint, by default:
+
+1. Check `git status` — a crashed run leaves aborted children's edits on disk.
+2. Re-derive done-ness from the tree: run each task's verify command and the
+   frozen-test diff. A task whose verify passes is done; nobody needs to
+   remember what happened.
+3. Regenerate the group script for **only the incomplete subgraph** and relaunch.
+4. Only if the tree is irreconcilable — conflicting partial edits, corrupted
+   state — reset to the last checkpoint and re-run the group. A hard reset is
+   destructive: it requires human approval, and some target repositories
+   forbid it outright.
+
+## Fixed resources
+
+Verify commands that bind fixed resources (a local test backend on a fixed
+port, a single-server harness) cannot run concurrently — not for tasks in the
+same group, and not for contract authors red-running specs in parallel. Read
+verify commands at plan time for port/server binds. When two tasks bind the
+same fixed resource, stagger them (via a scheduling-only dependency or a
+fence), or run those verifies on the host at the fence instead of in the
+child. Tell the human when parallelism is limited this way, and name the
+concrete remediation (for example: configuring Playwright for dynamic ports
+would let these verifies run concurrently) so improving it is a backlog
+choice, not a mystery.
+
+## Scoped green is not full green
+
+Per-task scoped verifies systematically miss cross-test interference. A
+failure that reproduces in full-suite runs but not in scoped runs is a
+locator or resource collision between tests **until proven otherwise** — not
+flake. Diagnose with strict-mode element counts (a locator resolving to two
+elements is a collision, not timing), fix with exact-name targeting, and
+confirm by re-running the full suite.
 
 ## Target-repository integration
 

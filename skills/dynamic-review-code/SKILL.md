@@ -80,6 +80,10 @@ by a reviewer, on a specific suspicion. It is never a routine self-administered 
 
 Calibration:
 - A frozen test file modified by the implementing fence group: **Critical**.
+- A frozen test file modified by a **parent-applied repair**: not automatically a
+  finding — verify it against the worklog's recorded repair (assertion-neutral,
+  disclosed, rationale given) by reading the diff yourself; an unrecorded or
+  assertion-weakening frozen-file edit: **Critical**.
 - A `contract` task whose test cannot fail: **Critical** — it is worse than no test, because
   it reports success.
 - Behaviour changed with no corresponding test change: **Major**.

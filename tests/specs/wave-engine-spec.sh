@@ -57,7 +57,6 @@ const {
   validateGraph,
   readySet,
   classifyFailure,
-  buildWaveScript,
   resolveFenceGroups,
   validateFenceGroups,
   buildGroupScript,
@@ -66,7 +65,6 @@ const hasAllExports = [
   validateGraph,
   readySet,
   classifyFailure,
-  buildWaveScript,
   resolveFenceGroups,
   validateFenceGroups,
   buildGroupScript,
@@ -74,7 +72,10 @@ const hasAllExports = [
 check("wave engine exports validateGraph", typeof validateGraph === "function");
 check("wave engine exports readySet", typeof readySet === "function");
 check("wave engine exports classifyFailure", typeof classifyFailure === "function");
-check("wave engine exports buildWaveScript", typeof buildWaveScript === "function");
+check(
+  "wave engine no longer exports the superseded buildWaveScript",
+  wave.buildWaveScript === undefined,
+);
 check("wave engine exports resolveFenceGroups", typeof resolveFenceGroups === "function");
 check("wave engine exports validateFenceGroups", typeof validateFenceGroups === "function");
 check("wave engine exports buildGroupScript", typeof buildGroupScript === "function");
@@ -175,62 +176,23 @@ equal(
   classifyFailure("Run fan-out: 63/64 used"),
   "failure",
 );
+equal(
+  "classifyFailure classifies a bare 429 with usage-limit text as quota",
+  classifyFailure('429: {"code":"1308","message":"Usage limit reached for 5 hour"}'),
+  "quota",
+);
+equal(
+  "classifyFailure classifies a rate limit as quota",
+  classifyFailure("error: rate limit exceeded for provider"),
+  "quota",
+);
+equal(
+  "classifyFailure classifies a 429 riding a sub-cap fan-out banner as quota",
+  classifyFailure("Run fan-out: 11/64 used\n429: usage limit reached"),
+  "quota",
+);
 for (const input of ["ordinary failure", "", null, undefined]) {
   equal(`classifyFailure defaults ${String(input)} to failure`, classifyFailure(input), "failure");
-}
-
-const adversarialBrief = 'Payload: "double quote", `backtick`, backslash \\, newline:\n${mustNotInterpolate}';
-const waveTasks = [
-  { id: "simple", brief: adversarialBrief },
-  { id: "complex-ui", brief: "Use the complex UI route.", class: "complex", ui: true },
-];
-const options = { cheapModel: "cheap-model", strongModel: "strong-model" };
-const script = buildWaveScript(waveTasks, options);
-
-check("buildWaveScript returns a string", typeof script === "string");
-check("buildWaveScript fans out with runs.all", script.includes("runs.all("));
-check("buildWaveScript never uses runs.run", !script.includes("runs.run("));
-check("buildWaveScript omits gate configuration", !script.includes("gate:"));
-check("buildWaveScript omits turnBudget", !script.includes("turnBudget"));
-check("buildWaveScript omits toolBudget", !script.includes("toolBudget"));
-check("buildWaveScript omits non-portable async function helpers", !script.includes("async function"));
-
-let parsedScript = true;
-try {
-  new Function(script);
-} catch (error) {
-  parsedScript = false;
-  console.error(`Script syntax error: ${error.message}`);
-}
-check("buildWaveScript escapes adversarial task briefs into valid JavaScript", parsedScript);
-
-let children;
-try {
-  children = new Function("runs", script)({
-    all: (emitted) => emitted,
-    run: () => {
-      throw new Error("runs.run must not be called");
-    },
-  });
-} catch (error) {
-  children = undefined;
-  console.error(`Script execution error: ${error.message}`);
-}
-check("buildWaveScript returns its emitted children through runs.all", Array.isArray(children));
-if (Array.isArray(children)) {
-  equal("buildWaveScript preserves the adversarial brief exactly", children[0]?.task, adversarialBrief);
-  check(
-    "buildWaveScript gives every child an explicit model",
-    children.every((child) => Object.hasOwn(child, "model") && typeof child.model === "string"),
-  );
-  equal("buildWaveScript routes ordinary tasks to worker with cheapModel", children[0] && {
-    agent: children[0].agent,
-    model: children[0].model,
-  }, { agent: "worker", model: options.cheapModel });
-  equal("buildWaveScript routes complex UI tasks to ui-worker with strongModel", children[1] && {
-    agent: children[1].agent,
-    model: children[1].model,
-  }, { agent: "ui-worker", model: options.strongModel });
 }
 
 equal(
@@ -254,6 +216,8 @@ check(
   }).some((error) => error.includes("api")),
 );
 
+const adversarialBrief = 'Payload: "double quote", `backtick`, backslash \\, newline:\n${mustNotInterpolate}';
+const options = { cheapModel: "cheap-model", strongModel: "strong-model" };
 const dagTasks = [
   { id: "T1", brief: adversarialBrief, class: "check", writes: ["src/t1.ts"], verify: "true" },
   { id: "T2", brief: "second", deps: ["T1"], class: "contract", testPaths: ["t2.spec.ts"], writes: ["src/t2.ts"], verify: "true" },

@@ -51,7 +51,18 @@ subagent({
   task: "Read PLAN_DIR/plan.md and tasks.json. Produce the interface surface the tasks share: exact function/type signatures, file paths, and data shapes crossing task boundaries. Write it to PLAN_DIR/interfaces.md. Do not implement anything."
 })
 
-Review the result yourself.
+Review the result yourself. Freeze quality is what makes two agents who never
+communicate interoperable, so hold `interfaces.md` to:
+
+- **Exact strings, not concepts** — error messages, accessible names,
+  empty-state copy, button labels, confirmation dialogs, test describe titles.
+- Exact signatures — args objects, return shapes, thrown-error precedence.
+- Harness contracts — mock conventions, dispatch order, seeding helpers.
+- Partition contracts — per-task grep scopes (with a no-cross-substring audit
+  when one spec file backs several tasks).
+- A Discrepancies section reconciling the plan against the interface picks.
+
+Anything two tasks share must be literal in `interfaces.md`, not prose.
 
 ## Phase 2 — Contract
 
@@ -72,6 +83,28 @@ CONTRACT="$(git rev-parse HEAD)"
 ```
 
 Tasks of class `characterization`, `check`, or `none` skip this phase.
+
+**Parallel authors and fixed resources:** contract authors must not red-run
+specs that bind fixed resources (a local test backend on a fixed port) — two
+authors running the same harness collide. Those authors write specs only; you
+run their red sequentially on the host. See "Fixed resources" in
+`docs/execution-patterns.md`.
+
+### Repairing a broken oracle
+
+The freeze binds **implementers**, not the oracle itself. Contract tests are
+authored ahead of the implementation, so they can contain author-side defects:
+typing errors that break the repo's typecheck, wrong harness conventions,
+locator collisions between specs. When one surfaces, the **parent** — never an
+implementer — may repair a frozen file under all of these constraints:
+
+1. **Assertion-neutral.** No assertion, expectation, or its target meaning may
+   change. Typing, mock plumbing, and locator precision are repairable;
+   weakening what a test asserts is not.
+2. **Disclosed.** Show the human the exact diff against the freeze commit.
+3. **Recorded.** The worklog lists every frozen-file repair with rationale.
+4. **Escalate on meaning.** If the fix would change what a test asserts, stop
+   and ask the human — that is a contract change, not a repair.
 
 ## Phase 3 — Fence groups
 
@@ -119,6 +152,7 @@ The `git diff` half is not optional for `contract` tasks.
 |---|---|---|
 | `acceptance` | reporting/paperwork | inspect the diff before retrying |
 | `model` | configuration error | fix routing; do not retry |
+| `quota` | provider 429 / usage or rate limit | reroute to a different provider or wait for the reset; never retry the same provider; does not consume the strong retry |
 | `spawn-budget` | fan-out ceiling | stop, escalate |
 | `failure` | real failure | retry the **failed branch** once with the strong model, then escalate |
 
@@ -136,17 +170,28 @@ subagent({
 Apply fixes yourself, then commit the group (implementation + `dataflow.<id>.js`
 + review notes). That commit is the resume point.
 
-Before relaunching a crashed group, check `git status`. Default policy: reset
-to the last checkpoint and re-run the group.
+Before relaunching a crashed group, check `git status`. A crash usually leaves
+intact, partially verified work — **resume from the tree**: re-derive each
+task's done-ness by running its verify command and frozen-test diff, regenerate
+the group script for only the incomplete subgraph, and relaunch that. Reset to
+the last checkpoint only when the tree is irreconcilable, and only with human
+approval (see "Resume" in `docs/execution-patterns.md`).
 
 ## Phase 4 — Final gate
 
 After the last group:
 
-1. Run the repo's final verification command on the host.
+1. Run the repo's **complete verification surface** on the host — typecheck,
+   lint, unit, E2E, and domain gates, enumerated from the repo's CI config and
+   canonical docs, not just the commands tasks happened to use. A final gate
+   narrower than CI ships gaps that only the reviewer might catch.
 2. Delegate a **fresh-context** `oracle` review of `BASE..HEAD` with
    `dynamic-review-code`.
 3. Fix until the final review is clean, then mark the plan complete.
+
+Scoped task verifies passing while the full suite fails is **cross-test
+interference, not flake** — see "Scoped green is not full green" in
+`docs/execution-patterns.md` before diagnosing.
 
 ## What you must not do
 

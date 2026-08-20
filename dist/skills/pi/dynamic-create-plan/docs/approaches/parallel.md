@@ -102,7 +102,9 @@ authored by someone other than those implementers.
 ## Execution
 
 Parent owns git, host verification, and dispatch. Children implement and report.
-Children never commit.
+Children never commit. Frozen tests bind implementers; the parent may repair an
+author-side defect in a frozen file only under assertion-neutrality, disclosure,
+and worklog documentation (see `dynamic-execute-plan`).
 
 Per fence group:
 

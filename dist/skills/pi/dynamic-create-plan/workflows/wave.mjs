@@ -2,8 +2,8 @@
 //
 // The scheduler is a DAG. The parent runs one generated workflowScript per
 // planned fence group, then host-verifies and commits. See
-// docs/approaches/parallel.md. readySet / buildWaveScript remain for older
-// tests; new execution uses resolveFenceGroups + buildGroupScript.
+// docs/approaches/parallel.md. readySet remains for older tests; new execution
+// uses resolveFenceGroups + buildGroupScript.
 //
 // Runtime constraints were verified in
 // docs/investigations/2026-08-18-code-mode-process/spike.md.
@@ -81,57 +81,22 @@ export function readySet(tasks, done, maxWidth) {
 
 /**
  * Classify a child failure so the parent does not spend a strong retry on a
- * configuration error or a reporting-format error.
- * @returns {"acceptance"|"model"|"spawn-budget"|"failure"}
+ * configuration error, a quota exhaustion, or a reporting-format error.
+ * @returns {"acceptance"|"model"|"quota"|"spawn-budget"|"failure"}
  */
 export function classifyFailure(errorString) {
   const text = typeof errorString === 'string' ? errorString : '';
   if (text.includes('Acceptance rejected:')) return 'acceptance';
   if (text.includes('Unknown subagent model')) return 'model';
+  // Provider quota/rate exhaustion before the fan-out check: a 429 riding a
+  // fan-out banner at sub-cap numbers is quota, not spawn-budget, and it must
+  // not consume the one strong retry on the same capped provider.
+  if (/\b429\b/.test(text) || /usage limit reached/i.test(text) || /rate limit/i.test(text)) {
+    return 'quota';
+  }
   const fanout = text.match(/Run fan-out:\s*(\d+)\s*\/\s*(\d+)\s*used/);
   if (fanout && Number(fanout[1]) >= Number(fanout[2])) return 'spawn-budget';
   return 'failure';
-}
-
-/**
- * Build the `workflowScript` body for one wave.
- *
- * Deliberate constraints, each verified against the runtime:
- *  - `runs.all` only. `runs.run` throws on failure and aborts in-flight
- *    siblings, so a single bad child would destroy the wave.
- *  - No `gate:`. It implies acceptance level "verified", whose evidence
- *    validation short-circuits before the command result is consulted.
- *  - No `turnBudget` / `toolBudget` on writers.
- *  - No `async function` helpers; they are rejected as non-portable.
- *  - Task data is embedded with JSON.stringify, so briefs containing quotes,
- *    backticks, backslashes, newlines or `${}` cannot break the script.
- */
-export function buildWaveScript(tasks, opts = {}) {
-  const { cheapModel, strongModel } = opts;
-  if (typeof cheapModel !== 'string' || cheapModel === '') {
-    throw new Error('buildWaveScript requires opts.cheapModel');
-  }
-  if (typeof strongModel !== 'string' || strongModel === '') {
-    throw new Error('buildWaveScript requires opts.strongModel');
-  }
-
-  const children = tasks.map((task) => {
-    const child = {
-      key: `impl-${task.id}`,
-      agent: task.ui ? UI_AGENT : DEFAULT_AGENT,
-      // Explicit per child: an unresolved default model fails the child before
-      // it starts, and the flake default is not resolvable everywhere.
-      model: task.class === 'complex' ? strongModel : cheapModel,
-      task: task.brief,
-    };
-    if (Number.isInteger(task.timeoutMs) && task.timeoutMs > 0) {
-      // The runtime default is 30 minutes per child; longer work must opt up.
-      child.timeoutMs = task.timeoutMs;
-    }
-    return child;
-  });
-
-  return `return runs.all(${JSON.stringify(children, null, 2)});`;
 }
 
 /**

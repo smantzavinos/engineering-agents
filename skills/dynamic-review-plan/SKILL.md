@@ -63,6 +63,14 @@ a change in the behaviour or artifact the task modifies, without someone editing
 - Globs are not widened to dodge collision detection.
 - Dependencies reflect real coupling, not story order. A missing edge is a race; a
   spurious one serialises the DAG for nothing.
+- Named anti-patterns, each a finding: a shared component bundled into its first
+  consumer's integration task (serializes the other consumers); a trailing polish
+  task re-touching all surface files after parallel surface tasks (merge the polish
+  into each surface's ownership); edges between tasks with disjoint write-sets
+  (serialize nothing but the clock); story-order fences (recreate the wave engine).
+- A scheduling-only dependency (used because the write dialect cannot express a
+  dynamic path segment) is legitimate **only** when labeled as such in `plan.md`;
+  unlabeled, it looks exactly like accidental coupling.
 - Fence groups cut where later work must not start on a lie. Extra groups that only
   recreate ready-set waves are a finding. Missing groups before a wide fan-out that is
   expensive to rewind are a finding.

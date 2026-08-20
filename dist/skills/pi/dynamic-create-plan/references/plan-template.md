@@ -73,10 +73,14 @@ there must appear here.
 Default: one implicit group (the whole graph). Name extra groups only where later
 work must wait for a host verify.
 
-| Group | Tasks | Why this cut |
-|-------|-------|--------------|
-| shared | T1–T4 | later collect must not start on an unverified tree |
-| collect | T5 | — |
+| Group | Tasks | What the fence verify includes | Why this cut |
+|-------|-------|--------------------------------|--------------|
+| shared | T1–T4 | union of task verifies + frozen diffs | later collect must not start on an unverified tree |
+| collect | T5 | full suite | final-ish group, cheap to verify broadly |
+
+What a fence verify includes (union of task verifies, scoped suite, full
+suite) is a per-plan decision — record it here so the executor and reviewer
+know what each fence proved. There is deliberately no universal default.
 
 Verification classes are defined in [docs/approaches/parallel.md](../docs/approaches/parallel.md).
 Choose per task:
@@ -94,6 +98,11 @@ Choose per task:
 | `<fast command>` | touched files | during a task | the change works |
 | `<gate command>` | package-wide | at a fence | no cross-module drift |
 | `<final command>` | repo-wide | before completion | full repo integrity |
+
+The final gate must cover the repo's **complete CI/verification surface** —
+typecheck, lint, unit, E2E, and domain gates — enumerated from the repo's CI
+config and canonical docs. A final gate narrower than CI ships gaps that only
+the final reviewer might catch; a missing gate is a plan-review finding.
 
 **Baseline:** record what already fails before starting, so a pre-existing failure is
 never mistaken for a regression.

@@ -69,6 +69,12 @@ and its descendants. The only wildcard is `*`; it must occupy a whole path
 segment. The checker rejects absolute paths, parent traversal, `**`,
 partial-segment patterns such as `*.ts`, `?`, character classes, and braces.
 
+Dynamic route segments (e.g. `[id]`) are not expressible. Use a whole-segment
+`*` for that segment; if the wildcard then collides with a sibling file under
+the checker's conservative model, add a **scheduling-only dependency** between
+the two tasks and label it as such in `plan.md` — the files are disjoint; the
+edge exists only to satisfy the checker.
+
 ## Rules the checker enforces
 
 1. **The graph is valid** — unique IDs, no unknown dependencies, no cycles,
@@ -81,3 +87,11 @@ partial-segment patterns such as `*.ts`, `?`, character classes, and braces.
    transitively depends on the other. Different groups may share a path.
 6. **`plan.md` and `tasks.json` agree** on task IDs.
 7. **Declared models are non-empty strings.**
+
+## Shared spec files
+
+One frozen spec file may back several tasks when each task verifies against a
+scope of it (a describe title grepped by the task's `verify` command). Pin the
+titles in `interfaces.md` and keep scopes mutually exclusive: no test title
+inside one task's scope may contain another task's grep substring
+(no-cross-substring rule), or one task's verify will run another's tests.
