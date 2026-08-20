@@ -1,63 +1,104 @@
 ---
 name: discover-and-design
-description: Fast path from a clear request to brief.md plus approach.md. Use for straightforward work when goals are known and the design is not a real fork. For vague, high-blast-radius, or multi-option problems use Discovery then Design instead.
+description: Document an already-discussed piece of work into an accepted brief.md plus approach.md. Use when the problem, scope, and design direction were already talked through in detail and what remains is writing it down, checking for genuinely overlooked gaps, and asking only targeted clarifying questions. For simple obvious tasks use Discover and Design Simple. To start from a vague idea use Discovery then Design.
 harnesses: [pi]
 ---
 
-# Discover and Design (speed run)
+# Discover and Design
 
-Produce an accepted `brief.md` and `approach.md` in one sitting. Optimized for
-work that is already well-posed. You may do light codebase research. You do not
-run a Socratic interview or a multi-option design workshop.
+Turn an already-aligned discussion into an accepted `brief.md` and
+`approach.md`. The prior conversation is the source of truth: you document it,
+verify the few claims that matter against the codebase, and surface gaps the
+discussion genuinely missed. You do not restart the interview, and you do not
+run a research program.
 
 ## When to use / when to stop
 
-**Use when:** the human already knows the outcome, the change is local, and
-there is at most one obvious design.
+**Use when:** the human has already talked through the problem in detail —
+goals, scope, and design direction are effectively agreed — and what remains
+is to write it down, check for overlooked areas, and resolve a small number of
+targeted questions.
 
-**Stop and tell them to use `/discovery` then `/design` when:**
+**Stop and redirect when:**
 
-- goals, non-goals, or success criteria are actually unclear
-- two or more designs are real, not cosmetic
-- the work is epic-sized or cross-cutting
-- research turns up a safety, compatibility, or scope surprise
-
-Do not pretend a speed run is still appropriate after that. Hand off.
+- the task is small and obvious — use `/discover-and-design-simple`
+- the direction is not actually agreed, or two or more designs are still live —
+  use `/discovery` then `/design`
+- the work turns out to be epic-sized — use `/design` (epic decomposition is
+  required there)
+- verification contradicts a load-bearing assumption from the discussion —
+  that is a real design fork, not a documentation detail; say so and redirect
+  to `/design`
 
 ## Process
 
-1. **Restate the request** in a few sentences. Confirm only what is actually
-   ambiguous. Do not walk a question checklist.
-2. **Look at the code** that will change. One focused research pass is enough.
+1. **Mine the conversation, don't restart it.** Extract from the discussion:
+   goals, non-goals, constraints, success criteria, decisions already made
+   (with the rationale that was given), and open points. Present a compact
+   restatement — "here is what we agreed" — not a question checklist. Ask only
+   about contradictions or true blanks, and batch every remaining question
+   into a single round. If the context arrived as a handoff summary rather
+   than a live conversation and key parts are missing, ask for them instead of
+   guessing.
+2. **Verify only what matters.** Check the discussion's load-bearing claims
+   against the actual code: the files and modules it names, the integration
+   points and behavior it assumes. A few file reads in this session is usually
+   enough; at most one focused research delegate:
 
 {{delegate:research skill=research}}
-Research [specific files/modules]. Write findings to [path/findings/current_state.md]. Keep it short and evidence-based.
+Verify [specific claim from the discussion] against [specific files/modules]. Write findings to [path/findings/current_state.md]. Keep it short and evidence-based.
 {{/delegate}}
 
-Skip the delegate if you can answer from a few file reads in this session.
-3. **Write both artifacts** into the plan directory (ask for the path if
-   missing). Use the templates in [references/brief-template.md](references/brief-template.md)
-   and [references/approach-template.md](references/approach-template.md).
-   Keep them short. Record plan level. If the repo maintains requirements,
-   cite IDs or list questions; do not edit canonical requirements.
-4. **Show the paths and wait.** Do not commit until the human accepts both
-   files. Then commit `brief.md`, `approach.md`, `findings/` (if any), and
-   `state.json` as `design: speed-run approach for <slug>`.
-5. **Next step:** "{{note:design-execute-standard}}"
+   Do not run a broad topic-by-topic research program — that is what the full
+   Design phase is for.
+3. **Run a focused gap scan.** Even a thorough discussion misses things. Check
+   for legitimately overlooked areas — lifecycle, failure recovery, day-2
+   operations, validation and safety, compatibility, requirement gaps — and
+   raise only the ones that would change the design or are required for a
+   complete, safe v1. Ask at most one focused batch of questions about them.
+   Record the scan outcome in the brief (goals, non-goals, or open questions)
+   so planning can see what was considered. Everything else goes to open
+   questions or, with the human's confirmation, the backlog — not into scope.
+4. **Write both artifacts** into the plan directory (ask for the path if
+   missing). Use the templates in
+   [references/brief-template.md](references/brief-template.md) and
+   [references/approach-template.md](references/approach-template.md). Record
+   plan level. Fill the decisions tables from the conversation — each decision
+   records what was chosen and the rationale as discussed, not new options you
+   invented. If the repo maintains requirements, cite IDs or list questions;
+   do not edit canonical requirements.
+5. **Run one approach review pass** unless the human waives it:
 
-For a true simple change (obvious, tiny, no design), write only `brief.md` at
-plan level `simple` and say they can implement directly.
+{{delegate:approachReview skill=review-approach}}
+Review the approach at [plan directory path]/approach.md for architectural soundness and brief alignment.
+{{/delegate}}
+
+   Fix what it finds in one pass. If review exposes a real design fork the
+   discussion never settled, stop — that work belongs in the full Design
+   phase.
+6. **Show the paths and wait.** Do not commit until the human accepts both
+   files. Then commit `brief.md`, `approach.md`, `approach_review.md` (if
+   any), `findings/` (if any), and `state.json` as
+   `design: document agreed approach for <slug>`.
+7. **Next step:** "{{note:design-execute-standard}}"
 
 ## Quality bar
 
-- Goals, non-goals, and success criteria are explicit.
-- The approach names the files/modules that change and what stays the same.
-- Findings are factual and cite paths. No speculation presented as fact.
+- The artifacts faithfully record what was agreed — no silent scope additions,
+  no dropped constraints, no reopened decisions presented as settled.
+- Every load-bearing claim about the codebase was either verified or is marked
+  as an open question.
+- Gaps raised are ones that change the design or are required for a safe v1 —
+  not a generic checklist dump.
+- Goals, non-goals, and success criteria are explicit. The approach names the
+  files/modules that change and what stays the same.
 - No task list, no `tasks.json`, no implementation.
 
 ## What you must not do
 
+- Do not re-run the Socratic interview — the discussion already happened.
 - Do not implement.
 - Do not write `plan.md` or `tasks.json`.
-- Do not invent a second ceremony. If it needs ceremony, this is the wrong skill.
+- Do not reopen settled decisions unless verification shows one is wrong — and
+  then say so explicitly.
 - Do not skip the human accept-and-commit gate.
