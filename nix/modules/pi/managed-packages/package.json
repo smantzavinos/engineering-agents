@@ -4,7 +4,7 @@
   "private": true,
   "description": "Vendor bundle for engineering-agents Pi managed packages. Built by nix/modules/pi (npm ci from package-lock.json), combined with fetchFromGitHub-pinned git packages, and compiled into local facades at build time. Maintained by nix/modules/pi/config.nix — do not add ad-hoc dependencies here.",
   "dependencies": {
-    "@aliou/pi-guardrails": "0.9.5",
+    "@aliou/pi-guardrails": "0.17.0",
     "@benvargas/pi-claude-code-use": "^1.0.1",
     "@byteowlz/pi-auto-rename": "1.0.7",
     "@richardgill/pi-config": "0.0.8",

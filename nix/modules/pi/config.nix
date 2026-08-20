@@ -177,9 +177,9 @@ let
       source = {
         type = "npm";
         packageName = "@aliou/pi-guardrails";
-        spec = "@aliou/pi-guardrails@0.9.5";
-        installSpec = "@aliou/pi-guardrails@0.9.5";
-        version = "0.9.5";
+        spec = "@aliou/pi-guardrails@0.17.0";
+        installSpec = "@aliou/pi-guardrails@0.17.0";
+        version = "0.17.0";
       };
     };
 
@@ -345,7 +345,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-fZXjE5LLDwsN1qtTL0PDdgwqUlTqpvEjN84l6OEkCJA=";
+      hash = "sha256-+d0CRSLc27qe9sxtRKqniQ3NkkbEyIJSpQf3LpZGck8=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];

@@ -63,7 +63,9 @@ if grep -Fq 'canonical docs `AGENTS.md` points to' \
     "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
   && grep -Fq "repo's documented follow-up mechanism" \
     "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
-  && grep -Fq 'do not need to exist in a target repository' \
+  && grep -Fq 'These files do not need to' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md" \
+  && grep -Fq 'exist in a target repository.' \
     "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md"; then
   pass "dynamic workflow resources defer target paths and policies to AGENTS.md"
 else
@@ -184,12 +186,15 @@ fi
 # configure-pi is Pi-only, project-scoped, and preserves the spawn-limit boundary.
 if [[ -f "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" ]] \
   && grep -Fq '`.pi/settings.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq '`.pi/extensions/guardrails.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'pathAccess.allowedPaths' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'autoDenyPatterns' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'maxSubagentSpawnsPerSession' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'PI_SUBAGENT_MAX_SPAWNS_PER_SESSION=100 pi' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'outside this project-scoped skill' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md"; then
-  pass "configure-pi is present in Pi with project-scope and spawn-limit boundaries"
+  pass "configure-pi documents project settings, repository Guardrails, and spawn-limit boundaries"
 else
-  fail "configure-pi is missing from Pi or lacks its project-scope boundary"
+  fail "configure-pi is missing Pi project settings, repository Guardrails, or spawn-limit boundaries"
 fi
 if [[ -e "$REPO_ROOT/dist/skills/opencode/configure-pi" ]]; then
   fail "configure-pi (pi-only) leaked into the OpenCode tree"

@@ -31,6 +31,47 @@ else
   fail "guardrails.json is not valid JSON"
 fi
 
+if jq -e '
+  .features.pathAccess == true
+  and .pathAccess.mode == "ask"
+  and any(.pathAccess.allowedPaths[]; .kind == "file" and .path == "/dev/null")
+  and any(.permissionGate.patterns[]; .regex == true and (.pattern | test("git push")))
+  and any(.permissionGate.autoDenyPatterns[]; .regex == true and (.pattern | test("git push")))
+  and all(.permissionGate.patterns[]; .pattern != "git push")
+  and all(.permissionGate.autoDenyPatterns[]; .pattern != "git push")
+' "$REPO_ROOT/nix/modules/pi/guardrails.json" >/dev/null 2>&1; then
+  pass "guardrails enables ask-mode path access and auto-denies force pushes only"
+else
+  fail "guardrails policy must enable ask-mode path access and deny force pushes without blocking normal pushes"
+fi
+
+if GUARDRAILS_CONFIG="$REPO_ROOT/nix/modules/pi/guardrails.json" node <<'NODE'
+const fs = require("fs");
+const config = JSON.parse(fs.readFileSync(process.env.GUARDRAILS_CONFIG, "utf8"));
+const entry = config.permissionGate.autoDenyPatterns.find((pattern) => pattern.regex);
+if (!entry) process.exit(1);
+const matcher = new RegExp(entry.pattern);
+const cases = [
+  [["git", "push", "origin", "main"], false],
+  [["git", "push", "origin", "main", "--force"], true],
+  [["git", "push", "-f", "origin", "main"], true],
+  [["git", "push", "origin", "main", "--force-with-lease"], true],
+  [["git", "push", "+main:main"], true],
+  [["git", "push", "origin", "+main:main"], true],
+];
+for (const [parts, expected] of cases) {
+  const actual = matcher.test(parts.join(" "));
+  if (actual !== expected) {
+    throw new Error(`${parts.join(" ")}: expected ${expected}, got ${actual}`);
+  }
+}
+NODE
+then
+  pass "force-push matcher covers flags and +refspec syntax without blocking normal pushes"
+else
+  fail "force-push matcher does not distinguish normal pushes from force-push syntax"
+fi
+
 # Verify compile-managed-packages.mjs is valid JS (syntax check)
 if node --check "$REPO_ROOT/nix/modules/pi/compile-managed-packages.mjs" 2>/dev/null; then
   pass "compile-managed-packages.mjs has valid syntax"
