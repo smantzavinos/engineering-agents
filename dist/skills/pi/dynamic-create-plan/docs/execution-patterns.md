@@ -1,21 +1,21 @@
 # Execution Patterns
 
-Runtime constraints for Pi Parallel execution. The approach itself —
-scheduler, fences, planning, verification classes — lives in
+Runtime constraints for Pi Parallel execution. The approach itself, covering
+scheduler, fences, planning, and verification classes, lives in
 [approaches/parallel.md](approaches/parallel.md).
 
 "Code mode" is the mechanism (`workflowScript`). Parallel is the process.
 
 ## The loop lives in the parent
 
-**The parent drives the loop and invokes one `workflowScript` per fence group.**
-It does not hand the whole plan to a single long-running script. Two independently
-verified constraints force this:
+**The parent drives the loop and invokes one `workflowScript` per fence
+group.** It does not hand the whole plan to a single long-running script. Two
+independently verified constraints force this:
 
 1. **Verification cannot be delegated to a child.** `gate:` implies acceptance
-   level `verified`, whose structured-evidence validation short-circuits *before*
-   the gate command's result is consulted. In testing, `gate: "true"` and
-   `gate: "false"` were indistinguishable.
+   level "verified", whose structured-evidence validation short-circuits
+   *before* the gate command's result is consulted. In testing, `gate: "true"`
+   and `gate: "false"` were indistinguishable.
 2. **Nothing applies worktree patches back.** `worktree.discard` exists;
    `worktree.apply` does not, and the script sandbox has no filesystem or shell
    access.
@@ -49,8 +49,8 @@ hand-author a second inline copy. Do not compute ready-set waves or `maxWidth`.
   methods** inside a script. Use top-level `await`, plain helpers, or Promise
   chains.
 - **Await every launched promise** before returning.
-- Embed task data with exact `JSON.stringify`. Briefs carry **paths, never file
-  contents**.
+- Embed task data with exact `JSON.stringify`. Briefs carry **paths, never
+  file contents**.
 
 ## Failure classification
 
@@ -71,43 +71,45 @@ hand-author a second inline copy. Do not compute ready-set waves or `maxWidth`.
 
 ## Resume
 
-The **fence-group checkpoint commit** is the resume point — but a crashed group
+The fence-group checkpoint commit is the resume point. But a crashed group
 usually leaves intact, partially verified work in the tree, and that work is
 not waste. Resume from the tree, not from the checkpoint, by default:
 
-1. Check `git status` — a crashed run leaves aborted children's edits on disk.
-2. Re-derive done-ness from the tree: run each task's verify command and the
-   frozen-test diff. A task whose verify passes is done; nobody needs to
+1. Check `git status`. A crashed run leaves aborted children's edits on disk.
+2. Re-derive done-ness from the tree by running each task's verify command and
+   the frozen-test diff. A task whose verify passes is done. Nobody needs to
    remember what happened.
-3. Regenerate the group script for **only the incomplete subgraph** and relaunch.
-4. Only if the tree is irreconcilable — conflicting partial edits, corrupted
-   state — reset to the last checkpoint and re-run the group. A hard reset is
-   destructive: it requires human approval, and some target repositories
-   forbid it outright.
+3. Regenerate the group script for only the incomplete subgraph and relaunch.
+4. Reset to the last checkpoint and re-run the group only when the tree is
+   irreconcilable, meaning conflicting partial edits or corrupted state. A hard
+   reset is destructive. It requires human approval, and some target
+   repositories forbid it outright.
 
 ## Fixed resources
 
-Verify commands that bind fixed resources (a local test backend on a fixed
-port, a single-server harness) cannot run concurrently — not for tasks in the
-same group, and not for contract authors red-running specs in parallel. Read
-verify commands at plan time for port/server binds. When two tasks bind the
-same fixed resource, stagger them (via a scheduling-only dependency or a
-fence), or run those verifies on the host at the fence instead of in the
+Verify commands that bind fixed resources cannot run concurrently. A local
+test backend on a fixed port is the common case. This applies to tasks in the
+same group and to contract authors red-running specs in parallel.
+
+Read verify commands at plan time for port and server binds. When two tasks
+bind the same fixed resource, stagger them with a scheduling-only dependency
+or a fence, or run those verifies on the host at the fence instead of in the
 child. Tell the human when parallelism is limited this way, and name the
-concrete remediation (for example: configuring Playwright for dynamic ports
-would let these verifies run concurrently) so improving it is a backlog
-choice, not a mystery.
+concrete fix. For example, configuring Playwright for dynamic ports would let
+those verifies run concurrently. That turns a hidden limit into a backlog
+choice.
 
 ## Scoped green is not full green
 
 Per-task scoped verifies systematically miss cross-test interference. A
-failure that reproduces in full-suite runs but not in scoped runs is a
-locator or resource collision between tests **until proven otherwise** — not
-flake. Diagnose with strict-mode element counts (a locator resolving to two
-elements is a collision, not timing), fix with exact-name targeting, and
-confirm by re-running the full suite.
+failure that reproduces in full-suite runs but not in scoped runs is a locator
+or resource collision between tests until proven otherwise. It is not flake.
+Diagnose with strict-mode element counts, because a locator resolving to two
+elements is a collision, not a timing problem. Fix with exact-name targeting,
+and confirm by re-running the full suite.
 
 ## Target-repository integration
 
 Use the target repository's `AGENTS.md` for verification commands, plan
-locations, requirements, and follow-up tracking. These files do not need to exist in a target repository.
+locations, requirements, and follow-up tracking. These files do not need to
+exist in a target repository.

@@ -38,7 +38,7 @@ If the repo maintains requirements, cite the current ones this plan touches.
 - Approved requirement changes to apply: <none | add/update/remove FR-001 in task T3>
 
 ## Related Backlog Items
-- <none | TASK-0001 — title>
+- <none | TASK-0001 and its title>
 
 ## Open Questions
 
@@ -65,7 +65,7 @@ there must appear here.
 
 | ID | Task | Depends on | Class | Verification |
 |---:|------|------------|-------|--------------|
-| T1 | <task> | — | contract | `<command>` |
+| T1 | <task> | none | contract | `<command>` |
 | T2 | <task> | T1 | check | `<command>` |
 
 ## Fence Groups
@@ -75,21 +75,25 @@ work must wait for a host verify.
 
 | Group | Tasks | What the fence verify includes | Why this cut |
 |-------|-------|--------------------------------|--------------|
-| shared | T1–T4 | union of task verifies + frozen diffs | later collect must not start on an unverified tree |
-| collect | T5 | full suite | final-ish group, cheap to verify broadly |
+| shared | T1 through T4 | union of task verifies + frozen diffs | later collect must not start on an unverified tree |
+| collect | T5 | full suite | last group, cheap to verify broadly |
 
-What a fence verify includes (union of task verifies, scoped suite, full
-suite) is a per-plan decision — record it here so the executor and reviewer
-know what each fence proved. There is deliberately no universal default.
+What a fence verify includes is a per-plan decision: union of task verifies, a
+scoped suite, or the full suite. Record the choice here so the executor and
+reviewer know what each fence proved. There is deliberately no universal
+default.
 
 Verification classes are defined in [docs/approaches/parallel.md](../docs/approaches/parallel.md).
 Choose per task:
 
-- `contract` — new or changed observable behaviour; a failing test is authored first,
-  by someone other than the implementer.
-- `characterization` — refactor with no behaviour change; existing tests must stay green.
-- `check` — config, wiring, generated artifacts, schema; a structural check must pass.
-- `none` — prose-only with no structural contract. Legitimate, but choose it explicitly.
+- **`contract`.** New or changed observable behaviour. A failing test is authored
+  first, by someone other than the implementer.
+- **`characterization`.** Refactor with no behaviour change. Existing tests must
+  stay green.
+- **`check`.** Config, wiring, generated artifacts, schema. A structural check
+  must pass.
+- **`none`.** Prose-only with no structural contract. Legitimate, but choose it
+  explicitly.
 
 ## Verification Plan
 
@@ -99,10 +103,10 @@ Choose per task:
 | `<gate command>` | package-wide | at a fence | no cross-module drift |
 | `<final command>` | repo-wide | before completion | full repo integrity |
 
-The final gate must cover the repo's **complete CI/verification surface** —
-typecheck, lint, unit, E2E, and domain gates — enumerated from the repo's CI
-config and canonical docs. A final gate narrower than CI ships gaps that only
-the final reviewer might catch; a missing gate is a plan-review finding.
+The final gate must cover every gate the repo runs: typecheck, lint, unit,
+E2E, and domain gates, enumerated from the repo's CI config and canonical
+docs. A final gate narrower than CI ships gaps that only the final reviewer
+might catch, and a missing gate is a plan-review finding.
 
 **Baseline:** record what already fails before starting, so a pre-existing failure is
 never mistaken for a regression.

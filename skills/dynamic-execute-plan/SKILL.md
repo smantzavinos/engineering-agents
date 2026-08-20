@@ -34,14 +34,14 @@ git status --porcelain            # must be clean; refuse to start on a dirty tr
 node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" "$PLAN_DIR"
 ```
 
-Record the **baseline**: run the repo's verification command and note what
-already fails.
+Record the baseline: run the repo's verification command and note what already
+fails.
 
 ```bash
 BASE="$(git rev-parse HEAD)"
 ```
 
-## Phase 1 — Freeze interfaces
+## Phase 1: Freeze interfaces
 
 One strong child returns the shared signatures, file paths, and data shapes.
 It writes no implementation.
@@ -53,23 +53,23 @@ Read PLAN_DIR/plan.md and tasks.json. Produce the interface surface the tasks sh
 Review the result yourself. Freeze quality is what makes two agents who never
 communicate interoperable, so hold `interfaces.md` to:
 
-- **Exact strings, not concepts** — error messages, accessible names,
-  empty-state copy, button labels, confirmation dialogs, test describe titles.
-- Exact signatures — args objects, return shapes, thrown-error precedence.
-- Harness contracts — mock conventions, dispatch order, seeding helpers.
-- Partition contracts — per-task grep scopes (with a no-cross-substring audit
-  when one spec file backs several tasks).
-- A Discrepancies section reconciling the plan against the interface picks.
+- **Exact strings, not concepts.** Error messages, accessible names, empty-state
+  copy, button labels, confirmation dialogs, test describe titles.
+- **Exact signatures.** Args objects, return shapes, thrown-error precedence.
+- **Harness contracts.** Mock conventions, dispatch order, seeding helpers.
+- **Partition contracts.** Per-task grep scopes, audited for cross-substring
+  leaks when one spec file backs several tasks.
+- **A Discrepancies section** reconciling the plan against the interface picks.
 
 Anything two tasks share must be literal in `interfaces.md`, not prose.
 
-## Phase 2 — Contract
+## Phase 2: Contract
 
 For every task of class `contract`, a **different agent than the implementer**
 authors the failing test. Observe red once, here.
 
 {{delegate:planner skill=dynamic-create-plan}}
-Author the failing tests for the tasks listed as class "contract" in PLAN_DIR/tasks.json, against the interfaces in PLAN_DIR/interfaces.md. Write tests only — no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.
+Author the failing tests for the tasks listed as class "contract" in PLAN_DIR/tasks.json, against the interfaces in PLAN_DIR/interfaces.md. Write tests only, no implementation. Each test must be able to fail because of a change in the behaviour it covers, without a manual edit of the test. Run them and report the exact red output.
 {{/delegate}}
 
 Confirm red yourself, then commit. This commit is the frozen baseline:
@@ -81,10 +81,10 @@ CONTRACT="$(git rev-parse HEAD)"
 
 Tasks of class `characterization`, `check`, or `none` skip this phase.
 
-**Parallel authors and fixed resources:** contract authors must not red-run
-specs that bind fixed resources (a local test backend on a fixed port) — two
-authors running the same harness collide. Those authors write specs only; you
-run their red sequentially on the host. See "Fixed resources" in
+**Parallel authors and fixed resources.** Contract authors must not red-run
+specs that bind fixed resources, such as a local test backend on a fixed port.
+Two authors running the same harness collide. Those authors write specs only.
+You run their red sequentially on the host. See "Fixed resources" in
 `docs/execution-patterns.md`.
 
 ### Repairing a broken oracle
@@ -92,21 +92,21 @@ run their red sequentially on the host. See "Fixed resources" in
 The freeze binds **implementers**, not the oracle itself. Contract tests are
 authored ahead of the implementation, so they can contain author-side defects:
 typing errors that break the repo's typecheck, wrong harness conventions,
-locator collisions between specs. When one surfaces, the **parent** — never an
-implementer — may repair a frozen file under all of these constraints:
+locator collisions between specs. When one surfaces, the parent, never an
+implementer, may repair a frozen file under these constraints:
 
 1. **Assertion-neutral.** No assertion, expectation, or its target meaning may
-   change. Typing, mock plumbing, and locator precision are repairable;
-   weakening what a test asserts is not.
+   change. Typing, mock plumbing, and locator precision are repairable.
+   Weakening what a test asserts is not.
 2. **Disclosed.** Show the human the exact diff against the freeze commit.
 3. **Recorded.** The worklog lists every frozen-file repair with rationale.
 4. **Escalate on meaning.** If the fix would change what a test asserts, stop
-   and ask the human — that is a contract change, not a repair.
+   and ask the human. That is a contract change, not a repair.
 
-## Phase 3 — Fence groups
+## Phase 3: Fence groups
 
-Resolve groups with `resolveFenceGroups` (missing `fenceGroups` ⇒ one group
-`all`). For **each group, in order**:
+Resolve groups with `resolveFenceGroups`. A missing `fenceGroups` means one
+group, `all`. For each group, in order:
 
 **1. Generate and persist the script.**
 
@@ -149,7 +149,7 @@ The `git diff` half is not optional for `contract` tasks.
 |---|---|---|
 | `acceptance` | reporting/paperwork | inspect the diff before retrying |
 | `model` | configuration error | fix routing; do not retry |
-| `quota` | provider 429 / usage or rate limit | reroute to a different provider or wait for the reset; never retry the same provider; does not consume the strong retry |
+| `quota` | provider 429, usage or rate limit | reroute to a different provider or wait for the reset; never retry the same provider; does not consume the strong retry |
 | `spawn-budget` | fan-out ceiling | stop, escalate |
 | `failure` | real failure | retry the **failed branch** once with the strong model, then escalate |
 
@@ -162,31 +162,31 @@ fails for the accumulated tree.
 Review the diff for fence group <id> against PLAN_DIR/plan.md and tasks.json. Report correctness, scope creep, undeclared writes, and any test that cannot fail for a reason other than an edit to itself.
 {{/delegate}}
 
-Apply fixes yourself, then commit the group (implementation + `dataflow.<id>.js`
-+ review notes). That commit is the resume point.
+Apply fixes yourself, then commit the group: implementation, `dataflow.<id>.js`,
+and review notes together. That commit is the resume point.
 
 Before relaunching a crashed group, check `git status`. A crash usually leaves
-intact, partially verified work — **resume from the tree**: re-derive each
+intact, partially verified work. **Resume from the tree.** Re-derive each
 task's done-ness by running its verify command and frozen-test diff, regenerate
 the group script for only the incomplete subgraph, and relaunch that. Reset to
 the last checkpoint only when the tree is irreconcilable, and only with human
-approval (see "Resume" in `docs/execution-patterns.md`).
+approval. See "Resume" in `docs/execution-patterns.md`.
 
-## Phase 4 — Final gate
+## Phase 4: Final gate
 
 After the last group:
 
-1. Run the repo's **complete verification surface** on the host — typecheck,
-   lint, unit, E2E, and domain gates, enumerated from the repo's CI config and
-   canonical docs, not just the commands tasks happened to use. A final gate
-   narrower than CI ships gaps that only the reviewer might catch.
+1. Run every repo gate on the host: typecheck, lint, unit, E2E, and domain
+   gates. Enumerate them from the repo's CI config and canonical docs. The
+   commands tasks happened to use are not enough. A final gate narrower than
+   CI ships gaps that only the reviewer might catch.
 2. Delegate a **fresh-context** `oracle` review of `BASE..HEAD` with
    `dynamic-review-code`.
 3. Fix until the final review is clean, then mark the plan complete.
 
-Scoped task verifies passing while the full suite fails is **cross-test
-interference, not flake** — see "Scoped green is not full green" in
-`docs/execution-patterns.md` before diagnosing.
+When scoped task verifies pass but the full suite fails, treat it as
+**cross-test interference, not flake**. Read "Scoped green is not full green"
+in `docs/execution-patterns.md` before diagnosing.
 
 ## What you must not do
 
