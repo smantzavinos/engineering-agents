@@ -1,4 +1,26 @@
 {
+  "direct-plan": [
+    {
+      "source": "docs/approaches/parallel.md",
+      "target": "docs/approaches/parallel.md"
+    },
+    {
+      "source": "docs/execution-patterns.md",
+      "target": "docs/execution-patterns.md"
+    },
+    {
+      "source": "skills/dynamic-create-plan/references/tasks-schema.md",
+      "target": "references/tasks-schema.md"
+    },
+    {
+      "source": "tools/check-plan.mjs",
+      "target": "tools/check-plan.mjs"
+    },
+    {
+      "source": "workflows/wave.mjs",
+      "target": "workflows/wave.mjs"
+    }
+  ],
   "discover-and-design": [
     {
       "source": "skills/discovery/references/brief-template.md",

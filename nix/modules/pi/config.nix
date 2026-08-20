@@ -846,6 +846,7 @@ let
     "design"
     "discover-and-design"
     "discover-and-design-simple"
+    "direct-plan"
     "dynamic-execute-plan"
     "dynamic-create-plan"
     "dynamic-review-plan"
