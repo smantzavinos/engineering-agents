@@ -94,7 +94,7 @@ _No entries yet._
 ### Inline workflowScript is not a reviewable record
 - Date: 2026-08-19
 - Type: learning
-- Source: Atlas requirement-labels closeout DAG run; human asked where the script was stored
+- Source: plan closeout DAG run; human asked where the script was stored
 - Summary: An attended `dynamic-execute-dag-plan` run inlined the DAG `workflowScript` only
   on the `subagent` tool call. After the run, the script existed only inside the session
   JSONL, so it could not be reviewed before launch or kept with the plan. Persist the exact
@@ -124,7 +124,7 @@ _No entries yet._
 ### Team contracts must start before implementation completion
 - Date: 2026-07-15
 - Type: learning
-- Source: Atlas layout dropdown team-mode trial
+- Source: UI work team-mode trial
 - Requirement refs: FR-007, FR-008, OPR-003
 - Summary: Blocking the verifier until implementation completed delayed the acceptance
   contract and caused repeated task-board polling. Contract packets should start immediately,
