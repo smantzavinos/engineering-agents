@@ -34,8 +34,8 @@ git status --porcelain            # must be clean; refuse to start on a dirty tr
 node "$HOME/.pi/agent/skills/dynamic-create-plan/tools/check-plan.mjs" "$PLAN_DIR"
 ```
 
-Record the baseline: run the repo's verification command and note what already
-fails.
+Record the baseline: run the plan's final gate commands, the full set recorded
+in `plan.md`'s Verification Plan, and note what already fails.
 
 ```bash
 BASE="$(git rev-parse HEAD)"
@@ -134,9 +134,11 @@ The file is raw JavaScript. Commit it as an orchestration record. Tell the
 human the path. **Do not launch until they approve this file** unless they
 already approved this exact file.
 
-**2. Launch that file's contents** as `workflowScript` in one `subagent` call.
-Do not hand-author a second inline copy. Every child already has an explicit
-`model` from the generator.
+**2. Launch that file's contents** as `workflowScript` in one async `subagent`
+call. Read the file and pass its body as the `workflowScript` argument. Do not
+combine `workflowScript` with single-child parameters such as `agent` or
+`task`; the runtime rejects that combination. Do not hand-author a second
+inline copy. Every child already has an explicit `model` from the generator.
 
 **3. Verify on the host.** You run this, not a child.
 

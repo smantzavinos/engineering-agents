@@ -158,6 +158,9 @@ alternative is duplicating a contract across specs.
 - One child, default 30 minutes. Split or set `timeoutMs`.
 - A run allows 64 spawns and never refunds them. At roughly four spawns per
   task, a run caps near 16 tasks. Split larger work.
+- Set `models.cheap` and `models.strong` from the repo's model configuration,
+  or ask the human which models to use. An unresolved model fails the child
+  before it starts.
 
 ## Epic guard
 
