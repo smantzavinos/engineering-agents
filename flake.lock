@@ -211,11 +211,11 @@
     "visualExplainer": {
       "flake": false,
       "locked": {
-        "lastModified": 1782373596,
-        "narHash": "sha256-LBqLqz7Irc8nSHuUUB25Nqn5qQa/ItgpojR/U+RVimc=",
+        "lastModified": 1787204262,
+        "narHash": "sha256-CfLPZjoOed+Vfq+H4VYjMU0LEzsOYf9g7y4GuAlM6/U=",
         "owner": "nicobailon",
         "repo": "visual-explainer",
-        "rev": "528b71feb85dab5d92b82c3554880826f50a75da",
+        "rev": "df35d97a00191d8aba831e757a65dd6ce0514fc0",
         "type": "github"
       },
       "original": {
