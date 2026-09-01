@@ -228,6 +228,19 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json missing zai-coding-plan provider"
   fi
 
+  if jq -e '.providers["zai-coding-plan"].models | any(.id == "glm-5.3" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true) and any(.id == "glm-5.3-flash" and .name == "GLM 5.3 Flash" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true)' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+    pass "models.json includes GLM 5.3 and GLM 5.3 Flash"
+  else
+    fail "models.json is missing GLM 5.3 or GLM 5.3 Flash metadata"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.enabledModels | index("zai-coding-plan/glm-5.3") != null and index("zai-coding-plan/glm-5.3-flash") != null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi enabledModels includes GLM 5.3 and GLM 5.3 Flash"
+  else
+    fail "Pi enabledModels is missing GLM 5.3 or GLM 5.3 Flash"
+  fi
+
   if jq -e '.providers["github-copilot"].models | any(.id == "claude-opus-5" and .api == "anthropic-messages" and .contextWindow == 1048576 and .maxTokens == 128000 and .compat.forceAdaptiveThinking == true and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     pass "models.json extends github-copilot with Claude Opus 5"
   else

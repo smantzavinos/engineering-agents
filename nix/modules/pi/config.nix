@@ -275,6 +275,7 @@ let
     "openai-codex/gpt-5.6-sol"
     "zai-coding-plan/glm-5.2"
     "zai-coding-plan/glm-5.3"
+    "zai-coding-plan/glm-5.3-flash"
     "xai/grok-4.5"
     "xai/grok-4.6"
     "fireworks/accounts/fireworks/models/deepseek-v4-flash-0731"
@@ -692,6 +693,7 @@ let
           api = "openai-completions";
           models = [
             { id = "glm-5.3"; name = "GLM 5.3"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; }
+            { id = "glm-5.3-flash"; name = "GLM 5.3 Flash"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; }
             { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; reasoning = true; }
             { id = "glm-5.1"; name = "GLM 5.1"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
             { id = "glm-5"; name = "GLM 5"; contextWindow = 204800; maxTokens = 131072; reasoning = true; }
