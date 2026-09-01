@@ -228,7 +228,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json missing zai-coding-plan provider"
   fi
 
-  if jq -e '.providers["zai-coding-plan"].models | any(.id == "glm-5.3" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true) and any(.id == "glm-5.3-flash" and .name == "GLM 5.3 Flash" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true)' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+  if jq -e '.providers["zai-coding-plan"].models | any(.id == "glm-5.3" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true) and any(.id == "glm-5.3-flash" and .name == "GLM 5.3 Flash" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true and .input == ["text", "image"])' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     pass "models.json includes GLM 5.3 and GLM 5.3 Flash"
   else
     fail "models.json is missing GLM 5.3 or GLM 5.3 Flash metadata"
