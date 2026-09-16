@@ -92,17 +92,6 @@ else
   fail "review-code is missing team-plan final review semantics"
 fi
 
-# Template files in create-new-repo-docs
-TEMPLATE_DIR="$REPO_ROOT/skills/create-new-repo-docs/templates"
-if [[ -d "$TEMPLATE_DIR" ]]; then
-  for tmpl in README.md docs/architecture.md docs/testing-strategy.md; do
-    if [[ -f "$TEMPLATE_DIR/$tmpl" ]]; then
-      pass "Template exists: $tmpl"
-    else
-      fail "Template missing: $tmpl"
-    fi
-  done
-fi
 
 # Verify approach template has expected structure
 if [[ -f "$REPO_ROOT/skills/design/references/approach-template.md" ]]; then

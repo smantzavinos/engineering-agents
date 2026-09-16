@@ -302,7 +302,7 @@
           done
           for s in discovery design research create-plan review-plan create-worklog \
                    execute-task execution-orchestrator review-code review-approach \
-                   assess-repo create-skills configure-pi create-new-repo-docs \
+                   assess-repo create-skills configure-pi \
                    pi-team-plan pi-team-lead pi-team-worker; do
             test -d "$cfgd/agent/skills/$s" || { echo "MISSING: skills/$s"; exit 1; }
           done

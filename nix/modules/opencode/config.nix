@@ -298,7 +298,7 @@ let
     "discovery" "design" "execution-orchestrator" "execution-orchestrator-team"
     "research" "create-plan" "create-team-plan" "create-worklog" "create-team-worklog" "execute-task"
     "review-plan" "review-team-plan" "review-code" "review-approach" "review-epic"
-    "assess-repo" "create-skills" "create-new-repo-docs"
+    "assess-repo" "create-skills"
     "configure-opencode"
   ];
 

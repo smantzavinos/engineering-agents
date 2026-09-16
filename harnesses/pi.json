@@ -17,8 +17,7 @@
     "review-epic",
     "configure-pi",
     "configure-opencode",
-    "create-skills",
-    "create-new-repo-docs"
+    "create-skills"
   ],
   "roles": {
     "planner": {

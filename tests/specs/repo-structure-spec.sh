@@ -78,7 +78,7 @@ SKILLS=(
   create-worklog create-team-worklog
   execute-task execution-orchestrator execution-orchestrator-team
   review-code review-approach review-epic
-  assess-repo create-skills create-new-repo-docs
+  assess-repo create-skills
   configure-opencode
 )
 for skill in "${SKILLS[@]}"; do

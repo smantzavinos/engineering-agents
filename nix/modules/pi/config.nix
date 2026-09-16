@@ -859,7 +859,6 @@ let
     "assess-repo"
     "create-skills"
     "configure-pi"
-    "create-new-repo-docs"
   ];
 
   piAgents = [
