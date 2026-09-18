@@ -47,6 +47,31 @@ else
   fail "dist/skills/ is stale — run: node tools/render-skills.mjs --write"
 fi
 
+# Dynamic workflow resources are rendered from one canonical source into each
+# self-contained Pi skill tree.
+for skill in dynamic-create-plan dynamic-execute-plan; do
+  for resource in docs/approaches/parallel.md docs/execution-patterns.md tools/check-plan.mjs workflows/wave.mjs; do
+    if cmp -s "$REPO_ROOT/$resource" "$REPO_ROOT/dist/skills/pi/$skill/$resource"; then
+      pass "$skill packages canonical $resource"
+    else
+      fail "$skill is missing or has drifted from canonical $resource"
+    fi
+  done
+done
+
+if grep -Fq 'canonical docs `AGENTS.md` points to' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
+  && grep -Fq "repo's documented follow-up mechanism" \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
+  && grep -Fq 'These files do not need to' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md" \
+  && grep -Fq 'exist in a target repository.' \
+    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md"; then
+  pass "dynamic workflow resources defer target paths and policies to AGENTS.md"
+else
+  fail "dynamic workflow resources leak framework paths or follow-up policy into target repos"
+fi
+
 # Canonical sources must NOT hardcode compatibility in their frontmatter block
 # (the renderer injects it per harness). Body documentation may still mention it.
 if node -e '
@@ -82,10 +107,10 @@ if grep -rn 'task(category=\|task({' "$REPO_ROOT/dist/skills/pi/" >/dev/null 2>&
 else
   pass "Pi tree uses only Pi-style delegation"
 fi
-if grep -rln 'subagent({' "$REPO_ROOT/dist/skills/pi/execution-orchestrator/SKILL.md" >/dev/null 2>&1; then
-  pass "Pi execution-orchestrator renders subagent({...}) delegation"
+if grep -rln 'subagent({' "$REPO_ROOT/dist/skills/pi/design/SKILL.md" >/dev/null 2>&1; then
+  pass "Pi design renders subagent({...}) delegation"
 else
-  fail "Pi execution-orchestrator is missing subagent({...}) delegation"
+  fail "Pi design is missing subagent({...}) delegation"
 fi
 
 # OpenCode tree must not contain Pi-style subagent() calls
@@ -161,18 +186,67 @@ fi
 # configure-pi is Pi-only, project-scoped, and preserves the spawn-limit boundary.
 if [[ -f "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" ]] \
   && grep -Fq '`.pi/settings.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq '`.pi/extensions/guardrails.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'pathAccess.allowedPaths' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'autoDenyPatterns' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'maxSubagentSpawnsPerSession' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'PI_SUBAGENT_MAX_SPAWNS_PER_SESSION=100 pi' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'outside this project-scoped skill' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md"; then
-  pass "configure-pi is present in Pi with project-scope and spawn-limit boundaries"
+  pass "configure-pi documents project settings, repository Guardrails, and spawn-limit boundaries"
 else
-  fail "configure-pi is missing from Pi or lacks its project-scope boundary"
+  fail "configure-pi is missing Pi project settings, repository Guardrails, or spawn-limit boundaries"
 fi
 if [[ -e "$REPO_ROOT/dist/skills/opencode/configure-pi" ]]; then
   fail "configure-pi (pi-only) leaked into the OpenCode tree"
 else
   pass "configure-pi is excluded from the OpenCode tree"
 fi
+
+# Team mode was replaced by code-mode execution: the Pi-only team skills are gone,
+# and the retired orchestration skills render for OpenCode only.
+for gone in pi-team-plan pi-team-lead pi-team-worker; do
+  if [[ ! -e "$REPO_ROOT/dist/skills/pi/${gone}" ]]; then
+    pass "${gone} is absent from the Pi tree"
+  else
+    fail "${gone} must be absent from the Pi tree"
+  fi
+done
+for oc_only in execution-orchestrator execute-task create-worklog \
+                create-plan review-plan review-code; do
+  if [[ ! -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
+    pass "${oc_only} is excluded from the Pi tree"
+  else
+    fail "${oc_only} (opencode-only) leaked into the Pi tree"
+  fi
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${oc_only}/SKILL.md" ]]; then
+    pass "${oc_only} is retained in the OpenCode tree"
+  else
+    fail "${oc_only} is missing from the OpenCode tree"
+  fi
+done
+
+# Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
+# disable-model-invocation for Pi only, never for OpenCode.
+for hidden in discovery design discover-and-design discover-and-design-simple direct-plan dynamic-create-plan dynamic-review-plan dynamic-review-code research; do
+  if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
+    pass "${hidden} is hidden from the Pi system prompt"
+  else
+    fail "${hidden} should be hidden from the Pi system prompt"
+  fi
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${hidden}/SKILL.md" ]] \
+     && grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/opencode/${hidden}/SKILL.md"; then
+    fail "${hidden} discoverability must not leak into the OpenCode tree"
+  else
+    pass "${hidden} discoverability does not leak into the OpenCode tree"
+  fi
+done
+for shown in assess-repo; do
+  if grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/pi/${shown}/SKILL.md"; then
+    fail "${shown} must remain discoverable in Pi"
+  else
+    pass "${shown} remains discoverable in Pi"
+  fi
+done
 
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
 for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
@@ -210,6 +284,30 @@ for harness in pi opencode; do
 done
 
 # ============================================================
+# Every rendered Pi delegation block must be syntactically valid JavaScript.
+# Prompts are prose and may contain quotes or backslashes; raw interpolation
+# silently emitted broken snippets before the renderer encoded them properly.
+if node -e '
+const fs = require("fs"), path = require("path");
+let bad = 0, n = 0;
+const root = path.join(process.argv[1], "dist", "skills", "pi");
+for (const d of fs.readdirSync(root)) {
+  const f = path.join(root, d, "SKILL.md");
+  if (!fs.existsSync(f)) continue;
+  for (const m of fs.readFileSync(f, "utf8").matchAll(/^subagent\(\{[\s\S]*?^\}\)$/gm)) {
+    n += 1;
+    try { new Function("subagent", "return " + m[0]); }
+    catch (e) { bad += 1; console.error(`invalid subagent block in ${d}: ${e.message}`); }
+  }
+}
+if (n === 0) { console.error("no subagent blocks found to check"); process.exit(1); }
+process.exit(bad === 0 ? 0 : 1);
+' "$REPO_ROOT"; then
+  pass "every rendered Pi subagent block is valid JavaScript"
+else
+  fail "a rendered Pi subagent block is not valid JavaScript"
+fi
+
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"
 if [[ "$FAIL" -gt 0 ]]; then

@@ -48,12 +48,6 @@ _No items yet._
 
 ## Ready
 
-### TASK-0001 — Upgrade @aliou/pi-guardrails 0.9.5 → 0.15.0
-- Status: Ready
-- Summary: Bump the held pi-guardrails managed package. Requires handling breaking changes: v0.12.0 split guardrails into three extensions (policy / path-access / permission-gate) and renamed public event-bus events; v0.14.0 migrated `pathAccess.allowedPaths` config from `string[]` to `{ kind, path }[]` (auto-migration `010`). v0.13.1 loosened Pi peer deps (compatible with our 0.80.x runtime).
-- Source: Package-update review session (commits 822f83d..80a8d19); changelog https://github.com/aliou/pi-guardrails/releases
-- Notes: Verify how `nix/modules/pi/default.nix` loads guardrails (single extension vs the new three-extension layout) and confirm our out-of-store `guardrails.json` (guardrailsConfigPath) auto-migrates cleanly on first launch. Update proof-set.json / version fields; run `./tests/run-tests.sh all`.
-
 ### TASK-0002 — Fork-currency audit: retire out-of-date forks where upstream has the fix
 - Status: In progress (pi-subagents retired; pi-gitnexus + pi-hooks remain)
 - Summary: Three managed git packages point at personal (`smantzavinos/*`) forks that are now well behind their true upstreams. For each, confirm which customizations the fork carries, check whether upstream has since incorporated an equivalent, and either (a) drop the fork and pin the real upstream, or (b) rebase the fork onto current upstream if the customization is still unique.
@@ -102,7 +96,11 @@ _No items yet._
 
 ## Done
 
-_No items yet._
+### TASK-0001 — Upgrade @aliou/pi-guardrails 0.9.5 → 0.17.0
+- Status: Done
+- Summary: Bump the held pi-guardrails managed package to 0.17.0, enable ask-mode outside-workspace path access, allow normal pushes while auto-denying force pushes, and document repository-local Guardrails configuration in `configure-pi`.
+- Source: Package-update review session (commits 822f83d..80a8d19) and follow-up configuration discussion; changelog https://github.com/aliou/pi-guardrails/releases
+- Notes: v0.12.0 split Guardrails into four manifest extensions (policy / path-access / permission-gate / Herdr) and renamed public events; v0.14.0 migrated `pathAccess.allowedPaths` to `{ kind, path }[]`. The Nix compiler auto-discovers the latest manifest entries. The repo config uses `pathAccess.mode: ask`; ordinary `git push` is not configured as a gate, while `--force`, `-f`, `--force-with-lease`, and `+refspec` force-push forms are auto-denied. `./tests/run-tests.sh fast`, `./tests/run-tests.sh all`, and `./scripts/pi-dev.sh --verify` pass. `skills/configure-pi/SKILL.md` documents `.pi/extensions/guardrails.json`.
 
 ## Canceled
 

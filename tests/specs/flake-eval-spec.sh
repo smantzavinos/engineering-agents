@@ -59,16 +59,16 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module missing models.json in activation package"
   fi
 
-  PI_MANAGED_PACKAGES_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages.json')"
-  if [[ -n "$PI_MANAGED_PACKAGES_JSON" ]] \
+  PI_MANAGED_PACKAGES_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages')/agent/managed-packages.declarations.json"
+  if [[ -n "$PI_MANAGED_PACKAGES_JSON" && -f "$PI_MANAGED_PACKAGES_JSON" ]] \
     && jq -e 'all(.packages[]; .packageId != "pi-gitnexus")' "$PI_MANAGED_PACKAGES_JSON" >/dev/null 2>&1; then
     pass "Pi module excludes pi-gitnexus from managed package declarations by default"
   else
     fail "Pi module still declares pi-gitnexus in managed package declarations by default"
   fi
 
-  PI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-settings-nix.json')"
-  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+  PI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-agent-config')/agent/settings.json"
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
     && jq -e 'all(.packages[]; . != "./packages/pi-gitnexus")' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
     pass "Pi module excludes pi-gitnexus from configured Pi packages by default"
   else
@@ -100,13 +100,24 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify skills are linked
-  for skill in discovery design research create-plan review-plan create-worklog \
-               execute-task execution-orchestrator review-code review-approach \
-               assess-repo create-skills create-new-repo-docs; do
+  for skill in discovery design discover-and-design discover-and-design-simple direct-plan dynamic-execute-plan dynamic-create-plan dynamic-review-plan dynamic-review-code \
+               research review-approach review-epic \
+               assess-repo create-skills; do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
       pass "Pi module links skill: $skill"
     else
       fail "Pi module missing skill: $skill"
+    fi
+  done
+
+  # Retired with team mode: OpenCode keeps these, Pi must not install them.
+  for skill in create-worklog execute-task execution-orchestrator \
+               create-plan review-plan review-code \
+               pi-team-plan pi-team-lead pi-team-worker; do
+    if [[ -e "$PI_FILES/.pi/agent/skills/$skill" ]]; then
+      fail "Pi module must not link retired skill: $skill"
+    else
+      pass "Pi module omits retired skill: $skill"
     fi
   done
 
@@ -128,55 +139,44 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module does not install visual-explainer prompts from commands/"
   fi
 
-  # Verify git-source packages are only reinstalled when their resolved commit
-  # changes (idempotent rebuilds), not unconditionally on every activation.
-  if grep -q 'Skipping \$package_name (already at \$target_commit)' "$PI_OUT/activate" \
-     && grep -q 'if \[ "\$current_commit" = "\$target_commit" \]; then' "$PI_OUT/activate"; then
-    pass "Pi module skips git reinstall when installed commit already matches"
+  # Managed packages are materialized at BUILD time: activation must not run
+  # npm or git at all — facades link from the store tree.
+  if ! grep -Eq 'npm (install|uninstall|ci)|git (ls-remote|clone)' "$PI_OUT/activate" \
+     && grep -q 'managed Pi packages materialized from /nix/store' "$PI_OUT/activate"; then
+    pass "Pi activation materializes managed packages from the store without npm/git"
   else
-    fail "Pi module unconditionally reinstalls git-source packages"
-  fi
-
-  # Regression guard: the skip path must still refresh .pi-managed-install.json
-  # so a ref-type change at the same commit (branch -> pinned commit) is
-  # reflected in install-state/staleness. The loop flips a `needs_install` flag
-  # instead of `continue`, so the metadata write is always reached.
-  git_loop="$(awk '/git source\)/{f=1} f{print} /requestedRefType.*requested_ref_type/{if(f)exit}' "$PI_OUT/activate")"
-  if grep -q 'needs_install=0' "$PI_OUT/activate" \
-     && ! printf '%s' "$git_loop" | grep -q 'continue'; then
-    pass "Pi module refreshes git install metadata even when reinstall is skipped"
-  else
-    fail "Pi module skip path bypasses install-metadata refresh"
+    fail "Pi activation runs npm/git or no longer materializes store facades"
   fi
 
   # Verify every managed git source is pinned to an immutable 40-hex commit so
-  # no-change rebuilds resolve offline (no git ls-remote / npm install).
-  PI_MANAGED_PACKAGES_ALL="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages.json')"
-  if [[ -n "$PI_MANAGED_PACKAGES_ALL" ]] \
+  # the vendor build resolves offline (no git ls-remote / npm install).
+  PI_MANAGED_PACKAGES_ALL="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages')/agent/managed-packages.declarations.json"
+  if [[ -n "$PI_MANAGED_PACKAGES_ALL" && -f "$PI_MANAGED_PACKAGES_ALL" ]] \
     && jq -e 'all(.packages[] | select(.source.type == "git") | .source.installSpec; test("#[0-9a-fA-F]{40}$"))' "$PI_MANAGED_PACKAGES_ALL" >/dev/null 2>&1; then
     pass "Pi module pins every git-source package to an immutable commit"
   else
     fail "Pi module has a git-source package using a mutable ref (branch/tag)"
   fi
 
-  if [[ -n "$PI_MANAGED_PACKAGES_ALL" ]] \
+  if [[ -n "$PI_MANAGED_PACKAGES_ALL" && -f "$PI_MANAGED_PACKAGES_ALL" ]] \
     && jq -e 'any(.packages[]; .packageId == "pi-powerline-footer" and .source.type == "git" and .source.packageName == "pi-powerline-footer" and (.source.installSpec | test("^github:nicobailon/pi-powerline-footer#[0-9a-fA-F]{40}$"))) and any(.packages[]; .packageId == "pi-zentui" and .source.type == "git" and .source.packageName == "pi-zentui" and (.source.installSpec | test("^github:lmilojevicc/pi-zentui#[0-9a-fA-F]{40}$")))' "$PI_MANAGED_PACKAGES_ALL" >/dev/null 2>&1; then
     pass "Pi module manages pinned Powerline and Zentui sources"
   else
     fail "Pi module must manage pinned Powerline and Zentui sources"
   fi
 
-  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
     && jq -e '.packages | index("./packages/pi-powerline-footer") != null and index("./packages/pi-zentui") == null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
     pass "Pi module defaults to the Powerline footer profile"
   else
     fail "Pi module must load only Powerline by default"
   fi
 
-  if [[ -n "$PI_SETTINGS_STORE_JSON" ]] \
+  PI_MANAGED_TREE="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages')"
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
     && jq -e '.powerline | .preset == "nerd" and .fixedEditor == true and .mouseScroll == true and .welcome == true and .cost.subscriptionDisplay == "reported-cost" and .path.mode == "abbreviated" and .path.maxLength == 36' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
     && jq -e '.powerlineShortcuts.scrollChatUp == "ctrl+alt+u" and .powerlineShortcuts.scrollChatDown == "ctrl+alt+d"' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
-    && grep -q 'POWERLINE_THEME_PATH=.*pi-powerline-footer/theme.json' "$PI_OUT/activate" \
+    && jq -e '.colors.model == "#cba6f7"' "$PI_MANAGED_TREE/vendor/node_modules/pi-powerline-footer/theme.json" >/dev/null 2>&1 \
     && grep -q 'export POWERLINE_NERD_FONTS="1"' "$PI_OUT/home-path/etc/profile.d/hm-session-vars.sh"; then
     pass "Powerline profile applies the declarative visual configuration"
   else
@@ -228,6 +228,19 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json missing zai-coding-plan provider"
   fi
 
+  if jq -e '.providers["zai-coding-plan"].models | any(.id == "glm-5.3" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true) and any(.id == "glm-5.3-flash" and .name == "GLM 5.3 Flash" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true and .input == ["text", "image"])' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+    pass "models.json includes GLM 5.3 and GLM 5.3 Flash"
+  else
+    fail "models.json is missing GLM 5.3 or GLM 5.3 Flash metadata"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.enabledModels | index("zai-coding-plan/glm-5.3") != null and index("zai-coding-plan/glm-5.3-flash") != null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi enabledModels includes GLM 5.3 and GLM 5.3 Flash"
+  else
+    fail "Pi enabledModels is missing GLM 5.3 or GLM 5.3 Flash"
+  fi
+
   if jq -e '.providers["github-copilot"].models | any(.id == "claude-opus-5" and .api == "anthropic-messages" and .contextWindow == 1048576 and .maxTokens == 128000 and .compat.forceAdaptiveThinking == true and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     pass "models.json extends github-copilot with Claude Opus 5"
   else
@@ -253,8 +266,8 @@ PI_ZENTUI_OUT=$(echo "$PI_ZENTUI_OUT" | grep '^/nix/store' | head -1 || true)
 PI_ZENTUI_SETTINGS_STORE_JSON=""
 if [[ -n "$PI_ZENTUI_OUT" && -x "$PI_ZENTUI_OUT/activate" ]]; then
   pass "Zentui footer-profile activation package builds"
-  PI_ZENTUI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_ZENTUI_OUT/activate" 'pi-settings-nix.json')"
-  if [[ -n "$PI_ZENTUI_SETTINGS_STORE_JSON" ]] \
+  PI_ZENTUI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_ZENTUI_OUT/activate" 'pi-agent-config')/agent/settings.json"
+  if [[ -n "$PI_ZENTUI_SETTINGS_STORE_JSON" && -f "$PI_ZENTUI_SETTINGS_STORE_JSON" ]] \
     && jq -e '.packages | index("./packages/pi-zentui") != null and index("./packages/pi-powerline-footer") == null' "$PI_ZENTUI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
     pass "Zentui footer profile loads only Zentui"
   else
@@ -379,7 +392,7 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
   done
 
   # Verify engineering workflow skills (OpenCode-rendered set)
-  for skill in discovery design execution-orchestrator execution-orchestrator-team research create-plan create-team-plan create-worklog create-team-worklog execute-task review-plan review-team-plan review-code review-approach review-epic assess-repo create-skills create-new-repo-docs configure-opencode; do
+  for skill in discovery design execution-orchestrator execution-orchestrator-team research create-plan create-team-plan create-worklog create-team-worklog execute-task review-plan review-team-plan review-code review-approach review-epic assess-repo create-skills configure-opencode; do
     if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
       pass "OpenCode skill: $skill"
     else

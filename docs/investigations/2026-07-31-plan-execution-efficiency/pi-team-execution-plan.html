@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pi Team Execution — Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+
+    --bg: #f7f6f1;
+    --surface: #ffffff;
+    --border: rgba(23, 42, 76, 0.12);
+    --text: #172a4c;
+    --text-dim: #5d6b85;
+
+    --primary: #1d4ed8;       /* deep blue */
+    --primary-dim: rgba(29, 78, 216, 0.08);
+    --gold: #b45309;          /* gold/amber */
+    --gold-dim: rgba(180, 83, 9, 0.10);
+    --green: #047857;
+    --green-dim: rgba(4, 120, 87, 0.09);
+    --rose: #be123c;
+    --rose-dim: rgba(190, 18, 60, 0.08);
+    --violet: #6d28d9;
+    --violet-dim: rgba(109, 40, 217, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1526;
+      --surface: #16203a;
+      --border: rgba(226, 232, 250, 0.10);
+      --text: #e2e8fa;
+      --text-dim: #8fa0c2;
+
+      --primary: #7ba3f7;
+      --primary-dim: rgba(123, 163, 247, 0.12);
+      --gold: #f0b35c;
+      --gold-dim: rgba(240, 179, 92, 0.12);
+      --green: #4ade9d;
+      --green-dim: rgba(74, 222, 157, 0.11);
+      --rose: #fb7195;
+      --rose-dim: rgba(251, 113, 149, 0.10);
+      --violet: #b79bf5;
+      --violet-dim: rgba(183, 155, 245, 0.12);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg);
+    background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    color: var(--text);
+    font-family: var(--font-body);
+    padding: 40px 24px 80px;
+    min-height: 100vh;
+    line-height: 1.55;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate { animation: fadeUp 0.4s ease-out both; animation-delay: calc(var(--i, 0) * 0.05s); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition-duration: 0.01ms !important;
+    }
+  }
+
+  .container { max-width: 1080px; margin: 0 auto; }
+
+  header { margin-bottom: 36px; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+  }
+  h1 { font-size: 40px; font-weight: 700; letter-spacing: -1.2px; text-wrap: balance; margin-bottom: 8px; }
+  .subtitle { color: var(--text-dim); font-size: 15px; max-width: 760px; }
+  .subtitle code, p code, li code, td code {
+    font-family: var(--font-mono); font-size: 0.85em;
+    background: var(--primary-dim); color: var(--primary);
+    padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+  }
+
+  h2 {
+    font-size: 22px; font-weight: 600; letter-spacing: -0.4px;
+    margin: 52px 0 6px; scroll-margin-top: 20px;
+  }
+  h2 .sec-num { color: var(--gold); font-family: var(--font-mono); font-size: 15px; margin-right: 8px; }
+  .sec-lede { color: var(--text-dim); font-size: 14px; margin-bottom: 18px; max-width: 780px; }
+
+  /* ===== trigger taxonomy badges ===== */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .b-human  { background: var(--gold-dim);    color: var(--gold);    border-color: var(--gold); }
+  .b-agent  { background: var(--primary-dim); color: var(--primary); border-color: var(--primary); }
+  .b-ext    { background: var(--green-dim);   color: var(--green);   border-color: var(--green); }
+  .b-board  { background: var(--violet-dim);  color: var(--violet);  border-color: var(--violet); }
+
+  .taxonomy {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px; margin: 18px 0 8px;
+  }
+  .tax-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; min-width: 0;
+  }
+  .tax-card p { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+  .tax-card p strong { color: var(--text); }
+
+  /* ===== role cards ===== */
+  .roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .role-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px; min-width: 0;
+    border-top: 3px solid var(--accent, var(--primary));
+  }
+  .role-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+  .role-card .who { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+  .role-card ul { list-style: none; font-size: 13px; }
+  .role-card li { padding: 3px 0 3px 16px; position: relative; color: var(--text-dim); overflow-wrap: break-word; }
+  .role-card li::before { content: '▸'; position: absolute; left: 0; color: var(--accent, var(--primary)); }
+  .role-card li.never { color: var(--rose); }
+  .role-card li.never::before { content: '✕'; color: var(--rose); }
+
+  /* ===== skills table & generic tables ===== */
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-dim);
+    padding: 12px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: break-word; }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+
+  /* ===== diagram shell (canonical) ===== */
+  .mermaid-wrap {
+    position: relative; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px 24px; overflow: auto; margin-bottom: 12px;
+    display: flex; justify-content: center; align-items: center; min-height: 400px;
+  }
+  .zoom-controls {
+    position: absolute; top: 8px; right: 8px; display: flex; gap: 2px; z-index: 10;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 2px;
+  }
+  .zoom-controls button {
+    width: 28px; height: 28px; border: none; background: transparent; color: var(--text-dim);
+    font-family: var(--font-mono); font-size: 14px; cursor: pointer; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .zoom-controls button:hover { background: var(--border); color: var(--text); }
+  .mermaid-wrap { cursor: grab; }
+  .mermaid-wrap.is-panning { cursor: grabbing; user-select: none; }
+  .diagram-shell { position: relative; }
+  .diagram-shell__hint { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-bottom: 8px; opacity: 0.7; }
+  .mermaid-viewport { position: relative; overflow: hidden; width: 100%; height: 100%; min-height: 300px; }
+  .mermaid-canvas { position: absolute; top: 0; left: 0; }
+  .zoom-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); padding: 0 6px; white-space: nowrap; }
+
+  .mermaid .nodeLabel { font-family: var(--font-body) !important; font-size: 15px !important; }
+  .mermaid .edgeLabel { font-family: var(--font-mono) !important; font-size: 12px !important; }
+  .mermaid .messageText { font-family: var(--font-mono) !important; font-size: 12.5px !important; }
+  .mermaid .actor-box, .mermaid .actor { font-family: var(--font-body) !important; }
+  .mermaid .node rect, .mermaid .node circle, .mermaid .node polygon { stroke-width: 1.5px !important; }
+
+  /* ===== legend ===== */
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+
+  /* ===== callout ===== */
+  .callout {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0;
+    padding: 14px 18px; font-size: 13px; line-height: 1.6; color: var(--text-dim); margin: 18px 0;
+  }
+  .callout strong { color: var(--text); }
+
+  /* ===== context rules strip ===== */
+  .ctx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .ctx-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; min-width: 0;
+  }
+  .ctx-card .mode {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+    color: var(--primary); margin-bottom: 4px;
+  }
+  .ctx-card .sit { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .ctx-card p { font-size: 12px; color: var(--text-dim); }
+
+  footer {
+    margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
+  }
+
+  @media (max-width: 768px) {
+    body { padding: 16px 12px 60px; }
+    h1 { font-size: 26px; }
+    .mermaid-wrap { padding: 16px 12px; }
+  }
+  .ref { font-family: ui-monospace, monospace; font-size: 0.82em; color: #6366f1; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="animate" style="--i:0">
+  <p class="eyebrow">Proposal · Pi only · Team mode only</p>
+  <h1>Pi Team Execution</h1>
+  <p class="subtitle">
+    An additive, Pi-only calibration: freeze one <code>plan.md</code> contract, initialize a
+    board, execute one dirty wave, review complete bundles, digest the affected write sets, then
+    let the lead commit. Every arrow below identifies the responsible human, lead, worker, or
+    reviewer — and the boundaries that keep canonical process and OpenCode unchanged.
+  </p>
+</header>
+
+<!-- ============ 1. TRIGGER TAXONOMY ============ -->
+<section class="animate" style="--i:1">
+  <h2><span class="sec-num">01</span>Trigger taxonomy</h2>
+  <p class="sec-lede">Four kinds of trigger exist in the whole system. Everything in the diagrams and tables below is tagged with one of these.</p>
+  <div class="taxonomy">
+    <div class="tax-card">
+      <span class="badge b-human">HUMAN</span>
+      <p><strong>You act manually.</strong> Chat messages, slash commands (<code>/pi-team-plan</code>), approvals, DMs from the <code>/messenger</code> overlay. The only inputs the process requires from you: intent, risk approvals (rare), reading the summary.</p>
+    </div>
+    <div class="tax-card">
+      <span class="badge b-agent">AGENT TOOL</span>
+      <p><strong>An agent decides to call a tool.</strong> Each ephemeral lead calls <code>pi_messenger join</code>, then <code>team.profile.use pi-team</code>. The lead checks the plan, initializes the board, emits review bundles, and alone commits reviewed waves. Workers reserve, edit, check, release — never commit.</p>
+    </div>
+    <div class="tax-card">
+      <span class="badge b-ext">EXTENSION AUTO</span>
+      <p><strong>Fires without anyone asking.</strong> Reservation conflicts and completion notifications remain visible, but Crew auto-review is disabled. The lead explicitly creates a complete path-scoped <strong>review bundle</strong> for a fresh <code>pi-team-reviewer</code>.</p>
+    </div>
+    <div class="tax-card">
+      <span class="badge b-board">BOARD EVENT</span>
+      <p><strong>File-state change wakes an agent.</strong> A green task bundle enables G1 only after all three task bundles SHIP. Its revision is the normalized write-set <strong>content digest</strong>; it reruns only when that digest changes. <em>Nothing polls on a timer.</em></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. ROLES ============ -->
+<section class="animate" style="--i:2">
+  <h2><span class="sec-num">02</span>Roles &amp; responsibilities</h2>
+  <p class="sec-lede">Five lane roles route the same <code>pi-team-worker</code> protocol. Each repository selects the lane models in its local profile; the current example uses Luna, Terra, Sol, Sonnet 5, and Opus 5. Escalation is bounded: two Crew attempts, then one fresh sol rescue and a fresh review.</p>
+  <div class="roles">
+    <div class="role-card" style="--accent: var(--gold)">
+      <h3>Human approval</h3><p class="who">risk gate · <span class="badge b-human">HUMAN</span></p>
+      <ul>
+        <li>Must approve <code>migration</code>, <code>destructive</code>, <code>auth</code>, and <code>api-contract</code> labels</li>
+        <li>Receives a pause only when rescue or scope needs a decision</li>
+        <li class="never">Approve ordinary work or worker commits</li>
+      </ul>
+    </div>
+    <div class="role-card" style="--accent: var(--primary)">
+      <h3>Pi lead</h3><p class="who">ephemeral Pi session · <span class="badge b-agent">AGENT TOOL</span></p>
+      <ul>
+        <li><code>pi_messenger join</code> then <code>team.profile.use pi-team</code></li>
+        <li>Require a clean index/worktree, record <code>BASE = HEAD</code>, then open one dirty wave transaction</li>
+        <li>Create review bundles; commit only after affected-group content digests are green</li>
+        <li class="never">Let workers commit</li>
+      </ul>
+    </div>
+    <div class="role-card" style="--accent: var(--primary)">
+      <h3>Five worker lanes</h3><p class="who">all use pi-team-worker · <span class="badge b-agent">AGENT TOOL</span></p>
+      <ul>
+        <li>Repository profile routes <code>worker-cheap</code> to Luna, <code>worker-std</code> to Terra, and <code>worker-complex</code> to Sol</li>
+        <li>Repository profile routes <code>worker-visual</code> to Sonnet 5 and <code>worker-visual-complex</code> to Opus 5</li>
+        <li>Reserve write set, make the dirty change, run the packet check, and hand off</li>
+        <li class="never">Worker commits, broad gates, or out-of-set edits</li>
+      </ul>
+    </div>
+    <div class="role-card" style="--accent: var(--green)">
+      <h3>Fresh reviewer</h3><p class="who">pi-team-reviewer · <span class="badge b-agent">AGENT TOOL</span></p>
+      <ul>
+        <li>Reviews a complete path-scoped tracked/untracked review bundle</li>
+        <li>Returns <code>SHIP</code>, <code>NEEDS_WORK</code>, or <code>MAJOR_RETHINK</code></li>
+        <li>Reviews every retry and the sol rescue afresh</li>
+        <li class="never">Auto-review a handoff or fix its own findings</li>
+      </ul>
+    </div>
+    <div class="role-card" style="--accent: var(--violet)">
+      <h3>Board</h3><p class="who">pi-messenger crew — files, not an agent · <span class="badge b-board">BOARD EVENT</span></p>
+      <ul>
+        <li>Task DAG, statuses, dependencies, waves</li>
+        <li>File reservations that block with a named holder</li>
+        <li>Wakes agents on events; live overlay for the human</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2b. MODEL TIERS ============ -->
+<section class="animate" style="--i:2">
+  <h2><span class="sec-num">02b</span>Model tiers — lanes route models, not roles</h2>
+  <p class="sec-lede">The active <code>pi-team</code> profile supplies exactly five lane roles. They all run <code>pi-team-worker</code>; the lane selects the configured model route, not a different execution contract.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Lane tag</th><th>Team role</th><th>Tier</th><th>Qualifies when</th><th>Escalates to</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">cheap</td><td class="mono">worker-cheap</td><td>profile: Luna</td><td>Decision-complete, bounded task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">std</td><td class="mono">worker-std</td><td>profile: Terra</td><td>Normal implementation</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">complex</td><td class="mono">worker-complex</td><td>profile: Sol</td><td>Complex or risk-bearing implementation</td><td>fresh review after rescue</td></tr>
+        <tr><td class="mono">visual</td><td class="mono">worker-visual</td><td>profile: Sonnet 5</td><td>Visual, UI, UX, or accessibility task</td><td>second Crew attempt, then sol rescue</td></tr>
+        <tr><td class="mono">visual-complex</td><td class="mono">worker-visual-complex</td><td>profile: Opus 5</td><td>Complex visual task</td><td>fresh review after rescue</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="table-wrap" style="margin-top: 14px;">
+    <table>
+      <thead><tr><th>Agent</th><th>Tier</th><th>Instances</th></tr></thead>
+      <tbody>
+        <tr><td>Lead</td><td>your session model</td><td class="mono">1</td></tr>
+        <tr><td>Worker</td><td>per task lane (○/◐/●)</td><td class="mono">1–4 concurrent</td></tr>
+        <tr><td>Handoff reviewer</td><td>◐ standard</td><td class="mono">fresh per handoff</td></tr>
+        <tr><td>Lead rescue</td><td>● strong subagent, lead-spawned</td><td class="mono">on blocked task</td></tr>
+        <tr><td>Final reviewer</td><td>● strong, fresh</td><td class="mono">1 per plan</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <strong>Preflight is ordered and explicit.</strong> An ephemeral lead calls <code>pi_messenger join</code>
+    before <code>team.profile.use pi-team</code>; only then do the five lane roles resolve to their
+    repository-selected model routes. The profile, deterministic CLI, three Pi-only skills plus reviewer,
+    sandbox and active deployment, resource proof, and profile activation are implemented and green
+    (Phase 0 upstream: 408/408 passed). Canonical process and OpenCode remain unchanged.
+  </div>
+</section>
+
+<!-- ============ 3. SKILLS ============ -->
+<section class="animate" style="--i:3">
+  <h2><span class="sec-num">03</span>Skills &amp; entry points</h2>
+  <p class="sec-lede">
+    Three human-triggered skills carry <code>disable-model-invocation: true</code> — Pi cannot
+    discover or auto-load them, so they cost zero context until you type the slash command.
+    Only the two execution skills are model-discoverable.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Skill</th><th>Trigger</th><th>Model-discoverable?</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="mono">/discovery</td>
+          <td><span class="badge b-human">HUMAN</span></td>
+          <td>No — <code>disable-model-invocation</code></td>
+          <td>Optional. Socratic pushback mode for genuinely fuzzy problems. Most work never needs it — plain conversation covers discovery.</td>
+        </tr>
+        <tr>
+          <td class="mono">/design</td>
+          <td><span class="badge b-human">HUMAN</span></td>
+          <td>No — <code>disable-model-invocation</code></td>
+          <td>Optional. Structured option-comparison with throwaway scout/researcher fanout. Output lands in chat, not artifacts.</td>
+        </tr>
+        <tr>
+          <td class="mono">/pi-team-plan</td>
+          <td><span class="badge b-human">HUMAN</span></td>
+          <td>No — <code>disable-model-invocation</code></td>
+          <td>The pivot. Freezes the conversation into one authored <code>plan.md</code> (Intent · Contracts · Decisions · Checks · Tasks), runs the 4 mechanical gates, requests approval only if risk-flagged or requested, else starts execution.</td>
+        </tr>
+        <tr>
+          <td class="mono">pi-team-lead</td>
+          <td><span class="badge b-agent">AGENT TOOL</span></td>
+          <td>Yes</td>
+          <td>The lead's execution protocol: board materialization, dispatch, wave gates, escalation rules, close sequence. Loaded when execution starts.</td>
+        </tr>
+        <tr>
+          <td class="mono">pi-team-worker</td>
+          <td><span class="badge b-board">BOARD EVENT</span></td>
+          <td>Injected into worker packets</td>
+          <td>Worker contract: claim/reserve/implement/check/handoff/release. Stated once here, never restated in plans.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <strong>Why <code>disable-model-invocation</code>?</strong> Skills Pi can discover sit in every
+    system prompt. Discovery/design/plan are deliberate human decisions — hiding them from the model
+    keeps ~3 skill descriptions out of every turn's context and prevents Pi from ceremonially
+    "entering discovery mode" when you just wanted a conversation.
+  </div>
+  <div class="callout">
+    <strong>One contract, one directory.</strong> The selected plan directory contains one authored
+    <code>plan.md</code>. It may also hold
+    <code>notes/</code> (reference material, research, superseded drafts) and, generated at
+    close, <code>review.md</code> and <code>telemetry.md</code>. <strong>Only
+    <code>plan.md</code> is injected into task packets</strong> — everything else is human
+    reference and never enters an agent's context unless a task row explicitly cites it. If a
+    worker needs a note to do its job, the plan didn't freeze enough: fix the plan, don't add
+    a reference.
+  </div>
+</section>
+
+<!-- ============ 4. LIFECYCLE ============ -->
+<section class="animate" style="--i:4">
+  <h2><span class="sec-num">04</span>Lifecycle</h2>
+  <p class="sec-lede">Four stages. Conversation is the front of the process — no artifacts until you say "plan it".</p>
+  <section class="diagram-shell">
+    <p class="diagram-shell__hint">Ctrl/Cmd + wheel to zoom · drag to pan · double-click to fit · ⛶ opens full size</p>
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button type="button" data-action="zoom-in" title="Zoom in">+</button>
+        <button type="button" data-action="zoom-out" title="Zoom out">&minus;</button>
+        <button type="button" data-action="zoom-fit" title="Smart fit">&#8634;</button>
+        <button type="button" data-action="zoom-one" title="1:1 zoom">1:1</button>
+        <button type="button" data-action="zoom-expand" title="Open full size">&#x26F6;</button>
+        <span class="zoom-label">Loading…</span>
+      </div>
+      <div class="mermaid-viewport"><div class="mermaid mermaid-canvas"></div></div>
+    </div>
+    <script type="text/plain" class="diagram-source">
+flowchart TD
+  A["👤 intent → frozen plan.md"] --> B["🤖 ephemeral lead:<br/>pi_messenger join"]
+  B --> C["🤖 team.profile.use pi-team<br/>five lanes resolve"]
+  C --> D{"plan check passes?"}
+  D -->|no| A
+  D -->|yes| E{"migration / destructive /<br/>auth / api-contract risk?"}
+  E -->|yes| F["👤 human approval"]
+  E -->|no| G["🤖 initialize board"]
+  F --> G
+  G --> H["⚙️ clean tree · record BASE = HEAD<br/>one dirty wave · workers do not commit"]
+  H --> I["🤖 complete review bundle →<br/>fresh pi-team-reviewer"]
+  I --> J{"all task bundles SHIP?"}
+  J -->|no| H
+  J -->|yes| K["🤖 G1: affected-group<br/>content digest green"]
+  K --> L["🤖 lead commits wave"]
+  L --> M["🏁 additive calibration only:<br/>three code runs still required"]
+
+  style A fill:#fdf3e3,stroke:#b45309,color:#172a4c
+  style B fill:#e8eefc,stroke:#1d4ed8,color:#172a4c
+  style E fill:#e4f3ec,stroke:#047857,color:#172a4c
+  style F fill:#f0eafb,stroke:#6d28d9,color:#172a4c
+    </script>
+  </section>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--gold)"></div> human-driven</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--primary)"></div> lead agent</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--green)"></div> team execution</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--violet)"></div> close-out</div>
+  </div>
+</section>
+
+<!-- ============ 5. MAIN SEQUENCE ============ -->
+<section class="animate" style="--i:5">
+  <h2><span class="sec-num">05</span>Full run — sequence</h2>
+  <p class="sec-lede">One bounded wave. Crew auto-review is disabled: the lead intentionally bundles each dirty task change and assigns a fresh reviewer before integration or commit.</p>
+  <section class="diagram-shell">
+    <p class="diagram-shell__hint">Ctrl/Cmd + wheel to zoom · drag to pan · double-click to fit · ⛶ opens full size</p>
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button type="button" data-action="zoom-in" title="Zoom in">+</button>
+        <button type="button" data-action="zoom-out" title="Zoom out">&minus;</button>
+        <button type="button" data-action="zoom-fit" title="Smart fit">&#8634;</button>
+        <button type="button" data-action="zoom-one" title="1:1 zoom">1:1</button>
+        <button type="button" data-action="zoom-expand" title="Open full size">&#x26F6;</button>
+        <span class="zoom-label">Loading…</span>
+      </div>
+      <div class="mermaid-viewport"><div class="mermaid mermaid-canvas"></div></div>
+    </div>
+    <script type="text/plain" class="diagram-source">
+sequenceDiagram
+  autonumber
+  actor H as 👤 Human
+  participant L as Lead<br/>(primary Pi)
+  participant B as Board<br/>(pi-messenger)
+  participant W as Worker<br/>(crew)
+  participant R as pi-team-reviewer<br/>(fresh)
+  participant G as Git
+
+  rect rgba(29,78,216,0.06)
+    note over L,B: PREFLIGHT AND BOARD
+    L->>L: pi_messenger join
+    L->>L: team.profile.use pi-team
+    L->>L: plan check
+    opt migration / destructive / auth / api-contract
+      L->>H: request human approval
+      H->>L: approve
+    end
+    L->>B: initialize board with exact lane roles
+  end
+
+  rect rgba(4,120,87,0.06)
+    note over B,G: ONE DIRTY WAVE — workers never commit
+    B-->>W: ready task: terra or sol lane
+    W->>B: reserve → implement → packet check → handoff
+    W->>B: release; leave dirty change
+    L->>R: pi-team review-wave complete review bundle
+    R->>L: SHIP / NEEDS_WORK / MAJOR_RETHINK
+    opt every task bundle SHIP
+      L->>L: calculate affected-group content digest
+      L->>L: run G1 only for a changed digest
+      L->>G: lead commits reviewed wave after G1 green
+    end
+  end
+
+  rect rgba(109,40,217,0.06)
+    note over L,H: ROLLOUT BOUNDARY
+    L-->>H: additive bootstrap evidence and telemetry
+    L->>L: do not change canonical process or OpenCode
+    L->>L: promotion awaits three representative code runs<br/>and median wall-clock ≤ 60% serial estimate
+  end
+    </script>
+  </section>
+  <div class="callout">
+    <strong>Watching live is optional.</strong> At any point during EXECUTE, <code>/messenger</code>
+    <span class="badge b-human">HUMAN</span> opens the overlay: every agent, its status, current task,
+    activity feed, and DM input. The run does not need you there — you are only interrupted for
+    blockers, product decisions, or unresolved risk flags (via intercom).
+  </div>
+</section>
+
+<!-- ============ 6. REMEDIATION SEQUENCE ============ -->
+<section class="animate" style="--i:6">
+  <h2><span class="sec-num">06</span>Remediation &amp; escalation — sequence</h2>
+  <p class="sec-lede">Ordinary work receives two Crew attempts. Exhausted or <code>MAJOR_RETHINK</code> work gets exactly one fresh sol rescue, followed by a fresh task review.</p>
+  <section class="diagram-shell">
+    <p class="diagram-shell__hint">Ctrl/Cmd + wheel to zoom · drag to pan · double-click to fit · ⛶ opens full size</p>
+    <div class="mermaid-wrap">
+      <div class="zoom-controls">
+        <button type="button" data-action="zoom-in" title="Zoom in">+</button>
+        <button type="button" data-action="zoom-out" title="Zoom out">&minus;</button>
+        <button type="button" data-action="zoom-fit" title="Smart fit">&#8634;</button>
+        <button type="button" data-action="zoom-one" title="1:1 zoom">1:1</button>
+        <button type="button" data-action="zoom-expand" title="Open full size">&#x26F6;</button>
+        <span class="zoom-label">Loading…</span>
+      </div>
+      <div class="mermaid-viewport"><div class="mermaid mermaid-canvas"></div></div>
+    </div>
+    <script type="text/plain" class="diagram-source">
+sequenceDiagram
+  autonumber
+  actor H as 👤 Human
+  participant L as Lead
+  participant B as Board
+  participant W as Worker A<br/>(original)
+  participant W2 as Worker B<br/>(fresh, strong model)
+  participant R as Reviewer
+
+  W->>B: handoff task T3 【AGENT】
+  L->>R: review bundle 【AGENT: review-wave】
+  R->>B: NEEDS_WORK + findings 【AGENT】
+  note over B,W: Crew attempt 2 — findings carried
+  B-->>W: task reset: fresh worker and packet
+  W->>B: handoff v2, still dirty
+  L->>R: fresh review bundle
+
+  alt SHIP
+    R->>B: SHIP — task done 【AGENT】
+  else still failing / RETHINK
+    R->>B: MAJOR_RETHINK / exhausted 【AGENT】
+    B-->>L: escalation 【BOARD EVENT】
+    note over L,W2: one fresh sol rescue only
+    L->>W2: spawn sol rescue, fresh packet
+    W2->>B: handoff v3, still dirty
+    L->>R: fresh task review bundle
+    alt SHIP
+      R->>B: SHIP 【AGENT】
+    else second failure
+      R->>B: fail 【AGENT】
+      B-->>L: stop-the-line 【BOARD EVENT】
+      L->>H: pause + decision request 【intercom → notification】
+      H->>L: decide: rescope / drop / take over 【HUMAN】
+    end
+  end
+    </script>
+  </section>
+</section>
+
+<!-- ============ 7. EVENT MODEL ============ -->
+<section class="animate" style="--i:7">
+  <h2><span class="sec-num">07</span>Event model — every trigger in one table</h2>
+  <p class="sec-lede">Nothing polls on a timer. Crew auto-review is disabled: a lead action creates the review bundle, and only a green affected-group content digest permits the lead's per-wave commit.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Event</th><th>Trigger type</th><th>Mechanism</th><th>Wakes</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>Ephemeral lead starts</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">pi_messenger join → team.profile.use</td><td>Pi team profile</td><td>Activate the exact five lane routes</td></tr>
+        <tr><td>Plan accepted</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">clean tree · BASE = HEAD · board init</td><td>Workers</td><td>Create one dirty wave transaction</td></tr>
+        <tr><td>Risk label present</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">migration | destructive | auth | api-contract</td><td>Human</td><td>Must approve before work proceeds</td></tr>
+        <tr><td>Worker handoff</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">pi-team review-wave</td><td>Fresh reviewer</td><td>Review complete tracked/untracked review bundle</td></tr>
+        <tr><td>NEEDS_WORK</td><td><span class="badge b-board">BOARD</span></td><td class="mono">Crew attempt 2</td><td>Fresh worker</td><td>Retry with findings; ordinary work has two attempts</td></tr>
+        <tr><td>Exhausted / MAJOR_RETHINK</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">sol rescue</td><td>Fresh sol worker + reviewer</td><td>One rescue, then fresh task review</td></tr>
+        <tr><td>All three task bundles SHIP</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">G1</td><td>Lead</td><td>Use normalized write-set content digest; rerun only when changed</td></tr>
+        <tr><td>Affected-group digest green</td><td><span class="badge b-agent">AGENT</span></td><td class="mono">per-wave boundary</td><td>Lead</td><td>Lead commits the reviewed dirty wave</td></tr>
+        <tr><td>Board empty</td><td><span class="badge b-board">BOARD</span></td><td class="mono">crew status</td><td>Lead</td><td>Close: final review, telemetry, summary</td></tr>
+        <tr><td>Agent silent 2 turns</td><td><span class="badge b-ext">EXT AUTO</span></td><td class="mono">messenger stuck detection</td><td>Lead</td><td>Nudge once, then restart that member</td></tr>
+        <tr><td>Watch / steer mid-run</td><td><span class="badge b-human">HUMAN</span></td><td class="mono">/messenger overlay</td><td>—</td><td>Observe presence + feed; DM any agent (optional)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 8. CONTEXT RULES ============ -->
+<section class="animate" style="--i:8">
+  <h2><span class="sec-num">08</span>Context rules</h2>
+  <p class="sec-lede">Context is the scarce resource. Workers get a packet, not a transcript; the lead never ingests full diffs (they flow worker → reviewer directly); handoffs are ≤15 lines.</p>
+  <div class="ctx-grid">
+    <div class="ctx-card"><p class="mode">fresh + packet</p><p class="sit">Worker, first attempt</p><p>A packet (write set · contract · decisions · check) beats inheriting a transcript.</p></div>
+    <div class="ctx-card"><p class="mode">fresh + findings</p><p class="sit">Worker, retry #1</p><p>Not a choice: Crew workers run <code>--no-session</code>. Crew re-injects task spec, review feedback, and ~30 progress lines.</p></div>
+    <div class="ctx-card"><p class="mode">fresh + strong</p><p class="sit">After failed retry</p><p>The old context holds the wrong model — that's why it failed.</p></div>
+    <div class="ctx-card"><p class="mode">fresh, always</p><p class="sit">Every reviewer</p><p>Independence. Never forked or resumed from the implementer.</p></div>
+    <div class="ctx-card"><p class="mode">fork</p><p class="sit">Lead helper only</p><p>Replanning genuinely needs the conversation. (Fork disables child thinking — avoid for complex work.)</p></div>
+  </div>
+</section>
+
+<!-- ============ 9. DEPLOYMENT ============ -->
+<section class="animate" style="--i:9">
+  <h2><span class="sec-num">09</span>Deployment</h2>
+  <p class="sec-lede">Bootstrap mechanics are implemented and green: deterministic <code>pi-team</code> CLI, package/config/profile, three Pi-only skills plus reviewer, sandbox and active deployment, resource proof, and profile activation. This rollout is additive and does not alter canonical process or OpenCode.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Piece</th><th>Provides</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">pi-team profile</td><td>Exact terra routes for cheap/std/visual and sol routes for complex/visual-complex; all lanes use <code>pi-team-worker</code></td><td>✅ active</td></tr>
+        <tr><td class="mono">pi-team CLI</td><td>Deterministic plan check, board initialization, review-wave bundles, and digest integration</td><td>✅ implemented</td></tr>
+        <tr><td class="mono">review boundary</td><td>Crew auto-review disabled; fresh <code>pi-team-reviewer</code> reviews each complete bundle</td><td>✅ implemented</td></tr>
+        <tr><td class="mono">deployment proof</td><td>Sandbox + active deployment, resource proof, and Phase 0 upstream 408/408</td><td>✅ green</td></tr>
+        <tr><td class="mono">promotion</td><td>Three representative code-change calibrations; median wall-clock must be ≤ 60% of frozen serial estimates</td><td>⏳ not counted by bootstrap</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <strong>Repo hooks — exactly three, all lead-owned.</strong>
+    Requirements (<code>docs/requirements.md</code>: plans cite IDs, edits are plan tasks, final review checks alignment) ·
+    Testing levels (<code>docs/testing-strategy.md</code>: broad = wave gate, targeted = worker loop) ·
+    Backlog (<code>docs/backlog.md</code>: deferred work → <code>TASK-XXXX</code> at close; critical discoveries stop the line).
+    Nothing else in the repo docs is process-load-bearing.
+  </div>
+</section>
+
+<footer class="animate" style="--i:10">
+  Evidence base &amp; extension evaluation: README.md · prose version: pi-team-execution.md · rollout: implementation-plan.md
+</footer>
+
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs';
+
+  const config = {
+    fitPadding: 28, minHeight: 360, maxHeightPx: 960, maxHeightVh: 0.84,
+    maxInitialZoom: 1.8, minZoom: 0.08, maxZoom: 6.5, zoomStep: 0.14, readabilityFloor: 0.58
+  };
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  let activeDrag = null;
+  addEventListener('mousemove', (e) => activeDrag?.onMove(e));
+  addEventListener('mouseup', () => { activeDrag?.onEnd(); activeDrag = null; });
+
+  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+
+  mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    look: 'classic',
+    layout: 'elk',
+    sequence: { mirrorActors: false, actorMargin: 42, messageMargin: 34, boxMargin: 8 },
+    themeVariables: {
+      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+      fontSize: '15px',
+      primaryColor: isDark ? '#1e3a8a' : '#e8eefc',
+      primaryBorderColor: isDark ? '#7ba3f7' : '#1d4ed8',
+      primaryTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      secondaryColor: isDark ? '#713f12' : '#fdf3e3',
+      secondaryBorderColor: isDark ? '#f0b35c' : '#b45309',
+      secondaryTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      tertiaryColor: isDark ? '#064e3b' : '#e4f3ec',
+      tertiaryBorderColor: isDark ? '#4ade9d' : '#047857',
+      tertiaryTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      lineColor: isDark ? '#8fa0c2' : '#5d6b85',
+      actorBkg: isDark ? '#1e3a8a' : '#e8eefc',
+      actorBorder: isDark ? '#7ba3f7' : '#1d4ed8',
+      actorTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      actorLineColor: isDark ? '#8fa0c2' : '#5d6b85',
+      signalColor: isDark ? '#e2e8fa' : '#172a4c',
+      signalTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      labelBoxBkgColor: isDark ? '#713f12' : '#fdf3e3',
+      labelBoxBorderColor: isDark ? '#f0b35c' : '#b45309',
+      labelTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      loopTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      noteBkgColor: isDark ? '#713f12' : '#fdf3e3',
+      noteTextColor: isDark ? '#e2e8fa' : '#172a4c',
+      noteBorderColor: isDark ? '#f0b35c' : '#b45309',
+      activationBkgColor: isDark ? '#16203a' : '#f7f6f1',
+      activationBorderColor: isDark ? '#8fa0c2' : '#5d6b85',
+      sequenceNumberColor: isDark ? '#0e1526' : '#ffffff'
+    }
+  });
+
+  function initDiagram(shell) {
+    const wrap = shell.querySelector('.mermaid-wrap');
+    const viewport = shell.querySelector('.mermaid-viewport');
+    const canvas = shell.querySelector('.mermaid-canvas');
+    const source = shell.querySelector('.diagram-source');
+    const label = shell.querySelector('.zoom-label');
+    if (!wrap || !viewport || !canvas || !source || !label) return;
+
+    let zoom = 1, fitMode = 'contain', panX = 0, panY = 0, svgW = 0, svgH = 0;
+    let sx = 0, sy = 0, spx = 0, spy = 0;
+    let touchDist = 0, touchCx = 0, touchCy = 0;
+
+    function constrainPan() {
+      const vpW = viewport.clientWidth, vpH = viewport.clientHeight;
+      const rW = svgW * zoom, rH = svgH * zoom, pad = config.fitPadding;
+      panX = (rW + pad * 2 <= vpW) ? (vpW - rW) / 2 : clamp(panX, vpW - rW - pad, pad);
+      panY = (rH + pad * 2 <= vpH) ? (vpH - rH) / 2 : clamp(panY, vpH - rH - pad, pad);
+    }
+    function applyTransform() {
+      const svg = canvas.querySelector('svg');
+      if (!svg || !svgW) return;
+      constrainPan();
+      svg.style.width = (svgW * zoom) + 'px';
+      svg.style.height = (svgH * zoom) + 'px';
+      canvas.style.transform = `translate(${panX}px, ${panY}px)`;
+      label.textContent = Math.round(zoom * 100) + '% \u2014 ' + fitMode;
+    }
+    function canPan() {
+      return svgW * zoom + config.fitPadding * 2 > viewport.clientWidth
+          || svgH * zoom + config.fitPadding * 2 > viewport.clientHeight;
+    }
+    function computeSmartFit() {
+      const vpW = viewport.clientWidth, vpH = viewport.clientHeight;
+      const aW = Math.max(80, vpW - config.fitPadding * 2);
+      const aH = Math.max(80, vpH - config.fitPadding * 2);
+      const contain = Math.min(aW / svgW, aH / svgH);
+      let z = contain, mode = 'contain';
+      if (contain < config.readabilityFloor) {
+        const chartR = svgH / svgW, vpR = vpH / Math.max(vpW, 1);
+        if (chartR >= vpR) { z = aW / svgW; mode = 'width-priority'; }
+        else { z = aH / svgH; mode = 'height-priority'; }
+      }
+      return { zoom: clamp(z, config.minZoom, config.maxInitialZoom), mode };
+    }
+    function fitDiagram() {
+      if (!svgW) return;
+      const fit = computeSmartFit();
+      zoom = fit.zoom; fitMode = fit.mode;
+      panX = (viewport.clientWidth - svgW * zoom) / 2;
+      panY = (viewport.clientHeight - svgH * zoom) / 2;
+      applyTransform();
+    }
+    function setOneToOne() {
+      zoom = clamp(1, config.minZoom, config.maxZoom);
+      fitMode = '1:1';
+      panX = (viewport.clientWidth - svgW * zoom) / 2;
+      panY = (viewport.clientHeight - svgH * zoom) / 2;
+      applyTransform();
+    }
+    function zoomAround(factor, cx, cy) {
+      const next = clamp(zoom * factor, config.minZoom, config.maxZoom);
+      const ratio = next / zoom;
+      panX = cx - ratio * (cx - panX);
+      panY = cy - ratio * (cy - panY);
+      zoom = next; fitMode = 'custom';
+      applyTransform();
+    }
+    function readSvgNaturalSize(svg) {
+      let w = 0, h = 0;
+      if (svg.viewBox?.baseVal?.width > 0) { w = svg.viewBox.baseVal.width; h = svg.viewBox.baseVal.height; }
+      if (!w) { w = parseFloat(svg.getAttribute('width')) || 0; h = parseFloat(svg.getAttribute('height')) || 0; }
+      if (!w) { const b = svg.getBBox(); w = b.width; h = b.height; }
+      if (!w) { const r = svg.getBoundingClientRect(); w = r.width || 1000; h = r.height || 700; }
+      if (!svg.getAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      return { w, h };
+    }
+    function setAdaptiveHeight() {
+      if (!svgW) return;
+      const usableW = Math.max(280, wrap.getBoundingClientRect().width - 2);
+      const idealH = (svgH / svgW) * usableW + config.fitPadding * 2;
+      const maxVp = Math.floor(innerHeight * config.maxHeightVh);
+      const hardMax = Math.min(config.maxHeightPx, Math.max(config.minHeight + 40, maxVp));
+      wrap.style.height = Math.round(clamp(idealH, config.minHeight, hardMax)) + 'px';
+    }
+    function openInNewTab() {
+      const svg = canvas.querySelector('svg');
+      if (!svg) return;
+      const clone = svg.cloneNode(true);
+      clone.style.width = ''; clone.style.height = '';
+      const bg = isDark ? '#0e1526' : '#f7f6f1';
+      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Diagram</title><style>
+      body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:${bg};padding:40px;box-sizing:border-box}
+      svg{max-width:100%;max-height:90vh;height:auto}
+      </style></head><body>${clone.outerHTML}</body></html>`;
+      open(URL.createObjectURL(new Blob([html], { type: 'text/html' })), '_blank');
+    }
+    async function render() {
+      try {
+        const code = source.textContent.trim();
+        if (!code) { label.textContent = 'Error: Empty source'; return; }
+        const id = 'diagram-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        const { svg } = await mermaid.render(id, code);
+        const parsed = new DOMParser().parseFromString(svg, 'text/html');
+        const parsedSvg = parsed.body.querySelector('svg');
+        if (!parsedSvg) { label.textContent = 'Error: No SVG'; return; }
+        canvas.replaceChildren(document.adoptNode(parsedSvg));
+        const svgNode = canvas.querySelector('svg');
+        if (!svgNode) { label.textContent = 'Error: No SVG'; return; }
+        const size = readSvgNaturalSize(svgNode);
+        svgW = size.w; svgH = size.h;
+        svgNode.removeAttribute('width');
+        svgNode.removeAttribute('height');
+        svgNode.style.maxWidth = 'none';
+        svgNode.style.display = 'block';
+        setAdaptiveHeight();
+        fitDiagram();
+      } catch (err) {
+        console.error('Mermaid render failed:', err);
+        label.textContent = 'Error: ' + (err.message || 'Render failed');
+      }
+    }
+
+    const actions = {
+      'zoom-in': () => zoomAround(1 + config.zoomStep, viewport.clientWidth / 2, viewport.clientHeight / 2),
+      'zoom-out': () => zoomAround(1 / (1 + config.zoomStep), viewport.clientWidth / 2, viewport.clientHeight / 2),
+      'zoom-fit': fitDiagram,
+      'zoom-one': setOneToOne,
+      'zoom-expand': openInNewTab
+    };
+    Object.entries(actions).forEach(([action, handler]) => {
+      wrap.querySelector(`[data-action="${action}"]`)?.addEventListener('click', handler);
+    });
+    viewport.addEventListener('dblclick', fitDiagram);
+    viewport.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const rect = viewport.getBoundingClientRect();
+        const factor = e.deltaY < 0 ? 1 + config.zoomStep : 1 / (1 + config.zoomStep);
+        zoomAround(factor, e.clientX - rect.left, e.clientY - rect.top);
+        return;
+      }
+      if (canPan()) { e.preventDefault(); panX -= e.deltaX; panY -= e.deltaY; applyTransform(); }
+    }, { passive: false });
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.zoom-controls') || !canPan()) return;
+      wrap.classList.add('is-panning');
+      sx = e.clientX; sy = e.clientY; spx = panX; spy = panY;
+      e.preventDefault();
+      activeDrag = {
+        onMove: (ev) => { panX = spx + (ev.clientX - sx); panY = spy + (ev.clientY - sy); applyTransform(); },
+        onEnd: () => { wrap.classList.remove('is-panning'); }
+      };
+    });
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; spx = panX; spy = panY; }
+      else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchDist = Math.sqrt(dx * dx + dy * dy);
+        const r = viewport.getBoundingClientRect();
+        touchCx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+        touchCy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+      }
+    }, { passive: true });
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1 && canPan()) {
+        if (touchDist > 0) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; spx = panX; spy = panY; touchDist = 0; }
+        e.preventDefault();
+        panX = spx + (e.touches[0].clientX - sx);
+        panY = spy + (e.touches[0].clientY - sy);
+        applyTransform();
+      } else if (e.touches.length === 2 && touchDist > 0) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        zoomAround(d / touchDist, touchCx, touchCy);
+        touchDist = d;
+      }
+    }, { passive: false });
+    new ResizeObserver(() => { if (svgW) { setAdaptiveHeight(); fitDiagram(); } }).observe(wrap);
+    render();
+  }
+
+  document.querySelectorAll('.diagram-shell').forEach(initDiagram);
+</script>
+</body>
+</html>

@@ -40,6 +40,11 @@ assert_file_not_contains() {
   if grep -Fq "$needle" "$path"; then fail "$desc (unexpected: $needle in $path)"; else pass "$desc"; fi
 }
 
+assert_file_absent() {
+  local path="$1" desc="$2"
+  if [[ -e "$path" ]]; then fail "$desc (still present: $path)"; else pass "$desc"; fi
+}
+
 printf 'Repo readiness docs verification\n'
 printf '================================\n\n'
 
@@ -54,8 +59,8 @@ assert_file_exists "$REPO_ROOT/plans/README.md" "Plans guidance doc exists"
 assert_file_exists "$REPO_ROOT/docs/issues_learnings.md" "Issues and learnings log exists"
 assert_file_exists "$REPO_ROOT/docs/adr/README.md" "ADR index exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Initial ADR exists"
-assert_file_exists "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Team planning ADR exists"
-assert_file_exists "$REPO_ROOT/docs/team-mode-execution.md" "Team-mode execution doc exists"
+assert_file_exists "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Code-mode ADR exists"
+assert_file_exists "$REPO_ROOT/docs/execution-patterns.md" "Code-mode execution patterns doc exists"
 assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
 assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
 assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
@@ -81,7 +86,7 @@ assert_file_contains "$REPO_ROOT/AGENTS.md" "## Requirements" "AGENTS routes req
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/requirements.md" "AGENTS points to the canonical requirements doc"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Planning Artifacts" "AGENTS routes planning artifacts section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "plans/README.md" "AGENTS points to the plans guidance doc"
-assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/team-mode-execution.md" "AGENTS routes to team-mode execution"
+assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/execution-patterns.md" "AGENTS routes to code-mode execution patterns"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "## Operational Memory" "AGENTS routes operational memory section"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/issues_learnings.md" "AGENTS points to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/AGENTS.md" "docs/adr/README.md" "AGENTS points to the ADR index"
@@ -131,7 +136,9 @@ assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "## Scope, Timing, an
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "task completion gate" "Testing strategy doc identifies the task gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "final plan gate" "Testing strategy doc identifies the final gate"
 assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "bash tests/specs/proof-set-runtime-spec.sh" "Testing strategy doc lists targeted proof-set feedback"
-assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Team-mode ownership" "Testing strategy assigns team verification roles"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Ownership in the dynamic workflow" "Testing strategy assigns dynamic-workflow verification roles"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "Verification classes" "Testing strategy defines the verification classes"
+assert_file_contains "$REPO_ROOT/docs/testing-strategy.md" "no mandatory break-it step" "Testing strategy records that break-it is reviewer-initiated only"
 
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "# Backlog" "Backlog doc has title"
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "## System" "Backlog doc explains the system"
@@ -225,8 +232,10 @@ assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "#
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Decision" "Initial ADR documents the decision"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Consequences" "Initial ADR documents consequences"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "FR-001" "Initial ADR cites relevant requirement IDs"
-assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Status: Accepted" "Team planning ADR is accepted"
-assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "team_plan.md" "Team planning ADR records the separate artifact"
+assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Status: Accepted" "Code-mode ADR is accepted"
+assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Status: Superseded" "Team planning ADR is superseded"
+assert_file_contains "$REPO_ROOT/docs/adr/0003-restore-team-mode-throughput-scheduling.md" "Status: Superseded" "Team throughput ADR is superseded"
+assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "tasks.json" "Code-mode ADR records the machine-readable task graph"
 
 assert_file_contains "$REPO_ROOT/README.md" "docs/architecture.md" "README links to the architecture doc"
 assert_file_contains "$REPO_ROOT/README.md" "docs/coding-rules.md" "README links to the coding rules doc"
@@ -288,6 +297,36 @@ assert_file_contains "$REPO_ROOT/.llm/nix_rules.txt" "generated package" "Nix LL
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-001' "Readiness docs spec cites a functional requirement"
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-004' "Readiness docs spec cites the requirements-system contract"
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' "Proof-set runtime spec cites its functional requirement"
+
+# Team mode was removed in favour of code-mode execution. These assert the
+# teardown stays torn down; see docs/investigations/2026-08-18-code-mode-process/.
+assert_file_absent "$REPO_ROOT/docs/pi-team-setup.md" "Pi team setup doc is removed with team mode"
+assert_file_absent "$REPO_ROOT/config/pi-team/team-profile.json" "Pi team profile is removed with team mode"
+assert_file_absent "$REPO_ROOT/tools/pi-team.mjs" "pi-team tool is removed with team mode"
+assert_file_not_contains "$REPO_ROOT/AGENTS.md" "docs/pi-team-setup.md" "AGENTS no longer routes the removed Pi team setup doc"
+assert_file_not_contains "$REPO_ROOT/nix/modules/pi/config.nix" "pi-messenger" "Pi module no longer declares pi-messenger"
+assert_file_not_contains "$REPO_ROOT/nix/modules/pi/default.nix" "piTeamPkg" "Pi module no longer installs the pi-team command"
+
+
+INVESTIGATION="$REPO_ROOT/docs/investigations/2026-07-31-plan-execution-efficiency"
+NOTES="$INVESTIGATION/notes/README.md"
+DESIGN="$INVESTIGATION/pi-team-execution.md"
+IMPLEMENTATION="$INVESTIGATION/implementation-plan.md"
+assert_file_contains "$NOTES" '**SUB-11**' "Investigation records the Crew worker override constraint"
+assert_file_contains "$NOTES" 'crew/agents/crew-worker.md Phase 5' "Worker override finding cites the bundled commit phase"
+assert_file_contains "$NOTES" 'crew/utils/discover.ts:116-127' "Worker override finding cites project discovery precedence"
+assert_file_contains "$NOTES" '**SUB-12**' "Investigation records the Crew worker tool-exposure constraint"
+assert_file_contains "$NOTES" 'crew/agents.ts:40-41,225-245' "Worker tool-exposure finding cites the filtering and extension-tool implementation"
+assert_file_contains "$DESIGN" 'config/pi-team/crew-worker.md' "Design deployment table includes the canonical worker override"
+assert_file_contains "$DESIGN" '.pi/messenger/crew/agents/crew-worker.md' "Design deployment table includes the project worker symlink"
+assert_file_contains "$DESIGN" '[SUB-11]' "Design cites the worker override substrate finding"
+assert_file_contains "$DESIGN" '[SUB-12]' "Design cites the Crew worker tool-exposure constraint"
+assert_file_contains "$DESIGN" 'no `tools` frontmatter' "Design requires the Crew worker override to omit tools frontmatter"
+assert_file_contains "$IMPLEMENTATION" 'pre-dispatch worker-system override' "Implementation plan tracks the worker override contract"
+assert_file_contains "$IMPLEMENTATION" 'config/pi-team/crew-worker.md' "Implementation plan assigns the canonical worker override"
+assert_file_contains "$IMPLEMENTATION" '.pi/messenger/crew/agents/crew-worker.md' "Implementation plan assigns the project worker symlink"
+assert_file_contains "$IMPLEMENTATION" '[SUB-12]' "Implementation plan cites the Crew worker tool-exposure constraint"
+assert_file_contains "$IMPLEMENTATION" 'no `tools` frontmatter' "Implementation plan requires the Crew worker override to omit tools frontmatter"
 
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"

@@ -16,10 +16,10 @@
     {
       "packageId": "pi-subagents",
       "sourceManifestName": "pi-subagents",
-      "sourceSpec": "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206",
+      "sourceSpec": "github:nicobailon/pi-subagents#3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b",
       "resourceExpectations": {
         "extensions": [
-          "./src/extension/index.ts"
+          "./index.ts"
         ],
         "skills": [
           "pi-subagents"
@@ -47,19 +47,6 @@
       "resourceExpectations": {
         "extensions": [
           "./extensions/leader-key/index.ts"
-        ],
-        "skills": [],
-        "themes": []
-      }
-    },
-    {
-      "packageId": "pi-ext-review",
-      "sourceManifestName": "pi-ext",
-      "sourceSpec": "github:tomsej/pi-ext#d162f4c47ae82d2cdb5d1d499136601ff8718303",
-      "sharedSourceKey": "src-6dae48d0004d3335",
-      "resourceExpectations": {
-        "extensions": [
-          "./extensions/review/review.ts"
         ],
         "skills": [],
         "themes": []

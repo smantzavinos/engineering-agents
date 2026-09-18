@@ -52,6 +52,25 @@ for agent in planner plan-reviewer code-reviewer worker ui-worker researcher vis
   fi
 done
 
+# Every skill a preset tells the model to read must actually be installed for Pi.
+# The execute preset previously pointed at execution-orchestrator, which had been
+# removed from the Pi tree; nothing caught it because no spec checked the link.
+REFERENCED_SKILLS="$(printf '%s' "$PRESET_JSON" \
+  | jq -r '.presets[].instructions // ""' \
+  | grep -o '~/\.pi/agent/skills/[A-Za-z0-9._-]*' \
+  | sed 's|.*/||' | sort -u)"
+if [[ -z "$REFERENCED_SKILLS" ]]; then
+  fail "no preset references a skill path; the check would be vacuous"
+else
+  for skill in $REFERENCED_SKILLS; do
+    if [[ -f "$REPO_ROOT/dist/skills/pi/${skill}/SKILL.md" ]]; then
+      pass "preset-referenced skill '${skill}' is installed for Pi"
+    else
+      fail "preset references skill '${skill}' which is not in the Pi tree"
+    fi
+  done
+fi
+
 # ============================================================
 printf '\n'
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"

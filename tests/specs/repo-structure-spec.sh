@@ -78,7 +78,7 @@ SKILLS=(
   create-worklog create-team-worklog
   execute-task execution-orchestrator execution-orchestrator-team
   review-code review-approach review-epic
-  assess-repo create-skills create-new-repo-docs
+  assess-repo create-skills
   configure-opencode
 )
 for skill in "${SKILLS[@]}"; do
@@ -108,8 +108,8 @@ assert_file_contains "$REPO_ROOT/README.md" "homeManagerModules" "README documen
 assert_file_contains "$REPO_ROOT/flake.nix" "homeManagerModules" "Flake exposes homeManagerModules"
 assert_file_contains "$REPO_ROOT/flake.nix" "llmAgents" "Flake references llmAgents input"
 assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references OpenCode module"
-assert_file_contains "$REPO_ROOT/docs/process.md" "team_plan.md" "Process documents the team planning branch"
-assert_file_contains "$REPO_ROOT/docs/team-mode-execution.md" "Strong rescue implementer" "Team-mode doc defines the rescue role"
+assert_file_contains "$REPO_ROOT/docs/process.md" "Parallel Planning and Execution" "Process documents the parallel planning branch"
+assert_file_contains "$REPO_ROOT/docs/execution-patterns.md" "The loop lives in the parent" "Execution patterns doc defines the parent-driven loop"
 
 # ============================================================
 printf '\n'

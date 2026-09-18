@@ -1,6 +1,6 @@
 ---
 name: configure-pi
-description: Configure Pi safely for the current repository through `.pi/settings.json`, including project-specific models, resources, and subagent role overrides. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
+description: Configure Pi safely for the current repository through `.pi/settings.json`, repository-local Guardrails in `.pi/extensions/guardrails.json`, and the Pi-team profile, including project-specific models, resources, subagent role overrides, Crew lane routing, and safety policy. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
 harnesses: [pi]
 metadata:
   domain: pi
@@ -8,15 +8,17 @@ metadata:
 
 ## What I do
 - Create or update the committed, project-local Pi settings file: `.pi/settings.json`.
-- Configure project-specific model defaults, model cycling, resource paths, and `subagents.agentOverrides` without inventing model IDs or overwriting unrelated settings.
+- Create or update repository-local Guardrails policy in `.pi/extensions/guardrails.json`, including path access, protected-file policies, and dangerous-command gates.
+- Configure project-specific model defaults, model cycling, resource paths, `subagents.agentOverrides`, and Pi-team Crew lane routing without inventing model IDs or overwriting unrelated settings.
 - Diagnose project trust, invalid JSON, precedence, and reload/restart requirements when a project setting appears ignored.
 - Explain when a requested behavior belongs to a user-wide extension configuration rather than this project skill's scope.
 
 ## When to use me
 Use this when a user asks to:
 - Make this repository use a different Pi default provider, model, thinking level, UI behavior, resource path, or subagent role model.
+- Configure repository-local Guardrails, including outside-workspace path access or dangerous-command policies.
 - Configure Pi settings that should be committed with this repository.
-- Diagnose why `.pi/settings.json` is not taking effect in this project.
+- Diagnose why `.pi/settings.json` or `.pi/extensions/guardrails.json` is not taking effect in this project.
 
 Do not use this skill to configure every Pi project, edit `~/.pi/agent/`, author an extension, skill, theme, or prompt template. Use the specialized skill or Pi documentation for those surfaces.
 
@@ -26,15 +28,77 @@ This skill changes **only**:
 
 ```text
 .pi/settings.json
+.pi/extensions/guardrails.json
+config/pi-team/team-profile.json (when the repository uses Pi-team)
 ```
 
-Pi loads `~/.pi/agent/settings.json` as the user-wide base and merges `.pi/settings.json` as the current project's override. Nested objects merge, so add only the keys that differ for this repository. Do not copy the user's entire global configuration into the project file.
+Pi loads `~/.pi/agent/settings.json` as the user-wide base and merges `.pi/settings.json` as the current project's override. Guardrails separately loads `~/.pi/agent/extensions/guardrails.json` and merges `.pi/extensions/guardrails.json` as the project override. Nested objects merge, so add only the keys that differ for this repository. Guardrails combines `pathAccess.allowedPaths` and merges named `policies.rules` by ID; other Guardrails arrays, such as permission-gate patterns, replace the inherited array at the higher-priority scope. Do not copy the user's entire global configuration into either project file.
 
 Project-local settings and resources require Pi to trust the project. In non-interactive runs, use an existing trust decision or the appropriate explicit trust flag rather than assuming `.pi/` content was loaded.
+
+## Repository-local Guardrails
+
+Guardrails configuration is separate from Pi's main settings. Use `.pi/extensions/guardrails.json` for policy that should travel with this repository; do not put Guardrails keys in `.pi/settings.json`.
+
+The supported top-level areas are:
+
+- `features.policies`, `features.permissionGate`, and `features.pathAccess` — enable or disable checks.
+- `pathAccess.mode` — `allow`, `ask`, or `block` for paths outside the current working directory.
+- `pathAccess.allowedPaths` — explicit `{ "kind": "file"|"directory", "path": "..." }` entries. Do not use the legacy string/trailing-slash form.
+- `policies.rules` — protected file patterns with `none`, `readOnly`, or `noAccess` protection.
+- `permissionGate.patterns` — dangerous command patterns that require confirmation.
+- `permissionGate.autoDenyPatterns` — command patterns that are blocked without confirmation.
+- `permissionGate.allowedPatterns` — command patterns exempted from the permission gate.
+
+Minimal example enabling interactive outside-workspace checks:
+
+```json
+{
+  "features": {
+    "pathAccess": true
+  },
+  "pathAccess": {
+    "mode": "ask",
+    "allowedPaths": [
+      { "kind": "file", "path": "/dev/null" },
+      { "kind": "directory", "path": "/path/to/shared-tooling" }
+    ]
+  }
+}
+```
+
+Use `ask` unless the repository has a deliberate strict policy. `block` rejects outside-workspace access, while `allow` disables path-access prompts. Pi documentation and loaded skill paths receive dynamic grants from current Guardrails versions; do not broadly allow `~/.pi/agent` just to make those resources work.
+
+For a force-push-only command policy, leave ordinary pushes out of the pattern lists and use a regex in both `patterns` and `autoDenyPatterns`:
+
+```json
+{
+  "permissionGate": {
+    "patterns": [
+      {
+        "pattern": "git push (?:\\+[^\\s]+|.*(?:-f\\b|--force(?!-with-lease)|--force-with-lease|\\s\\+[^\\s]+))",
+        "regex": true,
+        "description": "Git force push (flags or +refspec)"
+      }
+    ],
+    "autoDenyPatterns": [
+      {
+        "pattern": "git push (?:\\+[^\\s]+|.*(?:-f\\b|--force(?!-with-lease)|--force-with-lease|\\s\\+[^\\s]+))",
+        "regex": true,
+        "description": "Git force push (flags or +refspec)"
+      }
+    ]
+  }
+}
+```
+
+When overriding `permissionGate.patterns`, `permissionGate.allowedPatterns`, or `permissionGate.autoDenyPatterns`, include the complete intended list because those arrays replace the inherited list. After editing repository-local Guardrails, validate it with `jq -e . .pi/extensions/guardrails.json` and restart Pi. Guardrails may add a `$schema` field when the settings UI saves the file.
 
 ## What I need before editing
 - The project behavior that should differ from the user's normal Pi defaults.
 - The current `.pi/settings.json`, if it exists.
+- The current `.pi/extensions/guardrails.json`, if it exists, when changing repository safety policy.
+- The requested Guardrails feature mode, path grants, protected-file rules, or command policy.
 - Available model IDs when changing model routing. Inspect the current Pi model list or existing valid configuration; never invent a provider/model ID.
 - Any error message or evidence that the setting is being ignored.
 
@@ -47,19 +111,20 @@ Use `.pi/settings.json` for settings such as:
 - `defaultProvider`, `defaultModel`, `defaultThinkingLevel`, and `enabledModels`.
 - `thinkingBudgets`, display settings, compaction, retry, and session settings when they must differ for this repository.
 - Project-local `extensions`, `skills`, `prompts`, and `themes` paths.
-- `subagents.agentOverrides` for repository-specific subagent model, thinking, tool, or role behavior.
+- `subagents.agentOverrides` for repository-specific subagent model, thinking, tool, fallback-chain, or role behavior.
+- `subagents.defaultModel` to give subagents without an explicit model their own default model (separate from the session model).
 
 Example: keep the project's default model and route a reviewer to a verified stronger model:
 
 ```json
 {
   "defaultProvider": "github-copilot",
-  "defaultModel": "github-copilot/gpt-5.4",
+  "defaultModel": "github-copilot/gpt-5.6-terra",
   "subagents": {
     "agentOverrides": {
-      "reviewer": {
-        "model": "github-copilot/claude-sonnet-4.6",
-        "thinking": "high"
+      "code-reviewer": {
+        "model": "github-copilot/gpt-5.6-sol",
+        "thinking": "medium"
       }
     }
   }
@@ -67,6 +132,83 @@ Example: keep the project's default model and route a reviewer to a verified str
 ```
 
 Use only model IDs available in the current environment. Keep every project configuration secret-free.
+
+### Subagent model fallback chains
+
+`pi-subagents` supports an ordered fallback chain per agent. Set it in `subagents.agentOverrides.<agent>.fallbackModels` (array) or directly in an agent definition's frontmatter (`fallbackModels: provider/id, provider/id`).
+
+```json
+{
+  "subagents": {
+    "agentOverrides": {
+      "worker": {
+        "model": "zai-coding-plan/glm-5.2",
+        "fallbackModels": [
+          "fireworks/accounts/fireworks/models/deepseek-v4-flash",
+          "fireworks/accounts/fireworks/models/qwen3p8-max"
+        ]
+      }
+    }
+  }
+}
+```
+
+Fallback semantics (verified against the pinned pi-subagents source):
+
+- The chain is tried **in order** after the primary model fails.
+- Fallback triggers only on **provider/model failure classes**: rate limit (429), quota/billing, auth/API-key errors, timeouts, provider overloaded/unavailable, model not found/disabled, and network errors. **Ordinary task failures never trigger fallback** — a failing test or bad code output is retried by the same model, not routed to the next one.
+- Model IDs resolve fuzzily (case/separator/date-stamp tolerant); a `provider/id` reference never silently switches providers.
+
+Precedence rule — important: an override field is **skipped when the agent definition's frontmatter already declares that field**. An agent file with `model:` in frontmatter ignores `agentOverrides.<agent>.model` (same for `fallbackModels`/`thinking`). Settings-level overrides apply only to fields the agent file leaves undeclared. To re-point a frontmatter-declared model per environment, either edit the agent definition or, in engineering-agents-managed deployments, use the `agentOverrides` argument of `makePiConfig`/`engineering-agents.pi-for-user.args`, which patches the shipped agent frontmatter at build time.
+
+`subagents.defaultModel` applies only to agents **without** an explicit model (frontmatter `model:` and any per-agent override win).
+
+### Pi-team Crew lane models
+
+Pi-team model routing is separate from `subagents.agentOverrides`. Configure the five Crew lanes
+in the repository's `config/pi-team/team-profile.json`; the installed `pi` wrapper automatically
+sets `PI_MESSENGER_TEAM_PROFILE_DIR` to the current repository's `config/pi-team` when the
+repository provides `config/pi-team/pi-team.json`. Keep that entry as a relative symlink to the
+canonical profile so the profile remains one authored source.
+
+Example profile roles:
+
+```json
+{
+  "name": "pi-team",
+  "roles": {
+    "worker-cheap": {
+      "model": "github-copilot/gpt-5.6-luna",
+      "thinking": "high",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-std": {
+      "model": "github-copilot/gpt-5.6-terra",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-complex": {
+      "model": "github-copilot/gpt-5.6-sol",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-visual": {
+      "model": "github-copilot/claude-sonnet-5",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    },
+    "worker-visual-complex": {
+      "model": "github-copilot/claude-opus-5",
+      "thinking": "medium",
+      "skills": ["pi-team-worker"]
+    }
+  }
+}
+```
+
+The exact role choices are repository policy, not universal defaults. Verify model availability
+with `pi --list-models` before committing a profile. Keep rescue and final-review policy in the
+Pi-team lead contract; do not silently replace the configured lane model from a worker packet.
 
 ## Out-of-scope: subagent runtime limits
 
@@ -86,16 +228,19 @@ This affects only that Pi process and does not modify project files or global co
 
 ## Process
 1. Confirm that the request is for the current repository and identify the exact project behavior.
-2. Inspect `.pi/settings.json` and any relevant project-local resources.
+2. Inspect `.pi/settings.json`, `.pi/extensions/guardrails.json` when present, any relevant project-local resources, and `config/pi-team/team-profile.json` when the repository uses Pi-team.
 3. Verify project trust if local settings or resources are not loading.
 4. Preserve unrelated configuration and make the smallest valid JSON change.
-5. Validate the file with `jq -e . .pi/settings.json`.
+5. Validate each changed JSON file with `jq -e .`.
 6. Restart Pi after startup-loaded setting changes. `/reload` is appropriate for reloadable resources, but a restart is the reliable default for settings changes.
-7. Report the modified file, changed keys, validation command, and any required restart.
+7. Report the modified file and changed keys, and state any required Pi restart or Home Manager activation.
 
 ## Examples
 - “Make this repo use a different default Pi model.” → inspect `.pi/settings.json` and available models, then add the minimal project override.
-- “Use stronger reviewers but keep workers cheap in this repo.” → update only `subagents.agentOverrides` in `.pi/settings.json` with verified model IDs.
+- “Use stronger reviewers but keep workers cheap in this repo.” → update only `subagents.agentOverrides` in `.pi/settings.json` with verified model IDs; if Pi-team is also enabled, update its five lane models in `config/pi-team/team-profile.json`.
+- “Use Luna for cheap work, Terra for standard work, Sol for complex work, Sonnet 5 for visual work, and Opus 5 for complex visual work.” → update the repository's Pi-team profile with those verified IDs and thinking levels; do not change unrelated subagent overrides.
+- “Configure outside-workspace access for this repository.” → update `.pi/extensions/guardrails.json` with `features.pathAccess`, an explicit `pathAccess.mode`, and narrow object-form `allowedPaths` entries.
+- “Allow normal pushes but deny force pushes.” → keep ordinary pushes out of the Guardrails patterns and add a force-push regex to both `permissionGate.patterns` and `permissionGate.autoDenyPatterns`.
 - “My project settings do nothing.” → verify project trust, configuration path, JSON validity, precedence, and whether a restart is required.
 - “Raise the subagent cap above 40.” → explain that the cap is user-wide extension runtime configuration and is outside this project-scoped skill.
 

@@ -1,8 +1,10 @@
 # ADR 0003: Restore throughput scheduling in team mode
 
-Status: Accepted
+Status: Superseded
 
 Date: 2026-07-17
+
+Superseded by: ADR 0004 (team mode replaced by the code-mode dynamic workflow)
 
 Requirement refs: FR-008, NFR-003
 

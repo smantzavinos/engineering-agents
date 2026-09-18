@@ -53,6 +53,13 @@
         "installedPath": "/fixture/.pi/agent/packages/pi-subagents"
       },
       {
+        "packageId": "pi-messenger",
+        "source": "./packages/pi-messenger",
+        "scope": "user",
+        "filtered": false,
+        "installedPath": "/fixture/.pi/agent/packages/pi-messenger"
+      },
+      {
         "packageId": "pi-powerline-footer",
         "source": "./packages/pi-powerline-footer",
         "scope": "user",
@@ -119,14 +126,14 @@
         "packageId": "pi-subagents",
         "source": {
           "type": "git",
-          "spec": "github:nicobailon/pi-subagents#c940fe20e86d9ba429eebcac809ec79d478ef206",
+          "spec": "github:nicobailon/pi-subagents#3847deeaa6e814c328ff4964fc28d7c2e6f9fc9b",
           "materializedKey": "src-pi-subagents"
         },
         "sourceManifestName": "pi-subagents",
         "sourceRoot": "/fixture/.pi/agent/sources/src-pi-subagents",
         "selectedResources": {
           "extensions": [
-            "./src/extension/index.ts"
+            "./index.ts"
           ],
           "skills": [
             "pi-subagents"
@@ -141,10 +148,10 @@
       "discovered": {
         "extensions": [
           {
-            "relativePath": "./_source/src/extension/index.ts",
-            "sourceRelativePath": "./src/extension/index.ts",
-            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/src/extension/index.ts",
-            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/src/extension/index.ts",
+            "relativePath": "./_source/index.ts",
+            "sourceRelativePath": "./index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/index.ts",
             "tools": [],
             "commands": [],
             "flags": []
@@ -156,6 +163,63 @@
             "relativePath": "./_source/skills/pi-subagents/SKILL.md",
             "sourceRelativePath": "./skills/pi-subagents/SKILL.md",
             "path": "/fixture/.pi/agent/packages/pi-subagents/_source/skills/pi-subagents/SKILL.md"
+          }
+        ],
+        "themes": []
+      },
+      "diagnostics": {
+        "extensions": [],
+        "skills": [],
+        "themes": []
+      }
+    },
+    {
+      "packageId": "pi-messenger",
+      "configuredPackagePath": "./packages/pi-messenger",
+      "facadePath": "/fixture/.pi/agent/packages/pi-messenger",
+      "sourceRoot": "/fixture/.pi/agent/sources/src-pi-messenger",
+      "sourceManifestName": "pi-messenger",
+      "sourceProvenance": {
+        "schemaVersion": 1,
+        "packageId": "pi-messenger",
+        "source": {
+          "type": "npm",
+          "spec": "pi-messenger@0.15.0",
+          "materializedKey": "src-pi-messenger"
+        },
+        "sourceManifestName": "pi-messenger",
+        "sourceRoot": "/fixture/.pi/agent/sources/src-pi-messenger",
+        "selectedResources": {
+          "extensions": [
+            "./index.ts"
+          ],
+          "skills": [
+            "pi-messenger-crew"
+          ],
+          "prompts": [],
+          "themes": []
+        }
+      },
+      "discovered": {
+        "extensions": [
+          {
+            "relativePath": "./_source/index.ts",
+            "sourceRelativePath": "./index.ts",
+            "path": "/fixture/.pi/agent/packages/pi-messenger/_source/index.ts",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-messenger/index.ts",
+            "tools": [
+              "pi_messenger"
+            ],
+            "commands": [],
+            "flags": []
+          }
+        ],
+        "skills": [
+          {
+            "name": "pi-messenger-crew",
+            "relativePath": "./_source/skills/pi-messenger-crew/SKILL.md",
+            "sourceRelativePath": "./skills/pi-messenger-crew/SKILL.md",
+            "path": "/fixture/.pi/agent/packages/pi-messenger/_source/skills/pi-messenger-crew/SKILL.md"
           }
         ],
         "themes": []

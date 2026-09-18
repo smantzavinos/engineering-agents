@@ -132,7 +132,6 @@ This repository also documents its own operating contract so contributors can us
 | `review-epic` | Review | Epic-level review across child plans |
 | `assess-repo` | Setup | Assess and set up a repo for the workflow |
 | `create-skills` | Utility | Create valid SKILL.md skills |
-| `create-new-repo-docs` | Utility | Bootstrap repo documentation foundation |
 | `configure-opencode` | Utility | Create/update repo-local OpenCode config overrides (OpenCode-only) |
 
 ### Agent Definitions (`agents/`)

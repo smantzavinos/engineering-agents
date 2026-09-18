@@ -2,6 +2,7 @@
 name: design
 description: Collaborative design agent that moves from a brief through research and into a documented approach. Suggests research topics, delegates to research sub-agents, presents design options with tradeoffs, and documents architectural decisions. Use after Discovery has produced a brief and plan level.
 compatibility: pi
+disable-model-invocation: true
 ---
 
 # Design
@@ -208,5 +209,5 @@ You're done when:
 - The approach addresses all goals and constraints from the brief
 
 Tell the human:
-- For standard work: "The approach is ready. You can now start the Execution phase. Switch to: `/preset execute` and then say 'Execute the plan at [path]. Auto-continue.'"
-- For epic work: "The epic approach and decomposition are ready. You can now start Execution at the child-plan level. Switch to: `/preset execute` and then say 'Execute the epic at [path].'"
+- For standard work: "The approach is ready. Write the Parallel plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan` (DAG per fence group)."
+- For epic work: "The epic approach and decomposition are ready. Start execution at the child-plan level: `/dynamic-create-plan` for a child plan, then `/dynamic-execute-plan`."

@@ -8,7 +8,7 @@ This repository packages a reusable autonomous software-delivery process. It com
 - `agents/` — agent definitions and preset configuration.
 - `skills/` — canonical, harness-neutral workflow skills (the single source edited by hand).
 - `harnesses/` — per-harness render profiles (`pi.json`, `opencode.json`) consumed by the skill renderer.
-- `tools/` — repo tooling, including `render-skills.mjs` (canonical skills × harness profiles → `dist/`).
+- `tools/` — repo tooling: `render-skills.mjs` (canonical skills × harness profiles → `dist/`), `critical-path.py` (plan DAG critical path and throughput thresholds), `measure-gate-cost.sh` (verification profile cost measurement).
 - `dist/` — generated per-harness skill trees (`dist/skills/<harness>/`), committed and drift-tested, never hand-edited. See `docs/skill-rendering.md`.
 - `nix/` and `flake.nix` — installation and packaging for Pi/OpenCode integration.
 - `templates/` — starter files for downstream repositories.
@@ -18,8 +18,8 @@ This repository packages a reusable autonomous software-delivery process. It com
 ## Core Flows
 1. **Consume the repo**: import the flake module, enable the Pi/OpenCode modules, apply with Home Manager, then use the installed agents and skills.
 2. **Read the process**: start in `README.md`, then move into `docs/` for workflow, orchestration, setup, and references.
-3. **Change the repo safely**: after a reviewed approach, choose sequential planning or the
-   separate role-based team planning pipeline. For Pi-module changes, run
+3. **Change the repo safely**: after a reviewed approach, Pi uses the Parallel path
+   (`docs/approaches/parallel.md`). Sequential is frozen; team is abandoned. For Pi-module changes, run
    `scripts/pi-dev.sh --verify` against the current checkout before the active-install final gate
    through `tests/run-tests.sh`.
 

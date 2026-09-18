@@ -9,6 +9,7 @@
 //
 // Harness profiles live in `harnesses/<id>.json` and map semantic roles to a concrete
 // implementation (named subagent vs category) plus harness-specific notes.
+// `skill-resources.json` maps shared canonical files into self-contained rendered skills.
 //
 // Output is written to `dist/skills/<harness-id>/<name>/` (checked in, drift-tested).
 //
@@ -25,6 +26,7 @@ const REPO_ROOT = path.resolve(__dirname, '..');
 const SKILLS_DIR = path.join(REPO_ROOT, 'skills');
 const HARNESS_DIR = path.join(REPO_ROOT, 'harnesses');
 const DIST_DIR = path.join(REPO_ROOT, 'dist', 'skills');
+const RESOURCE_MANIFEST = path.join(REPO_ROOT, 'skill-resources.json');
 
 const DELEGATE_RE = /^[ \t]*\{\{delegate:([A-Za-z0-9_-]+)(?:\s+skill=([A-Za-z0-9_-]+))?\}\}[ \t]*\n([\s\S]*?)\n[ \t]*\{\{\/delegate\}\}[ \t]*$/gm;
 const NOTE_RE = /\{\{note:([A-Za-z0-9_-]+)\}\}/g;
@@ -43,12 +45,56 @@ function listDirs(dir) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function loadSkillResources(skills) {
+  if (!fs.existsSync(RESOURCE_MANIFEST)) return new Map();
+
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(RESOURCE_MANIFEST, 'utf8'));
+  } catch (error) {
+    fail(`cannot parse skill-resources.json: ${error.message}`);
+  }
+  if (!manifest || Array.isArray(manifest) || typeof manifest !== 'object') {
+    fail('skill-resources.json must be an object keyed by skill name');
+  }
+
+  const resources = new Map();
+  for (const [skill, entries] of Object.entries(manifest)) {
+    if (!skills.includes(skill)) fail(`skill-resources.json references unknown skill "${skill}"`);
+    if (!Array.isArray(entries)) fail(`skill-resources.json entry "${skill}" must be an array`);
+
+    const targets = new Set();
+    resources.set(skill, entries.map((entry, index) => {
+      if (!entry || typeof entry.source !== 'string' || typeof entry.target !== 'string') {
+        fail(`skill-resources.json entry "${skill}"[${index}] needs string source and target paths`);
+      }
+      const source = path.normalize(entry.source);
+      const target = path.normalize(entry.target);
+      const unsafe = (value) => path.isAbsolute(value) || value === '..' || value.startsWith(`..${path.sep}`);
+      if (!source || unsafe(source)) fail(`skill-resources.json has unsafe source path "${entry.source}"`);
+      if (!target || unsafe(target)) fail(`skill-resources.json has unsafe target path "${entry.target}"`);
+      if (targets.has(target)) fail(`skill-resources.json repeats target "${entry.target}" for "${skill}"`);
+      targets.add(target);
+
+      const sourcePath = path.join(REPO_ROOT, source);
+      if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
+        fail(`skill-resources.json source does not exist: ${entry.source}`);
+      }
+      return { sourcePath, target };
+    }));
+  }
+  return resources;
+}
+
 function loadHarnesses() {
   const harnesses = [];
   for (const file of fs.readdirSync(HARNESS_DIR).sort()) {
     if (!file.endsWith('.json')) continue;
     const profile = JSON.parse(fs.readFileSync(path.join(HARNESS_DIR, file), 'utf8'));
     if (!profile.id) fail(`harness profile ${file} is missing "id"`);
+    if (profile.hiddenSkills !== undefined && !Array.isArray(profile.hiddenSkills)) {
+      fail(`harness profile ${file} has a non-array "hiddenSkills"`);
+    }
     harnesses.push(profile);
   }
   if (harnesses.length === 0) fail('no harness profiles found in harnesses/');
@@ -63,6 +109,14 @@ function normalizePrompt(body) {
     .join(' ');
 }
 
+// Delegation prompts are authored prose and may legitimately contain quotes,
+// backslashes or newlines. Interpolating them raw produced syntactically invalid
+// delegation snippets, so every embedded prompt goes through a real string-literal
+// encoder.
+function jsString(value) {
+  return JSON.stringify(String(value));
+}
+
 function renderDelegate(harness, skillName, role, skill, prompt) {
   const def = harness.roles?.[role];
   if (!def) {
@@ -72,31 +126,31 @@ function renderDelegate(harness, skillName, role, skill, prompt) {
     if (def.kind !== 'agent') {
       fail(`skill "${skillName}": harness "${harness.id}" role "${role}" must map to an agent for pi-subagent style`);
     }
-    const lines = ['subagent({', `  agent: "${def.agent}",`];
+    const lines = ['subagent({', `  agent: ${jsString(def.agent)},`];
     if (skill) {
-      lines.push(`  task: "${prompt}",`);
-      lines.push(`  skill: "${skill}"`);
+      lines.push(`  task: ${jsString(prompt)},`);
+      lines.push(`  skill: ${jsString(skill)}`);
     } else {
-      lines.push(`  task: "${prompt}"`);
+      lines.push(`  task: ${jsString(prompt)}`);
     }
     lines.push('})');
     return lines.join('\n');
   }
   if (harness.delegationStyle === 'opencode-task') {
     if (def.kind === 'category') {
-      const loadSkills = skill ? `["${skill}"]` : '[]';
-      return `task(category="${def.category}", load_skills=${loadSkills}, prompt="${prompt}")`;
+      const loadSkills = skill ? `[${jsString(skill)}]` : '[]';
+      return `task(category=${jsString(def.category)}, load_skills=${loadSkills}, prompt=${jsString(prompt)})`;
     }
     if (def.kind === 'subagent_type') {
-      const loadSkills = skill ? `["${skill}"]` : '[]';
-      return `task(subagent_type="${def.subagent_type}", load_skills=${loadSkills}, prompt="${prompt}")`;
+      const loadSkills = skill ? `[${jsString(skill)}]` : '[]';
+      return `task(subagent_type=${jsString(def.subagent_type)}, load_skills=${loadSkills}, prompt=${jsString(prompt)})`;
     }
     if (def.kind === 'agent') {
       let message = prompt;
       if (skill) {
         message += ` Read your skill file at ${harness.skillPathPrefix}${skill}/SKILL.md and follow its process.`;
       }
-      return ['task({', `  agent: "${def.agent}",`, `  message: "${message}"`, '})'].join('\n');
+      return ['task({', `  agent: ${jsString(def.agent)},`, `  message: ${jsString(message)}`, '})'].join('\n');
     }
     fail(`skill "${skillName}": harness "${harness.id}" role "${role}" has unknown kind "${def.kind}"`);
   }
@@ -139,11 +193,21 @@ function injectCompatibility(source, harness, skillName) {
   for (const line of fmLines) {
     if (/^compatibility:/.test(line)) continue; // renderer owns compatibility
     if (/^harnesses:/.test(line)) continue; // applicability is build-time only
+    if (/^disable-model-invocation:/.test(line)) continue; // renderer owns discoverability
     kept.push(line);
     if (/^description:/.test(line)) descIndex = kept.length - 1;
   }
   if (descIndex === -1) fail(`skill "${skillName}": frontmatter missing "description"`);
-  kept.splice(descIndex + 1, 0, `compatibility: ${harness.compatibility}`);
+  const injected = [`compatibility: ${harness.compatibility}`];
+  // Per-harness discoverability. A skill listed in a harness profile's
+  // `hiddenSkills` is kept out of that harness's system prompt but stays
+  // loadable via `/skill:<name>`. Declared per harness rather than in canonical
+  // frontmatter so hiding a skill from one harness cannot alter another
+  // harness's rendered output.
+  if (Array.isArray(harness.hiddenSkills) && harness.hiddenSkills.includes(skillName)) {
+    injected.push('disable-model-invocation: true');
+  }
+  kept.splice(descIndex + 1, 0, ...injected);
   // kept ends with a trailing empty string from the split; rebuild cleanly.
   const fmText = kept.filter((line, idx) => !(idx === kept.length - 1 && line === '')).join('\n');
   return `---\n${fmText}\n---\n${rest}`;
@@ -175,6 +239,7 @@ function buildRenderTree() {
   const skills = listDirs(SKILLS_DIR).filter((name) =>
     fs.existsSync(path.join(SKILLS_DIR, name, 'SKILL.md')),
   );
+  const skillResources = loadSkillResources(skills);
   const tree = new Map();
   for (const harness of harnesses) {
     for (const skill of skills) {
@@ -188,6 +253,14 @@ function buildRenderTree() {
       for (const rel of walkFiles(skillDir)) {
         if (rel === 'SKILL.md') continue;
         tree.set(path.join(harness.id, skill, rel), fs.readFileSync(path.join(skillDir, rel)));
+      }
+      // Materialize shared framework-owned resources into self-contained skill trees.
+      for (const resource of skillResources.get(skill) ?? []) {
+        const outputPath = path.join(harness.id, skill, resource.target);
+        if (tree.has(outputPath)) {
+          fail(`skill "${skill}" resource target collides with a local file: ${resource.target}`);
+        }
+        tree.set(outputPath, fs.readFileSync(resource.sourcePath));
       }
     }
   }

@@ -92,17 +92,6 @@ else
   fail "review-code is missing team-plan final review semantics"
 fi
 
-# Template files in create-new-repo-docs
-TEMPLATE_DIR="$REPO_ROOT/skills/create-new-repo-docs/templates"
-if [[ -d "$TEMPLATE_DIR" ]]; then
-  for tmpl in README.md docs/architecture.md docs/testing-strategy.md; do
-    if [[ -f "$TEMPLATE_DIR/$tmpl" ]]; then
-      pass "Template exists: $tmpl"
-    else
-      fail "Template missing: $tmpl"
-    fi
-  done
-fi
 
 # Verify approach template has expected structure
 if [[ -f "$REPO_ROOT/skills/design/references/approach-template.md" ]]; then
@@ -171,6 +160,30 @@ if ! grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/skills/execution-orchestra
 else
   fail "Team orchestrator should not duplicate docs/orchestration.md's model suggestion table"
 fi
+
+# Team mode was replaced by code-mode execution: the Pi-only team skills and the
+# team task reviewer are removed, and the retired orchestration skills are kept
+# for OpenCode only so the Pi surface stays small.
+for gone in pi-team-plan pi-team-lead pi-team-worker; do
+  if [[ ! -e "$REPO_ROOT/skills/$gone" ]]; then
+    pass "${gone} is removed with team mode"
+  else
+    fail "${gone} is removed with team mode"
+  fi
+done
+if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
+  pass "pi-team-reviewer agent is removed with team mode"
+else
+  fail "pi-team-reviewer agent is removed with team mode"
+fi
+for oc_only in execution-orchestrator execute-task create-worklog \
+                create-plan review-plan review-code; do
+  if grep -Fq 'harnesses: [opencode]' "$REPO_ROOT/skills/$oc_only/SKILL.md"; then
+    pass "${oc_only} is retained for OpenCode only"
+  else
+    fail "${oc_only} must be restricted to OpenCode after the Pi code-mode switch"
+  fi
+done
 
 if grep -Fq 'General model suggestion' "$REPO_ROOT/docs/orchestration.md" \
   && grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/docs/orchestration.md" \

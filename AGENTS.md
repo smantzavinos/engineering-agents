@@ -5,9 +5,9 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 ## Rules
 - Keep this file short and routing-oriented; put detailed policy in the linked docs.
 - Prefer small, focused changes that preserve the existing command surface.
-- Follow the selected execution contract: strict Red → Green → Break-it → Verify for
-  sequential plans; contract-first tests, minimal implementer checks, independent
-  verification, and fresh final review for team plans.
+- Follow the execution contract in `docs/execution-patterns.md`: contract-first tests authored
+  by a different agent than the implementer, parent-run host verification at wave boundaries,
+  and a fresh final review.
 
 ## Tech Stack
 - Markdown docs define the process and contributor contract.
@@ -22,7 +22,7 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - Canonical skills are harness-neutral; never hand-edit `dist/`. After changing a skill, run `node tools/render-skills.mjs --write` and commit `dist/`.
 
 ## Coding Rules
-- `docs/coding-rules.md` — repo-wide editing, shell, documentation, and verification rules.
+- `docs/coding-rules.md` — repo-wide editing, shell, documentation, and verification rules, including the per-task verification classes.
 
 ## Development Environment
 - `docs/development-environment.md` — required tooling, setup/apply flow, and verification entry points.
@@ -45,7 +45,8 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 
 ## Planning Artifacts
 - `plans/README.md` — repo-specific planning guidance, canonical verification sources, and plan/worklog constraints for this repo.
-- `docs/team-mode-execution.md` — separate post-approach team planning pipeline, role contracts, model routing, escalation, and event-driven execution.
+- `docs/approaches/parallel.md` — Pi execution approach: DAG scheduler, planned fence groups, planning rules.
+- `docs/execution-patterns.md` — Parallel runtime constraints (sandbox, parent-driven loop).
 - Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
 
 ## Operational Memory
