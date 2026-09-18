@@ -3,7 +3,9 @@
 Operating manuals for Hermes agents (and similar coding agents) that run this
 repo's process against the repos they own. This section explains **mechanics
 and setup** — cron jobs, labels, triggers, notification routing. The
-**process policy** lives in the canonical docs and is never restated here:
+**process policy** — what a review must check, what a PR body must contain,
+what escalates to a human, how plans and tasks are structured — lives in the
+canonical docs and is never restated here:
 
 - [Development Process](../process.md) — the software development pipeline.
 - [PR review process](../references/pr-review.md) — review contract, common
@@ -16,20 +18,21 @@ If this section and a canonical doc disagree, the canonical doc wins.
 | Document | Read when |
 |----------|-----------|
 | [Software development process](dev-process.md) | Setting up an agent to run the development pipeline on owned repos (skill sync, stop boundaries) |
-| [PR automation](pr-automation.md) | Setting up an agent to detect and review PRs automatically (cron sweep, labels, triggers) |
+| [PR automation](pr-automation.md) | Setting up an agent to detect and review PRs automatically (cron sweep, labels, triggers, monitor script) |
 
 ## Agent self-setup checklist
 
 An agent being handed ownership of one or more repos runs this once:
 
 1. **Verify each repo is onboarded.** Check for `pr-review-hooks.md` at the
-   repo root and that `AGENTS.md` routes the process docs. Missing pieces:
-   report to the human and offer an assess-repo setup run. Do not start
-   automated review for a repo without a manifest.
+   repo root (see the Required Repo Hooks table in the PR review process) and
+   that `AGENTS.md` routes the process docs. Missing pieces: report to the
+   human and offer an assess-repo setup run. Do not start automated review
+   for a repo without a manifest.
 2. **Sync your skills** against the checklist in
-   [Software development process](dev-process.md); create the sweep cron from
-   the template in [PR automation](pr-automation.md) if the agent owns PR
-   monitoring.
+   [Software development process](dev-process.md), then create the sweep cron
+   from the template in [PR automation](pr-automation.md) — one job covering
+   all owned repos.
 3. **Register the trigger surface**: confirm which GitHub handle mentions
    should trigger this agent, and check the repo's `pr-tracking` manifest
    row documents it.

@@ -31,6 +31,7 @@ bash tests/specs/repo-readiness-docs-spec.sh
 bash tests/specs/proof-set-runtime-spec.sh
 bash tests/specs/skill-content-spec.sh
 bash tests/specs/skill-render-spec.sh
+bash tests/specs/hermes-docs-spec.sh
 bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
