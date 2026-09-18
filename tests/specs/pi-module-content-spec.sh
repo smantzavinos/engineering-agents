@@ -103,7 +103,7 @@ SKILL_REFS=(
   "skills/discovery" "skills/design" "skills/research"
   "skills/create-plan" "skills/review-plan"
   "skills/review-code" "skills/review-approach" "skills/assess-repo"
-  "skills/create-skills" "skills/configure-pi"
+  "skills/create-skills" "skills/configure-pi" "skills/pull-request"
 )
 for ref in "${SKILL_REFS[@]}"; do
   skill_name="$(basename "$ref")"
