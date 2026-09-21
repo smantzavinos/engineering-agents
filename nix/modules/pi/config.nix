@@ -709,19 +709,24 @@ let
           ];
         };
 
-        # PI-VERSION-OVERLAY: Temporary compatibility overlay for Pi 0.80.7's
-        # bundled Copilot catalog. Remove it when the Pi version we adopt
-        # includes `claude-opus-5` in its built-in github-copilot catalog; a custom model
-        # with the same id replaces the packaged definition. The provider's
-        # built-in OAuth configuration remains in effect.
+        # PI-VERSION-OVERLAY: Temporary github-copilot catalog patches.
+        # A custom model with the same id replaces the packaged definition.
+        # The provider's built-in OAuth configuration remains in effect.
+        # Copilot requires this IDE identity on every request, including
+        # requests for models added outside Pi's bundled catalog.
+        #
+        # Remove each entry independently when ALL of the following are true:
+        # 1. `pi --version`'s baked github-copilot catalog includes that model
+        #    id (search the pi package; do not use models.dev alone).
+        # 2. https://pi.dev/api/models/providers/github-copilot includes that
+        #    model id, so `pi update --models` would supply it without this
+        #    overlay. Pi's live refresh uses pi.dev, not models.dev.
         github-copilot = {
           models = [
             {
               id = "claude-opus-5";
               name = "Claude Opus 5";
               api = "anthropic-messages";
-              # Copilot requires this IDE identity on every request, including
-              # requests for models added outside Pi's bundled catalog.
               headers = {
                 "User-Agent" = "GitHubCopilotChat/0.35.0";
                 "Editor-Version" = "vscode/1.107.0";
@@ -741,6 +746,27 @@ let
                 forceAdaptiveThinking = true;
                 supportsTemperature = false;
               };
+            }
+            {
+              id = "grok-4.7";
+              name = "Grok 4.7";
+              api = "openai-responses";
+              headers = {
+                "User-Agent" = "GitHubCopilotChat/0.35.0";
+                "Editor-Version" = "vscode/1.107.0";
+                "Editor-Plugin-Version" = "copilot-chat/0.35.0";
+                "Copilot-Integration-Id" = "vscode-chat";
+              };
+              reasoning = true;
+              thinkingLevelMap = {
+                low = "low";
+                medium = "medium";
+                high = "high";
+                xhigh = "xhigh";
+              };
+              input = [ "text" "image" ];
+              contextWindow = 500000;
+              maxTokens = 128000;
             }
           ];
         };

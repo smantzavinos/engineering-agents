@@ -91,6 +91,15 @@ else
   fail "Pi module declares no pi-messenger or pi-team profile wiring"
 fi
 
+if grep -Fq 'id = "grok-4.7"' "$PI_CONFIG" \
+  && grep -Fq 'api = "openai-responses"' "$PI_CONFIG" \
+  && grep -Fq 'https://pi.dev/api/models/providers/github-copilot' "$PI_CONFIG" \
+  && grep -Fq 'pi update --models' "$PI_CONFIG"; then
+  pass "Pi module overlays Copilot Grok 4.7 until pi.dev/baked catalogs include it"
+else
+  fail "Pi module overlays Copilot Grok 4.7 until pi.dev/baked catalogs include it"
+fi
+
 # The pi-team PATH command and its repo tool were removed with team mode.
 if ! grep -Fq 'piTeamPkg' "$PI_MODULE" && [[ ! -e "$REPO_ROOT/tools/pi-team.mjs" ]]; then
   pass "Pi module no longer installs the removed pi-team command"
