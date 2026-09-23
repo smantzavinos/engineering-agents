@@ -332,6 +332,15 @@ assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "reviewed@<sha>" 
 assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "ESCALATE" "PR review doc defines the escalation severity"
 assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "different agent than the author" "PR review doc enforces reviewer independence"
 
+# Hermes operations docs and skill reference map
+assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "## Skill reference map" "Hermes README maps jobs to canonical skill paths"
+assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "skills/babysit-pr/SKILL.md" "Hermes README includes the babysit-pr skill in the reference map"
+assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "never hunt" "Hermes README states the no-hunting entry-point rule"
+assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "do **not** install rendered copies" "Hermes README states the live-reference consumption model"
+assert_file_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "docs/hermes/pr-automation.md" "babysit-pr cross-links the persistent sweep"
+assert_file_not_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "Spiros" "babysit-pr has no agent-specific names"
+assert_file_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "pr-review-hooks.md" "babysit-pr defers policy to the repo manifest"
+
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-001' "Readiness docs spec cites a functional requirement"
 assert_file_contains "$REPO_ROOT/tests/specs/repo-readiness-docs-spec.sh" 'Requirement: FR-004' "Readiness docs spec cites the requirements-system contract"
 assert_file_contains "$REPO_ROOT/tests/specs/proof-set-runtime-spec.sh" 'Requirement: FR-006' "Proof-set runtime spec cites its functional requirement"
