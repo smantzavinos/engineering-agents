@@ -61,6 +61,7 @@ run_specs() {
               "$SCRIPT_DIR/specs/managed-package-status-spec.sh" \
               "$SCRIPT_DIR/specs/pi-startup-wrapper-spec.sh" \
               "$SCRIPT_DIR/specs/pi-dev-spec.sh" \
+              "$SCRIPT_DIR/specs/hermes-docs-spec.sh" \
               "$SCRIPT_DIR/specs/startup-warning-extension-spec.sh" \
               "$SCRIPT_DIR/specs/pi-startup-warning-contract-spec.sh"; do
     if [[ -x "$spec" ]]; then
