@@ -47,6 +47,18 @@ else
   fail "dist/skills/ is stale — run: node tools/render-skills.mjs --write"
 fi
 
+# Skills that declare packaged references in skill-resources.json must render them
+for packaged in discover-and-design discover-and-design-simple; do
+  for resource in references/brief-template.md references/approach-template.md; do
+    if grep -q "skills/discovery/references/brief-template.md\|skills/design/references/approach-template.md" skill-resources.json \
+       && [[ -f "$REPO_ROOT/dist/skills/pi/${packaged}/${resource}" ]]; then
+      pass "${packaged} packages ${resource}"
+    else
+      fail "${packaged} is missing packaged ${resource} — check skill-resources.json entries for discover-and-design*"
+    fi
+  done
+done
+
 # Retired parallel-machinery skills must not be rendered anywhere
 for retired in dynamic-create-plan dynamic-execute-plan dynamic-review-plan dynamic-review-code direct-plan create-team-plan review-team-plan create-team-worklog execution-orchestrator-team; do
   if [[ -e "$REPO_ROOT/dist/skills/pi/${retired}" || -e "$REPO_ROOT/dist/skills/opencode/${retired}" ]]; then
