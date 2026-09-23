@@ -302,19 +302,13 @@ state lives on the live team task board, not here. Contains:
 - remediation summaries and evidence references
 - rescue escalations, fresh final review, closure, backlog, and requirement records
 
-### Dynamic execution artifacts
+### Retired execution artifacts
 
-These belong on a dynamic plan after the human has approved `plan.md` + `tasks.json`. They are execution records, not planning substitutes.
-
-| File | Written by | Purpose |
-|---|---|---|
-| `tasks.json` | `dynamic-create-plan` | Executable task graph, optional `fenceGroups` |
-| `interfaces.md` | execute-plan freeze | Shared signatures and data shapes |
-| `dataflow.<group>.js` | `dynamic-execute-plan`, before each fence group | Exact DAG `workflowScript` body for that group |
-
-Scripts are raw JavaScript (no markdown fence). The parent launches by reading that file
-and passing its contents as `workflowScript`. Do not keep a second hand-authored inline copy.
-See [Parallel Approach](approaches/parallel.md).
+`tasks.json`, `interfaces.md`, and `dataflow.<group>.js` belonged to the retired
+dynamic-execution pipeline (frozen contract files, executable task graph, per-fence-group
+DAG scripts). They are no longer produced; sequential plans keep everything in `plan.md`
+and `worklog.md`. The machinery is archived under
+`docs/investigations/2026-09-23-retired-parallel-execution/` — see ADR 0006.
 
 ### code_review.md
 

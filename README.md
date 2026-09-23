@@ -111,29 +111,28 @@ This repository also documents its own operating contract so contributors can us
 
 ### Skills (`skills/`)
 
-19 skills covering the full development lifecycle:
+14 skills covering the full development lifecycle:
 
 | Skill | Stage | Purpose |
 |-------|-------|---------|
 | `discovery` | Discovery | Socratic dialogue to clarify intent |
 | `design` | Design | Collaborative research and approach development |
 | `research` | Design | Investigate a specific topic in a codebase |
-| `create-plan` | Planning | Create strict-TDD sequential implementation plans |
+| `create-plan` | Planning | Create sequential implementation plans with verification class + execution tier per task |
 | `review-plan` | Planning | Review sequential plans for completeness and consistency |
-| `create-team-plan` | Planning | Create role-oriented team plans directly from reviewed approaches (OpenCode-only) |
-| `review-team-plan` | Planning | Review team plans for contracts, concurrency, roles, and escalation readiness (OpenCode-only) |
 | `review-approach` | Planning | Review approaches for architectural soundness |
 | `create-worklog` | Execution | Create execution log from approved plan |
-| `create-team-worklog` | Execution | Create the role/stage execution ledger from a reviewed team plan (OpenCode-only) |
-| `execute-task` | Execution | Execute one plan task using strict TDD |
+| `execute-task` | Execution | Execute one plan task per its verification class |
 | `execution-orchestrator` | Execution | Autonomous orchestrator driving plan to completion |
-| `execution-orchestrator-team` | Execution | Role-based fast lane with early contracts, fast implementers, rescue escalation, and fresh final review (OpenCode-only) |
 | `review-code` | Review | Post-implementation code review |
 | `review-epic` | Review | Epic-level review across child plans |
 | `pull-request` | Review | Prepare or review a PR per the PR review process: body, evidence, rules, verdict |
 | `assess-repo` | Setup | Assess and set up a repo for the workflow |
 | `create-skills` | Utility | Create valid SKILL.md skills |
 | `configure-opencode` | Utility | Create/update repo-local OpenCode config overrides (OpenCode-only) |
+
+Retired skills (parallel execution, team mode) are archived under
+`docs/investigations/2026-09-23-retired-parallel-execution/` — see ADR 0006.
 
 ### Agent Definitions (`agents/`)
 
@@ -188,9 +187,8 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 
 | Workflow | When to use | Process |
 |----------|-------------|---------|
-| Feature Development (sequential) | New capabilities, maximum rigor | brief → research → approach → plan → review → execute → code review |
-| Feature Development (team) | New capabilities, high-speed role separation | brief → research → approach → team plan → team plan review → team execute → fresh final review |
-| Bug Fix | Defects, regressions | brief → debug/research → approach → sequential or team planning → execute → review |
+| Feature Development | New capabilities, maximum rigor | brief → research → approach → plan → review → execute → code review → PR review |
+| Bug Fix | Defects, regressions | brief → debug/research → approach → planning → execute → review |
 | Epic | Large initiatives | brief → findings → approach → epic decomposition → child plans |
 | Simple Change | Trivial fixes, config | brief → implement → verify |
 
@@ -227,10 +225,10 @@ You can copy the generated trees to any coding agent's configuration directory:
 - **Skills define process, repos define specifics** — Skills know *what* to do; repos define *how*
 - **Documentation drives discovery** — AGENTS.md files enable progressive information discovery
 - **Everything in one directory** — One plan directory = one unit of work
-- **Commits are process checkpoints** — Sequential mode commits per task; team mode commits
-  reviewed and verified integration groups
-- **Tests define contracts early** — Sequential mode uses strict TDD; team mode writes
-  acceptance contracts before or alongside implementation and verifies independently
+- **Commits are process checkpoints** — every task ends with exactly one atomic commit
+  (`task(T<N>): <desc>`) including source, tests, and the worklog update
+- **Tests define contracts early** — test-first discipline per the task's verification class;
+  a failing test exists before implementation for `contract` tasks
 
 ## License
 

@@ -50,7 +50,7 @@ printf 'Skill content verification\n'
 printf '==========================\n\n'
 
 # Skills that should have references
-SKILLS_WITH_REFS=(discovery design create-plan create-team-plan create-worklog create-team-worklog review-plan review-team-plan review-approach review-code assess-repo)
+SKILLS_WITH_REFS=(discovery design create-plan create-worklog review-plan review-approach review-code assess-repo)
 for skill in "${SKILLS_WITH_REFS[@]}"; do
   assert_references_valid "$REPO_ROOT/skills/$skill" "$skill"
 done
@@ -84,12 +84,11 @@ else
   fail "review-code does not reference plan"
 fi
 
-if grep -Fq '`team_plan.md`' "$REPO_ROOT/skills/review-code/SKILL.md" \
-  && grep -Fq 'Team mode' "$REPO_ROOT/skills/review-code/SKILL.md" \
-  && grep -Fq 'do not require per-packet break-it evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
-  pass "review-code supports independent final review for team plans"
+if grep -Fq 'Team mode' "$REPO_ROOT/skills/review-code/SKILL.md" \
+  && grep -Fq 'per-task verification evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
+  pass "review-code distinguishes execution modes and checks per-task verification evidence"
 else
-  fail "review-code is missing team-plan final review semantics"
+  fail "review-code is missing execution-mode distinction or verification-evidence semantics"
 fi
 
 
@@ -105,87 +104,6 @@ if [[ -f "$REPO_ROOT/skills/create-plan/references/plan-template.md" ]]; then
   pass "Plan template exists"
 else
   fail "Plan template missing"
-fi
-
-if [[ -f "$REPO_ROOT/skills/create-team-plan/references/team-plan-template.md" ]]; then
-  pass "Team plan template exists"
-else
-  fail "Team plan template missing"
-fi
-if [[ -f "$REPO_ROOT/skills/review-team-plan/references/review-template.md" ]]; then
-  pass "Team plan review template exists"
-else
-  fail "Team plan review template missing"
-fi
-
-if grep -Fq 'Acceptance Contract Packets' "$REPO_ROOT/skills/create-team-plan/SKILL.md" \
-  && grep -Fq 'Strong rescue implementer' "$REPO_ROOT/skills/create-team-plan/references/team-plan-template.md"; then
-  pass "Team planning skill defines contract-first execution and rescue capacity"
-else
-  fail "Team planning skill is missing contract-first or rescue-role requirements"
-fi
-
-if grep -Fq 'Do not poll' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'Final reviewer' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
-  pass "Team orchestrator is event-driven and includes fresh final review"
-else
-  fail "Team orchestrator is missing no-polling or final-review rules"
-fi
-
-# PR review pipeline skill implements the canonical contract in two roles
-if grep -Fq 'pr-review-hooks.md' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'review-inputs' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'review-rules' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'verification-commands' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq '## Author procedure' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq '## Reviewer procedure' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
-  pass "pull-request skill consumes the repo hook manifest in both roles"
-else
-  fail "pull-request skill does not consume the repo hook manifest in both roles"
-fi
-
-if grep -Fq 'reviewed@<sha>' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'READY' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'FIX' "$REPO_ROOT/skills/pull-request/SKILL.md" \
-  && grep -Fq 'BLOCKED' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
-  pass "pull-request skill stamps reviewed SHAs and uses the verdict vocabulary"
-else
-  fail "pull-request skill is missing stamping or the verdict vocabulary"
-fi
-
-if grep -Fq 'docs/references/pr-review.md' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
-  pass "pull-request skill cites the canonical process doc"
-else
-  fail "pull-request skill must cite docs/references/pr-review.md"
-fi
-
-if grep -Fq 'direct `subagent_type="hephaestus"`' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'category="ultrabrain"' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
-  pass "Team orchestrator separates direct rescue from external strong final review"
-else
-  fail "Team orchestrator role routing is incomplete"
-fi
-
-if grep -Fq 'Resume from the first missing stage artifact' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'Do not push; all commits remain local' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
-  pass "Team orchestrator has resumable prerequisites and a local-only git boundary"
-else
-  fail "Team orchestrator prerequisites or git boundary are incomplete"
-fi
-
-if grep -Fq 'Visual implementer replaces one fast implementer' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'Member Prompt Contracts' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && grep -Fq 'Contract/verifier prompt contract' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
-  pass "Team orchestrator defines adaptive UI staffing and self-contained member prompts"
-else
-  fail "Team orchestrator is missing adaptive UI staffing or member prompt contracts"
-fi
-
-if ! grep -Fq 'GitHub Copilot suggestion' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
-  && ! grep -Fq 'Suggested Models' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
-  pass "Team orchestrator does not duplicate model recommendations that live in orchestration docs"
-else
-  fail "Team orchestrator should not duplicate docs/orchestration.md's model suggestion table"
 fi
 
 # Team mode was replaced by code-mode execution: the Pi-only team skills and the

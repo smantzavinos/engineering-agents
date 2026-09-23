@@ -50,7 +50,7 @@ Skip the delegate if you can answer from a few file reads in this session.
 4. **Show the paths and wait.** Do not commit until the human accepts both
    files. Then commit `brief.md`, `approach.md`, `findings/` (if any), and
    `state.json` as `design: speed-run approach for <slug>`.
-5. **Next step:** "The approach is ready. Write the Parallel plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan` (DAG per fence group)."
+5. **Next step:** "The approach is ready. Create the plan with `/create-plan`, review it with `/review-plan`, and once you have approved it execute it task-by-task (`/execute-task` per task, sequential with opportunistic parallel dispatch)."
 
 For a true simple change (obvious, tiny, no design), write only `brief.md` at
 plan level `simple` and say they can implement directly.
