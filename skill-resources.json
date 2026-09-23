@@ -18,5 +18,11 @@
       "source": "skills/design/references/approach-template.md",
       "target": "references/approach-template.md"
     }
+  ],
+  "pull-request": [
+    {
+      "source": "docs/references/pr-review.md",
+      "target": "docs/references/pr-review.md"
+    }
   ]
 }

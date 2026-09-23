@@ -126,6 +126,7 @@ This repository also documents its own operating contract so contributors can us
 | `execution-orchestrator` | Execution | Autonomous orchestrator driving plan to completion |
 | `review-code` | Review | Post-implementation code review |
 | `review-epic` | Review | Epic-level review across child plans |
+| `pull-request` | Review | Prepare or review a PR per the PR review process: body, evidence, rules, verdict |
 | `assess-repo` | Setup | Assess and set up a repo for the workflow |
 | `create-skills` | Utility | Create valid SKILL.md skills |
 | `configure-opencode` | Utility | Create/update repo-local OpenCode config overrides (OpenCode-only) |

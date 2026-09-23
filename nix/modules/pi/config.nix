@@ -854,6 +854,7 @@ let
     "assess-repo"
     "create-skills"
     "configure-pi"
+    "pull-request"
   ];
 
   piAgents = [
