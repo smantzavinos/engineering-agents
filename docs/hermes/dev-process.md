@@ -65,6 +65,14 @@ They are additions, never overrides.
    actions, money/legal/external commitments. Everything else is decided,
    logged in the worklog, and surfaced in the digest.
 
+## Which vehicle runs the stages
+
+Hermes can drive the pipeline three ways — Pi subprocesses (standard),
+Hermes subagents, or a single Hermes session — with mode confirmed at
+execution start and selection guidance per plan complexity. That is a
+logistics concern, not a pipeline change; it is defined in
+[Execution modes](execution-modes.md).
+
 ---
 
 ## Worked example

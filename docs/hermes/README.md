@@ -18,6 +18,7 @@ If this section and a canonical doc disagree, the canonical doc wins.
 | Document | Read when |
 |----------|-----------|
 | [Software development process](dev-process.md) | Setting up an agent to run the development pipeline on owned repos (skill sync, stop boundaries) |
+| [Execution modes](execution-modes.md) | Deciding HOW Hermes drives the pipeline: Pi subprocesses vs Hermes subagents vs single session |
 | [PR automation](pr-automation.md) | Setting up an agent to detect and review PRs automatically (cron sweep, labels, triggers, monitor script) |
 
 ## Agent self-setup checklist
@@ -36,7 +37,10 @@ An agent being handed ownership of one or more repos runs this once:
 3. **Register the trigger surface**: confirm which GitHub handle mentions
    should trigger this agent, and check the repo's `pr-tracking` manifest
    row documents it.
-4. **Confirm the never-merge boundary** with the human once: the agent
+4. **Agree the execution mode** (Pi subprocesses / Hermes subagents / single
+   session) with the human when a plan is approved for execution — see
+   [Execution modes](execution-modes.md).
+5. **Confirm the never-merge boundary** with the human once: the agent
    detects, reviews, labels, and notifies. Only the human merges.
-5. **Report the completed setup** to the human with the repo list and cron
+6. **Report the completed setup** to the human with the repo list and cron
    schedule so it is auditable.
