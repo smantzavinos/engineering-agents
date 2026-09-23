@@ -1,1 +1,22 @@
-{}
+{
+  "discover-and-design": [
+    {
+      "source": "skills/discovery/references/brief-template.md",
+      "target": "references/brief-template.md"
+    },
+    {
+      "source": "skills/design/references/approach-template.md",
+      "target": "references/approach-template.md"
+    }
+  ],
+  "discover-and-design-simple": [
+    {
+      "source": "skills/discovery/references/brief-template.md",
+      "target": "references/brief-template.md"
+    },
+    {
+      "source": "skills/design/references/approach-template.md",
+      "target": "references/approach-template.md"
+    }
+  ]
+}
