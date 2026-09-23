@@ -47,30 +47,14 @@ else
   fail "dist/skills/ is stale — run: node tools/render-skills.mjs --write"
 fi
 
-# Dynamic workflow resources are rendered from one canonical source into each
-# self-contained Pi skill tree.
-for skill in dynamic-create-plan dynamic-execute-plan; do
-  for resource in docs/approaches/parallel.md docs/execution-patterns.md tools/check-plan.mjs workflows/wave.mjs; do
-    if cmp -s "$REPO_ROOT/$resource" "$REPO_ROOT/dist/skills/pi/$skill/$resource"; then
-      pass "$skill packages canonical $resource"
-    else
-      fail "$skill is missing or has drifted from canonical $resource"
-    fi
-  done
+# Retired parallel-machinery skills must not be rendered anywhere
+for retired in dynamic-create-plan dynamic-execute-plan dynamic-review-plan dynamic-review-code direct-plan create-team-plan review-team-plan create-team-worklog execution-orchestrator-team; do
+  if [[ -e "$REPO_ROOT/dist/skills/pi/${retired}" || -e "$REPO_ROOT/dist/skills/opencode/${retired}" ]]; then
+    fail "${retired} is retired but still rendered"
+  else
+    pass "${retired} is not rendered (retired with ADR 0006)"
+  fi
 done
-
-if grep -Fq 'canonical docs `AGENTS.md` points to' \
-    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
-  && grep -Fq "repo's documented follow-up mechanism" \
-    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/SKILL.md" \
-  && grep -Fq 'These files do not need to' \
-    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md" \
-  && grep -Fq 'exist in a target repository.' \
-    "$REPO_ROOT/dist/skills/pi/dynamic-execute-plan/docs/execution-patterns.md"; then
-  pass "dynamic workflow resources defer target paths and policies to AGENTS.md"
-else
-  fail "dynamic workflow resources leak framework paths or follow-up policy into target repos"
-fi
 
 # Canonical sources must NOT hardcode compatibility in their frontmatter block
 # (the renderer injects it per harness). Body documentation may still mention it.
@@ -227,7 +211,7 @@ done
 
 # Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
 # disable-model-invocation for Pi only, never for OpenCode.
-for hidden in discovery design discover-and-design discover-and-design-simple direct-plan dynamic-create-plan dynamic-review-plan dynamic-review-code research; do
+for hidden in discovery design discover-and-design discover-and-design-simple research; do
   if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
     pass "${hidden} is hidden from the Pi system prompt"
   else
@@ -249,25 +233,12 @@ for shown in assess-repo; do
 done
 
 # The team-mode execution skills are OpenCode-only and must not leak into Pi
-for oc_only in execution-orchestrator-team create-team-plan review-team-plan create-team-worklog; do
-  if [[ -e "$REPO_ROOT/dist/skills/pi/${oc_only}" ]]; then
-    fail "${oc_only} (opencode-only) leaked into the Pi tree"
-  else
-    pass "${oc_only} is excluded from the Pi tree"
-  fi
-  if [[ -f "$REPO_ROOT/dist/skills/opencode/${oc_only}/SKILL.md" ]]; then
-    pass "${oc_only} is present in the OpenCode tree"
-  else
-    fail "${oc_only} is missing from the OpenCode tree"
-  fi
-done
-
-if grep -Fq 'team_plan.md' "$REPO_ROOT/dist/skills/opencode/create-team-plan/SKILL.md" \
-  && grep -Fq 'team_plan_review.md' "$REPO_ROOT/dist/skills/opencode/review-team-plan/SKILL.md" \
-  && grep -Fq 'Do not poll' "$REPO_ROOT/dist/skills/opencode/execution-orchestrator-team/SKILL.md"; then
-  pass "OpenCode team pipeline renders separate planning artifacts and no-polling execution"
+# Retired team skills must not appear in either harness tree (covered above), and
+# the retired parallel resources must not be referenced by any rendered skill.
+if grep -rqE 'dynamic-(create|execute|review)|execution-orchestrator-team|create-team-plan' "$REPO_ROOT/dist/skills/pi" "$REPO_ROOT/dist/skills/opencode" 2>/dev/null; then
+  fail "rendered skills must not reference retired parallel machinery"
 else
-  fail "OpenCode team pipeline rendering is incomplete"
+  pass "rendered skills reference no retired parallel machinery"
 fi
 
 # Every rendered SKILL.md must carry the harness-correct compatibility value

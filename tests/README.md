@@ -36,8 +36,6 @@ bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/pi-vendor-spec.sh
 bash tests/specs/compiler-contract-spec.sh
-bash tests/specs/wave-engine-spec.sh
-bash tests/specs/plan-check-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
 bash tests/specs/pi-startup-wrapper-spec.sh
@@ -53,8 +51,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 - **`resource-snapshot.mjs`** — Live Pi state snapshot from the filesystem and facade manifests (Pi >=0.80.8 ships as a compiled bundle with no importable module; schemaVersion 2 output unchanged)
 - **`assert-contract.sh`** — Proof-set contract assertions (facade, provenance, resources)
 - **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests
-- **`wave-engine-spec.sh`** — Parallel graph helpers: validation, fence groups, failure classification, generated DAG workflowScript
-- **`plan-check-spec.sh`** — Plan gate: tasks.json schema, verification classes, intra-wave write-set collisions, and plan.md drift
+- **`hermes-docs-spec.sh`** — Hermes-agent operations docs and sweep-monitor contract
 - **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
 
@@ -103,8 +100,6 @@ tests/
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
 │   ├── compiler-contract-spec.sh    # Compile helper contract tests
-│   ├── wave-engine-spec.sh          # Code-mode wave engine contract tests
-│   ├── plan-check-spec.sh           # Plan/tasks.json gate contract tests
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 │   ├── pi-startup-wrapper-spec.sh   # Repo-owned pi wrapper contract tests

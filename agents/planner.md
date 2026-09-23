@@ -16,9 +16,9 @@ You are called by the execution orchestrator to produce a plan from existing bri
 - Decompose the approach into concrete, verifiable tasks
 - Order tasks by dependency
 - Assign a verification class to every task: contract, characterization, check, or none
-- Declare a write-set per task so intra-wave collisions can be detected
+- Assign an execution tier to every task: high or low
 - Define verification gates using canonical repo commands
-- Produce plan.md and tasks.json, then pass `node tools/check-plan.mjs <plan-dir>`
+- Produce plan.md
 - When asked to author contract tests, write the failing tests only, observe red, and report
   the exact output — never the implementation that satisfies them
 
