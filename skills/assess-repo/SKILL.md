@@ -86,6 +86,7 @@ For documents that exist, evaluate:
 - **Task tracking:** Does the repo define every required task-tracking hook from `../../references/task-tracking.md`: backlog store, create item, stable ID, reference format, source backlink format, list inbox/untriaged, list `Up next`, mark ready/done/canceled/deferred/blocked, and critical/blocking policy? Is `Up next` human-controlled or explicitly delegated? Are agents allowed to create items directly or must they ask?
 - **Requirements posture:** Is the repo's requirements posture explicit? Report one of: maintains requirements, explicitly no separate requirements system, unclear, or likely needed but missing.
 - **Requirements:** If the repo maintains requirements, does it define every required requirements hook from `../../references/requirements.md`: requirements store, actor/persona definitions, use case definitions, workflow/scenario definitions, functional requirements, non-functional requirements, operational requirements, stable IDs, reference format, test citation format, traceability rules, apply approved requirement changes, retire/change requirements, validation/query commands if any, and approval policy? Are mutating operations and human approval boundaries clear?
+- **PR review process:** Does the repo have a `pr-review-hooks.md` manifest at its root answering the required hooks from `../../references/pr-review.md`: review inputs, local review rules, verification commands, evidence captures, PR tracking, and merge gate? Are the verification rows runnable commands and is the merge gate explicit?
 - **Tool availability:** For GitHub Projects, CLIs, or other external systems, are required tools installed/authenticated and are fallback procedures documented when access is unavailable?
 
 ### 4. Report or Act
@@ -104,6 +105,7 @@ For documents that exist, evaluate:
   1. Simple Markdown requirements (`docs/requirements.md`)
   2. Existing requirements CLI/tool integration
   3. No requirements system yet; document that requirements are not maintained separately
+- `pr-review-hooks.md` manifest at the repo root, drafted from the PR-review hooks in `../../references/pr-review.md`. Point at the rule files that already exist rather than restating them; every verification row must be a runnable command; name the evidence method and the merge gate explicitly.
 - AGENTS.md skeleton with proper references
 - Per-directory AGENTS.md files where patterns are needed
 
@@ -112,6 +114,7 @@ For documents that exist, evaluate:
 - Update test architecture doc when commands change
 - Update task-tracking docs when backlog policy changes
 - Update requirements docs when requirements policy changes
+- Update `pr-review-hooks.md` when rule files, verification commands, evidence methods, or merge policy change
 - Update AGENTS.md references when structure changes
 - Update per-directory AGENTS.md when patterns evolve
 

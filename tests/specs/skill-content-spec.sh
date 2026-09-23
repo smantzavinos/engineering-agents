@@ -132,6 +132,33 @@ else
   fail "Team orchestrator is missing no-polling or final-review rules"
 fi
 
+# PR review pipeline skill implements the canonical contract in two roles
+if grep -Fq 'pr-review-hooks.md' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'review-inputs' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'review-rules' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'verification-commands' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq '## Author procedure' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq '## Reviewer procedure' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
+  pass "pull-request skill consumes the repo hook manifest in both roles"
+else
+  fail "pull-request skill does not consume the repo hook manifest in both roles"
+fi
+
+if grep -Fq 'reviewed@<sha>' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'READY' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'FIX' "$REPO_ROOT/skills/pull-request/SKILL.md" \
+  && grep -Fq 'BLOCKED' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
+  pass "pull-request skill stamps reviewed SHAs and uses the verdict vocabulary"
+else
+  fail "pull-request skill is missing stamping or the verdict vocabulary"
+fi
+
+if grep -Fq 'docs/references/pr-review.md' "$REPO_ROOT/skills/pull-request/SKILL.md"; then
+  pass "pull-request skill cites the canonical process doc"
+else
+  fail "pull-request skill must cite docs/references/pr-review.md"
+fi
+
 if grep -Fq 'direct `subagent_type="hephaestus"`' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md" \
   && grep -Fq 'category="ultrabrain"' "$REPO_ROOT/skills/execution-orchestrator-team/SKILL.md"; then
   pass "Team orchestrator separates direct rescue from external strong final review"
