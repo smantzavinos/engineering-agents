@@ -75,9 +75,8 @@
 
 ### Verification classes
 
-Sequential plans use TDD checklists. Dynamic-workflow plans instead declare a **verification
-class per task**, defined in `docs/execution-patterns.md` and enforced by
-`node tools/check-plan.mjs`:
+Verification classes apply to every plan, sequential included. Each task
+declares one **verification class** when the plan is written:
 
 | Class | When | What proves it |
 |---|---|---|
@@ -89,12 +88,13 @@ class per task**, defined in `docs/execution-patterns.md` and enforced by
 The test that decides the class: *can this fail because of a change in the behaviour or
 artifact the task modifies, without a manual edit of the oracle?* If not, it is a `check`, or
 honestly `none`. A test asserting a document contains a sentence the same task just wrote is
-not a test.
+not a test. TDD catches legitimate regressions; it does not pin volatile content (config
+values, documentation wording, copy that is meant to change).
 
-**There is no mandatory break-it step.** It was self-administered by the same context that
-wrote the test, which is exactly the context least able to judge it. Break-it survives only as
-a reviewer-initiated, risk-triggered demand on a specific suspicious test — see
-`skills/dynamic-review-code`.
+**There is no mandatory break-it step.** A break-it demonstration is reserved for
+high-risk invariant tests — money, auth, data loss, irreversible operations — where a
+false green is expensive. It is reviewer-initiated, on a specific suspicious test, never
+a default per-task ritual.
 
 For `contract` tasks the frozen tests are protected mechanically, not by trust:
 
@@ -104,12 +104,13 @@ git diff --exit-code <contract-commit> -- <testPaths> && <verify command>
 
 A passing test therefore cannot mean an edited test.
 
-### Ownership in the dynamic workflow
+### Ownership
+
 - **Contract author:** writes failing tests before implementation, observes red once, with evidence. Never the implementer.
-- **Implementer:** makes the frozen test pass within its declared write-set. Runs its own task-scoped check only.
-- **Parent orchestrator:** runs all verification on the host at fence-group boundaries, classifies failures, commits checkpoints. Verification is never delegated to a child.
-- **Reviewer (`dynamic-review-code`):** per-group and final-diff review; may demand a break-it demonstration on a specific test.
-- **Fresh final reviewer:** full-diff review with no knowledge of how the groups went.
+- **Implementer:** makes the frozen test pass. Runs its own task-scoped check only.
+- **Orchestrator:** runs all verification on the host at task and plan boundaries, classifies failures, commits checkpoints. Verification is never delegated away from the host.
+- **Code reviewer:** per-task and final-diff review; may demand a break-it demonstration on a specific suspicious test.
+- **Fresh final reviewer:** full-diff review with no knowledge of how the tasks went.
 
 ## Related Docs
 - `docs/approaches/parallel.md` — Parallel scheduler, fences, and verification classes.

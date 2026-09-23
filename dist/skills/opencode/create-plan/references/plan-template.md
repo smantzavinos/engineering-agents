@@ -8,7 +8,7 @@
 ---
 
 ## Execution Contract
-This plan is meant to be **executed** with strict TDD (Red → Green → Break-it → Verify).
+This plan is meant to be **executed** with test-first discipline (Red → Green → Verify).
 
 No implementation change without a failing test (or an explicitly documented exception).
 
@@ -98,16 +98,17 @@ Approved requirement changes to apply during execution:
 
 #### T1: <task name>
 **Depends on:** —
+**Verification class:** <contract | characterization | check | none>
+**Execution tier:** <high | low>
 **Touched files:** <paths/globs this task writes; `(none)` if none; omit only if unknown>
 **Deliverable:** <what exists when done>
 **Requirement refs:** <FR-001, NFR-001, OPR-001 | none | N/A>
 
-**TDD checklist:**
+**TDD checklist (for `contract`/`characterization` classes; `check`/`none` use their proving command instead):**
 - [ ] Add failing test for <specific behavior> in `<path/to/test>`
 - [ ] Run `<exact test command>` — confirm failure
 - [ ] Implement minimal change in `<path/to/file>` to make test pass
 - [ ] Re-run `<exact test command>` — confirm pass
-- [ ] **Break-it check:** break <key invariant> in `<file>`, confirm test fails, restore
 - [ ] Refactor if needed (tests stay green)
 - [ ] Run task completion gate: `<command>`
 
@@ -119,16 +120,17 @@ Approved requirement changes to apply during execution:
 
 #### T2: <task name>
 **Depends on:** T1
+**Verification class:** <contract | characterization | check | none>
+**Execution tier:** <high | low>
 **Touched files:** <paths/globs this task writes; `(none)` if none; omit only if unknown>
 **Deliverable:** <what exists when done>
 **Requirement refs:** <FR-001, NFR-001, OPR-001 | none | N/A>
 
-**TDD checklist:**
+**TDD checklist (for `contract`/`characterization` classes; `check`/`none` use their proving command instead):**
 - [ ] Add failing test for <specific behavior> in `<path/to/test>`
 - [ ] Run `<exact test command>` — confirm failure
 - [ ] Implement minimal change in `<path/to/file>` to make test pass
 - [ ] Re-run `<exact test command>` — confirm pass
-- [ ] **Break-it check:** break <key invariant> in `<file>`, confirm test fails, restore
 - [ ] Refactor if needed (tests stay green)
 - [ ] Run task completion gate: `<command>`
 

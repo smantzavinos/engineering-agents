@@ -11,14 +11,14 @@
 - Keep command surfaces stable; if a wrapper script exists, document and use it instead of inventing a new top-level command.
 
 ## Verification Rules
-- Parallel plans declare a verification class per task (`contract`,
-  `characterization`, `check`, `none`); see `docs/approaches/parallel.md`. Contract tests are
+- Every plan declares a verification class per task (`contract`,
+  `characterization`, `check`, `none`); see `docs/testing-strategy.md`. Contract tests are
   authored by an agent other than the implementer, observed red once, and frozen.
-- There is no mandatory break-it step. A reviewer may demand one for a specific test that
-  looks like it cannot fail; an implementer never self-administers it.
-- Verification runs on the host, at fence-group boundaries, by the orchestrating parent. It is never
-  delegated to the child that did the work.
-- Sequential OpenCode plans keep strict TDD: failing test first, minimal fix, break-it check,
-  restore the passing state.
-- Use the repo's documented verification commands according to the selected execution mode.
+- There is no mandatory break-it step. A reviewer may demand one for a specific high-risk
+  invariant test that looks like it cannot fail; an implementer never self-administers it.
+- Verification runs on the host, at task and plan boundaries, by the orchestrator. It is never
+  delegated to the agent that did the work.
+- Test-first discipline (TDD: Red → Green → Verify) applies to `contract` and `characterization`
+  tasks; `check`/`none` tasks prove completion with their declared command.
+- Use the repo's documented verification commands; do not invent new ones.
 - Do not mark work done with unverified changes or with unrelated edits mixed into the same checkpoint.

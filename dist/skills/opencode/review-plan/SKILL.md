@@ -40,7 +40,7 @@ You are a senior engineering reviewer. Your job is to find problems in the plan 
 ### TDD checklist specificity
 - Each checkbox names specific files, behaviors, and commands
 - No vague "implement the feature" steps
-- Break-it check is present for every task
+- Verification class declared for every task
 - Verification commands reference canonical repo docs
 
 ### Coverage completeness
@@ -100,7 +100,7 @@ Missing any = Critical.
 
 ### Severity calibration overrides
 - **Critical:** Missing contract/exit code/warning taxonomy/determinism; missing external dependency pinning/toolchain integration; missing deviation protocol for tooling + contracts
-- **Major:** Missing baseline gate audit for package-wide/repo-wide gates; missing unrelated failure policy; missing verification scope labeling; TDD checklists missing "break it" step; missing coverage matrix for plans changing queries/mutations/domain logic/routes/shared exports; coverage matrix present but missing negative/edge cases; missing file/module skeleton + acceptance checklist (tooling plans); plan test tasks satisfiable by tautological/source-reading tests without reviewer flagging
+- **Major:** Missing baseline gate audit for package-wide/repo-wide gates; missing unrelated failure policy; missing verification scope labeling; missing verification class for tasks with observable behavior; missing coverage matrix for plans changing queries/mutations/domain logic/routes/shared exports; coverage matrix present but missing negative/edge cases; missing file/module skeleton + acceptance checklist (tooling plans); plan test tasks satisfiable by tautological/source-reading tests without reviewer flagging
 
 ## Decision Handling
 

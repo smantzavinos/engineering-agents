@@ -29,7 +29,7 @@
 - Negative/edge cases identified for each row: Yes | No
 - Bad-test avoidance addressed in approach.md: Yes | No
 - E2E seed/fixture data confirmed to support scenarios: Yes | No | N/A
-- TDD checklists include break-it step for all tasks: Yes | No
+- Verification class declared for all tasks: Yes | No
 
 ### Issues
 
