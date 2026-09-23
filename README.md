@@ -207,6 +207,13 @@ pi
 # Then: "Execute the plan at plans/my_feature/. Auto-continue."
 ```
 
+## Usage with Hermes
+
+Hermes agents reference this repo directly (no rendered copies): point the
+agent at the repo and route it to `docs/hermes/README.md` — the skill
+reference map there covers the full pipeline including PR babysitting
+(`skills/babysit-pr/SKILL.md`).
+
 ## Usage without Nix
 
 Canonical skills in `skills/` are harness-neutral templates. The final per-harness skill files are generated into `dist/skills/<harness>/` by the renderer (`node tools/render-skills.mjs --write`). See [Skill Rendering](docs/skill-rendering.md) for the pipeline. The `agents/` and `docs/` directories are plain Markdown/JSON.

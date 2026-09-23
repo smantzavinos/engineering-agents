@@ -21,6 +21,38 @@ If this section and a canonical doc disagree, the canonical doc wins.
 | [Execution modes](execution-modes.md) | Deciding HOW Hermes drives the pipeline: Pi subprocesses vs Hermes subagents vs single session |
 | [PR automation](pr-automation.md) | Setting up an agent to detect and review PRs automatically (cron sweep, labels, triggers, monitor script) |
 
+## How Hermes consumes this repo
+
+Hermes agents do **not** install rendered copies (that's the Pi/OpenCode
+model — see `docs/skill-rendering.md`). Point the agent at this repo and it
+reads canonical files directly. The entry point is this directory:
+
+1. Read this README.
+2. Follow the checklist below.
+3. For any job, read the canonical path from the map — never hunt.
+
+## Skill reference map
+
+Canonical sources (`skills/<name>/SKILL.md`), not rendered copies. Hermes
+agents following the skill-sync checklist maintain their own equivalents;
+agents using this repo as a live reference read these directly.
+
+| Job | Canonical path |
+|-----|----------------|
+| Onboard / audit a repo | `skills/assess-repo/SKILL.md` |
+| Clarify intent → brief | `skills/discovery/SKILL.md` |
+| Research → approach | `skills/design/SKILL.md`, `skills/research/SKILL.md` |
+| Plan creation | `skills/create-plan/SKILL.md` |
+| Plan review | `skills/review-plan/SKILL.md` |
+| Execution log | `skills/create-worklog/SKILL.md` |
+| Task execution | `skills/execute-task/SKILL.md` |
+| Full autonomous execution | `skills/execution-orchestrator/SKILL.md` + [Execution modes](execution-modes.md) |
+| Code review | `skills/review-code/SKILL.md` |
+| Epic decomposition review | `skills/review-epic/SKILL.md` |
+| PR body + one verdict | `skills/pull-request/SKILL.md` |
+| Live-PR review cycling (session-scoped) | `skills/babysit-pr/SKILL.md` |
+| PR monitoring infrastructure | [PR automation](pr-automation.md) |
+
 ## Agent self-setup checklist
 
 An agent being handed ownership of one or more repos runs this once:
