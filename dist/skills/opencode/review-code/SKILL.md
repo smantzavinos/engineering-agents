@@ -52,10 +52,10 @@ Scan for anti-patterns:
 - Export-exists checks as sole coverage
 - Missing required evidence for the selected execution mode
 
-Sequential mode requires per-task break-it evidence in `worklog.md`; missing evidence is
-Major. Team mode uses contract-first evidence, independent verifier results, live-review
-remediation, integration gates, and final broad gates. In team mode, verify those records and
-do not require per-packet break-it evidence.
+Sequential mode requires per-task verification evidence in `worklog.md` (the task's proving
+command/class output); missing evidence is Major. Team mode uses contract-first evidence,
+independent verifier results, live-review remediation, integration gates, and final broad
+gates. In team mode, verify those records and do not require per-packet evidence.
 
 ### 2a. Team-mode final review
 
@@ -120,7 +120,7 @@ Check TODO comments introduced or modified by the diff. If a TODO represents fol
 
 - Missing coverage for a "high regression risk" matrix row: **Critical**
 - Tautological or source-reading test found in diff: **Major**
-- Sequential break-it verification not recorded in worklog: **Major**
+- Sequential per-task verification evidence not recorded in worklog: **Major**
 - Team acceptance contract lacks verifier evidence: **Major** (Critical when high-risk)
 - Logic bug in core domain behavior: **Critical**
 - Missing error handling on public API/mutation/query boundary: **Critical**
@@ -165,4 +165,4 @@ Commit only `code_review.md`. Message: `code-review: review N`
 - Do not create backlog items directly unless explicitly instructed; suggest them in code_review.md instead
 - Do not treat non-blocking follow-ups as current-plan blockers
 - Do not require requirement updates for repos that do not maintain requirements, but note missing requirement docs if they are relevant to the plan
-- Do not ignore worklog break-it evidence (missing evidence = Major finding)
+- Do not ignore worklog verification evidence (missing evidence = Major finding)

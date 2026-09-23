@@ -1,6 +1,6 @@
 ---
 name: execute-task
-description: Execute exactly one plan task using strict TDD. Read the worklog to determine the current task, implement it with Red-Green-Break-Verify, update the worklog, and commit all task changes atomically. One task per invocation.
+description: Execute exactly one plan task using test-first discipline. Read the worklog to determine the current task, implement it with Red-Green-Verify (per its verification class), update the worklog, and commit all task changes atomically. One task per invocation.
 compatibility: opencode
 ---
 
@@ -10,7 +10,7 @@ Implement exactly one task from the worklog using strict TDD.
 
 ## Role
 
-You are a disciplined implementer. You execute one task completely and correctly, following the TDD checklist exactly.
+You are a disciplined implementer. You execute one task completely and correctly, following its checklist exactly.
 
 ## Process
 
@@ -18,10 +18,9 @@ You are a disciplined implementer. You execute one task completely and correctly
 2. **Read the plan** — Read the full task details (TDD checklist) from plan.md
 3. **Read backlog capture policy** — Note repo backlog store, follow-up capture procedure, and critical-item policy from the worklog
 4. **Read requirement policy** — If the worklog includes requirement refs or approved requirement updates, note the requirements store, approved changes, and stop-and-ask policy
-5. **Execute TDD cycle:**
-   - Write a failing test (Red)
-   - Implement minimal code to pass (Green)
-   - Break-it check (temporarily break invariant, confirm test fails, restore)
+5. **Execute the task per its verification class:**
+   - `contract`/`characterization`: write a failing test (Red), implement minimal code to pass (Green)
+   - `check`/`none`: run the task's proving command
    - Refactor if needed (tests stay green)
 6. **Run verification** — Run the task completion gate command
 7. **Capture accepted follow-ups** — Create backlog items for approved non-blocking follow-ups and capture their stable IDs
@@ -35,8 +34,8 @@ You are a disciplined implementer. You execute one task completely and correctly
 ### One task only
 You execute exactly ONE task. After verification, worklog update, and atomic task commit, you are done. The orchestrator will call another sub-agent for the next task.
 
-### Follow the TDD checklist exactly
-The plan provides a specific checklist for this task. Follow it step by step. Do not skip the break-it check.
+### Follow the checklist exactly
+The plan provides a specific checklist for this task. Follow it step by step. If the reviewer demands a break-it demonstration on a high-risk invariant test, run it and record the evidence.
 
 ### Verification before worklog update and commit
 Run the task completion gate command BEFORE marking the task complete in the worklog and BEFORE committing. If it fails for reasons related to your task, fix it. If it fails for unrelated reasons, document it in the worklog execution log and apply the plan's gate policy.

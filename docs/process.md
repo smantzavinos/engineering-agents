@@ -126,14 +126,16 @@ brief → research → approach → approach review
 
 #### 4A. Sequential Plan
 
-**Purpose:** Create a detailed, executable implementation plan with dependency-ordered tasks and TDD checklists.
+**Purpose:** Create a detailed, executable implementation plan with dependency-ordered tasks, verification classes, and test-first checklists.
 
 **Artifact:** `plan.md`
 
 **What happens:**
 - Break the approach into concrete implementation tasks
 - Order tasks by dependency (what must be done before what)
-- Write TDD checklists for each task (Red → Green → Break-it → Verify)
+- Assign a verification class to every task (contract / characterization / check / none — see `docs/testing-strategy.md`)
+- Write test-first checklists for each task (Red → Green → Verify)
+- Assign an execution tier to every task (high / low model class)
 - Define verification gates (what commands prove each task is done)
 - Identify the coverage matrix (what behaviors need tests at what layers)
 - Reference specific files, modules, and test locations
@@ -152,7 +154,7 @@ brief → research → approach → approach review
 
 **What happens:**
 - Review task graph for correctness (dependency ordering, no cycles)
-- Review TDD checklists for specificity (do they name files, behaviors, commands?)
+- Review test-first checklists for specificity (do they name files, behaviors, commands?)
 - Check for logic bugs (cross-section contradictions)
 - Verify coverage matrix completeness
 - Check that verification commands reference canonical repo docs
@@ -192,11 +194,10 @@ brief → research → approach → approach review
 
 **Artifact:** Updates to `worklog.md` + source code changes + git commits
 
-**What happens (per task):**
+**What happens (per task, per its verification class):**
 - Read worklog to determine current task
-- Write a failing test for the target behavior
-- Implement the minimal change to make it pass
-- Break-it check: temporarily break the invariant, confirm the test fails, restore
+- For `contract`/`characterization`: write a failing test, implement the minimal change to make it pass
+- For `check`/`none`: run the task's proving command
 - Run task-completion verification
 - Capture accepted follow-up backlog items using the repo's task-tracking mechanism
 - Update worklog with results and any created backlog item IDs

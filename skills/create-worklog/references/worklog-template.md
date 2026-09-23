@@ -11,9 +11,9 @@
 
 ## Working Rules
 
-- Strict TDD (Red → Green → Break-it → Verify). No change without a failing test first.
+- Test-first discipline (Red → Green → Verify). No change without a failing test first, per the task's verification class.
 - Git commits are per plan task. Do NOT push until explicitly requested.
-- Follow the plan's TDD checklists exactly — do not skip the break-it check.
+- Follow the plan's checklists exactly.
 - Non-blocking follow-up work goes to the repo backlog, not into this plan's task list.
 
 ## References

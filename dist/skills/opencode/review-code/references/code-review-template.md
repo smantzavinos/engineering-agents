@@ -32,7 +32,7 @@
 ### Test Adequacy
 
 - Anti-patterns found: <none | list>
-- Break-it evidence in worklog:
+- Per-task verification evidence in worklog:
   - T1: ✅ recorded | ❌ missing
   - T2: ✅ recorded | ❌ missing
   - ...
