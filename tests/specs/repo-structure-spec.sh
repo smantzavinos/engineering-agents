@@ -74,9 +74,9 @@ assert_file_exists "$REPO_ROOT/docs/references/task-tracking.md" "references/tas
 # Skills (19 total)
 SKILLS=(
   discovery design research
-  create-plan review-plan create-team-plan review-team-plan
-  create-worklog create-team-worklog
-  execute-task execution-orchestrator execution-orchestrator-team
+  create-plan review-plan
+  create-worklog
+  execute-task execution-orchestrator
   review-code review-approach review-epic
   assess-repo create-skills
   configure-opencode
@@ -108,8 +108,7 @@ assert_file_contains "$REPO_ROOT/README.md" "homeManagerModules" "README documen
 assert_file_contains "$REPO_ROOT/flake.nix" "homeManagerModules" "Flake exposes homeManagerModules"
 assert_file_contains "$REPO_ROOT/flake.nix" "llmAgents" "Flake references llmAgents input"
 assert_file_contains "$REPO_ROOT/flake.nix" "opencode" "Flake references OpenCode module"
-assert_file_contains "$REPO_ROOT/docs/process.md" "Parallel Planning and Execution" "Process documents the parallel planning branch"
-assert_file_contains "$REPO_ROOT/docs/execution-patterns.md" "The loop lives in the parent" "Execution patterns doc defines the parent-driven loop"
+assert_file_contains "$REPO_ROOT/docs/process.md" "Opportunistic Parallel Dispatch" "Process documents opportunistic parallel dispatch (ADR 0006)"
 
 # ============================================================
 printf '\n'

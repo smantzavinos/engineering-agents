@@ -100,7 +100,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify skills are linked
-  for skill in discovery design discover-and-design discover-and-design-simple direct-plan dynamic-execute-plan dynamic-create-plan dynamic-review-plan dynamic-review-code \
+  for skill in discovery design discover-and-design discover-and-design-simple \
                research review-approach review-epic \
                assess-repo create-skills; do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
@@ -392,7 +392,7 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
   done
 
   # Verify engineering workflow skills (OpenCode-rendered set)
-  for skill in discovery design execution-orchestrator execution-orchestrator-team research create-plan create-team-plan create-worklog create-team-worklog execute-task review-plan review-team-plan review-code review-approach review-epic assess-repo create-skills configure-opencode; do
+  for skill in discovery design execution-orchestrator research create-plan create-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills configure-opencode; do
     if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
       pass "OpenCode skill: $skill"
     else

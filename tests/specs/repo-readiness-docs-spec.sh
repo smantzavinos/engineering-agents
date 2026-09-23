@@ -60,7 +60,7 @@ assert_file_exists "$REPO_ROOT/docs/issues_learnings.md" "Issues and learnings l
 assert_file_exists "$REPO_ROOT/docs/adr/README.md" "ADR index exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "Initial ADR exists"
 assert_file_exists "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Code-mode ADR exists"
-assert_file_exists "$REPO_ROOT/docs/execution-patterns.md" "Code-mode execution patterns doc exists"
+assert_file_contains "$REPO_ROOT/docs/adr/0006-retire-parallel-execution.md" "Status: Accepted" "Retirement ADR is accepted"
 assert_file_exists "$REPO_ROOT/agents/AGENTS.md" "Agents directory guide exists"
 assert_file_exists "$REPO_ROOT/skills/AGENTS.md" "Skills directory guide exists"
 assert_file_exists "$REPO_ROOT/tests/AGENTS.md" "Tests directory guide exists"
@@ -267,7 +267,7 @@ assert_file_contains "$REPO_ROOT/README.md" "plans/README.md" "README links to t
 assert_file_contains "$REPO_ROOT/README.md" "docs/issues_learnings.md" "README links to the issues/learnings log"
 assert_file_contains "$REPO_ROOT/README.md" "docs/adr/README.md" "README links to the ADR index"
 assert_file_contains "$REPO_ROOT/README.md" '`zai-coding-plan/glm-5.2` | Default model' "README documents the OpenCode default model"
-assert_file_contains "$REPO_ROOT/README.md" "sequential or team planning" "README routes bug fixes through the selected planning pipeline"
+assert_file_contains "$REPO_ROOT/README.md" "brief → debug/research → approach → planning → execute → review" "README routes bug fixes through the planning pipeline"
 
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "# Agents Directory Guide" "Agents guide has title"
 assert_file_contains "$REPO_ROOT/agents/AGENTS.md" "## Agent Frontmatter Conventions" "Agents guide covers frontmatter conventions"

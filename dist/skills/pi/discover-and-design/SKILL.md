@@ -85,7 +85,7 @@ subagent({
    files. Then commit `brief.md`, `approach.md`, `approach_review.md` (if
    any), `findings/` (if any), and `state.json` as
    `design: document agreed approach for <slug>`.
-7. **Next step:** "The approach is ready. Write the Parallel plan with `/dynamic-create-plan`, review it with `/dynamic-review-plan`, and once you have approved it run `/dynamic-execute-plan` (DAG per fence group)."
+7. **Next step:** "The approach is ready. Create the plan with `/create-plan`, review it with `/review-plan`, and once you have approved it execute it task-by-task (`/execute-task` per task, sequential with opportunistic parallel dispatch)."
 
 ## Quality bar
 

@@ -55,12 +55,8 @@ run_specs() {
               "$SCRIPT_DIR/specs/proof-set-runtime-spec.sh" \
               "$SCRIPT_DIR/specs/skill-content-spec.sh" \
               "$SCRIPT_DIR/specs/skill-render-spec.sh" \
-              "$SCRIPT_DIR/specs/pi-module-content-spec.sh" \
-              "$SCRIPT_DIR/specs/pi-vendor-spec.sh" \
               "$SCRIPT_DIR/specs/preset-spec.sh" \
               "$SCRIPT_DIR/specs/compiler-contract-spec.sh" \
-              "$SCRIPT_DIR/specs/wave-engine-spec.sh" \
-              "$SCRIPT_DIR/specs/plan-check-spec.sh" \
               "$SCRIPT_DIR/specs/managed-package-install-state-spec.sh" \
               "$SCRIPT_DIR/specs/managed-package-status-spec.sh" \
               "$SCRIPT_DIR/specs/pi-startup-wrapper-spec.sh" \
