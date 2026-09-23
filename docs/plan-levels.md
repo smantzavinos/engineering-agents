@@ -70,14 +70,9 @@ plans/
       dependencies.md
     approach.md
     approach_review.md
-    sequential:
-      plan.md
-      plan_review.md
-      worklog.md
-    or team:
-      team_plan.md
-      team_plan_review.md
-      team-worklog.md
+    plan.md
+    plan_review.md
+    worklog.md
     code_review.md
     state.json
 ```
@@ -89,11 +84,11 @@ plans/
 | Brief | ✅ | Full intent documentation |
 | Research | ✅ | Codebase exploration, dependency mapping |
 | Approach | ✅ | Conceptual model, structural decisions |
-| Planning pipeline | ✅ | Sequential strict-TDD plan or role-based team plan |
-| Planning review | ✅ | Mode-specific review until zero significant issues |
-| Execution log | ✅ | Sequential worklog or lead-owned team worklog |
-| Execute | ✅ | Sequential strict TDD or team role pipeline |
-| Code Review | ✅ | Sequential review or fresh strong final team review |
+| Planning pipeline | ✅ | Sequential plan with verification class + execution tier per task |
+| Planning review | ✅ | Review until zero significant issues |
+| Execution log | ✅ | `worklog.md` |
+| Execute | ✅ | Sequential, opportunistic parallel dispatch allowed |
+| Code Review | ✅ | Reviewer distinct from the implementer |
 
 ### Stage Transitions
 
@@ -101,8 +96,7 @@ Each stage produces its artifact and transitions the state. The orchestrator adv
 
 ```
 brief → research → approach → approach_review
-  ├─ plan → plan_review → worklog → sequential execute → code_review
-  └─ team_plan → team_plan_review → team-worklog → team execute → fresh final review
+  └─ plan → plan_review → worklog → execute → code_review → PR review
 ```
 
 ---
@@ -270,12 +264,9 @@ When uncertain about the level, **start at Standard**. The brief and research st
 | `findings/` | Facts about current state, code structure, dependencies (multiple focused files) | Approach, Plan |
 | `approach.md` | Conceptual model, structural decisions, "how we'll solve this" | Plan, Plan Review |
 | `approach_review.md` | Review findings, issues, and decisions for the approach | Approach (updates based on review), planning readiness |
-| `plan.md` | Detailed implementation tasks, TDD checklists, verification gates | Plan Review, Worklog, Execute, Code Review |
+| `plan.md` | Detailed implementation tasks with verification class + execution tier, checklists, verification gates | Plan Review, Worklog, Execute, Code Review |
 | `plan_review.md` | Review findings, issues, resolutions | Plan (updates based on review) |
 | `worklog.md` | Execution tracking, task status, loop log | Execute (read/write each iteration) |
-| `team_plan.md` | Acceptance contracts, role packets, ownership, risk tier/implementer class, escalation, integration groups | Team Plan Review, Team Worklog, Team Execute, Final Review |
-| `team_plan_review.md` | Review findings for contract, concurrency, role, cost, and escalation readiness | Team Plan updates, team execution approval |
-| `team-worklog.md` | Lead-owned assignments, wake events, remediation, evidence, integration groups, closure | Team Execute |
 | `code_review.md` | Post-implementation findings, fix verification | Execute (fix pass), orchestrator (completion decision) |
 | `epic.md` | Workstream index, sequencing, execution record | Child plan orchestration |
 | `epic_review.md` | Review findings and decisions for epic decomposition | Epic decomposition updates, child-plan readiness |

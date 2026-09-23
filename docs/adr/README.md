@@ -25,7 +25,8 @@ When a decision becomes stale, add a superseding ADR instead of deleting the old
 
 ## Index
 - `0001-repo-operational-contracts.md` — adopt repo-local operational contracts, readiness checks, and centralized `agentOverrides` guidance.
-- `0002-split-team-planning-pipeline.md` — *(superseded by 0004)* branch after approach review into sequential and role-based team planning pipelines.
-- `0003-restore-team-mode-throughput-scheduling.md` — *(superseded by 0004)* restore DAG/lane-based throughput scheduling, Turn-Exit Contract, bounded-cheap routing, and compact wave ledger in team mode.
-- `0004-replace-team-mode-with-code-mode.md` — retire team mode; machine-readable task graph and parent-run verification. Wave/`maxWidth` split superseded by 0005.
-- `0005-parallel-dag-fences.md` — Pi Parallel: one DAG scheduler, planned fence groups, default one fence at the end.
+- `0002-split-team-planning-pipeline.md` — *(superseded by 0004, then 0006)* branch after approach review into sequential and role-based team planning pipelines.
+- `0003-restore-team-mode-throughput-scheduling.md` — *(superseded by 0004, then 0006)* restore DAG/lane-based throughput scheduling, Turn-Exit Contract, bounded-cheap routing, and compact wave ledger in team mode.
+- `0004-replace-team-mode-with-code-mode.md` — *(superseded by 0006)* retire team mode; machine-readable task graph and parent-run verification.
+- `0005-parallel-dag-fences.md` — *(superseded by 0006)* Pi Parallel: one DAG scheduler, planned fence groups, default one fence at the end.
+- `0006-retire-parallel-execution.md` — retire all parallel execution machinery (dynamic workflow, team mode); sequential-first pipeline with opportunistic dispatch; verification classes and execution tiers promoted to canon.

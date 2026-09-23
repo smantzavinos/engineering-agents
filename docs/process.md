@@ -6,12 +6,12 @@ This document defines the full lifecycle for each workflow type. The orchestrato
 
 Agents should not accumulate large uncommitted work. Human-reviewed planning artifacts are
 committed at approval boundaries. Sequential implementation commits every completed task
-with its tests and `worklog.md` update; Parallel implementation commits each verified, reviewed
-fence-group checkpoint, and that commit is the resume point if a group crashes.
+with its tests and `worklog.md` update; opportunistic parallel dispatch follows the
+same task-commit discipline per dispatched task.
 
 ## Task Tracking and Backlog Capture
 
-Current-plan tasks live in `plan.md` and, depending on the pipeline, `worklog.md` (sequential) or `tasks.json` (Parallel). Work discovered during a plan that is useful but outside the current scope belongs in the repo backlog, not silently added to the current task list.
+Current-plan tasks live in `plan.md` and `worklog.md`. Work discovered during a plan that is useful but outside the current scope belongs in the repo backlog, not silently added to the current task list.
 
 Each repo defines its own backlog implementation, but it must document the hooks described in [Task Tracking](./references/task-tracking.md): where backlog items live, how to create them, how IDs are assigned, how to list `Up next` work, and how to reference created items from worklogs or reviews.
 
@@ -45,8 +45,7 @@ The standard workflow for implementing new capabilities, enhancements, refactors
 
 ```
 brief → research → approach → approach review
-                              ├─ sequential (frozen): plan → plan review → worklog → execute → code review
-                              └─ parallel (Pi):       plan + tasks.json → plan review → [approval] → fence groups → fresh final review
+                              └─ plan → plan review → worklog → execute → code review → PR review
 ```
 
 #### 1. Brief
@@ -268,23 +267,27 @@ This does NOT replace the final code review — it supplements it. The final rev
 
 ---
 
-#### 4B–8B. Parallel Planning and Execution
+#### 4B. Opportunistic Parallel Dispatch
 
-Pi's post-approach path. Sequential TDD remains documented above as the frozen original.
-Team / Crew is abandoned.
+The pipeline is sequential-first. During execution (stage 7A), the orchestrator MAY
+dispatch plan tasks concurrently when they are obviously independent — no dependency
+edge between them and disjoint touched files. Bounds are each orchestrator's own
+policy for its environment; there is no universal concurrency cap. Any conflict,
+failure, or ambiguity falls back to sequential execution of the affected tasks.
 
-The scheduler, fence groups, planning rules, and verification classes live in
-[Parallel Approach](approaches/parallel.md). Do not restate them here.
+Parallel execution is an acceleration, never a planning artifact: plans stay
+dependency-ordered task lists; there is no DAG, no tasks.json, no fence groups.
+The historical parallel machinery (dynamic-* skills, wave scheduler, team mode) is
+retired — see [ADR 0006](adr/0006-retire-parallel-execution.md).
 
-```text
-plan.md + tasks.json → plan_review.md → [human approval]
-→ freeze interfaces → freeze contracts → for each fence group: DAG script → host verify → commit
-→ fresh final review
-```
+---
 
-Skills: `dynamic-create-plan`, `dynamic-review-plan`, `dynamic-execute-plan`,
-`dynamic-review-code`. There is no separate DAG skill. Runtime sandbox limits are in
-[Execution Patterns](execution-patterns.md).
+#### 9. PR Review
+
+After code review passes, the work enters the PR review process defined in
+[PR Review Process](references/pr-review.md): the author role prepares the PR body,
+evidence, and self-review; an independent reviewer role produces the verdict; the human
+merges. That document is canonical for everything past this point.
 
 ---
 
@@ -295,7 +298,7 @@ The workflow for fixing defects, regressions, and incorrect behavior. Similar to
 ### Stages
 
 ```
-brief → debug/research → approach → approach review → sequential or dynamic planning pipeline
+brief → debug/research → approach → approach review → planning pipeline
 ```
 
 #### 1. Brief
@@ -355,7 +358,7 @@ Same as feature development. Document the bug: what's happening, what should hap
 
 ---
 
-#### 4–8. Sequential or Dynamic Planning → Execute → Review
+#### 4–8. Planning → Execute → Review
 
 Same as feature development. The plan for a bug fix always includes:
 - A regression test that reproduces the bug (must fail before fix, pass after)

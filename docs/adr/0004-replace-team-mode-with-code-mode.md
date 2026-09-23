@@ -1,6 +1,6 @@
 # ADR 0004: Replace team mode with a code-mode dynamic workflow
 
-Status: Accepted (wave-engine / `maxWidth` split superseded by ADR 0005)
+Status: Superseded by ADR 0006 (retire parallel execution; sequential-first with opportunistic dispatch)
 
 Date: 2026-08-18
 

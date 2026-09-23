@@ -152,6 +152,17 @@ assert_file_not_contains "$REPO_ROOT/skills/review-plan/SKILL.md" "Break-it chec
 assert_file_contains "$REPO_ROOT/skills/review-plan/SKILL.md" "Verification class declared for every task" "review-plan demands a verification class for every task"
 assert_file_not_contains "$REPO_ROOT/skills/create-worklog/references/worklog-template.md" "Break-it" "worklog template drops the break-it field"
 
+# T2: one sequential-first pipeline; parallel machinery retired to history
+assert_file_not_contains "$REPO_ROOT/docs/process.md" "plan.md + tasks.json" "process.md no longer routes to the tasks.json pipeline"
+assert_file_not_contains "$REPO_ROOT/docs/process.md" "for each fence group" "process.md has no fence-group pipeline wording"
+assert_file_contains "$REPO_ROOT/docs/process.md" "Opportunistic Parallel Dispatch" "process.md documents opportunistic parallel dispatch"
+assert_file_contains "$REPO_ROOT/docs/process.md" "references/pr-review.md" "process.md chains the pipeline into the PR review process"
+assert_file_not_contains "$REPO_ROOT/docs/architecture.md" "Parallel path" "architecture doc no longer routes Pi changes to the Parallel path"
+assert_file_contains "$REPO_ROOT/docs/adr/0006-retire-parallel-execution.md" "Status: Accepted" "ADR 0006 retires the parallel pipeline"
+assert_file_contains "$REPO_ROOT/docs/adr/README.md" "0006-retire-parallel-execution.md" "ADR index lists 0006"
+assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Superseded by ADR 0006" "ADR 0004 is superseded by 0006"
+assert_file_contains "$REPO_ROOT/docs/adr/0005-parallel-dag-fences.md" "Superseded by ADR 0006" "ADR 0005 is superseded by 0006"
+
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "# Backlog" "Backlog doc has title"
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "## System" "Backlog doc explains the system"
 assert_file_contains "$REPO_ROOT/docs/backlog.md" "canonical backlog" "Backlog doc declares itself canonical"
@@ -244,7 +255,7 @@ assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "#
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Decision" "Initial ADR documents the decision"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "## Consequences" "Initial ADR documents consequences"
 assert_file_contains "$REPO_ROOT/docs/adr/0001-repo-operational-contracts.md" "FR-001" "Initial ADR cites relevant requirement IDs"
-assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Status: Accepted" "Code-mode ADR is accepted"
+assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "Superseded by ADR 0006" "Code-mode ADR is superseded by the retirement ADR"
 assert_file_contains "$REPO_ROOT/docs/adr/0002-split-team-planning-pipeline.md" "Status: Superseded" "Team planning ADR is superseded"
 assert_file_contains "$REPO_ROOT/docs/adr/0003-restore-team-mode-throughput-scheduling.md" "Status: Superseded" "Team throughput ADR is superseded"
 assert_file_contains "$REPO_ROOT/docs/adr/0004-replace-team-mode-with-code-mode.md" "tasks.json" "Code-mode ADR records the machine-readable task graph"

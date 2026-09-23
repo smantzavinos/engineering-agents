@@ -1,6 +1,6 @@
 # ADR 0005: Parallel execution is a DAG with planned fences
 
-Status: Accepted
+Status: Superseded by ADR 0006 (retire parallel execution; sequential-first with opportunistic dispatch)
 
 Date: 2026-08-19
 
