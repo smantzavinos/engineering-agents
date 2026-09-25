@@ -146,6 +146,12 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   for tool in nixfmt config; do
     [[ ! -e "$PI_LENS_TOOLS_BIN/$tool" ]] || { PI_LENS_TOOLS_OK=0; printf '    unexpected pi-lens tool: %s\n' "$tool" >&2; }
   done
+  # The tool env must not keep the whole npm vendor tree alive (it already
+  # ships inside the managed-packages output).
+  if nix path-info -r "$(readlink -f "$PI_FILES/.pi/agent/pi-lens-tools")" 2>/dev/null | grep -q -- '-pi-managed-vendor-'; then
+    PI_LENS_TOOLS_OK=0
+    printf '    pi-lens-tools closure references the full pi-managed-vendor tree\n' >&2
+  fi
   if [[ "$PI_LENS_TOOLS_OK" == "1" ]] && grep -Fq 'join(getAgentDir(), "pi-lens-tools", "bin")' "$PI_FILES/.pi/agent/extensions/pi-lens-policy/index.ts"; then
     pass "Pi module ships Nix pi-lens tools (no nixfmt) on pi's PATH"
   else
