@@ -10,28 +10,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Pi (pi-mono) coding agent
-    #
-    # PINNED to pi 0.80.7 (pre-refactor), NOT tracking latest.
-    # pi >=0.80.8 broke `/compact` and auto-compaction for GitHub Copilot
-    # Enterprise accounts: "Compaction failed: ... 421 Misdirected Request".
-    # Root cause: the 0.80.8 "Unified model runtime and provider
-    # authentication" (ModelRuntime) refactor stopped threading the
-    # resolved Enterprise base URL into the compaction/summarization call,
-    # so it falls back to the individual-account endpoint and gets rejected.
-    # Upstream bug: https://github.com/earendil-works/pi/issues/6768
-    # Community fix (unmerged as of 2026-07-20):
-    #   https://github.com/earendil-works/pi/compare/main...Marvae:fix/copilot-summarization-base-url
-    # To un-pin: watch for a llm-agents.nix commit past
-    #   https://github.com/numtide/llm-agents.nix/commits/main/packages/pi/hashes.json
-    # that bumps pi to a version where #6768 is closed/fixed, then restore
-    # `url = "github:numtide/llm-agents.nix";` and run
-    # `nix flake lock --update-input llmAgents`.
-    #
-    # Before updating, review every temporary Pi-version compatibility overlay:
+    # Match the reviewed dotfiles llmAgents pin (Pi 0.86.1) for standalone
+    # development and managed-package compatibility. Upstream main currently
+    # resolves a newer Pi; do not float the core runtime without its own audit.
+    # Historical Copilot Enterprise compaction issue to re-test before apply:
+    # https://github.com/earendil-works/pi/issues/6768
+    # Review temporary overlays before future Pi bumps:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {
-      url = "github:numtide/llm-agents.nix";
+      url = "github:numtide/llm-agents.nix/4e06012de602e51d03b0d482c2ddec420151cb9d";
     };
 
     # Visual Explainer skill (external, non-flake source)
@@ -288,18 +275,19 @@
         # Pi static agent tree produces the expected file set and settings body
         pi-agent-config-shape = pkgs.runCommand "pi-agent-config-shape-check" {} ''
           cfgd=${self.packages.${system}.pi-agent-config-default}
+          ${pkgs.jq}/bin/jq -e '.settings.allowInstall == false and .settings.scriptMode == true and .settings.toolPrefix == "server"' \
+            "$cfgd/agent/mcp.json" >/dev/null || { echo "FAIL: MCP adapter must disable installs, keep scripting enabled, and preserve server tool prefix"; exit 1; }
           for f in settings.json models.json mcp.json keybindings.json guardrails.json \
                    preset.jsonc CLAUDE.md CODEX.md themes/catppuccin-mocha.json \
-                   messenger/team-profiles/pi-team.json extensions/startup-staleness-warning/index.ts; do
+                   extensions/startup-staleness-warning/index.ts; do
             test -e "$cfgd/agent/$f" || { echo "MISSING: agent/$f"; exit 1; }
           done
-          for a in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle pi-team-reviewer; do
+          for a in planner plan-reviewer code-reviewer worker ui-worker researcher vision oracle; do
             test -f "$cfgd/agent/agents/$a.md" || { echo "MISSING: agents/$a.md"; exit 1; }
           done
-          for s in discovery design research create-plan review-plan create-worklog \
-                   execute-task execution-orchestrator review-code review-approach \
-                   assess-repo create-skills configure-pi pull-request \
-                   pi-team-plan pi-team-lead pi-team-worker; do
+          for s in discovery design discover-and-design discover-and-design-simple \
+                   research review-approach review-epic assess-repo create-skills \
+                   configure-pi pull-request; do
             test -d "$cfgd/agent/skills/$s" || { echo "MISSING: skills/$s"; exit 1; }
           done
           ${pkgs.jq}/bin/jq -e '.defaultProvider == "zai-coding-plan" and .defaultModel == "glm-5.2"' \
@@ -355,11 +343,12 @@
           tree=${self.packages.${system}.pi-managed-packages}
           for id in pi-subagents pi-hooks pi-agent-guidance pi-mcp-adapter \
                     pi-web-access pi-powerline-footer pi-zentui \
-                    pi-subdir-context pi-ding pi-notify pi-auto-rename pi-ext-leader-key \
+                    pi-subdir-context pi-ding pi-notify pi-session-autoname pi-ext-leader-key \
                     pi-guardrails pi-preset pi-btw; do
             test -f "$tree/agent/packages/$id/package.json" || { echo "MISSING facade: $id"; exit 1; }
           done
-          test ! -e "$tree/agent/packages/pi-gitnexus" || { echo "FAIL: pi-gitnexus must be excluded by default"; exit 1; }
+          test ! -e "$tree/agent/packages/pi-gitnexus" || { echo "FAIL: retired pi-gitnexus must be absent"; exit 1; }
+          test ! -e "$tree/agent/packages/pi-auto-rename" || { echo "FAIL: replaced pi-auto-rename must be absent"; exit 1; }
           # Removed with team mode / code-mode consolidation; must not come back.
           for id in pi-messenger pi-prompt-template-model pi-ext-review pi-interactive-shell; do
             test ! -e "$tree/agent/packages/$id" || { echo "FAIL: $id must not be installed"; exit 1; }
@@ -367,7 +356,21 @@
 
           # Facade source links must resolve to reachable files.
           test -f "$tree/agent/packages/pi-subagents/_source/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-session-autoname/_source/src/index.ts" || { echo "FAIL: pi-session-autoname _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-powerline-footer/_source/index.ts" || { echo "FAIL: powerline _source unreachable"; exit 1; }
+
+          # Check the shipped facade source, not the vendored input: the nested
+          # naming request must allow enough output for reasoning models.
+          autoname_source="$tree/agent/packages/pi-session-autoname/_source/src/extension.ts"
+          test -f "$autoname_source" || { echo "FAIL: pi-session-autoname extension source unreachable"; exit 1; }
+          naming_request=$(sed -n '/const response = await ctx\.modelRegistry\.complete(/,/^[[:space:]]*);/p' "$autoname_source")
+          test -n "$naming_request" || { echo "FAIL: pi-session-autoname nested naming request missing"; exit 1; }
+          printf '%s\n' "$naming_request" | grep -Eq '^[[:space:]]*maxTokens:[[:space:]]*512,[[:space:]]*$' \
+            || { echo "FAIL: pi-session-autoname nested naming request must use maxTokens: 512"; exit 1; }
+          if printf '%s\n' "$naming_request" | grep -Eq '^[[:space:]]*maxTokens:[[:space:]]*64,[[:space:]]*$'; then
+            echo "FAIL: pi-session-autoname nested naming request still uses maxTokens: 64"
+            exit 1
+          fi
 
           # Git sources carry install metadata for the staleness checker.
           test -f "$tree/vendor/node_modules/pi-subagents/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
@@ -377,9 +380,9 @@
             "$tree/vendor/node_modules/pi-powerline-footer/theme.json" >/dev/null \
             || { echo "FAIL: powerline theme not patched"; exit 1; }
 
-          # Install state covers every facade package and no gitnexus.
+          # Install state covers every declared facade package and no GitNexus.
           count=$(${pkgs.jq}/bin/jq '.sources | map(.packageIds[]) | unique | length' "$tree/agent/managed-packages.install-state.json")
-          [ "$count" = "19" ] || { echo "FAIL: install-state covers $count packageIds, expected 19"; exit 1; }
+          [ "$count" = "15" ] || { echo "FAIL: install-state covers $count packageIds, expected 15"; exit 1; }
           touch $out
         '';
 
@@ -423,6 +426,10 @@
             }
             echo "$scriptText" | grep -qF 'settings.json|guardrails.json) continue' || {
               echo "FAIL: activation script must keep settings.json and guardrails.json as real files"
+              exit 1
+            }
+            echo "$scriptText" | grep -qF 'cp "$static/guardrails.json" "$agent/extensions/guardrails.json"' || {
+              echo "FAIL: activation script must install guardrails.json where Guardrails reads it (agent/extensions/)"
               exit 1
             }
             echo "$scriptText" | grep -qF 'managed/packages' || {

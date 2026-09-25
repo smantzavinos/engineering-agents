@@ -62,17 +62,17 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   PI_MANAGED_PACKAGES_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages')/agent/managed-packages.declarations.json"
   if [[ -n "$PI_MANAGED_PACKAGES_JSON" && -f "$PI_MANAGED_PACKAGES_JSON" ]] \
     && jq -e 'all(.packages[]; .packageId != "pi-gitnexus")' "$PI_MANAGED_PACKAGES_JSON" >/dev/null 2>&1; then
-    pass "Pi module excludes pi-gitnexus from managed package declarations by default"
+    pass "Pi module has no retired pi-gitnexus managed package"
   else
-    fail "Pi module still declares pi-gitnexus in managed package declarations by default"
+    fail "Pi module still declares retired pi-gitnexus in managed packages"
   fi
 
   PI_SETTINGS_STORE_JSON="$(store_file_from_activate "$PI_OUT/activate" 'pi-agent-config')/agent/settings.json"
   if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
     && jq -e 'all(.packages[]; . != "./packages/pi-gitnexus")' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
-    pass "Pi module excludes pi-gitnexus from configured Pi packages by default"
+    pass "Pi module has no retired pi-gitnexus runtime package"
   else
-    fail "Pi module still configures ./packages/pi-gitnexus by default"
+    fail "Pi module still configures retired ./packages/pi-gitnexus"
   fi
 
   if [[ -f "$PI_FILES/.pi/agent/mcp.json" ]]; then
@@ -85,6 +85,103 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     pass "Pi module produces keybindings.json"
   else
     fail "Pi module missing keybindings.json in activation package"
+  fi
+
+  # pi-tasks: repo-clean storage default, the forked shutdown fix in the
+  # built facade, and pi-ext's npm copy left in place.
+  if jq -e '.taskScope == "session-global"' "$PI_FILES/.pi/agent/tasks-config.json" >/dev/null 2>&1; then
+    pass "Pi module sets pi-tasks taskScope to session-global"
+  else
+    fail "Pi module missing tasks-config.json with taskScope session-global"
+  fi
+  PI_MANAGED_AGENT="$(dirname "$PI_MANAGED_PACKAGES_JSON")"
+  PI_TASKS_INDEX="$PI_MANAGED_AGENT/packages/pi-tasks/_source/src/index.ts"
+  if [[ -f "$PI_TASKS_INDEX" ]] \
+    && grep -Fq 'pi.on("session_shutdown"' "$PI_TASKS_INDEX" \
+    && grep -Fq 'widget.dispose();' "$PI_TASKS_INDEX"; then
+    pass "Pi module pi-tasks facade carries the session_shutdown spinner fix"
+  else
+    fail "Pi module pi-tasks facade missing or lacks the session_shutdown widget dispose"
+  fi
+  if jq -e '.version == "0.4.3"' "$(dirname "$PI_MANAGED_AGENT")/vendor/node_modules/@tintinweb/pi-tasks/package.json" >/dev/null 2>&1; then
+    pass "Pi module leaves pi-ext's npm @tintinweb/pi-tasks 0.4.3 untouched"
+  else
+    fail "Pi module vendor @tintinweb/pi-tasks is not the locked npm 0.4.3 (git fork overwrote it?)"
+  fi
+  # pi-hooks keeps its five non-LSP components; LSP belongs to pi-lens.
+  if jq -e '.pi.extensions == ["./_source/checkpoint/checkpoint.ts", "./_source/permission/permission.ts", "./_source/ralph-loop/ralph-loop.ts", "./_source/repeat/repeat.ts", "./_source/token-rate/token-rate.ts"]' \
+       "$PI_MANAGED_AGENT/packages/pi-hooks/package.json" >/dev/null 2>&1; then
+    pass "Pi module pi-hooks facade exposes exactly its five non-LSP extensions"
+  else
+    fail "Pi module pi-hooks facade must expose checkpoint/permission/ralph-loop/repeat/token-rate only (no lsp)"
+  fi
+  # pi-lens owns LSP: narrow facade, managed config, in-process install policy.
+  if jq -e '.pi.extensions == ["./_source/dist/index.js"] and (.pi.skills | sort) == (["pi-lens-ast-grep", "pi-lens-lsp-navigation", "pi-lens-write-ast-grep-rule", "pi-lens-write-tree-sitter-rule"] | map("./_source/skills/\(.)/SKILL.md"))' \
+       "$PI_MANAGED_AGENT/packages/pi-lens/package.json" >/dev/null 2>&1 \
+    && jq -e '.packages | index("./packages/pi-lens") != null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi module enables pi-lens with its extension and LSP/ast-grep skills"
+  else
+    fail "Pi module pi-lens facade/runtime package selection is wrong"
+  fi
+  PI_LENS_CONFIG="$PI_FILES/.pi/agent/pi-lens.json"
+  # Everything on except the two mutation paths (format/autofix stay a
+  # per-project .pi-lens.json opt-in); no servers disabled; every tool on.
+  if jq -e '.lsp == {enabled: true} and .format.enabled == false and .autofix.enabled == false
+            and ([.tests, .opengrep, .knip, .jscpd, .madge, .gitleaks, .govulncheck, .deadCode, .complexity, .readGuard, .contextInjection] | all(.enabled == true))
+            and .tools.lazy == false
+            and ([.tools | to_entries[] | select(.key != "lazy" and .value.enabled != true)] | length == 0)' \
+       "$PI_LENS_CONFIG" >/dev/null 2>&1; then
+    pass "Pi module ships the full pi-lens config (format/autofix per-project opt-in)"
+  else
+    fail "Pi module pi-lens.json missing or not the expected full config"
+  fi
+  # Nix-supplied pi-lens tools: present, no formatter-only binaries, and
+  # appended to pi's PATH by the policy extension.
+  PI_LENS_TOOLS_BIN="$PI_FILES/.pi/agent/pi-lens-tools/bin"
+  PI_LENS_TOOLS_OK=1
+  for tool in typescript-language-server svelteserver typos-lsp yaml-language-server bash-language-server pyright-langserver nixd \
+              biome ruff oxlint shellcheck shfmt yamllint actionlint zizmor gitleaks govulncheck ast-grep opengrep knip jscpd madge; do
+    [[ -x "$PI_LENS_TOOLS_BIN/$tool" ]] || { PI_LENS_TOOLS_OK=0; printf '    missing pi-lens tool: %s\n' "$tool" >&2; }
+  done
+  for tool in nixfmt config; do
+    [[ ! -e "$PI_LENS_TOOLS_BIN/$tool" ]] || { PI_LENS_TOOLS_OK=0; printf '    unexpected pi-lens tool: %s\n' "$tool" >&2; }
+  done
+  if [[ "$PI_LENS_TOOLS_OK" == "1" ]] && grep -Fq 'join(getAgentDir(), "pi-lens-tools", "bin")' "$PI_FILES/.pi/agent/extensions/pi-lens-policy/index.ts"; then
+    pass "Pi module ships Nix pi-lens tools (no nixfmt) on pi's PATH"
+  else
+    fail "Pi module pi-lens-tools environment is missing tools, ships formatter-only binaries, or is not on PATH"
+  fi
+  PI_LENS_POLICY="$PI_FILES/.pi/agent/extensions/pi-lens-policy/index.ts"
+  if [[ -f "$PI_LENS_POLICY" ]] \
+    && grep -Fq 'PI_LENS_DISABLE_LSP_INSTALL ??= "1"' "$PI_LENS_POLICY" \
+    && grep -Fq 'PI_LENS_DISABLE_TOOL_INSTALL ??= "1"' "$PI_LENS_POLICY" \
+    && grep -Fq 'PI_LENS_CONFIG_PATH ??= join(getAgentDir(), "pi-lens.json")' "$PI_LENS_POLICY" \
+    && grep -Fq 'PI_LENS_HOME ??= join(homedir(), ".pi-lens")' "$PI_LENS_POLICY"; then
+    pass "Pi module links the pi-lens-policy extension (no auto-install, managed config, fixed home)"
+  else
+    fail "Pi module pi-lens-policy extension missing or incomplete"
+  fi
+  # pi-tasks TaskExecute bridge onto the managed pi-subagents RPC.
+  PI_TASKS_BRIDGE="$PI_FILES/.pi/agent/extensions/pi-tasks-subagents-bridge/index.ts"
+  if [[ -f "$PI_TASKS_BRIDGE" ]] && grep -Fq 'subagents:rpc:v1:request' "$PI_TASKS_BRIDGE" \
+    && grep -Fq '"subagents:rpc:spawn"' "$PI_TASKS_BRIDGE"; then
+    pass "Pi module links the pi-tasks -> pi-subagents bridge extension"
+  else
+    fail "Pi module pi-tasks-subagents-bridge extension missing or incomplete"
+  fi
+  # Guardrails tool registration protocol (#99): Guardrails fork and pi-hooks
+  # permission consume registrations; pi-lens-policy registers pi-lens tools.
+  PI_GUARDRAILS_SRC="$PI_MANAGED_AGENT/packages/pi-guardrails/_source"
+  PI_HOOKS_SRC="$PI_MANAGED_AGENT/packages/pi-hooks/_source"
+  if grep -Fq 'GUARDRAILS_REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_GUARDRAILS_SRC/src/shared/tool-registry.ts" 2>/dev/null \
+    && [[ -e "$PI_GUARDRAILS_SRC/node_modules/@aliou/sh" && -e "$PI_GUARDRAILS_SRC/node_modules/@aliou/pi-utils-settings" ]] \
+    && grep -Fq 'REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_HOOKS_SRC/permission/tool-registry.ts" 2>/dev/null \
+    && grep -Fq 'createRegisteredToolResolver(pi.events)' "$PI_HOOKS_SRC/permission/permission.ts" 2>/dev/null \
+    && grep -Fq 'REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_LENS_POLICY" \
+    && grep -Fq 'ast_grep_replace:' "$PI_LENS_POLICY" && grep -Fq 'lsp_navigation:' "$PI_LENS_POLICY"; then
+    pass "Pi module wires the guardrails tool registration protocol (guardrails, pi-hooks permission, pi-lens-policy)"
+  else
+    fail "Pi module guardrails tool registration protocol wiring is incomplete"
   fi
 
   if [[ -f "$PI_FILES/.pi/agent/CLAUDE.md" ]]; then
@@ -192,17 +289,25 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module still clones/fetches agent-kit at activation"
   fi
   AK_OK=1
-  for target in $(grep -oE 'ln -sf /nix/store/[^ ]*(extensions/(direnv/direnv|ast-grep/ast-grep)\.ts|skills/ast-grep)' "$PI_OUT/activate" | awk '{print $3}'); do
+  for target in $(grep -oE 'ln -sf /nix/store/[^ ]*extensions/direnv/direnv\.ts' "$PI_OUT/activate" | awk '{print $3}'); do
     if [[ ! -e "$target" ]]; then
       AK_OK=0
       printf '    dangling agent-kit target: %s\n' "$target" >&2
     fi
   done
-  AK_COUNT=$(grep -cE 'ln -sf /nix/store/[^ ]*(extensions/(direnv/direnv|ast-grep/ast-grep)\.ts|skills/ast-grep)' "$PI_OUT/activate" || true)
-  if [[ "$AK_OK" == "1" && "$AK_COUNT" == "3" ]]; then
-    pass "Pi module links agent-kit extensions/skill from pinned store source (no dangling targets)"
+  AK_COUNT=$(grep -cE 'ln -sf /nix/store/[^ ]*extensions/direnv/direnv\.ts' "$PI_OUT/activate" || true)
+  if [[ "$AK_OK" == "1" && "$AK_COUNT" == "1" ]]; then
+    pass "Pi module links the agent-kit direnv extension from pinned store source (no dangling target)"
   else
-    fail "Pi module agent-kit symlinks are missing or dangling (found $AK_COUNT/3 valid)"
+    fail "Pi module agent-kit direnv symlink is missing or dangling (found $AK_COUNT/1 valid)"
+  fi
+  # ast-grep is served by pi-lens: agent-kit's tool/skill are no longer
+  # linked and stale links from earlier activations are removed.
+  if ! grep -qE 'extensions/ast-grep/ast-grep\.ts|agent-kit[^ ]*/skills/ast-grep' "$PI_OUT/activate" \
+    && grep -Fq 'rm -rf "$HOME/.pi/agent/extensions/ast-grep" "$HOME/.pi/agent/skills/ast-grep"' "$PI_OUT/activate"; then
+    pass "Pi module retires the agent-kit ast-grep tool/skill (pi-lens ast_grep_* instead)"
+  else
+    fail "Pi module still links agent-kit ast-grep or does not remove stale links"
   fi
 
   # Verify agents are linked

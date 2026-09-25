@@ -50,7 +50,6 @@ let
 
   # Same managed-packages derivation the Home Manager module consumes.
   cfgManaged = makePiManagedPackages {
-    includeGitNexus = cfg.args.includeGitNexus or false;
     powerlineTheme = cfg.args.powerlineTheme or defaultPowerlineTheme;
   };
 in
@@ -86,7 +85,7 @@ in
         Arguments forwarded to makePiConfig. See nix/modules/pi/config.nix
         for the full parameter signature. Common keys: defaultProvider,
         defaultModel, defaultThinkingLevel, theme, footer,
-        enabledModels, includeGitNexus, powerline,
+        enabledModels, powerline,
         powerlineShortcuts, powerlineTheme, extraSkills.
       '';
     };
@@ -191,12 +190,16 @@ in
 
         # guardrails.json: real, user-owned copy installed only when absent;
         # the extension persists confirmed decisions into it and those must
-        # survive rebuilds.
-        if [ ! -f "$agent/guardrails.json" ]; then
-          cp "$static/guardrails.json" "$agent/guardrails.json"
-          chown ${cfg.user}:${cfg.group} "$agent/guardrails.json"
+        # survive rebuilds. Guardrails reads its global config from
+        # <agentDir>/extensions/guardrails.json (same path Home Manager
+        # links); earlier shim versions wrote <agentDir>/guardrails.json,
+        # which Guardrails never read, so drop that stale copy.
+        if [ ! -f "$agent/extensions/guardrails.json" ]; then
+          cp "$static/guardrails.json" "$agent/extensions/guardrails.json"
+          chown ${cfg.user}:${cfg.group} "$agent/extensions/guardrails.json"
         fi
-        chmod 0644 "$agent/guardrails.json" 2>/dev/null || true
+        chmod 0644 "$agent/extensions/guardrails.json" 2>/dev/null || true
+        rm -f "$agent/guardrails.json"
 
         # The agent dir itself stays group-traversable but not world-open,
         # mirroring the hermes instance-root convention.

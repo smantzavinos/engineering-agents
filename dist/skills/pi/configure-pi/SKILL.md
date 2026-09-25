@@ -1,6 +1,6 @@
 ---
 name: configure-pi
-description: Configure Pi safely for the current repository through `.pi/settings.json`, repository-local Guardrails in `.pi/extensions/guardrails.json`, and the Pi-team profile, including project-specific models, resources, subagent role overrides, Crew lane routing, and safety policy. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
+description: Configure Pi safely for the current repository through `.pi/settings.json`, repository-local Guardrails in `.pi/extensions/guardrails.json`, and session naming in `.pi/session-autoname.json`, including project-specific models, resources, subagent role overrides, and safety policy. Use when a user asks to change Pi behavior for one project or diagnose why a project Pi setting is not taking effect.
 compatibility: pi
 disable-model-invocation: true
 metadata:
@@ -10,6 +10,7 @@ metadata:
 ## What I do
 - Create or update the committed, project-local Pi settings file: `.pi/settings.json`.
 - Create or update repository-local Guardrails policy in `.pi/extensions/guardrails.json`, including path access, protected-file policies, and dangerous-command gates.
+- Configure the managed `@camillof/pi-session-autoname` extension through `.pi/session-autoname.json` without changing Pi's main settings or silently routing naming to another provider.
 - Configure project-specific model defaults, model cycling, resource paths, `subagents.agentOverrides`, and Pi-team Crew lane routing without inventing model IDs or overwriting unrelated settings.
 - Diagnose project trust, invalid JSON, precedence, and reload/restart requirements when a project setting appears ignored.
 - Explain when a requested behavior belongs to a user-wide extension configuration rather than this project skill's scope.
@@ -18,8 +19,9 @@ metadata:
 Use this when a user asks to:
 - Make this repository use a different Pi default provider, model, thinking level, UI behavior, resource path, or subagent role model.
 - Configure repository-local Guardrails, including outside-workspace path access or dangerous-command policies.
+- Override the automatic session naming model for this repository.
 - Configure Pi settings that should be committed with this repository.
-- Diagnose why `.pi/settings.json` or `.pi/extensions/guardrails.json` is not taking effect in this project.
+- Diagnose why `.pi/settings.json`, `.pi/extensions/guardrails.json`, or `.pi/session-autoname.json` is not taking effect in this project.
 
 Do not use this skill to configure every Pi project, edit `~/.pi/agent/`, author an extension, skill, theme, or prompt template. Use the specialized skill or Pi documentation for those surfaces.
 
@@ -30,12 +32,30 @@ This skill changes **only**:
 ```text
 .pi/settings.json
 .pi/extensions/guardrails.json
+.pi/session-autoname.json
 config/pi-team/team-profile.json (when the repository uses Pi-team)
 ```
 
 Pi loads `~/.pi/agent/settings.json` as the user-wide base and merges `.pi/settings.json` as the current project's override. Guardrails separately loads `~/.pi/agent/extensions/guardrails.json` and merges `.pi/extensions/guardrails.json` as the project override. Nested objects merge, so add only the keys that differ for this repository. Guardrails combines `pathAccess.allowedPaths` and merges named `policies.rules` by ID; other Guardrails arrays, such as permission-gate patterns, replace the inherited array at the higher-priority scope. Do not copy the user's entire global configuration into either project file.
 
-Project-local settings and resources require Pi to trust the project. In non-interactive runs, use an existing trust decision or the appropriate explicit trust flag rather than assuming `.pi/` content was loaded.
+Project-local Pi settings and resources require Pi to trust the project. **Exception:** the globally installed session-autoname extension reads `.pi/session-autoname.json` directly from the workspace; its current published version does not check Pi's project-trust state before applying the override. Inspect this file before running in an unfamiliar repository. In non-interactive runs, use an existing trust decision or the appropriate explicit trust flag for Pi-managed project settings rather than assuming all `.pi/` content was loaded.
+
+## Repository-local session naming
+
+The managed `@camillof/pi-session-autoname` package is separate from Pi's `settings.json`. The user's writable global `<agent-dir>/session-autoname.json` sets the default naming model; this project may override selected keys in `.pi/session-autoname.json` (project values win). The personal Home Manager config seeds `github-copilot/gpt-6-luna` only when the global file does not already exist, so `/autoname model ...` can persist user changes. No naming model is inferred from `enabledModels` or the current conversation model.
+
+```json
+{
+  "enabled": true,
+  "model": "github-copilot/gpt-6-luna",
+  "timeoutMs": 30000,
+  "debug": false
+}
+```
+
+Use an authenticated, available `provider/model-id`, verified with `pi --list-models` and `/autoname status`. The configured model is the **only** naming model: if missing, unauthenticated, or failing, the extension leaves the session unnamed rather than falling back to another provider. A repository may intentionally select a different provider, so inspect and approve that provider's data boundary before adding a local override. Do not assume `enabledModels` restricts a model selected by this extension. The extension sends a redacted, bounded excerpt of the first user/assistant exchange to the configured provider, preserves an existing manually set session name, and updates the terminal title on success.
+
+Prefer a narrow project override (for example only `"model"`) instead of copying the global file. Do not commit credentials or private conversation text. Validate with `jq -e . .pi/session-autoname.json`, restart Pi or run `/reload`, and confirm `/autoname status` reports the intended effective model. `/autoname model <provider/model-id> --local` writes this project file; do not use that command without approval when it would route excerpts to another provider.
 
 ## Repository-local Guardrails
 
@@ -99,6 +119,7 @@ When overriding `permissionGate.patterns`, `permissionGate.allowedPatterns`, or 
 - The project behavior that should differ from the user's normal Pi defaults.
 - The current `.pi/settings.json`, if it exists.
 - The current `.pi/extensions/guardrails.json`, if it exists, when changing repository safety policy.
+- The current `.pi/session-autoname.json`, if it exists, and the effective global model when changing project session naming.
 - The requested Guardrails feature mode, path grants, protected-file rules, or command policy.
 - Available model IDs when changing model routing. Inspect the current Pi model list or existing valid configuration; never invent a provider/model ID.
 - Any error message or evidence that the setting is being ignored.
@@ -229,7 +250,7 @@ This affects only that Pi process and does not modify project files or global co
 
 ## Process
 1. Confirm that the request is for the current repository and identify the exact project behavior.
-2. Inspect `.pi/settings.json`, `.pi/extensions/guardrails.json` when present, any relevant project-local resources, and `config/pi-team/team-profile.json` when the repository uses Pi-team.
+2. Inspect `.pi/settings.json`, `.pi/extensions/guardrails.json`, `.pi/session-autoname.json` when present, any relevant project-local resources, and `config/pi-team/team-profile.json` when the repository uses Pi-team.
 3. Verify project trust if local settings or resources are not loading.
 4. Preserve unrelated configuration and make the smallest valid JSON change.
 5. Validate each changed JSON file with `jq -e .`.
@@ -240,6 +261,7 @@ This affects only that Pi process and does not modify project files or global co
 - “Make this repo use a different default Pi model.” → inspect `.pi/settings.json` and available models, then add the minimal project override.
 - “Use stronger reviewers but keep workers cheap in this repo.” → update only `subagents.agentOverrides` in `.pi/settings.json` with verified model IDs; if Pi-team is also enabled, update its five lane models in `config/pi-team/team-profile.json`.
 - “Use Luna for cheap work, Terra for standard work, Sol for complex work, Sonnet 5 for visual work, and Opus 5 for complex visual work.” → update the repository's Pi-team profile with those verified IDs and thinking levels; do not change unrelated subagent overrides.
+- “Name sessions in this repo with a different model.” → inspect `.pi/session-autoname.json`, verify the target model and provider, then add only the approved `model` override; no fallback or implicit provider switch.
 - “Configure outside-workspace access for this repository.” → update `.pi/extensions/guardrails.json` with `features.pathAccess`, an explicit `pathAccess.mode`, and narrow object-form `allowedPaths` entries.
 - “Allow normal pushes but deny force pushes.” → keep ordinary pushes out of the Guardrails patterns and add a force-push regex to both `permissionGate.patterns` and `permissionGate.autoDenyPatterns`.
 - “My project settings do nothing.” → verify project trust, configuration path, JSON validity, precedence, and whether a restart is required.

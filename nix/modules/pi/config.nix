@@ -64,8 +64,23 @@ let
       source = {
         type = "git";
         packageName = "pi-hooks";
-        spec = "github:smantzavinos/pi-hooks#1c3ed591b393793cd025ff43fa61e16828872931";
-        installSpec = "github:smantzavinos/pi-hooks#1c3ed591b393793cd025ff43fa61e16828872931";
+        spec = "github:smantzavinos/pi-hooks#fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
+        installSpec = "github:smantzavinos/pi-hooks#fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
+      };
+      # LSP moved to pi-lens: never expose ./lsp/lsp.ts or ./lsp/lsp-tool.ts
+      # alongside it (two LSP clients per session duplicate language servers
+      # and watchers). Keep this selection if the source returns upstream.
+      expose = {
+        extensions = [
+          "./checkpoint/checkpoint.ts"
+          "./permission/permission.ts"
+          "./ralph-loop/ralph-loop.ts"
+          "./repeat/repeat.ts"
+          "./token-rate/token-rate.ts"
+        ];
+        skills = [ ];
+        prompts = [ ];
+        themes = [ ];
       };
     };
 
@@ -83,9 +98,9 @@ let
       source = {
         type = "npm";
         packageName = "pi-mcp-adapter";
-        spec = "pi-mcp-adapter@2.11.0";
-        installSpec = "pi-mcp-adapter@2.11.0";
-        version = "2.11.0";
+        spec = "pi-mcp-adapter@2.37.0";
+        installSpec = "pi-mcp-adapter@2.37.0";
+        version = "2.37.0";
       };
     };
 
@@ -103,7 +118,9 @@ let
       source = {
         type = "git";
         packageName = "pi-powerline-footer";
-        # v0.7.0 supports Pi >=0.74.0 <0.81.0, including this flake's Pi 0.80.7 pin.
+        # v0.7.0 declares Pi >=0.74.0 <0.81.0; this known-working pin
+        # predates the Pi 0.86.1 input. Review a compatible footer release
+        # before changing this source or relying on its peer range as proof.
         spec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
         installSpec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
       };
@@ -148,13 +165,13 @@ let
       };
     };
 
-    pi-auto-rename = {
+    pi-session-autoname = {
       source = {
         type = "npm";
-        packageName = "@byteowlz/pi-auto-rename";
-        spec = "@byteowlz/pi-auto-rename@1.0.7";
-        installSpec = "@byteowlz/pi-auto-rename@1.0.7";
-        version = "1.0.7";
+        packageName = "@camillof/pi-session-autoname";
+        spec = "@camillof/pi-session-autoname@0.1.2";
+        installSpec = "@camillof/pi-session-autoname@0.1.2";
+        version = "0.1.2";
       };
     };
 
@@ -175,11 +192,15 @@ let
 
     pi-guardrails = {
       source = {
-        type = "npm";
-        packageName = "@aliou/pi-guardrails";
-        spec = "@aliou/pi-guardrails@0.17.0";
-        installSpec = "@aliou/pi-guardrails@0.17.0";
-        version = "0.17.0";
+        type = "git";
+        # Fork of aliou/pi-guardrails 0.19.0 (includes the 0.18.1
+        # `>& file` redirect fix) + the #99 tool registration protocol, which
+        # lets pi-lens-policy register pi-lens tools for policy/path/permission
+        # gating. Runtime deps @aliou/sh + @aliou/pi-utils-settings are
+        # vendored in managed-packages/package.json.
+        packageName = "pi-guardrails";
+        spec = "github:smantzavinos/pi-guardrails#678bcb675e09acf8bad8f3b0b872eddcaf187f8b";
+        installSpec = "github:smantzavinos/pi-guardrails#678bcb675e09acf8bad8f3b0b872eddcaf187f8b";
       };
     };
 
@@ -187,9 +208,9 @@ let
       source = {
         type = "npm";
         packageName = "@richardgill/pi-preset";
-        spec = "@richardgill/pi-preset@0.0.8";
-        installSpec = "@richardgill/pi-preset@0.0.8";
-        version = "0.0.8";
+        spec = "@richardgill/pi-preset@0.0.9";
+        installSpec = "@richardgill/pi-preset@0.0.9";
+        version = "0.0.9";
       };
     };
 
@@ -203,14 +224,59 @@ let
       };
     };
 
-    pi-gitnexus = {
+    pi-lens = {
       source = {
-        type = "git";
-        packageName = "pi-gitnexus";
-        spec = "github:smantzavinos/pi-gitnexus#fa63bd3f6156cec943e42411ec0fc1909181dd2c";
-        installSpec = "github:smantzavinos/pi-gitnexus#fa63bd3f6156cec943e42411ec0fc1909181dd2c";
+        type = "npm";
+        packageName = "pi-lens";
+        spec = "pi-lens@4.3.0";
+        installSpec = "pi-lens@4.3.0";
+        version = "4.3.0";
+      };
+      # Replaces pi-hooks' LSP. Runtime policy lives in pi-lens.json + the
+      # pi-lens-policy extension: no runtime installs (binaries come from
+      # pi-lens-tools.nix on pi's PATH), every feature and tool on except
+      # format/autofix, which rewrite whole files beyond the agent's edit
+      # (Biome/Ruff format by default without project config) and stay a
+      # per-project .pi-lens.json opt-in. tools.lazy=false: measured ~1.8k
+      # extra tokens/request, kept for a stable (cacheable) tool list.
+      # readGuard only warns. Headless (-p) runs use pi-lens quick startup
+      # (no session scans); interactive sessions run the scanners. gitleaks
+      # additionally needs a per-repo opt-in signal (config or hook).
+      # Accepted risk (human decision 2026-09-25, trusted repos only): a
+      # repo's .pi-lens.json can define LSP server commands that pi-lens
+      # runs without a Pi trust prompt, and can re-enable tools/format/autofix.
+      # ast-grep is served by pi-lens (ast_grep_search/replace/outline); the
+      # agent-kit ast-grep extension/skill are retired. Rule-writing skills
+      # author project pi-lens rules and are exposed too.
+      expose = {
+        extensions = [ "./dist/index.js" ];
+        skills = [
+          "pi-lens-lsp-navigation"
+          "pi-lens-ast-grep"
+          "pi-lens-write-ast-grep-rule"
+          "pi-lens-write-tree-sitter-rule"
+        ];
+        prompts = [ ];
+        themes = [ ];
       };
     };
+
+    pi-tasks = {
+      source = {
+        type = "git";
+        # Fork of @tintinweb/pi-tasks 0.9.0 + one fix: dispose the widget
+        # spinner interval on session_shutdown, without which `pi -p` never
+        # exits once a task has been in_progress. Upstream PR:
+        # https://github.com/tintinweb/pi-tasks/pull/65 — return to the npm
+        # release once it ships. packageName is only the vendor directory:
+        # "pi-tasks" avoids overwriting the npm @tintinweb/pi-tasks@0.4.3
+        # that pi-ext's manifest pulls in. Runtime dep typebox is Pi-injected.
+        packageName = "pi-tasks";
+        spec = "github:smantzavinos/pi-tasks#6a4445afe26430e634541723af4ed55aa8a86214";
+        installSpec = "github:smantzavinos/pi-tasks#6a4445afe26430e634541723af4ed55aa8a86214";
+      };
+    };
+
   };
 
   # Git package pins: one immutable tarball per source repo (shared by the
@@ -225,10 +291,10 @@ let
       };
     };
     "pi-hooks" = {
-      rev = "1c3ed591b393793cd025ff43fa61e16828872931";
+      rev = "fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
       tarball = pkgs.fetchzip {
-        url = "https://github.com/smantzavinos/pi-hooks/archive/1c3ed591b393793cd025ff43fa61e16828872931.tar.gz";
-        hash = "sha256-CHpl/so5oJos4croXT1d5bjKU5ODM27upXPWZx3yGq4=";
+        url = "https://github.com/smantzavinos/pi-hooks/archive/fb492365e5c83a170fe7aaabebb210e7b8f2c3d7.tar.gz";
+        hash = "sha256-XAgHF1rsqsT5OU8heG06NR5JSjcif7nl8B0qkBjjoC4=";
         stripRoot = true;
       };
     };
@@ -256,11 +322,19 @@ let
         stripRoot = true;
       };
     };
-    "pi-gitnexus" = {
-      rev = "fa63bd3f6156cec943e42411ec0fc1909181dd2c";
+    "pi-guardrails" = {
+      rev = "678bcb675e09acf8bad8f3b0b872eddcaf187f8b";
       tarball = pkgs.fetchzip {
-        url = "https://github.com/smantzavinos/pi-gitnexus/archive/fa63bd3f6156cec943e42411ec0fc1909181dd2c.tar.gz";
-        hash = "sha256-dWWYl09ysuiGj2IQCg+IpK056jg/EC2FD+VFvEhfX8I=";
+        url = "https://github.com/smantzavinos/pi-guardrails/archive/678bcb675e09acf8bad8f3b0b872eddcaf187f8b.tar.gz";
+        hash = "sha256-tdvJdXRXkP0kiAnTOQBbkZYwj1nuVWmrmcEtuB+ZK44=";
+        stripRoot = true;
+      };
+    };
+    "pi-tasks" = {
+      rev = "6a4445afe26430e634541723af4ed55aa8a86214";
+      tarball = pkgs.fetchzip {
+        url = "https://github.com/smantzavinos/pi-tasks/archive/6a4445afe26430e634541723af4ed55aa8a86214.tar.gz";
+        hash = "sha256-AEO+SrdgDC2kXLnuTxuZezdSTplgC052mJicE6w3oQ8=";
         stripRoot = true;
       };
     };
@@ -346,7 +420,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-+d0CRSLc27qe9sxtRKqniQ3NkkbEyIJSpQf3LpZGck8=";
+      hash = "sha256-VSlCC7+8fW+o9gR7ncteTze0Rtaauf7obmjTFpM1AGk=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
@@ -370,8 +444,35 @@ let
       runHook preInstall
       mkdir -p "$out"
       cp -r node_modules "$out/node_modules"
+
+      # Upstream 0.1.2 caps the nested naming call at 64 output tokens;
+      # github-copilot/gpt-6-luna can exhaust that budget before producing a
+      # title. Patch only the vendored copy, failing closed if upstream changes.
+      autoname="$out/node_modules/@camillof/pi-session-autoname/src/extension.ts"
+      test -f "$autoname"
+      test "$(grep -Fc 'maxTokens: 64,' "$autoname")" -eq 1
+      substituteInPlace "$autoname" \
+        --replace-fail 'maxTokens: 64,' 'maxTokens: 512,'
+
+      # jscpd 5 execs a prebuilt glibc binary from its platform package;
+      # point it at Nix's loader and libgcc_s (pi-lens-tools wraps the CLI).
+      jscpd_bins=( "$out"/node_modules/jscpd/node_modules/jscpd-linux-*-gnu/bin/jscpd )
+      test -f "''${jscpd_bins[0]}"
+      for bin in "''${jscpd_bins[@]}"; do
+        chmod u+w "$bin"
+        patchelf --set-interpreter "$(cat "$NIX_CC/nix-support/dynamic-linker")" \
+          --set-rpath "${lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]}" "$bin"
+      done
       runHook postInstall
     '';
+  };
+
+  # Nix-supplied binaries for pi-lens (language servers, linters, scanners).
+  # Built from nixpkgs-unstable for current linters/servers; knip/jscpd/madge
+  # come from the vendor tree above.
+  piLensTools = import ./pi-lens-tools.nix {
+    inherit pkgs piVendor;
+    pkgsUnstable = self.inputs.nixpkgs-unstable.legacyPackages.${pkgs.stdenv.hostPlatform.system};
   };
 
   # Pi's extension loader resolves imports against the literal (non-
@@ -447,11 +548,9 @@ let
 
   # Build the complete managed-package agent artifacts (facades, sources,
   # declarations/report/install-state) for a given package selection.
-  makePiManagedPackages = { includeGitNexus ? false, powerlineTheme ? defaultPowerlineTheme }:
+  makePiManagedPackages = { powerlineTheme ? defaultPowerlineTheme }:
     let
-      enabledPackages = lib.filterAttrs
-        (packageId: _: includeGitNexus || packageId != "pi-gitnexus")
-        managedPackages;
+      enabledPackages = managedPackages;
       enabledIds = lib.attrNames enabledPackages;
 
       themeFile = pkgs.writeText "pi-powerline-footer-theme.json"
@@ -530,10 +629,9 @@ let
     '';
 
   # Pi runtime package list (settings.json `packages`) for a footer choice.
-  makePiRuntimePackageIds = { footer ? "powerline", includeGitNexus ? false }:
+  makePiRuntimePackageIds = { footer ? "powerline" }:
     let
-      enabledIds = lib.filter (packageId: includeGitNexus || packageId != "pi-gitnexus")
-        (lib.attrNames managedPackages);
+      enabledIds = lib.attrNames managedPackages;
       selectedFooterPackageId = if footer == "powerline" then "pi-powerline-footer" else "pi-zentui";
     in
     lib.filter (packageId:
@@ -547,7 +645,6 @@ let
   makePiSettings = { defaultProvider ? "zai-coding-plan", defaultModel ? "glm-5.2"
     , defaultThinkingLevel ? "medium", theme ? "catppuccin-mocha"
     , footer ? "powerline", enabledModels ? defaultEnabledModels
-    , includeGitNexus ? false
     , powerline ? defaultPowerlineConfig, powerlineShortcuts ? defaultPowerlineShortcuts
     , subagentDefaultModel ? null, subagentOverrides ? { }
     }:
@@ -577,7 +674,7 @@ let
       inherit enabledModels;
 
       packages = map (packageId: "./packages/${packageId}")
-        (makePiRuntimePackageIds { inherit footer includeGitNexus; });
+        (makePiRuntimePackageIds { inherit footer; });
 
       # pi-subagents routing. disableBuiltins keeps the extension's bundled
       # agents out; the shipped repo agents (agents/*.md) are custom agents.
@@ -810,6 +907,9 @@ let
       settings = {
         toolPrefix = "server";
         idleTimeout = 10;
+        # Keep MCP scripting, but prevent model-initiated server installation.
+        scriptMode = true;
+        allowInstall = false;
       };
     };
   };
@@ -928,7 +1028,6 @@ in
     theme ? "catppuccin-mocha",
     footer ? "powerline",
     enabledModels ? defaultEnabledModels,
-    includeGitNexus ? false,
     powerline ? defaultPowerlineConfig,
     powerlineShortcuts ? defaultPowerlineShortcuts,
     extraSkills ? {},
@@ -956,7 +1055,6 @@ in
         theme
         footer
         enabledModels
-        includeGitNexus
         powerline
         powerlineShortcuts
         subagentDefaultModel
@@ -970,6 +1068,16 @@ in
     cp ${pkgs.writeText "pi-keybindings.json" piStaticFiles.keybindings} $out/agent/keybindings.json
     cp ${pkgs.writeText "pi-models.json" piStaticFiles.models} $out/agent/models.json
     cp ${pkgs.writeText "pi-mcp.json" piStaticFiles.mcp} $out/agent/mcp.json
+    # pi-tasks global defaults (read-only to the package; /tasks settings
+    # write project overrides instead). session-global keeps task files under
+    # the agent dir rather than in <workspace>/.pi/tasks/.
+    cp ${pkgs.writeText "pi-tasks-config.json" (builtins.toJSON { taskScope = "session-global"; })} $out/agent/tasks-config.json
+    # pi-lens global config (read-only; pi-lens never writes it). Selected via
+    # PI_LENS_CONFIG_PATH by the pi-lens-policy extension below.
+    cp ${repoRoot}/nix/modules/pi/pi-lens.json $out/agent/pi-lens.json
+    # Nix-supplied pi-lens binaries; pi-lens-policy appends its bin/ to pi's
+    # PATH (see pi-lens-tools.nix).
+    ln -s ${piLensTools} $out/agent/pi-lens-tools
     cp ${pkgs.writeText "catppuccin-mocha.json" piStaticFiles.catppuccinMochaTheme} $out/agent/themes/catppuccin-mocha.json
     cp ${pkgs.writeText "CLAUDE.md" piStaticFiles.claudeMd} $out/agent/CLAUDE.md
     cp ${pkgs.writeText "CODEX.md" piStaticFiles.codexMd} $out/agent/CODEX.md
@@ -980,6 +1088,8 @@ in
 
     ln -s ${repoRoot}/agents/preset.jsonc $out/agent/preset.jsonc
     ln -s ${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning $out/agent/extensions/startup-staleness-warning
+    ln -s ${repoRoot}/nix/modules/pi/extensions/pi-lens-policy $out/agent/extensions/pi-lens-policy
+    ln -s ${repoRoot}/nix/modules/pi/extensions/pi-tasks-subagents-bridge $out/agent/extensions/pi-tasks-subagents-bridge
 
     ${lib.concatMapStringsSep "\n  " (name:
       "ln -s ${

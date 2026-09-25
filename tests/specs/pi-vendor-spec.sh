@@ -52,10 +52,51 @@ console.log(JSON.stringify(decls));
 ' "$PI_CONFIG")"
 
 DECL_COUNT="$(jq 'length' <<<"$DECLS_JSON")"
-if [ "$DECL_COUNT" -ge 16 ]; then
+if [ "$DECL_COUNT" -ge 15 ]; then
   pass "managedPackages declares $DECL_COUNT packages"
 else
-  fail "managedPackages declares only $DECL_COUNT packages (expected >= 16)"
+  fail "managedPackages declares only $DECL_COUNT packages (expected >= 15)"
+fi
+
+if grep -Eq 'pi-gitnexus|includeGitNexus|enableGitNexus' "$PI_CONFIG" "$REPO_ROOT/nix/modules/pi/default.nix" "$REPO_ROOT/nix/modules/pi/nixos-user.nix"; then
+  fail "retired GitNexus must not remain in Pi declarations or module options"
+else
+  pass "retired GitNexus is absent from Pi declarations and module options"
+fi
+
+if grep -Fq 'pi-session-autoname = {' "$PI_CONFIG" \
+  && ! grep -Fq 'pi-auto-rename = {' "$PI_CONFIG" \
+  && jq -e '.dependencies["@camillof/pi-session-autoname"] == "0.1.2" and (.dependencies | has("@byteowlz/pi-auto-rename") | not)' \
+    "$VENDOR_DIR/package.json" >/dev/null; then
+  pass "Copilot-aware session namer replaces old pi-auto-rename exclusively"
+else
+  fail "session namer declaration and vendor pins must replace old auto-rename"
+fi
+
+# pi-tasks: git fork carrying the session_shutdown spinner fix (upstream
+# tintinweb/pi-tasks#65). Its vendor dir must not be @tintinweb/pi-tasks, or
+# installGitPackage would overwrite the npm copy pi-ext's manifest pulls in.
+if jq -e '.["pi-tasks"] | .type == "git" and .packageName == "pi-tasks" and (.spec | startswith("github:smantzavinos/pi-tasks#"))' \
+     <<<"$DECLS_JSON" >/dev/null; then
+  pass "pi-tasks is pinned to the smantzavinos fork in its own vendor dir"
+else
+  fail "pi-tasks must be a git declaration on the smantzavinos fork with packageName pi-tasks"
+fi
+if [[ "$(jq '[.[] | select(.packageName == "@tintinweb/pi-tasks")] | length' <<<"$DECLS_JSON")" == 0 ]]; then
+  pass "no managed declaration materializes into the npm @tintinweb/pi-tasks dir"
+else
+  fail "a managed declaration uses packageName @tintinweb/pi-tasks (would clobber pi-ext's npm copy)"
+fi
+
+# pi-guardrails: smantzavinos fork (upstream main + #99 tool registration
+# protocol). Its registry deps must be vendored and the npm release removed.
+if jq -e '.["pi-guardrails"] | .type == "git" and .packageName == "pi-guardrails" and (.spec | startswith("github:smantzavinos/pi-guardrails#"))' \
+     <<<"$DECLS_JSON" >/dev/null \
+  && jq -e '(.dependencies | has("@aliou/pi-guardrails") | not) and .dependencies["@aliou/sh"] != null and .dependencies["@aliou/pi-utils-settings"] != null' \
+       "$VENDOR_DIR/package.json" >/dev/null; then
+  pass "pi-guardrails uses the smantzavinos fork with its registry deps vendored"
+else
+  fail "pi-guardrails must be the smantzavinos fork git source, with @aliou/sh + @aliou/pi-utils-settings vendored and no npm @aliou/pi-guardrails"
 fi
 
 # spec/installSpec normalization

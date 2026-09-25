@@ -48,15 +48,15 @@
     },
     {
       "sourceKey": "src-003-git-offline",
-      "packageIds": ["pi-gitnexus"],
+      "packageIds": ["pi-powerline-footer"],
       "status": "unknown",
       "reasonCode": "OFFLINE",
       "reason": "network access is unavailable for the remote source lookup",
       "source": {
         "type": "git",
-        "spec": "github:smantzavinos/pi-gitnexus#fix/session-shutdown-cleanup",
-        "installSpec": "github:smantzavinos/pi-gitnexus#fix/session-shutdown-cleanup",
-        "packageName": "pi-gitnexus"
+        "spec": "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784",
+        "installSpec": "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784",
+        "packageName": "pi-powerline-footer"
       }
     },
     {
@@ -100,9 +100,9 @@
     },
     {
       "code": "MANAGED_PACKAGE_SOURCE_UNKNOWN",
-      "message": "Managed package source status is unknown: pi-gitnexus",
+      "message": "Managed package source status is unknown: pi-powerline-footer",
       "sourceKey": "src-003-git-offline",
-      "packageIds": ["pi-gitnexus"],
+      "packageIds": ["pi-powerline-footer"],
       "detail": {
         "reasonCode": "OFFLINE",
         "reason": "network access is unavailable for the remote source lookup"
