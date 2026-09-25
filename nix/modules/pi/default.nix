@@ -42,14 +42,12 @@ let
   piConfigTree = makePiConfig {
     inherit (cfg) defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels;
     inherit (cfg.powerline) config shortcuts;
-    includeGitNexus = cfg.enableGitNexus;
   };
 
   # Build-time managed package materialization (vendor tree + facades +
   # declarations/report/install-state). Same derivation hermes profiles
   # consume via nixosModules.pi-for-user — identical bits in both places.
   piManagedTree = makePiManagedPackages {
-    includeGitNexus = cfg.enableGitNexus;
     powerlineTheme = cfg.powerline.theme;
   };
 
@@ -123,16 +121,10 @@ in
       description = "Models available for Ctrl+P cycling";
     };
 
-    enableGitNexus = lib.mkOption {
-      type = lib.types.bool;
-      default = false;
-      description = "Enable GitNexus CLI and the pi-gitnexus managed package";
-    };
-
     enableAgentKit = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Install agent-kit extensions (direnv, ast-grep)";
+      description = "Install the agent-kit direnv extension";
     };
 
     enableVisualExplainer = lib.mkOption {
@@ -148,7 +140,7 @@ in
       piWrapperPkg
       piPkg
       pkgs.ast-grep
-    ] ++ lib.optional cfg.enableGitNexus llmAgents.packages.${pkgs.system}.gitnexus;
+    ];
 
     home.file = {
       # Static agent files, linked per-entry from the makePiConfig tree.
@@ -157,6 +149,9 @@ in
       ".pi/agent/keybindings.json".source = "${piConfigTree}/agent/keybindings.json";
       ".pi/agent/models.json".source = "${piConfigTree}/agent/models.json";
       ".pi/agent/mcp.json".source = "${piConfigTree}/agent/mcp.json";
+      ".pi/agent/tasks-config.json".source = "${piConfigTree}/agent/tasks-config.json";
+      ".pi/agent/pi-lens.json".source = "${piConfigTree}/agent/pi-lens.json";
+      ".pi/agent/pi-lens-tools".source = "${piConfigTree}/agent/pi-lens-tools";
       ".pi/agent/themes/catppuccin-mocha.json".source = "${piConfigTree}/agent/themes/catppuccin-mocha.json";
       ".pi/agent/CLAUDE.md".source = "${piConfigTree}/agent/CLAUDE.md";
       ".pi/agent/CODEX.md".source = "${piConfigTree}/agent/CODEX.md";
@@ -169,6 +164,14 @@ in
       # Repo-owned startup notifier extension
       ".pi/agent/extensions/startup-staleness-warning/index.ts".source =
         "${piConfigTree}/agent/extensions/startup-staleness-warning/index.ts";
+
+      # Repo-owned pi-lens runtime policy (no auto-install, managed config)
+      ".pi/agent/extensions/pi-lens-policy/index.ts".source =
+        "${piConfigTree}/agent/extensions/pi-lens-policy/index.ts";
+
+      # Repo-owned bridge: pi-tasks TaskExecute -> managed pi-subagents RPC
+      ".pi/agent/extensions/pi-tasks-subagents-bridge/index.ts".source =
+        "${piConfigTree}/agent/extensions/pi-tasks-subagents-bridge/index.ts";
     } // builtins.listToAttrs (map (name:
       lib.nameValuePair ".pi/agent/agents/${name}.md" {
         source = "${piConfigTree}/agent/agents/${name}.md";
@@ -265,24 +268,19 @@ in
 
       installAgentKit = lib.mkIf cfg.enableAgentKit (lib.hm.dag.entryAfter [ "writeBoundary" "materializePiManagedPackages" ] ''
         DIRENV_EXT="$HOME/.pi/agent/extensions/direnv"
-        AST_GREP_EXT="$HOME/.pi/agent/extensions/ast-grep"
-        AST_GREP_SKILL="$HOME/.pi/agent/skills/ast-grep"
 
-        echo "Installing agent-kit extensions and skills from pinned source..."
+        echo "Installing agent-kit extensions from pinned source..."
         mkdir -p "$HOME/.pi/agent/extensions"
 
         rm -rf "$DIRENV_EXT"
         mkdir -p "$DIRENV_EXT"
         ln -sf ${agentKitSrc}/extensions/direnv/direnv.ts "$DIRENV_EXT/index.ts"
 
-        rm -rf "$AST_GREP_EXT"
-        mkdir -p "$AST_GREP_EXT"
-        ln -sf ${agentKitSrc}/extensions/ast-grep/ast-grep.ts "$AST_GREP_EXT/index.ts"
+        # ast-grep moved to pi-lens (ast_grep_* tools + pi-lens-ast-grep
+        # skill); remove the retired agent-kit tool and skill links.
+        rm -rf "$HOME/.pi/agent/extensions/ast-grep" "$HOME/.pi/agent/skills/ast-grep"
 
-        rm -rf "$AST_GREP_SKILL"
-        ln -sf ${agentKitSrc}/skills/ast-grep "$AST_GREP_SKILL"
-
-        echo "agent-kit extensions and skills installed"
+        echo "agent-kit extensions installed"
       '');
     };
 

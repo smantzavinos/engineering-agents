@@ -168,7 +168,6 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `powerline.nerdFonts` | `"force"` | Nerd Font detection: `"auto"`, `"force"`, or `"disable"` |
 | `powerline.theme` | *(see module default)* | Declarative Powerline `theme.json` color and icon override |
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
-| `enableGitNexus` | `false` | Enable the GitNexus CLI and `pi-gitnexus` managed package |
 | `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
 | `enableVisualExplainer` | `true` | Install visual-explainer skill (pinned via the `visualExplainer` flake input) |
 

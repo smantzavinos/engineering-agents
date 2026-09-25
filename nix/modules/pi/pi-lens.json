@@ -1,0 +1,98 @@
+{
+  "lsp": {
+    "enabled": true
+  },
+  "format": {
+    "enabled": false
+  },
+  "autofix": {
+    "enabled": false
+  },
+  "tests": {
+    "enabled": true
+  },
+  "opengrep": {
+    "enabled": true
+  },
+  "knip": {
+    "enabled": true
+  },
+  "jscpd": {
+    "enabled": true
+  },
+  "madge": {
+    "enabled": true
+  },
+  "gitleaks": {
+    "enabled": true
+  },
+  "govulncheck": {
+    "enabled": true
+  },
+  "deadCode": {
+    "enabled": true
+  },
+  "complexity": {
+    "enabled": true
+  },
+  "readGuard": {
+    "enabled": true
+  },
+  "contextInjection": {
+    "enabled": true
+  },
+  "tools": {
+    "lazy": false,
+    "ast_grep_search": {
+      "enabled": true
+    },
+    "ast_grep_replace": {
+      "enabled": true
+    },
+    "ast_grep_outline": {
+      "enabled": true
+    },
+    "lsp_navigation": {
+      "enabled": true
+    },
+    "lens_diagnostics": {
+      "enabled": true
+    },
+    "lens_diagnostic_mark": {
+      "enabled": true
+    },
+    "symbol_search": {
+      "enabled": true
+    },
+    "module_report": {
+      "enabled": true
+    },
+    "project_report": {
+      "enabled": true
+    },
+    "read_symbol": {
+      "enabled": true
+    },
+    "read_enclosing": {
+      "enabled": true
+    },
+    "effective_config": {
+      "enabled": true
+    },
+    "analyze": {
+      "enabled": true
+    },
+    "health": {
+      "enabled": true
+    },
+    "latency": {
+      "enabled": true
+    },
+    "project_scan": {
+      "enabled": true
+    },
+    "rebuild": {
+      "enabled": true
+    }
+  }
+}

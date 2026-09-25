@@ -49,8 +49,8 @@ _No items yet._
 ## Ready
 
 ### TASK-0002 — Fork-currency audit: retire out-of-date forks where upstream has the fix
-- Status: In progress (pi-subagents retired; pi-gitnexus + pi-hooks remain)
-- Summary: Three managed git packages point at personal (`smantzavinos/*`) forks that are now well behind their true upstreams. For each, confirm which customizations the fork carries, check whether upstream has since incorporated an equivalent, and either (a) drop the fork and pin the real upstream, or (b) rebase the fork onto current upstream if the customization is still unique.
+- Status: In progress (pi-subagents upstream; pi-gitnexus retired by user; pi-hooks fork retained)
+- Summary: Audit the historical personal Pi package forks against upstream. Keep pi-hooks on the fork while its unique Ralph fixes are needed; remove unused pi-gitnexus entirely instead of migrating it to upstream.
 - Source: Package-update review session; fork/upstream compares via GitHub API (2026-07-13).
 - Notes:
   - **pi-subagents** → upstream `nicobailon/pi-subagents` (fork 2 ahead / 232 behind). Custom commits: `feat: apply agentOverrides to user agents (not just builtins)`, `fix: disableBuiltins takes priority over agentOverrides for builtins`. NOTE: the staleness warning comparing our pin to the fork's own `main` is a false positive — evaluate against `nicobailon` upstream instead.
@@ -59,7 +59,7 @@ _No items yet._
   - **pi-hooks** → upstream `prateekmedia/pi-hooks` (5 ahead / 8 behind). Custom commits: ralph-loop escape-sequence RPC-stdout fix, `execute()` parameter-order fix, auto-detect project-local agents when `agentScope` omitted, `processClosed` vs `proc.killed` SIGKILL fallback, `vscode-languageserver-protocol` import path for v3.18+.
     - **AUDIT VERDICT (2026-07-13): REBASE (keep fork).** Upstreamed/redundant: execute param-order (upstream `fix(ralph-loop): correct execute signature parameter order`) and vscode-lsp import (upstream uses ESM-correct `/node.js`). Still UNIQUE and unmerged: (1) `fix(ralph-loop): handle escape sequence contamination in RPC stdout`, (3) `feat(ralph-loop): auto-detect project-local agents` (`resolveAgentScope`/`"auto"` scope default), (4) `processClosed` SIGKILL fallback. Upstream also carries a change we LACK: `@mariozechner/*` → `@earendil-works/*` namespace migration + lsp-core refactor. Action: rebase our fork onto current upstream keeping commits 1/3/4, dropping 2/5, then re-pin; consider upstreaming 1/3/4 via PR to eventually drop the fork.
   - **pi-gitnexus** → upstream `tintinweb/pi-gitnexus` (1 ahead / 18 behind; disabled by default). Custom commit: `fix: stop MCP child process on session_shutdown to prevent hang`.
-    - **AUDIT VERDICT (2026-07-13): RETIRE.** Upstream `src/index.ts` now has the identical handler `pi.on('session_shutdown', () => { mcpClient.stop(); })`. Action: pin a specific current upstream commit; verify exposed paths; update proof-set.json (package is off by default, so low risk).
+    - **AUDIT VERDICT (2026-07-13): RETIRE FORK.** Upstream `src/index.ts` has the same shutdown handler. **Decision (2026-09-23): remove GitNexus altogether** because it is unused. Remove its managed source, optional module switches, and CLI wiring; do not replace it with upstream.
   - Any fork we drop must keep the pinned-commit + idempotent-install contract (see `nix/AGENTS.md`) and update `tests/fixtures/proof-set.json`.
 
 ## Inbox

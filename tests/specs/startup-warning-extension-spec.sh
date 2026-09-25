@@ -102,7 +102,7 @@ assert_json \
   '.notifications[0].message | contains("Stale managed package sources (2):")
    and contains("Unknown managed package sources (2):")
    and contains("pi-ext-leader-key, pi-ext-review")
-   and contains("pi-gitnexus")'
+   and contains("pi-powerline-footer")'
 
 assert_json \
   'valid snapshot copy stays within managed scope and points to the supported inspection/apply workflow' \

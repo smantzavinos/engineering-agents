@@ -183,14 +183,16 @@ fi
 if [[ -f "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" ]] \
   && grep -Fq '`.pi/settings.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq '`.pi/extensions/guardrails.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq '`.pi/session-autoname.json`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
+  && grep -Fq 'seeds `github-copilot/gpt-6-luna`' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'pathAccess.allowedPaths' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'autoDenyPatterns' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'maxSubagentSpawnsPerSession' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'PI_SUBAGENT_MAX_SPAWNS_PER_SESSION=100 pi' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md" \
   && grep -Fq 'outside this project-scoped skill' "$REPO_ROOT/dist/skills/pi/configure-pi/SKILL.md"; then
-  pass "configure-pi documents project settings, repository Guardrails, and spawn-limit boundaries"
+  pass "configure-pi documents project settings, repository Guardrails, session naming, and spawn-limit boundaries"
 else
-  fail "configure-pi is missing Pi project settings, repository Guardrails, or spawn-limit boundaries"
+  fail "configure-pi is missing Pi project settings, repository Guardrails, session naming, or spawn-limit boundaries"
 fi
 if [[ -e "$REPO_ROOT/dist/skills/opencode/configure-pi" ]]; then
   fail "configure-pi (pi-only) leaked into the OpenCode tree"

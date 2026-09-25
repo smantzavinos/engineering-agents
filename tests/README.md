@@ -36,12 +36,14 @@ bash tests/specs/flake-eval-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/pi-vendor-spec.sh
+bash tests/specs/pi-preset-refresh-contract-spec.sh
 bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
 bash tests/specs/pi-startup-wrapper-spec.sh
 bash tests/specs/pi-dev-spec.sh
 bash tests/specs/startup-warning-extension-spec.sh
+bash tests/specs/pi-tasks-bridge-spec.sh
 bash tests/specs/pi-startup-warning-contract-spec.sh
 ```
 
@@ -65,6 +67,7 @@ New tests specific to this repo:
 - **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`)
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
 - **`pi-vendor-spec.sh`** — Build-time vendor contracts: git pins match declarations, spec/installSpec normalized, injected core not vendored, nested lock shape
+- **`pi-preset-refresh-contract-spec.sh`** — Paired `@richardgill/pi-preset` + `pi-config` 0.0.9 manifest, Nix declaration, and lockfile version alignment
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
@@ -72,6 +75,7 @@ New tests specific to this repo:
 - **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
 - **`pi-dev-spec.sh`** — Repo-local Pi development sandbox isolation and credential-copy tests
 - **`startup-warning-extension-spec.sh`** — Startup notifier rendering, footer/status sync, and snapshot consumption tests
+- **`pi-tasks-bridge-spec.sh`** — pi-tasks `TaskExecute` → managed pi-subagents RPC bridge (fake event bus; no model)
 - **`pi-startup-warning-contract-spec.sh`** — Startup warning/helper/README workflow alignment and helper-install wiring tests
 
 ## File Layout
@@ -105,7 +109,9 @@ tests/
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
 │   ├── pi-startup-wrapper-spec.sh   # Repo-owned pi wrapper contract tests
 │   ├── pi-dev-spec.sh               # Repo-local Pi development sandbox contract tests
+│   ├── pi-preset-refresh-contract-spec.sh # Paired Pi preset/config vendor version contract
 │   ├── startup-warning-extension-spec.sh # Startup notifier contract tests
+│   ├── pi-tasks-bridge-spec.sh # pi-tasks -> pi-subagents bridge contract
 │   └── pi-startup-warning-contract-spec.sh # Startup warning/helper/docs contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification
 └── run-tests.sh                     # Main test runner (fast/all/full)
