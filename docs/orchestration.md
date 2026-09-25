@@ -383,7 +383,10 @@ create plan + task graph -> review -> approval
 
 #### Role-to-runtime mapping
 
-Pi resolves these to named subagents; OpenCode's sequential pipeline resolves the equivalent
+The canonical role inventory (12 roles, independence rules, execution
+tiers) is defined in [Agent Roles](references/agent-roles.md); per-repo
+model assignment is a repo hook checked by assess-repo. Pi resolves these
+to named subagents; OpenCode's sequential pipeline resolves the equivalent
 roles to categories. Repository/user overrides remain the source of truth.
 
 | Role | Pi agent | OpenCode agent type/category |
