@@ -11,15 +11,14 @@ OpenCode categories); per-repo model assignments are a repo hook (see
 
 | # | Role | Stage(s) | Responsibility | Tier |
 |---|------|----------|----------------|------|
-| 1 | Orchestrator | all | Owns the loop: advances stages, dispatches roles, runs verification on the host, commits checkpoints. Never implements. | high |
-| 2 | Author | brief, approach | Clarifies intent with the human, defines the conceptual model and structural decisions; produces `brief.md` and `approach.md`. | high |
-| 3 | Researcher | research | Investigates the codebase; produces findings files with verified anchors. | low |
-| 4 | Planner / contract author | plan | Decomposes into tasks; assigns verification class + execution tier; authors failing contract tests (observes red, never implements). | high |
-| 5 | Reviewer | approach, plan, code, PR review | Runs the review procedure for the stage — the stage skill defines the checklist; the role is the identity. Never reviews artifacts it authored. | high |
-| 6 | Fresh reviewer | final review; second reviewer in two-reviewer loops | Full-diff review with **no prior context** on the work. Read-only. | high (strongest available) |
-| 7 | Implementer, high tier | execute | Executes high-tier tasks per their verification class; atomic task commit. | high |
-| 8 | Implementer, low tier | execute | Executes low-tier tasks (mechanical, bounded, well-specified work). | low |
-| 9 | Visual implementer *(optional)* | execute (UI) | UI-specific tasks needing a UI-specialized model. Assign only if the repo wants a distinct UI model; otherwise implementer-high covers it. | high |
+| 1 | Orchestrator | all | The human's interface and owner of the loop: leads brief and approach with the human, advances stages, dispatches roles, runs verification on the host, commits checkpoints. Never implements, never reviews its own artifacts. | high |
+| 2 | Researcher | research | Investigates the codebase; produces findings files with verified anchors. | low |
+| 3 | Planner / contract author | plan | Decomposes into tasks; assigns verification class + execution tier; authors failing contract tests (observes red, never implements). | high |
+| 4 | Reviewer | approach, plan, code, PR review | Runs the review procedure for the stage — the stage skill defines the checklist; the role is the identity. Never reviews artifacts it (or its session lineage) authored. | high |
+| 5 | Fresh reviewer | final review; second reviewer in two-reviewer loops | Full-diff review with **no prior context** on the work. Read-only. | high (strongest available) |
+| 6 | Implementer, high tier | execute | Executes high-tier tasks per their verification class; atomic task commit. | high |
+| 7 | Implementer, low tier | execute | Executes low-tier tasks (mechanical, bounded, well-specified work). | low |
+| 8 | Visual implementer *(optional)* | execute (UI) | UI-specific tasks needing a UI-specialized model. Assign only if the repo wants a distinct UI model; otherwise implementer-high covers it. | high |
 
 Review stages share one Reviewer role because the thing that varies per
 stage is the **procedure** (a skill: review-plan, review-code, the PR
@@ -27,12 +26,17 @@ review process), not the identity — and every review stage defaults to the
 same tier, so per-stage roles would all resolve to the same model slot.
 The one exception is the Fresh reviewer: freshness is a context property,
 not a procedure, and it cannot be produced by a role that has been in the
-loop.
+loop. Similarly, brief and approach are **phases the Orchestrator leads**
+in dialogue with the human, not separate identities: the human talks to
+one thread from intent to dispatch (in Pi subprocess mode that thread may
+span several sessions — a session mechanic, see execution-modes, not a
+role boundary).
 
 ## Independence rules
 
-- A reviewer must not review artifacts it authored: the Reviewer role never
-  covers a stage whose artifact came from the same agent session or lineage.
+- A reviewer must not review artifacts authored by its own session or
+  lineage — including the Orchestrator's co-authored `brief.md` and
+  `approach.md`. Approaching review, the Reviewer is never the Orchestrator.
 - The Fresh reviewer has no prior context on the work at all — clean
   session, read-only.
 - Two-reviewer review loops use two distinct reviewer instances (Reviewer +
