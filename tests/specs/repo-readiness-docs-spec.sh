@@ -332,6 +332,16 @@ assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "reviewed@<sha>" 
 assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "ESCALATE" "PR review doc defines the escalation severity"
 assert_file_contains "$REPO_ROOT/docs/references/pr-review.md" "different agent than the author" "PR review doc enforces reviewer independence"
 
+# Agent roles inventory + per-repo model assignment hook
+assert_file_exists "$REPO_ROOT/docs/references/agent-roles.md" "Agent roles doc exists"
+assert_file_contains "$REPO_ROOT/docs/references/agent-roles.md" "## The roles" "Agent roles doc lists the roles"
+assert_file_contains "$REPO_ROOT/docs/references/agent-roles.md" "## Independence rules" "Agent roles doc defines independence rules"
+assert_file_contains "$REPO_ROOT/docs/references/agent-roles.md" "## Per-repo model assignment (required hook)" "Agent roles doc defines the per-repo model assignment hook"
+assert_file_contains "$REPO_ROOT/docs/references/agent-roles.md" "fails assessment" "Agent roles doc states the assessment consequence"
+assert_file_contains "$REPO_ROOT/skills/assess-repo/SKILL.md" "Agent role → model assignment" "Assess-repo checks role→model assignment"
+assert_file_contains "$REPO_ROOT/docs/orchestration.md" "references/agent-roles.md" "Orchestration doc routes to the canonical roles inventory"
+assert_file_contains "$REPO_ROOT/skills/create-plan/references/plan-template.md" "agent-roles.md" "Plan template points tiers at the roles doc"
+
 # Hermes operations docs and skill reference map
 assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "## Skill reference map" "Hermes README maps jobs to canonical skill paths"
 assert_file_contains "$REPO_ROOT/docs/hermes/README.md" "skills/babysit-pr/SKILL.md" "Hermes README includes the babysit-pr skill in the reference map"

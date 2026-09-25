@@ -99,7 +99,7 @@ Approved requirement changes to apply during execution:
 #### T1: <task name>
 **Depends on:** —
 **Verification class:** <contract | characterization | check | none>
-**Execution tier:** <high | low>
+**Execution tier:** <high | low — model mapping is repo config; see docs/references/agent-roles.md>
 **Touched files:** <paths/globs this task writes; `(none)` if none; omit only if unknown>
 **Deliverable:** <what exists when done>
 **Requirement refs:** <FR-001, NFR-001, OPR-001 | none | N/A>
@@ -121,7 +121,7 @@ Approved requirement changes to apply during execution:
 #### T2: <task name>
 **Depends on:** T1
 **Verification class:** <contract | characterization | check | none>
-**Execution tier:** <high | low>
+**Execution tier:** <high | low — model mapping is repo config; see docs/references/agent-roles.md>
 **Touched files:** <paths/globs this task writes; `(none)` if none; omit only if unknown>
 **Deliverable:** <what exists when done>
 **Requirement refs:** <FR-001, NFR-001, OPR-001 | none | N/A>
