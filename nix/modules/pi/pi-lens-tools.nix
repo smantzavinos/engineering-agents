@@ -82,12 +82,60 @@ let
 
   # npm bin scripts use `#!/usr/bin/env node`; wrap them with Nix's node
   # so they also run where PATH has no node (e.g. the Hermes service).
+  # Copy only the three packages plus the root-hoisted packages they resolve
+  # (Node resolution: nested node_modules first, then the vendor root), so
+  # the tool env does not keep the whole ~700 MiB vendor tree alive next to
+  # the copy inside the managed-packages output.
+  collectRootDeps = pkgs.writeText "collect-root-deps.mjs" ''
+    import fs from "node:fs";
+    import path from "node:path";
+    const [root, ...tools] = process.argv.slice(2);
+    const rootModules = path.join(root, "node_modules");
+    const needed = new Set(tools);
+    const seen = new Set();
+    const visit = (pkgDir) => {
+      if (seen.has(pkgDir)) return;
+      seen.add(pkgDir);
+      const manifest = JSON.parse(fs.readFileSync(path.join(pkgDir, "package.json"), "utf8"));
+      const deps = { ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.peerDependencies };
+      for (const dep of Object.keys(deps)) {
+        let dir = pkgDir, found;
+        while (dir.startsWith(rootModules) || dir === root) {
+          const candidate = path.join(dir, "node_modules", dep);
+          if (fs.existsSync(path.join(candidate, "package.json"))) { found = candidate; break; }
+          if (dir === root) break;
+          dir = path.dirname(dir);
+        }
+        if (!found) continue; // optional/peer not installed
+        if (path.dirname(found) === rootModules || path.dirname(path.dirname(found)) === rootModules && dep.startsWith("@")) needed.add(dep);
+        visit(found);
+      }
+      const nested = path.join(pkgDir, "node_modules");
+      if (!fs.existsSync(nested)) return;
+      for (const entry of fs.readdirSync(nested)) {
+        if (entry.startsWith(".")) continue;
+        const names = entry.startsWith("@") ? fs.readdirSync(path.join(nested, entry)).map((n) => path.join(entry, n)) : [entry];
+        for (const name of names) if (fs.existsSync(path.join(nested, name, "package.json"))) visit(path.join(nested, name));
+      }
+    };
+    for (const tool of tools) visit(path.join(rootModules, tool));
+    process.stdout.write([...needed].sort().join("\n") + "\n");
+  '';
+
   vendorBins = pkgs.runCommand "pi-lens-vendor-bins" {
-    nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+    nativeBuildInputs = [ pkgs.makeBinaryWrapper pkgs.nodejs ];
+    disallowedReferences = [ piVendor ];
   } ''
-    mkdir -p "$out/bin"
+    mkdir -p "$out/bin" "$out/lib/node_modules"
+    node ${collectRootDeps} "${piVendor}" knip jscpd madge > needed.txt
+    while IFS= read -r pkg; do
+      [ -n "$pkg" ] || continue
+      mkdir -p "$out/lib/node_modules/$(dirname "$pkg")"
+      cp -a "${piVendor}/node_modules/$pkg" "$out/lib/node_modules/$pkg"
+    done < needed.txt
     for tool in knip jscpd madge; do
       script="$(readlink -f "${piVendor}/node_modules/.bin/$tool")"
+      script="$out/lib/node_modules/''${script#${piVendor}/node_modules/}"
       test -f "$script"
       makeBinaryWrapper "${pkgs.nodejs}/bin/node" "$out/bin/$tool" --add-flags "$script"
       "$out/bin/$tool" --version >/dev/null
