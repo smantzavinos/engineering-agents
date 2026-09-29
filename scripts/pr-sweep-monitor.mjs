@@ -21,8 +21,12 @@
  *
  * Actionable means: label is pr:ready-review or pr:re-review; OR head SHA
  * differs from the last reviewed@ stamp with label not pr:in-review; OR a
- * comment newer than the last stamp mentions PR_AGENT_HANDLE.
- * pr:in-review PRs and quiet pr:ready-merge PRs are never actionable.
+ * comment newer than the last stamp mentions PR_AGENT_HANDLE; OR the head
+ * moved past the last review activity (a reviewed@ stamp or a
+ * READY/FIX/BLOCKED verdict comment) — including pr:in-review PRs, which is
+ * push demotion: the sweep re-labels pr:re-review and dispatches a fresh
+ * reviewer. pr:in-review PRs whose head has not moved past review activity,
+ * and quiet pr:ready-merge PRs, are never actionable.
  *
  * Babysit coexistence: a PR labeled pr:babysat with a fresh
  * `babysit: session=<id> heartbeat=<iso>` comment has claim=active. New
@@ -98,7 +102,14 @@ function main() {
 
       const labelActionable = ACTIONABLE_LABELS.has(label) || label === "unlabeled"; // unlabeled = drift; drift is actionable
       const staleApproval = label === "pr:ready-merge" && stampSha !== "none" && !head.startsWith(stampSha);
-      const movedAfterReview = stampSha !== "none" && label !== "pr:in-review" && !head.startsWith(stampSha) && label !== "pr:ready-merge";
+      // Push demotion: a head that moved past the last review activity (a reviewed@ stamp,
+      // or any verdict comment) needs a fresh reviewer — including pr:in-review PRs, where
+      // the author fixed findings after the review started or after a FIX verdict.
+      const verdicts = comments.filter(c => /reviewed@[0-9a-f]{7,40}|\b(READY|FIX|BLOCKED)\b/.test(c.body ?? ""));
+      const lastVerdict = verdicts.at(-1) ?? null;
+      const pushedAfterVerdict = lastVerdict !== null && typeof pr.pushed_at === "string"
+        && Date.parse(pr.pushed_at) > Date.parse(lastVerdict.created_at);
+      const movedAfterReview = (stampSha !== "none" && label !== "pr:ready-merge" && !head.startsWith(stampSha)) || pushedAfterVerdict;
       const quietReadyMerge = label === "pr:ready-merge" && !staleApproval && recent.length === 0;
 
       // An active babysitter owns comment traffic; only reviewer-side signals count.
@@ -106,7 +117,7 @@ function main() {
       const babysitSignal = babysitRequest && claim === "none";
 
       if (claim !== "stale" && !babysitSignal) {
-        if (quietReadyMerge || (label === "pr:in-review" && !commentSignal)) continue;
+        if (quietReadyMerge || (label === "pr:in-review" && !commentSignal && !movedAfterReview)) continue;
         if (!(labelActionable || staleApproval || movedAfterReview || commentSignal)) continue;
       }
 

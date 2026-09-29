@@ -141,8 +141,12 @@ Rules for the script:
 - **Actionable means actionable**: include a PR when (a) its label is
   `pr:ready-review` or `pr:re-review`, or (b) its head SHA differs from the
   last stamped SHA and its label is not `pr:in-review`, or (c) a new comment
-  mentions the agent. Do NOT include `pr:in-review` PRs the agent itself is
-  already working (the dispatch record below covers that) or
+  mentions the agent, or (d) its head moved past the last review activity (a
+  `reviewed@` stamp or a READY/FIX/BLOCKED verdict comment) — including
+  `pr:in-review` PRs, which the sweep then push-demotes to `pr:re-review` and
+  re-dispatches. Do NOT include `pr:in-review` PRs the agent itself is
+  already working whose head has not moved since review activity began (the
+  dispatch record below covers those) or
   `pr:ready-merge` PRs whose stamp matches HEAD and have no new comments —
   those would re-fire the LLM every tick until the human merges.
 - **Babysat PRs**: a `pr:babysat` PR with an active claim is listed only for
