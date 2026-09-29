@@ -42,7 +42,8 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const repos = (process.env.PR_SWEEP_REPOS ?? "").split(/\s+/).filter(Boolean);
-const handle = (process.env.PR_AGENT_HANDLE ?? "").replace(/^@/, "").toLowerCase();
+const handles = (process.env.PR_AGENT_HANDLE ?? "")
+  .split(/[\s,]+/).filter(Boolean).map(h => h.replace(/^@/, "").toLowerCase());
 
 function api(path) {
   if (process.env.PR_MONITOR_USE_CURL === "1") return apiCurl(path);
@@ -96,8 +97,9 @@ function main() {
       const stampSha = lastStamp ? (lastStamp.body.match(/reviewed@([0-9a-f]{7,40})/) ?? [])[1] ?? "none" : "none";
       const after = lastStamp ? Date.parse(lastStamp.created_at) : Date.parse(pr.created_at);
       const recent = comments.filter(c => Date.parse(c.created_at) > after);
-      const mentioned = handle !== "" && recent.some(c => (c.body ?? "").toLowerCase().includes("@" + handle));
-      const babysitRequest = handle !== "" && recent.some(c => (c.body ?? "").toLowerCase().includes("@" + handle + " babysit"));
+      const bodyLower = c => (c.body ?? "").toLowerCase();
+      const mentioned = handles.length > 0 && recent.some(c => handles.some(h => bodyLower(c).includes("@" + h)));
+      const babysitRequest = handles.length > 0 && recent.some(c => handles.some(h => bodyLower(c).includes("@" + h + " babysit")));
       const claim = claimState(labels, comments, Date.now(), staleMin);
 
       const labelActionable = ACTIONABLE_LABELS.has(label) || label === "unlabeled"; // unlabeled = drift; drift is actionable
