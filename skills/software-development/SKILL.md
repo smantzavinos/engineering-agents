@@ -125,7 +125,7 @@ mechanism, documented in a defined place:
 | Choice | When it happens | Mechanism | Documented in |
 | --- | --- | --- | --- |
 | Execution mode (pi subprocesses / Hermes subagents / single session) | At plan approval | Confirm with the human (default: pi subprocesses) | Worklog header |
-| Parallel reviews (`dual` — default: two independent reviewers, distinct from each other and the author — vs `multi-model`: 2–3 reviewers on distinct model families) | At plan creation | Agent proposes per plan risk; human confirms at plan approval | plan.md "Parallel reviews" choice row; if multi-model, the review files carry a merged findings table with per-reviewer attribution |
+| Parallel reviews (`single` — default: one independent reviewer, distinct from the author — vs `dual`: two independent reviewers, or `multi-model`: 2–3 reviewers on distinct model families) | At plan creation | Agent proposes per plan risk; human confirms at plan approval | plan.md "Parallel reviews" choice row; if multi-model, the review files carry a merged findings table with per-reviewer attribution |
 | Per-task review (yes/no per task) | At plan creation | Agent proposes per task risk (a `no` on schema/auth/migration tasks is a review finding); human confirms at plan approval | plan.md task graph |
 | Approval gates (approval-gate / auto-continue / detached) | At execution start | Human decides (default: approval-gate) | Worklog header |
 | Contract freezes | When a contract-task's tests are frozen | Agent-determines; changing frozen tests afterward requires human approval | plan.md freeze schedule + worklog |
@@ -159,10 +159,10 @@ mechanism, documented in a defined place:
 
 A plan/code review passes at zero **Blocker/Critical/Major** findings;
 Minors ride with recorded follow-ups. Approach/plan/code reviews run as a
-loop: each round re-reviews the fixed artifact until the bar is met. Every
-plan and code review round uses at least TWO reviewers, distinct from each
-other and from the author (`dual`, the default); the round passes only when
-both meet the bar — one clean pass is not enough. When the plan selects
+loop: each round re-reviews the fixed artifact until the bar is met.
+`single` (the default) uses one reviewer distinct from the author;
+`dual` uses two reviewers distinct from each other and from the author,
+and the round passes only when both meet the bar. When the plan selects
 `multi-model`, 2–3 reviewers on distinct model families run the round. In
-both cases findings merge into one review file with per-reviewer
+the parallel cases findings merge into one review file with per-reviewer
 attribution.
