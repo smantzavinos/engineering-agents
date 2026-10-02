@@ -84,11 +84,13 @@ else
   fail "review-code does not reference plan"
 fi
 
-if grep -Fq 'Team mode' "$REPO_ROOT/skills/review-code/SKILL.md" \
-  && grep -Fq 'per-task verification evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
-  pass "review-code distinguishes execution modes and checks per-task verification evidence"
+# Team mode was retired; execution-mode selection moved into the
+# software-development entry skill (NORMATIVE section). review-code must still
+# require per-task verification evidence in worklog.md.
+if grep -Fq 'per-task verification evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
+  pass "review-code checks per-task verification evidence"
 else
-  fail "review-code is missing execution-mode distinction or verification-evidence semantics"
+  fail "review-code is missing per-task verification-evidence semantics"
 fi
 
 
@@ -121,12 +123,15 @@ if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
 else
   fail "pi-team-reviewer agent is removed with team mode"
 fi
-for oc_only in execution-orchestrator execute-task create-worklog \
+# The six sequential-pipeline skills are universal since the hermes-harness
+# landing (render-spec's assertion lists are authoritative; no harnesses:
+# restriction — see docs/skill-rendering.md).
+for universal in execution-orchestrator execute-task create-worklog \
                 create-plan review-plan review-code; do
-  if grep -Fq 'harnesses: [opencode]' "$REPO_ROOT/skills/$oc_only/SKILL.md"; then
-    pass "${oc_only} is retained for OpenCode only"
+  if ! grep -Fq 'harnesses:' "$REPO_ROOT/skills/$universal/SKILL.md"; then
+    pass "${universal} is universal (no harnesses restriction)"
   else
-    fail "${oc_only} must be restricted to OpenCode after the Pi code-mode switch"
+    fail "${universal} must be universal (no harnesses restriction) since the hermes-harness landing"
   fi
 done
 
@@ -163,6 +168,35 @@ if grep -q 'Task review' "$REPO_ROOT/skills/review-plan/SKILL.md" && grep -q 'Ta
 else
   fail "create-plan or review-plan does not cover Task review"
 fi
+
+# Review-loop learnings (field-proven in LLS practice) — see
+# plans/20261002_review_loop_learnings/brief.md
+if grep -q 'Pre-review self-audit' "$REPO_ROOT/skills/create-plan/SKILL.md"; then
+  pass "create-plan mandates a pre-review self-audit before dispatching reviewers"
+else
+  fail "create-plan does not mandate a pre-review self-audit"
+fi
+if grep -q 'UNIQUE output file per reviewer per round' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan requires a unique output file per reviewer per round"
+else
+  fail "review-plan does not require unique output files per reviewer"
+fi
+if grep -q 'Stagger' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan staggers same-provider reviewer launches (rate limits)"
+else
+  fail "review-plan does not stagger same-provider reviewer launches"
+fi
+if grep -q 'commit it actually reviewed' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan requires verdicts to count only over the reviewed commit"
+else
+  fail "review-plan does not tie verdicts to the exact reviewed commit"
+fi
+if grep -q 'Static security scan' "$REPO_ROOT/skills/review-code/SKILL.md"; then
+  pass "review-code runs a static security scan over added lines"
+else
+  fail "review-code does not run a static security scan"
+fi
+
 
 # ============================================================
 printf '\n'

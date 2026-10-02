@@ -31,7 +31,8 @@ If the brief or approach has ambiguities that would affect task decomposition, v
 4. **Write verification plans** — Each task gets a verification class and explicit Red → Green → Verify steps
 5. **Define verification gates** — What proves each task is done, what proves the plan is complete
 6. **Map requirements where relevant** — If the repo maintains requirements, cite requirement refs per task and map approved requirement edits to explicit tasks
-7. **Write plan.md** — Using the template in [references/plan-template.md](references/plan-template.md)
+7. **Pre-review self-audit** — Before handing the draft to reviewers, mechanically audit it: grep every status/error/event vocabulary against the canonical spec (no invented values, no recalled-from-memory tables), trace gate dependencies for cycles, check every coverage-matrix claim has an owning task, and grep sibling docs for contradictions with any decision made. Fix what it catches — independent review rounds are for what only independent reviewers catch
+8. **Write plan.md** — Using the template in [references/plan-template.md](references/plan-template.md)
 
 ## Epic Guard
 
