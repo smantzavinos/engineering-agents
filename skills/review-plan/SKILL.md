@@ -116,7 +116,7 @@ If any significant issues are found (even if fixed in this pass), another review
 
 ## Output
 
-Write or append to `plan_review.md` using the format in [references/review-template.md](references/review-template.md). When the plan selects `multi-model` parallel reviews, run 2–3 review passes on distinct model families with fresh session ids per reviewer, then merge all findings into this one file with per-reviewer attribution.
+Write or append to `plan_review.md` using the format in [references/review-template.md](references/review-template.md). When the plan selects `multi-model` parallel reviews, run 2–3 review passes on distinct model families drawn from the repo's recorded reviewer model pool (see the roles doc's "Reviewer model pool" section; a repo with no recorded pool cannot select `multi-model`) with fresh session ids per reviewer, then merge all findings into this one file with per-reviewer attribution naming the model per reviewer.
 
 After completing the review pass, output a summary:
 

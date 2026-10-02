@@ -95,3 +95,7 @@ confirms at plan approval. The chosen set is recorded in the plan's
 `Parallel reviews` choice row and the per-reviewer attribution in the
 review files names the model that produced each finding set. A repo with
 no recorded pool cannot select `multi-model`; it uses `single` or `dual`.
+
+A repo that intends `multi-model` rounds but records no family-distinct
+pool (or records a pool whose entries are not family-distinct) fails the
+assessment item for its role→model mapping.

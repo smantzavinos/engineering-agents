@@ -163,6 +163,8 @@ loop: each round re-reviews the fixed artifact until the bar is met.
 `single` (the default) uses one reviewer distinct from the author;
 `dual` uses two reviewers distinct from each other and from the author,
 and the round passes only when both meet the bar. When the plan selects
-`multi-model`, 2–3 reviewers on distinct model families run the round. In
+`multi-model`, 2–3 reviewers drawn from the repo's recorded reviewer model
+pool run the round (a repo with no recorded pool cannot select
+`multi-model`; it uses `single` or `dual`). In
 the parallel cases findings merge into one review file with per-reviewer
-attribution.
+attribution naming the model per reviewer.
