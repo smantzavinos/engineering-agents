@@ -118,6 +118,11 @@ If any significant issues are found (even if fixed in this pass), another review
 
 Write or append to `plan_review.md` using the format in [references/review-template.md](references/review-template.md). When the plan selects `multi-model` parallel reviews, run 2–3 review passes on distinct model families with fresh session ids per reviewer, then merge all findings into this one file with per-reviewer attribution.
 
+Multi-model mechanics (each earned its place by a failure):
+- Each reviewer writes to a **UNIQUE output file per reviewer per round** — a shared filename lets a late reviewer overwrite an earlier one's record, and the operative findings survive only in a commit message. Naming collision = broken audit trail.
+- **Stagger** same-provider reviewer launches to avoid rate limits; a reviewer lost to a 429 is re-dispatched later, and the round record states when fewer than the full lane count ran.
+- **Interpret every verdict against the commit it actually reviewed** — record which commit each reviewer saw (verify with `git log`, reviewers often note only HEAD). A PASS on stale bytes does not terminate the loop, and a NEEDS_ANOTHER_PASS on pre-fix bytes may already be fully fixed.
+
 After completing the review pass, output a summary:
 
 ```

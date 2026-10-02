@@ -169,8 +169,33 @@ else
   fail "create-plan or review-plan does not cover Task review"
 fi
 
-# Review-loop learnings rows are added in the content commit — lifted for the
-# standalone spec-repair commit.
+# Review-loop learnings (field-proven in LLS practice) — see
+# plans/20261002_review_loop_learnings/brief.md
+if grep -q 'Pre-review self-audit' "$REPO_ROOT/skills/create-plan/SKILL.md"; then
+  pass "create-plan mandates a pre-review self-audit before dispatching reviewers"
+else
+  fail "create-plan does not mandate a pre-review self-audit"
+fi
+if grep -q 'UNIQUE output file per reviewer per round' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan requires a unique output file per reviewer per round"
+else
+  fail "review-plan does not require unique output files per reviewer"
+fi
+if grep -q 'Stagger' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan staggers same-provider reviewer launches (rate limits)"
+else
+  fail "review-plan does not stagger same-provider reviewer launches"
+fi
+if grep -q 'commit it actually reviewed' "$REPO_ROOT/skills/review-plan/SKILL.md"; then
+  pass "review-plan requires verdicts to count only over the reviewed commit"
+else
+  fail "review-plan does not tie verdicts to the exact reviewed commit"
+fi
+if grep -q 'Static security scan' "$REPO_ROOT/skills/review-code/SKILL.md"; then
+  pass "review-code runs a static security scan over added lines"
+else
+  fail "review-code does not run a static security scan"
+fi
 
 
 # ============================================================

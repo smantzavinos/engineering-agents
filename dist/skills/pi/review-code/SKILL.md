@@ -94,6 +94,9 @@ Reviewers should not create backlog items directly unless the orchestrator or hu
 ### 7. TODO traceability
 Check TODO comments introduced or modified by the diff. If a TODO represents follow-up work but does not reference a backlog ID, flag it as Minor or Major depending on risk. TODOs are not a backlog system; real follow-up work needs a durable backlog item ID.
 
+### 8. Static security scan
+Before reading the diff for logic, deterministically scan its ADDED lines (`git diff <range> | grep '^+'`) for the known dangerous classes: hardcoded secrets (api_key/secret/password/token assignments), shell injection (`os.system(`, `shell=True`), `eval(`/`exec(` with user input, unsafe deserialization (`pickle.loads(`), and SQL built by string formatting. Any hit is a finding: **Critical** when the construct can process attacker-controlled or credential-bearing input, otherwise **Major** with a concrete fix. This gate is cheap and mechanical — it catches what logic-only review reads past.
+
 ## Severity Levels
 
 | Severity | Meaning |
