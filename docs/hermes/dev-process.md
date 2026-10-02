@@ -69,6 +69,16 @@ They are additions, never overrides.
    questions it cannot resolve from the repo, destructive or irreversible
    actions, money/legal/external commitments. Everything else is decided,
    logged in the worklog, and surfaced in the digest.
+4. **Post-merge canon check.** After any merge that lands process docs or
+   skills, run `./tests/run-tests.sh fast` once on the updated default
+   branch before moving on, and repair in the same change window any spec
+   row its own merge staled. Reason: the pins live in the spec tree, and an
+   innocent docs/skills change can break an `assert_contains` needle
+   elsewhere — a merge can leave main's own gate red and nothing runs the
+   suite on main to notice. (Observed: three such rows — team-mode wording,
+   `harnesses: [opencode]` on the six now-universal pipeline skills, and
+   the superseded live-reference consumption model — sat red across
+   multiple merges until an unrelated branch ran the suite.)
 
 ## Which vehicle runs the stages
 
