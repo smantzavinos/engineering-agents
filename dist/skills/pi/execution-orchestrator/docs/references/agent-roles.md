@@ -76,3 +76,22 @@ assessment:
 A repo that cannot state its role→model mapping fails assessment. The
 mapping lives in the repo, not here: this document defines the roles; the
 repo defines who plays them.
+
+## Reviewer model pool (required for `multi-model` plans)
+
+Plans may select `Parallel reviews: multi-model` — 2–3 reviewers on
+distinct model families. A repo that intends multi-model rounds records a
+**reviewer model pool** alongside its role mapping: 2–3 models from
+distinct families (e.g. different vendors or model lines — distinctness is
+at the family level, so two variants of the same model line do not
+qualify), each with its manual fallback order, plus the family name for
+auditability. The pool lives in the same agent-configuration surface as the
+role mapping.
+
+When a plan selects `multi-model`, the plan names which pool members that
+plan's review rounds use: the agent proposes the subset from the repo's
+pool at plan creation (default: the first two pool entries), and the human
+confirms at plan approval. The chosen set is recorded in the plan's
+`Parallel reviews` choice row and the per-reviewer attribution in the
+review files names the model that produced each finding set. A repo with
+no recorded pool cannot select `multi-model`; it uses `single` or `dual`.
