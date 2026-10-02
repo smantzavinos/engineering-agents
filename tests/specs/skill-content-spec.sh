@@ -84,11 +84,13 @@ else
   fail "review-code does not reference plan"
 fi
 
-if grep -Fq 'Team mode' "$REPO_ROOT/skills/review-code/SKILL.md" \
-  && grep -Fq 'per-task verification evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
-  pass "review-code distinguishes execution modes and checks per-task verification evidence"
+# Team mode was retired; execution-mode selection moved into the
+# software-development entry skill (NORMATIVE section). review-code must still
+# require per-task verification evidence in worklog.md.
+if grep -Fq 'per-task verification evidence' "$REPO_ROOT/skills/review-code/SKILL.md"; then
+  pass "review-code checks per-task verification evidence"
 else
-  fail "review-code is missing execution-mode distinction or verification-evidence semantics"
+  fail "review-code is missing per-task verification-evidence semantics"
 fi
 
 
@@ -121,12 +123,15 @@ if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
 else
   fail "pi-team-reviewer agent is removed with team mode"
 fi
-for oc_only in execution-orchestrator execute-task create-worklog \
+# The six sequential-pipeline skills are universal since the hermes-harness
+# landing (render-spec's assertion lists are authoritative; no harnesses:
+# restriction — see docs/skill-rendering.md).
+for universal in execution-orchestrator execute-task create-worklog \
                 create-plan review-plan review-code; do
-  if grep -Fq 'harnesses: [opencode]' "$REPO_ROOT/skills/$oc_only/SKILL.md"; then
-    pass "${oc_only} is retained for OpenCode only"
+  if ! grep -Fq 'harnesses:' "$REPO_ROOT/skills/$universal/SKILL.md"; then
+    pass "${universal} is universal (no harnesses restriction)"
   else
-    fail "${oc_only} must be restricted to OpenCode after the Pi code-mode switch"
+    fail "${universal} must be universal (no harnesses restriction) since the hermes-harness landing"
   fi
 done
 
@@ -163,6 +168,10 @@ if grep -q 'Task review' "$REPO_ROOT/skills/review-plan/SKILL.md" && grep -q 'Ta
 else
   fail "create-plan or review-plan does not cover Task review"
 fi
+
+# Review-loop learnings rows are added in the content commit — lifted for the
+# standalone spec-repair commit.
+
 
 # ============================================================
 printf '\n'
