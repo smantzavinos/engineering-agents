@@ -125,7 +125,7 @@ mechanism, documented in a defined place:
 | Choice | When it happens | Mechanism | Documented in |
 | --- | --- | --- | --- |
 | Execution mode (pi subprocesses / Hermes subagents / single session) | At plan approval | Confirm with the human (default: pi subprocesses) | Worklog header |
-| Parallel reviews (`single` — default: one independent reviewer, distinct from the author — vs `dual`: two independent reviewers, or `multi-model`: 2–3 reviewers on distinct model families) | At plan creation | Agent proposes per plan risk; human confirms at plan approval | plan.md "Parallel reviews" choice row; if multi-model, the review files carry a merged findings table with per-reviewer attribution |
+| Parallel reviews (`single` — default: one independent reviewer, distinct from the author — vs `dual`: two independent reviewers, or `multi-model`: 2–3 reviewers on distinct model families drawn from the repo's recorded reviewer model pool) | At plan creation | Agent proposes per plan risk (multi-model additionally proposes the pool subset; no recorded pool → multi-model unavailable); human confirms at plan approval | plan.md "Parallel reviews" choice row; if multi-model, the review files carry a merged findings table with per-reviewer attribution naming the model per reviewer |
 | Per-task review (yes/no per task) | At plan creation | Agent proposes per task risk (a `no` on schema/auth/migration tasks is a review finding); human confirms at plan approval | plan.md task graph |
 | Approval gates (approval-gate / auto-continue / detached) | At execution start | Human decides (default: approval-gate) | Worklog header |
 | Contract freezes | When a contract-task's tests are frozen | Agent-determines; changing frozen tests afterward requires human approval | plan.md freeze schedule + worklog |
@@ -163,6 +163,8 @@ loop: each round re-reviews the fixed artifact until the bar is met.
 `single` (the default) uses one reviewer distinct from the author;
 `dual` uses two reviewers distinct from each other and from the author,
 and the round passes only when both meet the bar. When the plan selects
-`multi-model`, 2–3 reviewers on distinct model families run the round. In
+`multi-model`, 2–3 reviewers drawn from the repo's recorded reviewer model
+pool run the round (a repo with no recorded pool cannot select
+`multi-model`; it uses `single` or `dual`). In
 the parallel cases findings merge into one review file with per-reviewer
-attribution.
+attribution naming the model per reviewer.
