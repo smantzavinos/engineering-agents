@@ -33,7 +33,14 @@ Do not pretend a speed run is still appropriate after that. Hand off.
 
 1. **Restate the request** in a few sentences. Confirm only what is actually
    ambiguous. Do not walk a question checklist.
-2. **Look at the code** that will change. One focused research pass is enough.
+2. **Look at the code** that will change. When producing an approach, first read
+   [references/design-approach-authoring.md](references/design-approach-authoring.md)
+   and resolve its **Required repo hooks** from root `AGENTS.md` direct routes or
+   a linked compact mapping. Read referenced local docs and affected sources;
+   record applicability (`N/A` needs a reason). Missing consequential hooks block
+   readiness: ask the owner, do not guess or duplicate the shared procedure.
+   Unconfigured rendering blocks actual approach package delivery. One focused
+   research pass is enough.
 
 subagent({
   agent: "worker",
@@ -45,10 +52,19 @@ Skip the delegate if you can answer from a few file reads in this session.
 3. **Write both artifacts** into the plan directory (ask for the path if
    missing). Use the templates in [references/brief-template.md](references/brief-template.md)
    and [references/approach-template.md](references/approach-template.md).
-   Keep them short. Record plan level. If the repo maintains requirements,
+   Read and follow [references/design-approach-authoring.md](references/design-approach-authoring.md)
+   whenever an approach is produced: main change map, optional reference, linked
+   meaning-bearing assets, and generated/visually inspected HTML views. Small work
+   may keep contracts in the main document and mark irrelevant layers `N/A` with a
+   reason; it does not bypass package authority, freshness, or acceptance scope.
+   Keep them focused. Record plan level. If the repo maintains requirements,
    cite IDs or list questions; do not edit canonical requirements.
-4. **Show the paths and wait.** Do not commit until the human accepts both
-   files. Then commit `brief.md`, `approach.md`, `findings/` (if any), and
+4. **Show the paths and wait.** Present the brief and full canonical package with
+   generated views; acceptance covers that revision, not just the entry files.
+   Record the package revision/inventory and generation/inspection evidence in
+   `approach_review.md` (acceptance evidence does not claim an independent review).
+   Do not commit until accepted. Then commit `brief.md`, the approach package and
+   generated views, `approach_review.md`, `findings/` (if any), and
    `state.json` as `design: speed-run approach for <slug>`.
 5. **Next step:** "The approach is ready. Create the plan with `/create-plan`, review it with `/review-plan`, and once you have approved it execute it task-by-task (`/execute-task` per task, sequential with opportunistic parallel dispatch)."
 
