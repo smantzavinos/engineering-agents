@@ -34,24 +34,82 @@ def comment(i, login, body):
 
 class ClaimState(unittest.TestCase):
     def test_no_label_is_none_whatever_the_comments(self):
-        self.assertEqual(d.claim_state([], [beat("s", "2026-01-01T11:59:00Z")], NOW, 60), "none")
+        self.assertEqual(d.claim_state([], [beat("s", "2026-01-01T11:59:00Z")], NOW, 60), ("none", ""))
 
     def test_fresh_heartbeat_is_active(self):
-        self.assertEqual(d.claim_state(["pr:babysat"], [beat("s", "2026-01-01T11:30:00Z")], NOW, 60), "active")
+        self.assertEqual(d.claim_state(["pr:fix-loop:session"], [beat("s", "2026-01-01T11:30:00Z")], NOW, 60), ("active", "chat"))
+
+    def test_sweep_label_is_active_whatever_the_heartbeat_age(self):
+        self.assertEqual(d.claim_state(["pr:fix-loop:sweep"], [beat("babysit-pr7", "2026-01-01T10:00:00Z")], NOW, 60), ("active", "sweep"))
 
     def test_old_heartbeat_is_stale(self):
-        self.assertEqual(d.claim_state(["pr:babysat"], [beat("s", "2026-01-01T10:00:00Z")], NOW, 60), "stale")
+        self.assertEqual(d.claim_state(["pr:fix-loop:session"], [beat("s", "2026-01-01T10:00:00Z")], NOW, 60), ("stale", "chat"))
 
     def test_latest_heartbeat_wins(self):
         cs = [beat("s", "2026-01-01T09:00:00Z"), beat("s", "2026-01-01T11:55:00Z")]
-        self.assertEqual(d.claim_state(["pr:babysat"], cs, NOW, 60), "active")
+        self.assertEqual(d.claim_state(["pr:fix-loop:session"], cs, NOW, 60), ("active", "chat"))
 
     def test_label_without_heartbeat_is_stale(self):
-        self.assertEqual(d.claim_state(["pr:babysat"], [comment(1, "a", "babysit: released")], NOW, 60), "stale")
+        self.assertEqual(d.claim_state(["pr:fix-loop:session"], [comment(1, "a", "babysit: released")], NOW, 60), ("stale", "chat"))
 
     def test_sweep_ownership_follows_reserved_prefix(self):
         self.assertTrue(d.sweep_owned([beat("babysit-pr7-abc", "2026-01-01T11:00:00Z")]))
         self.assertFalse(d.sweep_owned([beat("20260101_chat", "2026-01-01T11:00:00Z")]))
+
+    def test_state_label_drift_skips_both_owner_labels(self):
+        self.assertIsNone(d.state_label(["pr:fix-loop:sweep"], "review"))
+        self.assertIsNone(d.state_label(["pr:fix-loop:session"], "review"))
+
+
+class OwnerMigration(unittest.TestCase):
+    """Cutover: legacy pr:babysat maps to the ownership pair by the claim's session prefix."""
+
+    def make_pr(self, labels):
+        return {"number": 3, "title": "t", "headRefName": "b", "headRefOid": "3" * 40,
+                "labels": [{"name": l} for l in labels], "isDraft": False, "statusCheckRollup": []}
+
+    def run_tick(self, labels, comments):
+        def fake_gh(*args, **kwargs):
+            if args[:2] == ("pr", "list"):
+                return [self.make_pr(labels)]
+            if args[0] == "api" and str(args[1]).endswith("/comments?per_page=100"):
+                return comments
+            return []
+
+        orig_gh, orig_label, orig_remove, orig_dry, orig_out = d.gh, d.set_state_label, d.remove_label, d.DRY, d.out
+        removed, posted, lines = [], [], []
+        d.gh = fake_gh
+        d.DRY = False
+        d.out = lines
+        d.set_state_label = lambda repo, n, label: posted.append(("state", label))
+        d.remove_label = lambda repo, n, label: removed.append(label)
+        try:
+            recs, reported = [], set()
+            d.sweep_repo("o/r", recs, reported)
+        finally:
+            d.gh, d.set_state_label, d.remove_label, d.DRY, d.out = orig_gh, orig_label, orig_remove, orig_dry, orig_out
+        return removed, posted, lines, recs
+
+    def test_sweep_prefix_claim_maps_to_sweep_label(self):
+        comments = [{"id": 1, "user": {"login": "a"}, "body": "babysit: session=babysit-pr3-x heartbeat=2026-01-01T00:00:00Z"}]
+        removed, _posted, lines, _recs = self.run_tick(["pr:babysat", "pr:re-review"], comments)
+        self.assertIn("pr:babysat", removed)
+        self.assertTrue(any("migrated ownership label pr:babysat -> pr:fix-loop:sweep" in l for l in lines), lines)
+
+    def test_chat_claim_maps_to_session_label(self):
+        comments = [{"id": 1, "user": {"login": "a"}, "body": "babysit: session=20260101_chat heartbeat=2026-01-01T00:00:00Z"}]
+        removed, _posted, lines, _recs = self.run_tick(["pr:babysat", "pr:re-review"], comments)
+        self.assertIn("pr:babysat", removed)
+        self.assertTrue(any("migrated ownership label pr:babysat -> pr:fix-loop:session" in l for l in lines), lines)
+
+    def test_dry_run_migrates_nothing(self):
+        orig_dry, orig_out = d.DRY, d.out
+        d.DRY, d.out = True, []
+        try:
+            labels = d.migrate_owner_labels("o/r", 3, ["pr:babysat"], [])
+        finally:
+            d.DRY, d.out = orig_dry, orig_out
+        self.assertEqual(labels, ["pr:babysat"])
 
 
 class Verdicts(unittest.TestCase):
@@ -66,9 +124,11 @@ class StateLabel(unittest.TestCase):
     def test_opt_in_ignores_unlabeled(self):
         self.assertIsNone(d.state_label([], "ignore"))
 
-    def test_drift_mode_reviews_unlabeled_but_not_babysat(self):
+    def test_drift_mode_reviews_unlabeled_but_not_owned(self):
         self.assertEqual(d.state_label([], "review"), "pr:ready-review")
-        self.assertIsNone(d.state_label(["pr:babysat"], "review"))
+        self.assertIsNone(d.state_label(["pr:fix-loop:sweep"], "review"))
+        self.assertIsNone(d.state_label(["pr:fix-loop:session"], "review"))
+        self.assertIsNone(d.state_label(["pr:babysat"], "review"))  # legacy, pre-migration
 
     def test_in_review_outranks_other_labels(self):
         self.assertEqual(d.state_label(["pr:ready-review", "pr:in-review"], "ignore"), "pr:in-review")

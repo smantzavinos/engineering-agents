@@ -44,8 +44,10 @@ verdict and `reviewed@<sha>` stamp come only from an independent Reviewer run
    security, architecture, compatibility, or scope choices; no merge or
    production deployment without approval. No history rewriting on shared PR
    branches.
-4. **Claim the PR.** Add the `pr:babysat` label and post one comment
-   `babysit: session=<id> heartbeat=<iso-time>`. If another session already
+4. **Claim the PR.** Add the `pr:fix-loop:session` label and post one comment
+   `babysit: session=<id> heartbeat=<iso-time>`. (`pr:fix-loop:session` marks a
+   chat-started claim the sweep must not twin; a sweep handoff uses
+   `pr:fix-loop:sweep` instead.) If another session already
    holds an *active* claim, stop and report it; do not start a second
    babysitter. On every round you process, edit that same comment's
    heartbeat instead of posting a new one. Record the claim comment ID with
@@ -187,7 +189,8 @@ access pattern lets the other multiply unchecked.
 Stop on PR closure, explicit human stop, consequential decision needing
 approval, irrecoverable auth/runtime failure, or session end. Kill the
 recorded watcher when stopping/replacing and verify state. Release the claim:
-remove `pr:babysat` and edit the claim comment to `babysit: released`. If the
+remove `pr:fix-loop:session` (or `pr:fix-loop:sweep` when running a sweep
+handoff round) and edit the claim comment to `babysit: released`. If the
 session dies without releasing, the sweep's stale-claim rule recovers the PR. Do not blindly
 re-request reviews to chase a permanently retained historical finding;
 investigate current behavior, explain evidence, ask for a decision if

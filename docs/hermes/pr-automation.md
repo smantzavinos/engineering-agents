@@ -23,11 +23,17 @@ statelessly — no agent-side memory is required.
 | `pr:ready-merge` | Reviewer posted READY + stamp; human decision pending | Reviewer |
 | `pr:escalated` | BLOCKED verdict or an ESCALATE question is pending | Reviewer |
 
-One **ownership label** sits alongside the state labels. It never replaces them:
+One **ownership label** sits alongside the state labels. It never replaces them. The two ownership
+labels make fix-loop ownership an explicit, human-readable choice — same meaning, different owner:
 
 | Label | Meaning | Set by |
 |-------|---------|--------|
-| `pr:babysat` | An author-side babysit session owns the fix loop (see [Babysit coexistence](#babysit-coexistence)) | The babysit session, on start; removed by it on exit, or by the sweep when the claim goes stale |
+| `pr:fix-loop:sweep` | The fix loop is handed to the sweep: it dispatches one author-side round per new FIX verdict at the current head, per new completed bot review under the cap, and per CI red→green transition at the stamped READY head (see [Babysit coexistence](#babysit-coexistence) rule 7). A sweep-owned claim never ages — between rounds nobody runs by design. | The author at PR open (delivery pipeline), or the dispatched round itself (claim per prompt step 1); removed when the loop ends (READY/BLOCKED/closed/escalation) |
+| `pr:fix-loop:session` | A chat-started babysit session owns the fix loop: the sweep dispatches no author-side work and the session ages by heartbeat (`PR_BABYSIT_STALE_MIN`, default 60 min) | The babysit session, on start; removed by it on exit, or by the sweep when the heartbeat goes stale |
+
+Legacy `pr:babysat` is migrated mechanically by the sweep's first tick after cutover: a claim
+whose latest heartbeat session carries the reserved `babysit-pr` prefix becomes
+`pr:fix-loop:sweep`, anything else becomes `pr:fix-loop:session`.
 
 Transitions:
 
@@ -99,10 +105,12 @@ The sweep and babysitting are two different jobs, and both are needed:
 
 Rules that let them run on the same PR without fighting:
 
-1. **Claim.** A babysit session adds `pr:babysat` and posts one claim comment,
+1. **Claim.** A babysit session adds its ownership label (`pr:fix-loop:sweep`
+   for a sweep handoff, `pr:fix-loop:session` for a chat-started claim) and
+   posts one claim comment,
    `babysit: session=<id> heartbeat=<iso-time>`. It edits that same comment's
    heartbeat on every round it processes (it does not post a new one). On exit
-   it removes the label and edits the comment to `babysit: released`.
+   it removes the ownership label and edits the comment to `babysit: released`.
 2. **What the sweep still does on a babysat PR:** dispatches independent
    Reviewer runs (push demotion to `pr:re-review` works as usual), corrects
    label drift, and reports stuck states.
@@ -117,22 +125,25 @@ Rules that let them run on the same PR without fighting:
    [PR review process](../references/pr-review.md) is counted from the PR's
    FIX verdict history, not per session. A babysitter that reaches it
    escalates. Being asked to babysit does not raise the bound.
-6. **Stale claim.** If the heartbeat is older than `PR_BABYSIT_STALE_MIN`
+6. **Stale claim.** Chat-started claims only (`pr:fix-loop:session`; sweep
+   handoffs never age). If the heartbeat is older than `PR_BABYSIT_STALE_MIN`
    (default 60 minutes), the claim is stale. The sweep then
-   removes `pr:babysat`, treats the PR as a stuck state, and notifies the human
+   removes `pr:fix-loop:session`, treats the PR as a stuck state, and notifies the human
    once. The PR then falls back to normal sweep handling.
 7. **Babysit on open.** Under the [Delivery Pipeline](../references/delivery-pipeline.md#4-pr-lifecycle),
-   the author posts a sweep-owned claim (`session=babysit-pr…`) when opening
-   the PR, so babysitting starts without a mention. For sweep-owned claims the
-   sweep dispatches one round per new FIX verdict at the current head, one
+   the author adds `pr:fix-loop:sweep` and posts the sweep-owned claim
+   (`session=babysit-pr…`) when opening
+   the PR, so the fix loop starts without a mention. The sweep
+   dispatches one round per new FIX verdict at the current head, one
    round per new completed bot review (e.g. Copilot) while the PR's bot-review
    count is under the cap (**5 per PR**, `PR_BOT_REVIEW_CAP`; bot login(s) in
    `PR_BOT_REVIEWERS`), and one round per CI red→green transition at the
    stamped READY head (the author keeps required checks green; green again
-   restores `pr:ready-merge`). The round fires with or without an active
-   claim — the round posts its own claim; chat-started claims still get no
-   twin. Bot reviews never count toward the fix-loop bound; neither do CI
-   maintenance rounds.
+   restores `pr:ready-merge`). FIX and CI rounds fire **even with no ownership
+   label at all** — the round posts its own claim — so a hand-pushed fork PR
+   (which never runs the claim-at-open step) cannot silently dead-end on a FIX
+   verdict; chat-started claims still get no twin. Bot reviews never count
+   toward the fix-loop bound; neither do CI maintenance rounds.
    Sweep-owned claims are not aged by heartbeat (rule 6 applies to
    chat-started claims only): between rounds nobody is running, by design.
 8. **Who owns the round loop.** A babysitter started from chat runs its own
@@ -169,7 +180,9 @@ Per PR, each tick:
 - **Demotes pushes mechanically.** `pr:ready-merge` or `pr:escalated` whose
   latest verdict head is not the PR head moves to `pr:re-review`. A stale
   READY is reported.
-- **Handles claims.** A stale claim loses `pr:babysat` and is reported once.
+- **Handles claims.** A stale chat-started claim loses `pr:fix-loop:session`
+  and is reported once. Legacy `pr:babysat` labels are migrated to the
+  ownership pair on the first tick after cutover.
 - **Detects its own actions as calm.** After a reviewer posts, the next tick
   sees a finished review at this head and does nothing. If a PR re-dispatches
   every tick, the rules are wrong: fix the script, do not widen a session's
