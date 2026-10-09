@@ -76,6 +76,12 @@ MAX_FAILS = 3
 STATE_LABELS = ["pr:ready-review", "pr:in-review", "pr:re-review", "pr:ready-merge", "pr:escalated"]
 LABEL_PRIORITY = ["pr:in-review", "pr:re-review", "pr:ready-merge", "pr:escalated", "pr:ready-review"]
 SWEEP_CLAIM_PREFIX = "babysit-pr"  # session ids of sweep-started babysits (see Babysit coexistence rule 7)
+# Fix-loop ownership is an explicit two-label contract (no prefix magic on the
+# human-visible surface): sweep = a handoff TO the sweep (never ages), session =
+# a chat session owns the loop and the sweep stays out of author-side work.
+OWNER_LABEL_SWEEP = "pr:fix-loop:sweep"
+OWNER_LABEL_SESSION = "pr:fix-loop:session"
+OWNER_LABELS = (OWNER_LABEL_SWEEP, OWNER_LABEL_SESSION)
 VERDICT_RE = re.compile(r"<!--\s*pr-review verdict=(READY|FIX|BLOCKED) head=([0-9a-f]{7,40})\s*-->")
 HEARTBEAT_RE = re.compile(r"babysit: session=(\S+) heartbeat=(\S+)")
 
@@ -85,9 +91,13 @@ out = []  # lines delivered to the human
 # ---------------------------------------------------------------- pure decisions
 
 def state_label(labels, unlabeled=UNLABELED):
-    """The PR's one state label, or None. Drift mode reads 'no label' as awaiting review."""
+    """The PR's one state label, or None. Drift mode reads 'no label' as awaiting review.
+
+    Ownership labels are not state labels; in drift mode a fix-loop-owned PR
+    still has an author-side owner, so it is not drift."""
     label = next((l for l in LABEL_PRIORITY if l in labels), None)
-    if label is None and unlabeled == "review" and "pr:babysat" not in labels:
+    owned = any(l in labels for l in OWNER_LABELS) or "pr:babysat" in labels  # legacy kept pre-migration
+    if label is None and unlabeled == "review" and not owned:
         return "pr:ready-review"
     return label
 
@@ -99,27 +109,57 @@ def verdicts(comments):
 
 
 def claim_state(labels, comments, now_s, stale_min=STALE_MIN):
-    """Babysit claim: 'none' | 'active' | 'stale'. A label with no readable heartbeat is stale.
+    """('none'|'active'|'stale', 'sweep'|'chat') — the fix-loop owner and its state.
 
-    Sweep-owned claims never age: between rounds nobody runs by design, and the
-    sweep tracks their sessions through its own dispatch records."""
-    if "pr:babysat" not in labels:
-        return "none"
+    Ownership is the label pair: `pr:fix-loop:sweep` is a handoff TO the sweep
+    (never ages — between rounds nobody runs by design, and the sweep tracks
+    sessions through its own dispatch records); `pr:fix-loop:session` is a
+    chat-started claim whose session owns the loop and ages by heartbeat.
+    Returns owner "" with state "none" when no ownership label is present.
+    A heartbeat is required either way: without one the claim is stale (the
+    label alone proves nothing — a dead session must not hold the loop).
+    """
+    if OWNER_LABEL_SWEEP in labels:
+        owner = "sweep"
+    elif OWNER_LABEL_SESSION in labels:
+        owner = "chat"
+    else:
+        return "none", ""
     beats = [m for c in comments for m in [HEARTBEAT_RE.search(c.get("body") or "")] if m]
     if not beats:
-        return "stale"
-    if beats[-1].group(1).startswith(SWEEP_CLAIM_PREFIX):
-        return "active"
+        return "stale", owner
+    if owner == "sweep":
+        return "active", owner
     try:
         t = datetime.fromisoformat(beats[-1].group(2).replace("Z", "+00:00")).timestamp()
     except ValueError:
-        return "stale"
-    return "stale" if now_s - t > stale_min * 60 else "active"
+        return "stale", owner
+    return ("stale" if now_s - t > stale_min * 60 else "active"), owner
 
 
 def sweep_owned(comments):
     beats = [m for c in comments for m in [HEARTBEAT_RE.search(c.get("body") or "")] if m]
     return bool(beats) and beats[-1].group(1).startswith(SWEEP_CLAIM_PREFIX)
+
+
+def migrate_owner_labels(repo, n, labels, comments):
+    """One-time cutover: legacy `pr:babysat` → the explicit ownership label pair.
+
+    Keeps the pre-cutover semantics exactly: a claim whose latest heartbeat
+    session carries the sweep prefix becomes `pr:fix-loop:sweep`, anything else
+    becomes `pr:fix-loop:session` (where the stale-heartbeat rule can recover
+    it). Returns the updated label-name list; in dry-run nothing changes.
+    """
+    if DRY or "pr:babysat" not in labels:
+        return labels
+    new = OWNER_LABEL_SWEEP if sweep_owned(comments) else OWNER_LABEL_SESSION
+    remove_label(repo, n, "pr:babysat")
+    raw = gh("api", f"repos/{repo}/issues/{n}/labels")
+    cur = [l["name"] for l in raw] if isinstance(raw, list) else []
+    if new not in cur:
+        gh("api", "-X", "POST", f"repos/{repo}/issues/{n}/labels", "-f", f"labels[]={new}", parse=False)
+    out.append(f"{repo}#{n}: migrated ownership label pr:babysat -> {new} (fix-loop ownership is now an explicit label).")
+    return [l for l in labels if l != "pr:babysat"] + ([new] if new not in labels else [])
 
 
 def bot_reviews(reviews, bots=BOT_REVIEWERS):
@@ -291,8 +331,9 @@ def sweep_repo(repo, recs, reported):
     for pr in sorted(pulls, key=lambda p: p["number"]):
         n, head = pr["number"], pr["headRefOid"]
         labels = [l["name"] for l in pr["labels"]]
-        label = state_label(labels)
         comments = gh("api", f"repos/{repo}/issues/{n}/comments?per_page=100")
+        labels = migrate_owner_labels(repo, n, labels, comments)
+        label = state_label(labels)
         # Inline review-thread comments are mention surfaces too; "r"-prefixed ids keep the two
         # comment id spaces apart in the dispatch record.
         inline = [dict(c, id=f"r{c['id']}") for c in gh("api", f"repos/{repo}/pulls/{n}/comments?per_page=100")]
@@ -341,14 +382,6 @@ def sweep_repo(repo, recs, reported):
 
         mention_review, mention_babysit = mentions(comments + inline, HANDLES, {r.get("comment_id") for r in mine})
 
-        claim = claim_state(labels, comments, time.time())
-        babysitter_running = any(r["kind"] == "babysit" for r in running)
-        if claim == "stale" and not babysitter_running:
-            remove_label(repo, n, "pr:babysat")
-            out.append(f"{repo}#{n}: babysit claim went stale (> {STALE_MIN} min without heartbeat); "
-                       "claim removed, PR back to normal sweep handling.")
-            claim = "none"
-
         # Reviewer side: runs regardless of any babysit claim. A dispatch is done only when it wrote a
         # result file; a dead session without one is a failed dispatch, retried up to MAX_FAILS per head.
         reviewer_running = any(r["kind"] == "review" for r in running)
@@ -385,12 +418,23 @@ def sweep_repo(repo, recs, reported):
         fix_at_head = bool(last_v) and last_v[0] == "FIX" and head.startswith(last_v[1])
         verdict_id = last_v[2]["id"] if last_v else None
         round_done = any(r["kind"] == "babysit" and r["head"] == head and r.get("verdict_id") == verdict_id for r in mine)
-        owned = claim == "active" and sweep_owned(comments)
-        # A CI red is author-ownable maintenance even with nobody on the PR: a
-        # READY-stamped head may not sit red unclaimed until green. The round
-        # posts its own sweep-owned claim (prompt step 1); chat-started
-        # claims still get no twin, and a stale claim recovers above.
+        claim, claim_owner = claim_state(labels, comments, time.time())
+        owned = claim == "active" and claim_owner == "sweep"
+        babysitter_running = any(r["kind"] == "babysit" for r in running)
+        if claim == "stale" and claim_owner == "chat" and not babysitter_running:
+            remove_label(repo, n, OWNER_LABEL_SESSION)
+            out.append(f"{repo}#{n}: babysit claim went stale (> {STALE_MIN} min without heartbeat); "
+                       "claim removed, PR back to normal sweep handling.")
+            claim = "none"
+        # A CI red or an unclaimed FIX verdict is author-ownable even with nobody
+        # on the PR: a READY-stamped head may not sit red, and a FIX verdict must
+        # not silently dead-end when no author session ever claimed the PR (the
+        # claim-at-open step only runs under the delivery pipeline; hand-pushed
+        # fork PRs never get one). The round posts its own sweep claim (prompt
+        # step 1); chat-started claims still get no twin, and a stale sweep-claim
+        # recovers above.
         ci_round = (owned or claim == "none") and bool(ci_fires)
+        fix_round = (owned or claim == "none") and fix_at_head and not round_done
         handled_bots = set()
         for r in mine:
             if r.get("bot_review_id"):
@@ -402,7 +446,6 @@ def sweep_repo(repo, recs, reported):
             if key not in reported:
                 reported.add(key)
                 out.append(f"{repo}#{n}: bot-review cap ({BOT_CAP}) reached; no more bot rounds.")
-        fix_round = owned and fix_at_head and not round_done
         bot_round = owned and bot_rev is not None and not fix_round
         # A mention is an explicit instruction: it runs under no claim or a sweep-owned one, never twinning a chat watcher.
         mention_round = bool(mention_babysit) and (claim == "none" or owned)
@@ -411,7 +454,7 @@ def sweep_repo(repo, recs, reported):
             rec = {"ts": time.time(), "kind": "babysit", "repo": repo, "pr": n, "head": head,
                    "comment_id": mention_babysit["id"] if mention_round else None,
                    "verdict_id": verdict_id if fix_round or mention_round else None,
-                   "bot_review_id": bot_rev["id"] if bot_round else None,
+                   "bot_review_id": bot_rev["id"] if bot_round and bot_rev else None,
                    "bot_review_ids": bot_seen if bot_round else [],
                    "ci_key": ci_key if ci_round else None}
             try:

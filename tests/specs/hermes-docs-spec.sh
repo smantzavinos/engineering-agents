@@ -87,7 +87,8 @@ else
   pass "Retired monitor script removed"
 fi
 assert_contains "$HERMES_AUTO" "Babysit coexistence" "PR automation doc defines babysit coexistence"
-assert_contains "$HERMES_AUTO" "pr:babysat" "PR automation doc defines the babysit ownership label"
+assert_contains "$HERMES_AUTO" "pr:fix-loop:sweep" "PR automation doc defines the sweep-handoff ownership label"
+assert_contains "$HERMES_AUTO" "pr:fix-loop:session" "PR automation doc defines the chat-session ownership label"
 assert_contains "$HERMES_AUTO" "Shared bound" "Babysit and sweep share the two-fix-loop bound"
 assert_contains "$HERMES_AUTO" "## Verdict marker" "PR automation doc defines the machine-readable verdict marker"
 assert_contains "$HERMES_AUTO" "detached Hermes session" "Dispatch vehicle is a detached Hermes session, not in-process delegation"
@@ -103,7 +104,7 @@ assert_contains "$DISPATCH" "PR_SWEEP_DRY" "Dispatcher supports a non-mutating d
 assert_contains "$DISPATCH" "PR_SWEEP_UNLABELED" "Dispatcher exposes opt-in vs drift for unlabeled PRs"
 assert_contains "$REPO_ROOT/scripts/pr-sweep-prompts/review.md" "pr-review verdict=" "Reviewer prompt ends comments with the verdict marker"
 assert_contains "$REPO_ROOT/scripts/pr-sweep-prompts/babysit.md" "Never review your own work" "Babysit prompt keeps author/reviewer separation"
-assert_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "pr:babysat" "babysit-pr sets the ownership claim"
+assert_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "pr:fix-loop:session" "babysit-pr sets the chat-session ownership claim"
 assert_contains "$REPO_ROOT/skills/babysit-pr/SKILL.md" "heartbeat=" "babysit-pr maintains the claim heartbeat"
 
 printf '\n'

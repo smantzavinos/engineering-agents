@@ -64,10 +64,10 @@ role procedure; never restate the contract from memory.
    must match the prepared body and describe the final SHA you push.
 6. **Link and hand off.** When the work came from a backlog item, the body
    carries its closing reference (`Closes #N` on GitHub) and the item moves to
-   `In review` (per the `backlog` skill). Then start babysitting: add
-   `pr:babysat` and post the claim comment
+   `In review` (per the `backlog` skill). Then hand the fix loop to the sweep:
+   add `pr:fix-loop:sweep` and post the claim comment
    `babysit: session=babysit-pr-<item or PR>-<UTC ISO> heartbeat=<UTC ISO>`.
-   The `babysit-pr` prefix makes it sweep-owned, so the PR sweep runs fix
+   The `pr:fix-loop:sweep` label makes it sweep-owned, so the PR sweep runs fix
    rounds on FIX verdicts and bot reviews without a watcher (see the delivery
    pipeline's dispatch contract). The PR is not handed off until it is labeled
    for review, linked, and claimed. From hand-off until merge, the author

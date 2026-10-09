@@ -43,7 +43,7 @@ check  "$OUT" "would spawn review for o/r#1" "drift mode: unlabeled PR is review
 BOT="$TMP/gh-bot"
 cat > "$BOT" <<'EOF'
 #!/usr/bin/env bash
-old='{"number":7,"title":"owned","headRefName":"item/7","headRefOid":"7777777777777777777777777777777777777777","labels":[{"name":"pr:babysat"},{"name":"pr:in-review"}],"isDraft":false}'
+old='{"number":7,"title":"owned","headRefName":"item/7","headRefOid":"7777777777777777777777777777777777777777","labels":[{"name":"pr:fix-loop:sweep"},{"name":"pr:in-review"}],"isDraft":false}'
 # PR 8: READY stamped at its head; rollup controlled by CI_ROLLUP (red|green|pending|none)
 mk8() {
   case "${CI_ROLLUP:-red}" in
@@ -52,21 +52,25 @@ mk8() {
     pending) R='[{"name":"CI","status":"IN_PROGRESS","conclusion":null}]';;
     none)    R='[]';;
   esac
-  if [ "${PR8_LABEL:-pr:ready-merge}" = "pr:babysat" ]; then
-    L='[{"name":"pr:babysat"},{"name":"pr:in-review"}]'
-  else
-    L="[{\"name\":\"${PR8_LABEL:-pr:ready-merge}\"}]"
-  fi
+  case "${PR8_LABEL:-pr:ready-merge}" in
+    pr:fix-loop:sweep)   L='[{"name":"pr:fix-loop:sweep"},{"name":"pr:in-review"}]';;
+    pr:fix-loop:session) L='[{"name":"pr:fix-loop:session"},{"name":"pr:in-review"}]';;
+    *)                   L="[{\"name\":\"${PR8_LABEL:-pr:ready-merge}\"}]";;
+  esac
   printf '{"number":8,"title":"ready+ci","headRefName":"item/8","headRefOid":"8888888888888888888888888888888888888888","labels":%s,"isDraft":false,"statusCheckRollup":%s}' "$L" "$R"
 }
 case "$*" in
   "pr list"*) echo "[$old, $(mk8)]" ;;
   *"issues/7/comments"*) echo '[{"id":70,"user":{"login":"agent"},"body":"babysit: session=babysit-pr-item7-x heartbeat=2000-01-01T00:00:00Z"}]' ;;
   *"issues/8/comments"*)
-    C='[{"id":80,"user":{"login":"agent"},"body":"<!-- pr-review verdict=READY head=8888888888888888888888888888888888888888 -->"}'
-    if [ "${PR8_LABEL:-}" = "pr:babysat" ]; then
-      C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=${PR8_SESSION:-babysit-pr-item8-x} heartbeat=${PR8_HEARTBEAT:-2000-01-01T00:00:00Z}\"}"
-    fi
+    C="[{'id':80,'user':{'login':'agent'},'body':'<!-- pr-review verdict=${PR8_VERDICT:-READY} head=8888888888888888888888888888888888888888 -->'}"
+    C=$(printf '%s' "$C" | tr "'" '"')
+    case "${PR8_LABEL:-pr:ready-merge}" in
+      pr:fix-loop:sweep|pr:fix-loop:session|pr:babysat)
+        # pr:babysat stays accepted in the fixture (this spec is dry-run only; the
+        # live migration path is unit-tested) in case a future case drives it.
+        C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=${PR8_SESSION:-babysit-pr-item8-x} heartbeat=${PR8_HEARTBEAT:-2000-01-01T00:00:00Z}\"}" ;;
+    esac
     echo "$C]" ;;
   *"pulls/7/reviews"*)
     n="${BOT_REVIEWS:-1}"; printf '['
@@ -120,7 +124,7 @@ OUT="$(run CI_ROLLUP=none GH_BIN="$BOT")"
 refute "$OUT" "CI red" "CI gate: no checks yet is not a red"
 
 # A sweep-owned babysitter takes the CI round when one is due.
-OUT="$(run PR8_LABEL=pr:babysat CI_ROLLUP=red GH_BIN="$BOT")"
+OUT="$(run PR8_LABEL=pr:fix-loop:sweep CI_ROLLUP=red GH_BIN="$BOT")"
 check  "$OUT" "would spawn babysit for o/r#8" "CI gate: sweep-owned claim gets a CI-fix round"
 
 # CI red with NO claim at all also gets the CI round: the sweep posts its own claim per the
@@ -128,10 +132,27 @@ check  "$OUT" "would spawn babysit for o/r#8" "CI gate: sweep-owned claim gets a
 OUT="$(run PR8_LABEL=pr:ready-merge CI_ROLLUP=red GH_BIN="$BOT")"
 check  "$OUT" "would spawn babysit for o/r#8" "CI gate: red at READY head with no claim dispatches the round"
 
+# A FIX verdict at the current head with NO ownership label dispatches the fix round too:
+# the claim-at-open step only runs under the delivery pipeline, so a hand-pushed fork PR
+# must not silently dead-end on FIX (the silent dead end observed live on PR #38, 2026-10-09).
+OUT="$(run PR8_LABEL=pr:re-review PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#8" "FIX with no ownership label dispatches the fix round (the #38 dead end)"
+
+# ...but only once per verdict: the dispatch record's verdict_id consumes it.
+mkdir -p "$TMP/state"
+printf '%s\n' '{"ts":0,"kind":"babysit","repo":"o/r","pr":8,"head":"8888888888888888888888888888888888888888","verdict_id":80}' > "$TMP/state/dispatches.jsonl"
+OUT="$(run PR8_LABEL=pr:re-review PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+refute "$OUT" "would spawn babysit for o/r#8" "unclaimed FIX round fires once per verdict"
+rm -f "$TMP/state/dispatches.jsonl"
+
 # A chat-started claim must NOT get a sweep twin: only sweep-owned sessions (prefix babysit-pr)
 # are eligible for the CI round — the heartbeat must be FRESH so the claim is active, not stale.
-OUT="$(run PR8_LABEL=pr:babysat PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" CI_ROLLUP=red GH_BIN="$BOT")"
+OUT="$(run PR8_LABEL=pr:fix-loop:session PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" CI_ROLLUP=red GH_BIN="$BOT")"
 refute "$OUT" "would spawn babysit for o/r#8" "CI gate: chat-started claim gets no sweep twin"
+
+# A chat-started claim also suppresses the unclaimed-FIX round (the session owns the loop).
+OUT="$(run PR8_LABEL=pr:fix-loop:session PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+refute "$OUT" "would spawn babysit for o/r#8" "unclaimed-FIX round does not twin a chat-started claim"
 
 
 # Mentions: `@h review` -> Reviewer; any other mention -> a babysit round (also under a
@@ -142,7 +163,7 @@ cat > "$MEN" <<'EOF'
 #!/usr/bin/env bash
 pr='{"number":9,"title":"mention","headRefName":"item/9","headRefOid":"9999999999999999999999999999999999999999","labels":[{"name":"pr:ready-merge"}%s],"isDraft":false}'
 case "${M_CLAIM:-none}" in
-  owned) L=',{"name":"pr:babysat"}' ;;
+  owned) L=',{"name":"pr:fix-loop:sweep"}' ;;
   *) L='' ;;
 esac
 case "$*" in

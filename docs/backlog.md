@@ -44,7 +44,11 @@ The `TASK-XXXX` placeholder describes the required stable ID format. Replace `XX
 
 ## Up next
 
-_No items yet._
+### TASK-0008 — Split the babysit ownership label and make unclaimed FIX verdicts fire the fix round
+- Status: Up next
+- Summary: The legacy `pr:babysat` label encoded two opposite meanings behind one human-visible surface: sweep handoff (auto-dispatch fix rounds) vs chat session ownership (sweep stays out) — distinguished only by an invisible session-id prefix inside the claim comment. Separately, a FIX verdict on a PR with no ownership label dispatched nothing and notified nobody (`fix_round` required an active claim; delivery is FIX-silent), the silent dead end observed live on PR #38 (2026-10-09). The fix-loop PR replaces `pr:babysat` with an explicit pair (`pr:fix-loop:sweep` / `pr:fix-loop:session`), migrates legacy labels mechanically on the first tick, and fires FIX/CI fix rounds with no ownership label at all (the claim-at-open step only runs under the delivery pipeline; hand-pushed fork PRs never get one — chat-started claims still get no twin).
+- Source: Owner chat 2026-10-09 ("why wasn't #38 auto picked up for babysit"); live diagnosis in the same thread; owner ruling "all in one PR".
+- Notes: Owner-visible contract change: the fix-loop owner is now the label, not the claim prefix. Sweep-owned claims never age; only chat-session claims go stale.
 
 ## Ready
 
@@ -81,6 +85,7 @@ _No items yet._
 - Summary: `scripts/pipeline-dispatch.py` carries duplicated copies of the `reported.json` / `dispatches.jsonl` helpers from `scripts/pr-sweep-dispatch.py` (the repo's copy-one-file install model, documented in each script header). The Python unit suite imports only `pr-sweep-dispatch.py`; the pipeline copy is covered only where `tests/specs/pipeline-dispatch-spec.sh` happens to exercise it (now including the corrupt-ledger rebuild case from PR #38). Add direct unit coverage for the pipeline copy so future drift between the two files fails a test instead of surviving silently.
 - Source: Independent review of PR #38 (finding F3, 2026-10-09); https://github.com/smantzavinos/engineering-agents/pull/38
 - Notes: Either import the pipeline script the same way the unit suite imports `pr-sweep-dispatch.py`, or (better, if the duplication is ever consolidated) extract a shared module both scripts embed at install time.
+- Upstream note (fix-loop PR): the pipeline copy's report/claim logic was checked against the ownership-label cutover — `pipeline-dispatch.py` carries no claim/label decision logic of its own, so no change was required there; only its prompt-level claim posting (author session at PR open) references the label, and the sweep's mechanical migration covers any legacy label it already posted.
 
 ## Clarification needed
 
