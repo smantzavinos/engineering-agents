@@ -202,10 +202,10 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module missing CODEX.md in activation package"
   fi
 
-  # Verify skills are linked
-  for skill in discovery design discover-and-design discover-and-design-simple \
-               research review-approach review-epic \
-               assess-repo create-skills; do
+  # Verify skills are linked: every rendered skill must be installed
+  # (dist-iterating; a rendered-but-unlinked skill fails here — the bug
+  # class PR #39 fixed).
+  for skill in $(ls "$REPO_ROOT/dist/skills/pi"); do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
       pass "Pi module links skill: $skill"
     else
@@ -218,7 +218,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   # review-plan, review-code) are NOT retired for Pi: owner PR#25 ruling,
   # executed in a597054, dropped their harness restriction — Pi installs every
   # rendered skill in dist/skills/pi, so they must be present (covered by the
-  # link loop above).
+  # dist-iterating link loop above).
   for skill in pi-team-plan pi-team-lead pi-team-worker; do
     if [[ -e "$PI_FILES/.pi/agent/skills/$skill" ]]; then
       fail "Pi module must not link retired skill: $skill"
@@ -511,8 +511,9 @@ if [[ -n "$OC_OUT" && -d "$OC_OUT" ]]; then
     fi
   done
 
-  # Verify engineering workflow skills (OpenCode-rendered set)
-  for skill in discovery design execution-orchestrator research create-plan create-worklog execute-task review-plan review-code review-approach review-epic assess-repo create-skills configure-opencode; do
+  # Verify skills are linked: every rendered skill must be installed
+  # (dist-iterating; same self-healing contract as the Pi loop above).
+  for skill in $(ls "$REPO_ROOT/dist/skills/opencode"); do
     if [[ -f "$OC_FILES/.config/opencode/skills/$skill/SKILL.md" ]]; then
       pass "OpenCode skill: $skill"
     else
