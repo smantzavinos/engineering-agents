@@ -63,13 +63,20 @@ case "$*" in
   "pr list"*) echo "[$old, $(mk8)]" ;;
   *"issues/7/comments"*) echo '[{"id":70,"user":{"login":"agent"},"body":"babysit: session=babysit-pr-item7-x heartbeat=2000-01-01T00:00:00Z"}]' ;;
   *"issues/8/comments"*)
-    C="[{'id':80,'user':{'login':'agent'},'body':'<!-- pr-review verdict=${PR8_VERDICT:-READY} head=8888888888888888888888888888888888888888 -->'}"
-    C=$(printf '%s' "$C" | tr "'" '"')
+    C="[]"
+    C="[{\"id\":80,\"user\":{\"login\":\"agent\"},\"body\":\"<!-- pr-review verdict=${PR8_VERDICT:-READY} head=8888888888888888888888888888888888888888 -->\"}"
     case "${PR8_LABEL:-pr:ready-merge}" in
       pr:fix-loop:sweep|pr:fix-loop:session|pr:babysat)
         # pr:babysat stays accepted in the fixture (this spec is dry-run only; the
         # live migration path is unit-tested) in case a future case drives it.
-        C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=${PR8_SESSION:-babysit-pr-item8-x} heartbeat=${PR8_HEARTBEAT:-2000-01-01T00:00:00Z}\"}" ;;
+        # PR8_CLAIM=released models the trap state where a release edited the claim
+        # to `babysit: released` but failed to remove the ownership label; the
+        # default is the normal handoff claim.
+        if [ "${PR8_CLAIM:-present}" = released ]; then
+          C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: released\"}"
+        elif [ "${PR8_CLAIM:-present}" = present ]; then
+          C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=${PR8_SESSION:-babysit-pr-item8-x} heartbeat=${PR8_HEARTBEAT:-2000-01-01T00:00:00Z}\"}"
+        fi ;;
     esac
     echo "$C]" ;;
   *"pulls/7/reviews"*)
@@ -153,6 +160,21 @@ refute "$OUT" "would spawn babysit for o/r#8" "CI gate: chat-started claim gets 
 # A chat-started claim also suppresses the unclaimed-FIX round (the session owns the loop).
 OUT="$(run PR8_LABEL=pr:fix-loop:session PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
 refute "$OUT" "would spawn babysit for o/r#8" "unclaimed-FIX round does not twin a chat-started claim"
+
+# F1 recovery: a sweep ownership label with no usable heartbeat (a release edited the claim
+# to `babysit: released` but failed to remove the label, or the label landed before the
+# claim comment) must not dead-end the PR — the tick removes the label and the
+# unclaimed-FIX round fires on the SAME tick.
+OUT="$(run PR8_LABEL=pr:fix-loop:sweep PR8_CLAIM=released PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#8" "F1: released-claim sweep label recovered; the FIX round fires the same tick"
+check  "$OUT" "no usable heartbeat" "F1: the recovery is reported to the human"
+OUT="$(run PR8_LABEL=pr:fix-loop:sweep PR8_CLAIM=none PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#8" "F1: heartbeatless sweep label recovered; the FIX round fires"
+
+# The normal sweep handoff is untouched: label + live claim + FIX verdict at head -> round.
+OUT="$(run PR8_LABEL=pr:fix-loop:sweep PR8_CLAIM=present PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" PR8_VERDICT=FIX CI_ROLLUP=none GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#8" "sweep handoff: a FIX verdict at head under a live sweep claim dispatches the round"
+refute "$OUT" "claim with no usable heartbeat" "sweep handoff: recovery does not fire on a live claim"
 
 
 # Mentions: `@h review` -> Reviewer; any other mention -> a babysit round (also under a

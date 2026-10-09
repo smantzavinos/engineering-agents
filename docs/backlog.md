@@ -50,6 +50,12 @@ The `TASK-XXXX` placeholder describes the required stable ID format. Replace `XX
 - Source: Owner chat 2026-10-09 ("why wasn't #38 auto picked up for babysit"); live diagnosis in the same thread; owner ruling "all in one PR".
 - Notes: Owner-visible contract change: the fix-loop owner is now the label, not the claim prefix. Sweep-owned claims never age; only chat-session claims go stale.
 
+### TASK-0009 — Make a failed babysit spawn not consume its fix round
+- Status: Inbox
+- Summary: In `scripts/pr-sweep-dispatch.py` the babysit dispatch record is built before the `spawn()` `try` block, so a spawn exception still records `verdict_id` (and `ci_key`); `round_done` then consumes the round at that head and the fix never retries. Not introduced by the fix-loop PR (the record-before-try shape predates it) — surfaced by its review as F3. FIX verdicts firing rounds raises the stakes of a swallowed round.
+- Source: Independent review of PR #41 (finding F3, MINOR, pre-existing, disclosed); https://github.com/smantzavinos/engineering-agents/pull/41
+- Notes: Move the `record(recs, rec)` after a successful spawn (or record `error` rows with a shape `round_done` ignores). CI keys need the same treatment.
+
 ## Ready
 
 ### TASK-0002 — Fork-currency audit: retire out-of-date forks where upstream has the fix

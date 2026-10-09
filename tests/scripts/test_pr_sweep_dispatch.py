@@ -52,6 +52,15 @@ class ClaimState(unittest.TestCase):
     def test_label_without_heartbeat_is_stale(self):
         self.assertEqual(d.claim_state(["pr:fix-loop:session"], [comment(1, "a", "babysit: released")], NOW, 60), ("stale", "chat"))
 
+    def test_sweep_label_without_heartbeat_is_stale(self):
+        # F1 (review of the fix-loop PR): the label can land before the claim
+        # comment does. This trap state is what the tick's recovery branch removes —
+        # left alone it suppresses every fix/CI/mention round permanently.
+        self.assertEqual(d.claim_state(["pr:fix-loop:sweep"], [comment(1, "a", "babysit: released")], NOW, 60), ("stale", "sweep"))
+
+    def test_sweep_label_with_no_comments_at_all_is_stale(self):
+        self.assertEqual(d.claim_state(["pr:fix-loop:sweep"], [], NOW, 60), ("stale", "sweep"))
+
     def test_sweep_ownership_follows_reserved_prefix(self):
         self.assertTrue(d.sweep_owned([beat("babysit-pr7-abc", "2026-01-01T11:00:00Z")]))
         self.assertFalse(d.sweep_owned([beat("20260101_chat", "2026-01-01T11:00:00Z")]))
@@ -110,6 +119,125 @@ class OwnerMigration(unittest.TestCase):
         finally:
             d.DRY, d.out = orig_dry, orig_out
         self.assertEqual(labels, ["pr:babysat"])
+
+    def test_migration_creates_missing_repo_label_before_removing_legacy(self):
+        # F2 (review of the fix-loop PR): the add-label POST 404s when the
+        # repo-level label does not exist. The delete of the legacy label must not
+        # land before the new label exists (repo-side), or a failed migration
+        # silently de-owns the PR.
+        def fake_gh(*args, **kwargs):
+            if args[:2] == ("pr", "list"):
+                return [self.make_pr(["pr:babysat", "pr:re-review"])]
+            if args[0] == "api" and str(args[1]).endswith("/comments?per_page=100"):
+                return [{"id": 1, "user": {"login": "a"},
+                         "body": "babysit: session=babysit-pr3-x heartbeat=2026-01-01T00:00:00Z"}]
+            if args[0] == "api" and str(args[1]).endswith("/labels/pr:babysat"):
+                self.fail("legacy label deleted before repo-level label exists")
+            return []
+
+        orig_gh, orig_label, orig_remove, orig_dry, orig_out = d.gh, d.set_state_label, d.remove_label, d.DRY, d.out
+        calls, lines = [], []
+        d.gh = lambda *a, **k: (calls.append(a), fake_gh(*a, **k))[1]
+        d.DRY, d.out = False, lines
+        d.set_state_label = lambda repo, n, label: None
+        try:
+            recs, reported = [], set()
+            d.sweep_repo("o/r", recs, reported)
+        finally:
+            d.gh, d.set_state_label, d.remove_label, d.DRY, d.out = orig_gh, orig_label, orig_remove, orig_dry, orig_out
+        create_calls = [a for a in calls if "repos/o/r/labels" in str(a) and "-X" in [str(x) for x in a]]
+        self.assertTrue(any("POST" in [str(x) for x in a] for a in create_calls),
+                        f"migration must create the repo-level label: {calls}")
+        self.assertTrue(any("migrated ownership label pr:babysat -> pr:fix-loop:sweep" in l for l in lines), lines)
+
+
+class StaleRecovery(unittest.TestCase):
+    """F1: a sweep ownership label with no readable heartbeat must not dead-end the PR.
+
+    The label can land before the claim comment (prompt step 1 is two REST
+    calls) or after a release that removed the comment but failed to remove the
+    label. Either way the PR must fall back to normal sweep handling — with a
+    FIX verdict at head, the very next tick dispatches the fix round.
+    """
+
+    def make_pr(self, labels, head="4" * 40):
+        return {"number": 4, "title": "t", "headRefName": "b", "headRefOid": head,
+                "labels": [{"name": l} for l in labels], "isDraft": False, "statusCheckRollup": []}
+
+    def run_tick(self, labels, comments, verdict_body=None, review_done=False):
+        def fake_gh(*args, **kwargs):
+            if args[:2] == ("pr", "list"):
+                return [self.make_pr(labels)]
+            if args[0] == "api" and str(args[1]).endswith("/comments?per_page=100"):
+                cs = list(comments)
+                if verdict_body:
+                    cs.append({"id": 9, "user": {"login": "rev"}, "body": verdict_body})
+                return cs
+            if args[0] == "api" and str(args[1]).endswith("/labels/pr:fix-loop:sweep"):
+                raise RuntimeError("stale sweep label recovery must remove the label")
+            return []
+
+        orig_gh, orig_label, orig_remove, orig_dry, orig_out = d.gh, d.set_state_label, d.remove_label, d.DRY, d.out
+        removed, lines, recs, reported = [], [], [], set()
+        d.gh = fake_gh
+        d.DRY = True
+        d.out = lines
+        d.set_state_label = lambda repo, n, label: None
+        d.remove_label = lambda repo, n, label: removed.append(label)
+        try:
+            # A completed review at this head (the normal post-verdict state) keeps
+            # the reviewer leg quiet so the assertions read the babysit leg only.
+            if review_done:
+                d.RESULTS.mkdir(parents=True, exist_ok=True)
+                (d.RESULTS / "review-pr4-seeded.json").write_text('{"verdict": "FIX"}')
+                recs.append({"ts": 0, "kind": "review", "repo": "o/r", "pr": 4,
+                             "head": "4" * 40, "tag": "review-pr4-seeded"})
+            d.sweep_repo("o/r", recs, reported)
+        finally:
+            d.gh, d.set_state_label, d.remove_label, d.DRY, d.out = orig_gh, orig_label, orig_remove, orig_dry, orig_out
+        return removed, lines, recs
+
+    def babysit_recs(self, recs):
+        return [r for r in recs if r["kind"] == "babysit"]
+
+    def test_stale_sweep_label_is_recovered_and_fix_round_fires(self):
+        removed, lines, recs = self.run_tick(
+            ["pr:fix-loop:sweep", "pr:re-review"],
+            [{"id": 1, "user": {"login": "a"}, "body": "babysit: released"}],
+            verdict_body=f"<!-- pr-review verdict=FIX head={'4' * 40} -->", review_done=True)
+        self.assertIn("pr:fix-loop:sweep", removed, "stale sweep ownership label must be removed")
+        self.assertTrue(any("no usable heartbeat" in l for l in lines), f"the recovery is reported: {lines}")
+        self.assertEqual(len(self.babysit_recs(recs)), 1, "the fix round fires the same tick")
+        self.assertEqual(self.babysit_recs(recs)[0].get("verdict_id"), 9)
+
+    def test_heartbeatless_sweep_label_is_recovered_and_fix_round_fires(self):
+        removed, lines, recs = self.run_tick(
+            ["pr:fix-loop:sweep", "pr:re-review"], [],
+            verdict_body=f"<!-- pr-review verdict=FIX head={'4' * 40} -->", review_done=True)
+        self.assertIn("pr:fix-loop:sweep", removed)
+        self.assertTrue(any("no usable heartbeat" in l for l in lines), f"{lines}")
+        self.assertEqual(len(self.babysit_recs(recs)), 1)
+        self.assertEqual(self.babysit_recs(recs)[0].get("verdict_id"), 9)
+
+    def test_recovery_is_quiet_once_the_label_is_gone(self):
+        # Once-ness comes from the removal succeeding: the next tick sees no
+        # ownership label, so there is no recovery branch and no second report.
+        removed1, lines1, _ = self.run_tick(["pr:fix-loop:sweep"], [])
+        self.assertIn("pr:fix-loop:sweep", removed1)
+        self.assertTrue(any("no usable heartbeat" in l for l in lines1), lines1)
+        removed2, lines2, _ = self.run_tick([], [])
+        self.assertEqual(removed2, [])
+        self.assertFalse(any("heartbeat" in l for l in lines2), lines2)
+
+    def test_active_sweep_claim_is_not_touched(self):
+        # A sweep-owned claim with a live heartbeat is the normal handoff state —
+        # recovery must not remove it (sweep claims never age).
+        removed, lines, recs = self.run_tick(
+            ["pr:fix-loop:sweep"],
+            [{"id": 2, "user": {"login": "a"},
+              "body": "babysit: session=babysit-pr4-x heartbeat=2026-01-01T11:55:00Z"}])
+        self.assertEqual(removed, [])
+        self.assertEqual(recs, [])
 
 
 class Verdicts(unittest.TestCase):

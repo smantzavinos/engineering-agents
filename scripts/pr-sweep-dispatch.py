@@ -142,6 +142,22 @@ def sweep_owned(comments):
     return bool(beats) and beats[-1].group(1).startswith(SWEEP_CLAIM_PREFIX)
 
 
+def repo_labels(repo):
+    """Repo-level label names (paginated; labels are data the repo must know)."""
+    raw = gh("api", "--paginate", f"repos/{repo}/labels?per_page=100")
+    return [l["name"] for l in raw] if isinstance(raw, list) else []
+
+
+def ensure_repo_label(repo, label):
+    """Create a repo-level label when missing. The issue-labels POST 404s on a
+    name the repo does not know, so a migration that deleted the legacy label
+    before creating the new one would silently de-own the PR on first use (F2):
+    create first, delete after."""
+    if DRY or label in repo_labels(repo):
+        return
+    gh("api", "-X", "POST", f"repos/{repo}/labels", "-f", f"name={label}", parse=False)
+
+
 def migrate_owner_labels(repo, n, labels, comments):
     """One-time cutover: legacy `pr:babysat` → the explicit ownership label pair.
 
@@ -153,6 +169,7 @@ def migrate_owner_labels(repo, n, labels, comments):
     if DRY or "pr:babysat" not in labels:
         return labels
     new = OWNER_LABEL_SWEEP if sweep_owned(comments) else OWNER_LABEL_SESSION
+    ensure_repo_label(repo, new)
     remove_label(repo, n, "pr:babysat")
     raw = gh("api", f"repos/{repo}/issues/{n}/labels")
     cur = [l["name"] for l in raw] if isinstance(raw, list) else []
@@ -425,6 +442,14 @@ def sweep_repo(repo, recs, reported):
             remove_label(repo, n, OWNER_LABEL_SESSION)
             out.append(f"{repo}#{n}: babysit claim went stale (> {STALE_MIN} min without heartbeat); "
                        "claim removed, PR back to normal sweep handling.")
+            claim = "none"
+        if claim == "stale" and claim_owner == "sweep" and not babysitter_running:
+            # A sweep label reads as owned only with a usable heartbeat: a label
+            # whose claim comment is missing (label landed first) or released
+            # would otherwise suppress every fix/CI/mention round below forever.
+            remove_label(repo, n, OWNER_LABEL_SWEEP)
+            out.append(f"{repo}#{n}: sweep fix-loop claim has no usable heartbeat (label without a live "
+                       "claim); label removed, PR back to normal sweep handling.")
             claim = "none"
         # A CI red or an unclaimed FIX verdict is author-ownable even with nobody
         # on the PR: a READY-stamped head may not sit red, and a FIX verdict must

@@ -33,7 +33,10 @@ labels make fix-loop ownership an explicit, human-readable choice — same meani
 
 Legacy `pr:babysat` is migrated mechanically by the sweep's first tick after cutover: a claim
 whose latest heartbeat session carries the reserved `babysit-pr` prefix becomes
-`pr:fix-loop:sweep`, anything else becomes `pr:fix-loop:session`.
+`pr:fix-loop:sweep`, anything else becomes `pr:fix-loop:session`. The migration creates the
+repo-level label first (the issue-labels endpoint 404s on a name the repo does not know) and
+only then deletes the legacy label, so a failed migration leaves the PR owned and retries on
+the next tick.
 
 Transitions:
 
@@ -129,7 +132,12 @@ Rules that let them run on the same PR without fighting:
    handoffs never age). If the heartbeat is older than `PR_BABYSIT_STALE_MIN`
    (default 60 minutes), the claim is stale. The sweep then
    removes `pr:fix-loop:session`, treats the PR as a stuck state, and notifies the human
-   once. The PR then falls back to normal sweep handling.
+   once. The PR then falls back to normal sweep handling. A sweep ownership
+   label with no usable heartbeat at all (the label landed but the claim
+   comment did not, or a release edited the claim to `babysit: released` but
+   failed to remove the label) is recovered the same way: the tick removes
+   `pr:fix-loop:sweep` and falls back to normal handling — without this, the
+   trap state suppresses every fix, CI, and mention round permanently.
 7. **Babysit on open.** Under the [Delivery Pipeline](../references/delivery-pipeline.md#4-pr-lifecycle),
    the author adds `pr:fix-loop:sweep` and posts the sweep-owned claim
    (`session=babysit-pr…`) when opening

@@ -89,6 +89,7 @@ fi
 assert_contains "$HERMES_AUTO" "Babysit coexistence" "PR automation doc defines babysit coexistence"
 assert_contains "$HERMES_AUTO" "pr:fix-loop:sweep" "PR automation doc defines the sweep-handoff ownership label"
 assert_contains "$HERMES_AUTO" "pr:fix-loop:session" "PR automation doc defines the chat-session ownership label"
+assert_contains "$HERMES_AUTO" "no usable heartbeat" "PR automation doc recovers a heartbeatless sweep ownership label"
 assert_contains "$HERMES_AUTO" "Shared bound" "Babysit and sweep share the two-fix-loop bound"
 assert_contains "$HERMES_AUTO" "## Verdict marker" "PR automation doc defines the machine-readable verdict marker"
 assert_contains "$HERMES_AUTO" "detached Hermes session" "Dispatch vehicle is a detached Hermes session, not in-process delegation"

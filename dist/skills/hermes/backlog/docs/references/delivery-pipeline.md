@@ -426,7 +426,8 @@ and posts the PR's babysit claim with a session ID starting `babysit-pr`, which
 makes the claim sweep-owned. Sweep-owned claims do not go stale by heartbeat:
 the sweep owns their liveness through its dispatch records. (Pre-cutover PRs
 carrying the legacy `pr:babysat` label are migrated to the ownership pair
-mechanically by the sweep's first tick.)
+mechanically by the sweep's first tick; the migration creates the repo-level
+label before deleting the legacy one, so a failure leaves the PR owned.)
 
 ---
 
