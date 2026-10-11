@@ -71,6 +71,10 @@ Cut everything else. The prototype is the spec for behavior: every accepted demo
 
 Output: the pushed branch and `PROTOTYPE.md`. Tracker linkage stays as today (a backlog issue), described in one paragraph rather than a procedure.
 
+Disposal is decided during epic planning and recorded in `epic.md`:
+- **wipe-and-rebuild** is the default: the real work branches off the default branch and rebuilds cleanly, using the prototype as reference;
+- **clean up the prototype** is equally allowed when its structure is sound. The real work branches off the prototype and hardens it in place. This will often be the better choice.
+
 ### 4.2 Epic planning (interactive)
 
 A new session on a frontier model becomes the orchestrator. It reads `PROTOTYPE.md` and the prototype diff, using helpers to scout the codebase and research anything external. It then drafts `epic.md` with the human.
@@ -204,8 +208,9 @@ Repo-side speedups are separate from this process but often still needed. They a
 - A review loop hits its pass cap.
 - A gate failure the implementer cannot resolve and cannot show is pre-existing.
 - Oracle and implementer both remain unsure on a blocker.
+- **A major fork in the road with no clear winner.** A decision that sets the course for a large share of the remaining work, such as an architectural choice in child 1 of a 12-child epic, goes to the oracle first. Continue if the oracle names a clearly better option. Stop for the human only if it does not.
 
-Everything else is decided autonomously and noted in a short `decisions` section of `epic.md`. That section is for decisions only, never a running log.
+The default is full automation. Every other decision is made autonomously. Tricky decisions are recorded with their justification in a short `decisions` section of `epic.md`: the options, the choice, why, and whether the oracle was consulted. That section holds only those non-obvious decisions; it is not a running log.
 
 ## 9. Delegation to fast helpers
 
@@ -346,11 +351,24 @@ Baseline: children 01–02 of the epic in §1.
 | Defects found at epic/PR review that the child review missed | not tracked | Tracked; no worse than baseline |
 | Human interventions during autonomy | — | Only §8 stop conditions |
 
-## 16. Open questions for the owner
+## 16. Owner rulings and open questions
 
-1. **Single-plan work.** Should a non-epic change just be an epic with one child, giving one pipeline instead of two?
-2. **Planner and implementer.** Keep them as separate sessions per child (as specified), or let the resumed planner implement its own plan? It already holds the reasoning, which would save one context load per child.
+Ruled (2026-10-10):
+- **Autonomy.** Execution continues with full automation, and tricky decisions are recorded with justification. A course-setting fork goes to the oracle, and stops for the human only if the oracle has no clear better choice (§8).
+- **Pass cap.** 4 passes, for every review loop (§7).
+- **Prototype disposal.** Wipe-and-rebuild is the default; cleaning up the prototype in place stays fully allowed (§4.1).
+
+Still open:
+1. **Single-plan work.** Owner default: no, because a lone plan does not need an epic around it. Consistency is the counter-argument. Suggested middle ground: one orchestration loop for both. For single-plan work, the interactive phase produces `plan.md` directly, with no `epic.md` and no `NN_` subdirectory, and the same per-child loop runs once. The loop stays identical and the extra artifact is skipped.
+2. **Planner implements its own plan.** Owner default: no. It is attractive because the planner is already compacted and holds the reasoning, but the two roles may use different models.
+   - pi-subagents `resume` keeps the child's stored agent, model and tool contract, and rejects a model override. A resumed planner therefore cannot switch to the implementer's model. It would also need edit tools in its own agent definition.
+   - `context: "fork"` branches only from the *parent's* session, not a sibling child's.
+
+   Options:
+   - (a) Keep the sessions separate, and pass the planner's final handoff note to the implementer alongside `plan.md`. This is cheap and works across models. **Recommended for v1.**
+   - (b) Use one "builder" agent per child on a single model that both plans and implements, resumed across both loops.
+   - (c) Upstream a pi-subagents feature: resume with a model override, or fork from a retained child's session.
+
+   Pilot (a). Try (b) on one child if handoff loss shows up.
 3. **Plan approval.** Is reviewer-clean enough for child plans in autonomous mode, or should the human optionally see the first child's plan as a calibration check?
-4. **Pass cap.** Is 4 the right number, and is it the same for plan and code loops?
-5. **Prototype disposal.** Keep wipe-and-rebuild as the default?
-6. **Helper set.** Should `sweeper` exist from day one, or be added only if the pilot shows frontier implementers spending tokens on mechanical edits?
+4. **Helper set.** Should `sweeper` exist from day one, or be added only if the pilot shows frontier implementers spending tokens on mechanical edits?
