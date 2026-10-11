@@ -75,7 +75,7 @@ Disposal is decided during epic planning and recorded in `epic.md`:
 - **wipe-and-rebuild** is the default: the real work branches off the default branch and rebuilds cleanly, using the prototype as reference;
 - **clean up the prototype** is equally allowed when its structure is sound. The real work branches off the prototype and hardens it in place. This will often be the better choice.
 
-### 4.2 Epic planning (interactive)
+### 4.2 Scope: epic or single plan (interactive)
 
 A new session on a frontier model becomes the orchestrator. It reads `PROTOTYPE.md` and the prototype diff, using helpers to scout the codebase and research anything external. It then drafts `epic.md` with the human.
 
@@ -94,6 +94,8 @@ Then:
 5. The orchestrator self-compacts. Its note is: the epic path, "begin autonomous execution at child 01", and the stop conditions.
 
 From here on, the human is only pulled in by a stop condition (§8).
+
+If scoping shows the work fits one plan, there is no `epic.md`. The orchestrator spawns the planner, and the human iterates on `plan.md` through the orchestrator. The plan then gets a fresh review and human approval. Execution runs only the implement loop (§4.4) and the close (§4.6).
 
 ### 4.3 Per-child plan loop (autonomous)
 
@@ -176,7 +178,7 @@ The repo defines its gates; the pipeline defines when to run them.
 | Code review | The reviewer reads the gate evidence. It runs targeted tests only when it doubts a claim, and never repeats the full suite. |
 | Epic close | One full gate run on the final tree. |
 
-Gate runs are long and their logs are large, so a **runner** helper (§9) executes them. It returns a digest: pass or fail per gate, failing test names, the key assertion lines, and log paths. The implementer reads a full log only when the digest is not enough.
+Gate runs are long and their logs are large, so the implementer hands them to a fast subagent (the run-and-digest pattern, §9). It returns a digest: pass or fail per gate, failing test names, the key assertion lines, and log paths. The implementer reads a full log only when the digest is not enough.
 
 Flaky tests: a failure that passes on an isolated re-run is recorded and counts as a pass. A flake class seen twice becomes a tracker item.
 
@@ -236,17 +238,15 @@ Helper contract (in every helper agent definition):
 
 Delegation is opportunistic. Skills say *what* is delegable, not *when*. The frontier agent decides.
 
-Starting helper set:
-- **scout:** codebase reading, read-only.
-- **researcher:** web and external sources.
-- **runner:** executes commands and digests output; no edits.
-- **vision:** image reading.
-- **sweeper:** mechanical edits to a stated pattern. Optional; add it only if the pilot shows a need.
+These are **patterns, not agent types**. Each row above is an example of an errand a frontier agent gives a fast subagent: scout, research, run-and-digest, sweep, verify-a-claim, look, history. The `delegate` skill lists them, and the frontier agent is free to invent others. The only fast agent definitions needed are the ones whose tools or model differ:
+- a general `helper` with read, bash and edit tools; it is read-only unless the errand says otherwise;
+- a `researcher` with web tools;
+- a vision-capable agent, if the repo needs one.
 
 ## 10. Roles and models
 
 Frontier roles: orchestrator, planner, implementer, reviewer, oracle.
-Helper roles: scout, researcher, runner, vision.
+Fast agents: `helper`, `researcher`, and vision if the repo needs it (§9).
 
 These replace the old roles:
 - `worker-high`, `worker-low` and `worker` become the implementer plus helpers. A separate `ui-worker` is kept only if the repo wants a distinct UI model.
@@ -266,13 +266,15 @@ plans/<date>_<epic>/
   epic.md             goal, scope in/out, acceptance scenarios → child map, children in order
                       (goal / depends on / done when, a few lines each), gates, autonomy limits,
                       decisions (short). Target: a few pages.
-  state.json          per child: status, latest planner/implementer run ids, base commit
+  state.json          per child: status, latest planner/implementer run ids, base commit, review pass counts
   NN_<child>/
     plan.md           goal, context links, design decisions, changes by area,
                       tests to add (mapped to acceptance scenarios), gates, done criteria, risks.
                       Free-form, no task table. Target: ≤150 lines.
     review.md         append-only ledger: plan passes, code passes, responses, oracle rulings
 ```
+
+A single plan (not an epic) works as today: one plan directory with `PROTOTYPE.md`, `plan.md`, `review.md` and `state.json` at its root, and no `epic.md` or `NN_` subdirectories.
 
 Retired from this pipeline:
 - `brief.md`, `approach.md` and its review, `findings/`;
@@ -283,16 +285,19 @@ Retired from this pipeline:
 
 Targets: each skill ≤ ~80 lines, and the whole pipeline ≤ ~400 lines (~2,500 today). No reference templates beyond a short skeleton inside the skill.
 
+Drafts live in [`skills/`](skills/README.md) next to this plan.
+
 | New skill | Used by | Replaces on this path |
 |---|---|---|
 | `prototype` | human + agent session | `prototype-first` (trimmed) |
-| `epic` | orchestrator, interactive phase | `discovery`, `design`, `discover-and-design*`, `review-approach`, epic parts of `software-development` |
+| `scope` | orchestrator, interactive phase | `discovery`, `design`, `discover-and-design*`, `review-approach`, epic parts of `software-development` |
 | `orchestrate` | orchestrator, autonomous phase | `execution-orchestrator`, `create-worklog` |
 | `plan` | planner | `create-plan` + `plan-template` |
 | `implement` | implementer | `execute-task` |
-| `review` (modes: epic, plan, code) | reviewer | `review-epic`, `review-plan`, `review-code` + templates |
+| `review` (modes: epic, plan, code, epic-diff) | reviewer | `review-epic`, `review-plan`, `review-code` + templates |
+| `delegate` | every frontier agent | Scattered delegation guidance in presets and agent files |
 
-A delegation section (≈10 lines) lives in each frontier agent definition rather than in a skill.
+The interactive skill is named `scope` rather than `epic` because it produces either an epic or a single plan.
 
 Untouched for now:
 - `pull-request`, `babysit-pr`, `backlog`, `triage-backlog`, `work-item`;
@@ -357,10 +362,15 @@ Ruled (2026-10-10):
 - **Autonomy.** Execution continues with full automation, and tricky decisions are recorded with justification. A course-setting fork goes to the oracle, and stops for the human only if the oracle has no clear better choice (§8).
 - **Pass cap.** 4 passes, for every review loop (§7).
 - **Prototype disposal.** Wipe-and-rebuild is the default; cleaning up the prototype in place stays fully allowed (§4.1).
+- **Single-plan work.** It stays a single plan, as today, not a one-child epic. During `scope`, the human iterates with the planner on `plan.md`. After approval, the same implement loop runs once (§11).
+- **Planner vs. implementer.** Pilot (a) below; try (b) later.
+- **Delegation.** Helpers are patterns given to frontier agents as examples, not subagent types. Sweep is one pattern among several (§9).
 
 Still open:
-1. **Single-plan work.** Owner default: no, because a lone plan does not need an epic around it. Consistency is the counter-argument. Suggested middle ground: one orchestration loop for both. For single-plan work, the interactive phase produces `plan.md` directly, with no `epic.md` and no `NN_` subdirectory, and the same per-child loop runs once. The loop stays identical and the extra artifact is skipped.
-2. **Planner implements its own plan.** Owner default: no. It is attractive because the planner is already compacted and holds the reasoning, but the two roles may use different models.
+1. **Plan approval.** Is reviewer-clean enough for child plans in autonomous mode, or should the human optionally see the first child's plan as a calibration check?
+
+Background for the planner/implementer ruling:
+- **Planner implements its own plan.** Attractive because the planner is already compacted and holds the reasoning, but the two roles may use different models.
    - pi-subagents `resume` keeps the child's stored agent, model and tool contract, and rejects a model override. A resumed planner therefore cannot switch to the implementer's model. It would also need edit tools in its own agent definition.
    - `context: "fork"` branches only from the *parent's* session, not a sibling child's.
 
@@ -369,6 +379,4 @@ Still open:
    - (b) Use one "builder" agent per child on a single model that both plans and implements, resumed across both loops.
    - (c) Upstream a pi-subagents feature: resume with a model override, or fork from a retained child's session.
 
-   Pilot (a). Try (b) on one child if handoff loss shows up.
-3. **Plan approval.** Is reviewer-clean enough for child plans in autonomous mode, or should the human optionally see the first child's plan as a calibration check?
-4. **Helper set.** Should `sweeper` exist from day one, or be added only if the pilot shows frontier implementers spending tokens on mechanical edits?
+   Ruled: pilot (a); try (b) later.
