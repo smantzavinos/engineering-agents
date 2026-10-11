@@ -366,8 +366,9 @@ Ruled (2026-10-10):
 - **Planner vs. implementer.** Pilot (a) below; try (b) later.
 - **Delegation.** Helpers are patterns given to frontier agents as examples, not subagent types. Sweep is one pattern among several (§9).
 
-Still open:
-1. **Plan approval.** Is reviewer-clean enough for child plans in autonomous mode, or should the human optionally see the first child's plan as a calibration check?
+- **Plan approval.** In autonomous mode a clean fresh review is enough to approve a child plan. There is no human calibration check.
+
+No open questions remain.
 
 Background for the planner/implementer ruling:
 - **Planner implements its own plan.** Attractive because the planner is already compacted and holds the reasoning, but the two roles may use different models.
