@@ -3,6 +3,7 @@ name: plan-author
 description: Frontier planner for the frontier pipeline. Writes one child's short plan.md and revises it from fresh-review findings; resumed across review rounds. Use from the orchestrate skill, not the legacy execute preset.
 model: github-copilot/gpt-6.1-sol
 thinking: high
+inheritProjectContext: true
 skill: plan, delegate
 allowNestedSubagents: true
 defaultProgress: true

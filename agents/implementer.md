@@ -3,6 +3,7 @@ name: implementer
 description: Frontier implementer for the frontier pipeline. Builds a whole approved plan, passes the gates, and fixes fresh-review findings; resumed across review rounds. Use from the orchestrate skill, not the legacy execute preset.
 model: github-copilot/gpt-6.1-sol
 thinking: medium
+inheritProjectContext: true
 skill: implement, delegate
 allowNestedSubagents: true
 defaultProgress: true

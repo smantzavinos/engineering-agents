@@ -3,6 +3,7 @@ name: reviewer
 description: Fresh-context frontier reviewer for the frontier pipeline (epic, plan, code, epic-diff modes). A new session every pass; writes only the review ledger. Use from the scope and orchestrate skills.
 model: github-copilot/claude-opus-5.5
 thinking: high
+inheritProjectContext: true
 skill: review, delegate
 allowNestedSubagents: true
 defaultProgress: true
