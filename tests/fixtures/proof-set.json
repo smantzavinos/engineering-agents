@@ -16,12 +16,13 @@
     {
       "packageId": "pi-subagents",
       "sourceManifestName": "pi-subagents",
-      "sourceSpec": "github:nicobailon/pi-subagents#8a403efba6975988cc0488ec8bb941db5ef1a19e",
+      "sourceSpec": "pi-subagents@0.77.0",
       "resourceExpectations": {
         "extensions": [
-          "./index.ts"
+          "./index.js"
         ],
         "skills": [
+          "council-mode",
           "pi-subagents"
         ],
         "themes": []

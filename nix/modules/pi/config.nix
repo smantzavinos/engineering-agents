@@ -45,15 +45,29 @@ let
   managedPackages = {
     pi-subagents = {
       source = {
-        type = "git";
+        type = "npm";
         packageName = "pi-subagents";
-        # Released v0.73.1 tag (npm gitHead). Needs Pi >=0.86.1 (pi-ai peer)
-        # and vendors undici 8.10.0. `fallbackModels` is unsupported: agent
-        # frontmatter or overrides using it are a hard load error. Keeps the
-        # Bun promise-hook fallback + acorn workflowScript parsing.
-        # Entry point: ./index.ts.
-        spec = "github:nicobailon/pi-subagents#8a403efba6975988cc0488ec8bb941db5ef1a19e";
-        installSpec = "github:nicobailon/pi-subagents#8a403efba6975988cc0488ec8bb941db5ef1a19e";
+        # 0.77.0 ships compiled JS (entry ./index.js) and peers on Pi >=0.86.1,
+        # so it moved from a git pin back to npm. `fallbackModels` is
+        # unsupported: agent frontmatter or overrides using it are a hard
+        # load error.
+        spec = "pi-subagents@0.77.0";
+        installSpec = "pi-subagents@0.77.0";
+        version = "0.77.0";
+      };
+    };
+
+    # Durable self-compaction (`self_compact` tool) for long-running
+    # autonomous sessions and subagents; needs Pi >=0.87. Thresholds are CLI
+    # flags only (no settings), so the vendored copy is patched at build time
+    # to fit small context windows instead of failing closed (see piVendor).
+    pi-checkpoint = {
+      source = {
+        type = "npm";
+        packageName = "@nicknisi/pi-checkpoint";
+        spec = "@nicknisi/pi-checkpoint@0.2.1";
+        installSpec = "@nicknisi/pi-checkpoint@0.2.1";
+        version = "0.2.1";
       };
     };
 
@@ -95,9 +109,9 @@ let
       source = {
         type = "npm";
         packageName = "pi-mcp-adapter";
-        spec = "pi-mcp-adapter@2.37.0";
-        installSpec = "pi-mcp-adapter@2.37.0";
-        version = "2.37.0";
+        spec = "pi-mcp-adapter@5.2.0";
+        installSpec = "pi-mcp-adapter@5.2.0";
+        version = "5.2.0";
       };
     };
 
@@ -230,9 +244,9 @@ let
       source = {
         type = "npm";
         packageName = "pi-lens";
-        spec = "pi-lens@4.3.0";
-        installSpec = "pi-lens@4.3.0";
-        version = "4.3.0";
+        spec = "pi-lens@4.4.3";
+        installSpec = "pi-lens@4.4.3";
+        version = "4.4.3";
       };
       # Replaces pi-hooks' LSP. Runtime policy lives in pi-lens.json + the
       # pi-lens-policy extension: no runtime installs (binaries come from
@@ -284,14 +298,6 @@ let
   # Git package pins: one immutable tarball per source repo (shared by the
   # two pi-ext packageIds). Hashes are unpacked-codeload SRI values.
   gitSources = {
-    "pi-subagents" = {
-      rev = "8a403efba6975988cc0488ec8bb941db5ef1a19e";
-      tarball = pkgs.fetchzip {
-        url = "https://github.com/nicobailon/pi-subagents/archive/8a403efba6975988cc0488ec8bb941db5ef1a19e.tar.gz";
-        hash = "sha256-EqWfWHlyXkhWNgov4gQnpnX/Gnz4QjjBBAPcx8Xrvjo=";
-        stripRoot = true;
-      };
-    };
     "pi-hooks" = {
       rev = "fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
       tarball = pkgs.fetchzip {
@@ -430,7 +436,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-svAvFZO473Dl111LkAXZrcLUnhe53oXhud+4W2skqF0=";
+      hash = "sha256-1zc78jJbJRDfY6C7zhz9a010ZsMIewLWZXDIrbzQhpQ=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
@@ -469,6 +475,25 @@ let
       test "$(grep -Fc 'maxTokens: 64,' "$autoname")" -eq 1
       substituteInPlace "$autoname" \
         --replace-fail 'maxTokens: 64,' 'maxTokens: 512,'
+
+      # pi-checkpoint thresholds are CLI flags only (225k/250k/+20k by default)
+      # and subagent children get no extra flags. On a window below ~300k the
+      # defaults do not fit and the extension fails closed, blocking every
+      # ordinary tool call. Patch the vendored copy so thresholds that do not
+      # fit fall back to 55% / 65% / 75% of the window. 1M-window models keep
+      # the upstream token defaults.
+      ckpt="$out/node_modules/@nicknisi/pi-checkpoint/extensions/self-compact/config.ts"
+      test -f "$ckpt"
+      test "$(grep -Fc 'if (!(s > 0 && s < w && w <= h && h <= cap)) {' "$ckpt")" -eq 1
+      substituteInPlace "$ckpt" \
+        --replace-fail 'if (!(s > 0 && s < w && w <= h && h <= cap)) {' 'if (!(s > 0 && s < w && w <= h && h <= cap)) {
+    // engineering-agents patch: proportional fallback for small windows.
+    const fs = Math.round(0.55 * contextWindow);
+    const fw = Math.round(0.65 * contextWindow);
+    const fh = Math.min(Math.round(0.75 * contextWindow), cap);
+    if (fs > 0 && fs < fw && fw <= fh && fh <= cap) {
+      return { ok: true, thresholds: { contextWindow, softTokens: fs, warningTokens: fw, hardTokens: fh, cap }, compactPromptOverride };
+    }'
 
       # jscpd 5 execs a prebuilt glibc binary from its platform package;
       # point it at Nix's loader and libgcc_s (pi-lens-tools wraps the CLI).
@@ -682,6 +707,14 @@ let
       };
 
       enableSkillCommands = true;
+
+      # Pi >=0.99 ships a built-in MCP extension that reads mcp.json; the
+      # managed pi-mcp-adapter (mcp-adapter.json) owns MCP here.
+      extensions = [ "-builtin:mcp" ];
+
+      # Pi 1.0 made fullscreen the default; keep the terminal scrollback the
+      # footer packages and existing workflows were built for.
+      tuiMode = "regular";
 
       lsp = {
         hookMode = "agent_end";
@@ -1067,7 +1100,7 @@ in
     cp ${pkgs.writeText "pi-settings-nix.json" (builtins.toJSON settings)} $out/agent/settings.json
     cp ${pkgs.writeText "pi-keybindings.json" piStaticFiles.keybindings} $out/agent/keybindings.json
     cp ${pkgs.writeText "pi-models.json" piStaticFiles.models} $out/agent/models.json
-    cp ${pkgs.writeText "pi-mcp.json" piStaticFiles.mcp} $out/agent/mcp.json
+    cp ${pkgs.writeText "pi-mcp.json" piStaticFiles.mcp} $out/agent/mcp-adapter.json
     # pi-tasks global defaults (read-only to the package; /tasks settings
     # write project overrides instead). session-global keeps task files under
     # the agent dir rather than in <workspace>/.pi/tasks/.

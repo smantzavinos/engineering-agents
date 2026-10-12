@@ -148,7 +148,7 @@ in
       # auth.json, models-store.json, and session state at runtime.
       ".pi/agent/keybindings.json".source = "${piConfigTree}/agent/keybindings.json";
       ".pi/agent/models.json".source = "${piConfigTree}/agent/models.json";
-      ".pi/agent/mcp.json".source = "${piConfigTree}/agent/mcp.json";
+      ".pi/agent/mcp-adapter.json".source = "${piConfigTree}/agent/mcp-adapter.json";
       ".pi/agent/tasks-config.json".source = "${piConfigTree}/agent/tasks-config.json";
       ".pi/agent/pi-lens.json".source = "${piConfigTree}/agent/pi-lens.json";
       ".pi/agent/pi-lens-tools".source = "${piConfigTree}/agent/pi-lens-tools";

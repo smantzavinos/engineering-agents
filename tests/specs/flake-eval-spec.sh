@@ -75,10 +75,10 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module still configures retired ./packages/pi-gitnexus"
   fi
 
-  if [[ -f "$PI_FILES/.pi/agent/mcp.json" ]]; then
-    pass "Pi module produces mcp.json"
+  if [[ -f "$PI_FILES/.pi/agent/mcp-adapter.json" ]]; then
+    pass "Pi module produces mcp-adapter.json"
   else
-    fail "Pi module missing mcp.json in activation package"
+    fail "Pi module missing mcp-adapter.json in activation package"
   fi
 
   if [[ -f "$PI_FILES/.pi/agent/keybindings.json" ]]; then

@@ -8,6 +8,7 @@
     "@aliou/sh": "^0.3.3",
     "@benvargas/pi-claude-code-use": "^1.0.1",
     "@camillof/pi-session-autoname": "0.1.2",
+    "@nicknisi/pi-checkpoint": "0.2.1",
     "@richardgill/pi-config": "0.0.9",
     "@richardgill/pi-preset": "0.0.9",
     "@sting8k/pi-vcc": "^0.3.5",
@@ -20,9 +21,10 @@
     "madge": "^8.0.0",
     "pi-btw": "0.6.1",
     "pi-ding": "0.2.2",
-    "pi-lens": "4.3.0",
-    "pi-mcp-adapter": "2.37.0",
+    "pi-lens": "4.4.3",
+    "pi-mcp-adapter": "5.2.0",
     "pi-notify": "1.4.0",
+    "pi-subagents": "0.77.0",
     "pi-taskflow": "^0.1.5",
     "pi-web-access": "0.13.0",
     "shell-quote": "^1.8.3",
@@ -30,5 +32,5 @@
     "vscode-languageserver-protocol": "^3.17.5",
     "yaml": "2.8.3"
   },
-  "note-git-package-dependencies": "Git-sourced managed packages (fetched by Nix, not npm) ship without their own node_modules. Their registry dependencies that pi does NOT inject are declared here: jiti + yaml + acorn + undici (pi-subagents; acorn parses workflowScript, undici is the async runner's HTTP dispatcher), shell-quote + vscode-languageserver-protocol (pi-hooks), pi-taskflow + @benvargas/pi-claude-code-use + @sting8k/pi-vcc + @tintinweb/pi-tasks (pi-ext), @richardgill/pi-config (pi-preset peer), @aliou/pi-utils-settings + @aliou/sh (pi-guardrails fork). pi's injected core (@earendil-works/*, legacy @mariozechner/* aliases, typebox) is deliberately NOT vendored."
+  "note-git-package-dependencies": "Git-sourced managed packages (fetched by Nix, not npm) ship without their own node_modules. Their registry dependencies that pi does NOT inject are declared here: jiti + yaml + acorn + undici (formerly for the git-sourced pi-subagents; kept for other consumers until audited), shell-quote + vscode-languageserver-protocol (pi-hooks), pi-taskflow + @benvargas/pi-claude-code-use + @sting8k/pi-vcc + @tintinweb/pi-tasks (pi-ext), @richardgill/pi-config (pi-preset peer), @aliou/pi-utils-settings + @aliou/sh (pi-guardrails fork). pi's injected core (@earendil-works/*, legacy @mariozechner/* aliases, typebox) is deliberately NOT vendored."
 }

@@ -125,17 +125,18 @@
         "schemaVersion": 1,
         "packageId": "pi-subagents",
         "source": {
-          "type": "git",
-          "spec": "github:nicobailon/pi-subagents#8a403efba6975988cc0488ec8bb941db5ef1a19e",
+          "type": "npm",
+          "spec": "pi-subagents@0.77.0",
           "materializedKey": "src-pi-subagents"
         },
         "sourceManifestName": "pi-subagents",
         "sourceRoot": "/fixture/.pi/agent/sources/src-pi-subagents",
         "selectedResources": {
           "extensions": [
-            "./index.ts"
+            "./index.js"
           ],
           "skills": [
+            "council-mode",
             "pi-subagents"
           ],
           "prompts": [
@@ -148,16 +149,22 @@
       "discovered": {
         "extensions": [
           {
-            "relativePath": "./_source/index.ts",
-            "sourceRelativePath": "./index.ts",
-            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/index.ts",
-            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/index.ts",
+            "relativePath": "./_source/index.js",
+            "sourceRelativePath": "./index.js",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/index.js",
+            "resolvedPath": "/fixture/.pi/packages/lib/node_modules/pi-subagents/index.js",
             "tools": [],
             "commands": [],
             "flags": []
           }
         ],
         "skills": [
+          {
+            "name": "council-mode",
+            "relativePath": "./_source/skills/council-mode/SKILL.md",
+            "sourceRelativePath": "./skills/council-mode/SKILL.md",
+            "path": "/fixture/.pi/agent/packages/pi-subagents/_source/skills/council-mode/SKILL.md"
+          },
           {
             "name": "pi-subagents",
             "relativePath": "./_source/skills/pi-subagents/SKILL.md",

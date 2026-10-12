@@ -10,7 +10,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Match the reviewed dotfiles llmAgents pin (Pi 0.86.1) for standalone
+    # Match the reviewed dotfiles llmAgents pin (Pi 1.1.0) for standalone
     # development and managed-package compatibility. Upstream main currently
     # resolves a newer Pi; do not float the core runtime without its own audit.
     # Historical Copilot Enterprise compaction issue to re-test before apply:
@@ -18,7 +18,7 @@
     # Review temporary overlays before future Pi bumps:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {
-      url = "github:numtide/llm-agents.nix/4e06012de602e51d03b0d482c2ddec420151cb9d";
+      url = "github:numtide/llm-agents.nix/493c34b1bed086861b0e968a40d00bd06522f003";
     };
 
     # Visual Explainer skill (external, non-flake source)
@@ -277,8 +277,8 @@
         pi-agent-config-shape = pkgs.runCommand "pi-agent-config-shape-check" {} ''
           cfgd=${self.packages.${system}.pi-agent-config-default}
           ${pkgs.jq}/bin/jq -e '.settings.allowInstall == false and .settings.scriptMode == true and .settings.toolPrefix == "server"' \
-            "$cfgd/agent/mcp.json" >/dev/null || { echo "FAIL: MCP adapter must disable installs, keep scripting enabled, and preserve server tool prefix"; exit 1; }
-          for f in settings.json models.json mcp.json keybindings.json guardrails.json \
+            "$cfgd/agent/mcp-adapter.json" >/dev/null || { echo "FAIL: MCP adapter must disable installs, keep scripting enabled, and preserve server tool prefix"; exit 1; }
+          for f in settings.json models.json mcp-adapter.json keybindings.json guardrails.json \
                    preset.jsonc CLAUDE.md CODEX.md themes/catppuccin-mocha.json \
                    extensions/startup-staleness-warning/index.ts; do
             test -e "$cfgd/agent/$f" || { echo "MISSING: agent/$f"; exit 1; }
@@ -338,7 +338,7 @@
         # patched, git metadata present, install-state is well-formed.
         pi-managed-packages-shape = pkgs.runCommand "pi-managed-packages-shape-check" {} ''
           tree=${self.packages.${system}.pi-managed-packages}
-          for id in pi-subagents pi-hooks pi-agent-guidance pi-mcp-adapter \
+          for id in pi-subagents pi-checkpoint pi-hooks pi-agent-guidance pi-mcp-adapter \
                     pi-web-access pi-powerline-footer pi-zentui \
                     pi-subdir-context pi-ding pi-notify pi-session-autoname pi-ext-leader-key \
                     pi-guardrails pi-preset pi-btw; do
@@ -352,7 +352,8 @@
           done
 
           # Facade source links must resolve to reachable files.
-          test -f "$tree/agent/packages/pi-subagents/_source/index.ts" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-subagents/_source/index.js" || { echo "FAIL: pi-subagents _source unreachable"; exit 1; }
+          test -f "$tree/agent/packages/pi-checkpoint/_source/extensions/self-compact/self-compact.ts" || { echo "FAIL: pi-checkpoint _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-session-autoname/_source/src/index.ts" || { echo "FAIL: pi-session-autoname _source unreachable"; exit 1; }
           test -f "$tree/agent/packages/pi-powerline-footer/_source/index.ts" || { echo "FAIL: powerline _source unreachable"; exit 1; }
 
@@ -370,7 +371,7 @@
           fi
 
           # Git sources carry install metadata for the staleness checker.
-          test -f "$tree/vendor/node_modules/pi-subagents/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
+          test -f "$tree/vendor/node_modules/pi-hooks/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
 
           # Powerline theme override applied at build time.
           ${pkgs.jq}/bin/jq -e '.colors.model == "#cba6f7"' \
@@ -379,7 +380,7 @@
 
           # Install state covers every declared facade package and no GitNexus.
           count=$(${pkgs.jq}/bin/jq '.sources | map(.packageIds[]) | unique | length' "$tree/agent/managed-packages.install-state.json")
-          [ "$count" = "15" ] || { echo "FAIL: install-state covers $count packageIds, expected 15"; exit 1; }
+          [ "$count" = "18" ] || { echo "FAIL: install-state covers $count packageIds, expected 18"; exit 1; }
           touch $out
         '';
 
