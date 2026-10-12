@@ -19,10 +19,11 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
    - otherwise an **epic** of ordered child plans.
 4. Choose disposal: wipe-and-rebuild (default), or clean up the prototype in place when its structure is sound.
 5. Write the artifact and iterate with the human until they agree.
-6. Get a fresh review (`review` skill, epic or plan mode). Resolve the findings with the human. Repeat until clean, for at most 4 passes.
+6. Get a fresh review (`review` skill, epic or plan mode). Resolve the findings with the human. Repeat until the review is clean or the human explicitly accepts what remains, noted in the ledger. The human owns this gate, so the pass cap does not apply here.
 7. When the human approves:
-   - commit;
-   - write `state.json`;
+   - create the work branch (off the default branch, or off the prototype for clean-up in place) and copy `PROTOTYPE.md` into the plan directory;
+   - commit the artifact and `state.json`;
+   - start a helper running the full gates as the baseline, in the background, so it overlaps the first plan loop;
    - `self_compact`, with a note to begin `orchestrate`.
 
 ## epic.md
@@ -31,23 +32,26 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Acceptance scenarios:** those from `PROTOTYPE.md` plus agreed additions, each mapped to the child that delivers it.
 - **Children, in order:** `NN_slug`, with its goal, what it depends on, and when it's done. A few lines each, each sized for one implementer session.
 - **Disposal and branch.**
-- **Gates:** the repo's quality-gate commands, run at the end of each child.
-- **Autonomy:** anything the human wants to decide personally, beyond the standard stop conditions.
+- **Gates:** the repo's quality-gate commands. Say which run in full at every child close, and which slow suites run scoped per child and in full only at epic close, with the measured duration that justifies it.
+- **Budget:** wall time and cost per child. Exceeding it stops execution.
+- **Autonomy:** what the human wants to decide personally beyond the standard stop conditions, and what execution may do without asking: push the branch, open the PR, file tracker items.
 - **Decisions:** the human's decisions so far, with reasons. Execution appends to this.
+- **Follow-ups:** empty at approval; execution appends to this.
 
 Keep it to a few pages.
 
 ## Single plan
-There is no `epic.md`.
-1. Spawn the planner (`plan` skill), writing `plan.md` at the plan directory root.
+There is no `epic.md`, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
+1. Spawn the planner (`plan` skill), writing `plan.md` at the plan directory root, with the agreed scope in the task.
 2. Relay the human's feedback by resuming the same planner.
 3. Get a fresh review and the human's approval.
 
-Execution then runs only the implement loop.
+Execution then runs only the implement loop and hands to the PR process.
 
 ## Do
 - Push back on scope creep, and raise gaps the human hasn't considered.
-- Size children around reviewable diffs, not around layers.
+- Size children as vertical slices around reviewable diffs, not layers: a slice ends with a scenario that can be tested; a layer ends with nothing to show.
+- Order children so the course-setting decisions land early, where a stop costs least.
 
 ## Don't
 - Write task lists, implementation detail or test checklists. That is the planner's job.

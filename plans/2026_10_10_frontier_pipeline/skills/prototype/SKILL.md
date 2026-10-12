@@ -10,7 +10,7 @@ Build a working demo with the human, as fast as possible. It answers "is this wh
 ## Session
 - Restate the target as 2–3 bullets of visible behavior. Confirm them before building.
 - Optimize for speed only: hardcode, fake, skip error handling, no tests, no refactoring.
-- Keep a running change list as C1, C2 and so on, each with its objective, before/after and files. Note every hack as you make it.
+- Keep a running, numbered change list (objective, files) and note every hack as you make it. The write-up at the end is only as accurate as this list; memory of a long session is not.
 - When the human reacts, change the code and update the list. Record the accepted behavior, not the first attempt.
 - Timebox it to one session. If it needs more, cut the scope.
 
@@ -20,7 +20,7 @@ Build a working demo with the human, as fast as possible. It answers "is this wh
 - `PROTOTYPE.md` at the repo root, containing:
   - **Verdict:** build / build with changes / don't build.
   - **What was prototyped:** each change, with its objective and where it lives.
-  - **Acceptance scenarios:** numbered, each tied to a change. These become the definition of done.
+  - **Acceptance scenarios:** numbered, each tied to a change, each stating what a user does and what they observe. These become the definition of done and the tests of the real build, so a scenario the human only nodded at is not accepted until it reads back as behavior.
   - **How to run it, what's faked, and the shortcuts taken.**
   - **Disposal recommendation:**
     - wipe-and-rebuild (default), or

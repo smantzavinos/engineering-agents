@@ -9,38 +9,38 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 
 ## Modes
 - **epic:** `epic.md` against `PROTOTYPE.md`. Check that:
-  - the scope is complete;
-  - the children and their order make sense;
+  - the scope is complete, and the gaps the prototype skipped are addressed;
+  - the children are ordered sensibly and each is sized for one implementer session;
   - every acceptance scenario has an owner;
-  - the gaps the prototype skipped are addressed.
+  - gates, budgets and pre-authorizations are explicit enough to run unattended.
 - **plan:** `plan.md` against its epic entry. Check that it:
   - can be built without guessing;
   - makes sound decisions;
   - has tests covering the scenarios and the risky logic;
   - fits the codebase.
-- **code:** the child's diff against `plan.md`. Check that it:
+- **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
   - updates the affected docs.
 
-  Read the gate evidence. Run targeted tests only when you doubt a claim.
-- **epic-diff:** the whole epic's diff. Check the seams between children, and parity with every acceptance scenario.
+  The implementer's ledger entry holds the gate evidence. Treat it as claims: check that the commands match the plan's gates, that flakes are outside the diff, and run a targeted test when you doubt something. Never repeat the full suite.
+- **epic-diff:** the whole epic's diff. Check the seams between children, and parity with every acceptance scenario. Name, for each finding, the child whose review should have caught it.
 
 ## Earlier passes
-Read `review.md` first. For each earlier finding, decide whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled.
+Read the ledger first. For each earlier finding, verify in the artifact or diff, not in the response, whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled. If you disagree with a rejection, say so once; the author must then take it to the oracle.
 
-After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it.
+Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it.
 
 ## Findings
-Append `## <mode> pass N` to `review.md`. Each finding has an ID, a severity, a location, the problem and a suggested fix. Severities:
+Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or at the plan root for epic and epic-diff modes). Each finding has an ID, a severity, a location, the problem and a suggested fix. Severities:
 - **blocker:** wrong, unsafe, or missing required scope.
 - **major:** will cause real problems, and must be fixed before approval.
 - **minor:** worth fixing if it's cheap.
 
-Don't record nits. The work is approved when no blocker or major finding remains open.
+Don't record nits. The work is approved when no blocker or major finding remains open. Commit the ledger.
 
 ## Reply
-Reply with only the verdict (approved, or changes needed), the counts by severity and the `review.md` path.
+Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path.
 
 ## Do
 - On a large diff, gather context with subagents (`delegate`), but make every judgment yourself.

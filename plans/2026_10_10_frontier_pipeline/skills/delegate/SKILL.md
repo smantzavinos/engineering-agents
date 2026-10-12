@@ -22,18 +22,20 @@ These are examples; invent others.
 - **Scout:** "Where is X handled? List every call site of Y with file:line. Trace Z end to end."
 - **Research:** external docs, library behavior, version changes, prior art. Ask for sources.
 - **Run and digest:** run a long test suite or gate and report:
-  - pass or fail per command;
+  - pass or fail and duration per command;
   - the failing tests and their key assertion lines;
-  - the log paths.
+  - the log paths, kept outside git.
+
+  The same errand, run on an untouched tree, is the baseline that makes "pre-existing" a checkable fact.
 - **Sweep:** apply a change you have already decided and done once, such as a rename, a component adopted at N call sites, or updated imports. Give it the pattern, your finished example and the list of sites, then review the diff.
 - **Verify a claim:** "Does this still exist? Is this route registered? Which docs mention this path?"
 - **Look:** read screenshots; compare the prototype with the real UI.
 - **History:** "Why did this change? When did this behavior appear?"
 
-Run independent errands in parallel.
+Run independent errands in parallel. Run long ones, such as a baseline gate run, in the background and carry on.
 
 ## Writing the errand
-- One clear job, its scope (paths, commands), and the shape and length of the answer you want.
+- One clear job, its scope (paths, commands), the shape and length of the answer you want, and a deadline.
 - Ask for file:line or URLs, and for "not found" rather than guesses.
 - Say whether edits are allowed. The default is read-only.
 
