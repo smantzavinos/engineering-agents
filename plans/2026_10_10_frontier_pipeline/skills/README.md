@@ -1,18 +1,18 @@
-# Draft skills: frontier pipeline
+# Frontier pipeline skills
 
-These are drafts of the new skills described in [../plan.md](../plan.md) §12. They are not installed or rendered. When promoted, they move to `skills/<name>/` and the subagent calls are written with the harness `{{delegate:...}}` macros (see `skills/AGENTS.md`).
+The skills described in [../plan.md](../plan.md) §12 now live in the canonical `skills/` tree, restricted to Pi (`harnesses: [pi]`), and are rendered into `dist/skills/pi/`. The presets are `scope` and `orchestrate` in `agents/preset.jsonc`. The agents are `plan-author`, `implementer`, `reviewer` and `helper` in `agents/`, plus the shared `oracle` and `researcher`.
 
 | Skill | Who uses it | Lines |
 |---|---|---|
-| [prototype](prototype/SKILL.md) | human + agent, paired session | 38 |
-| [scope](scope/SKILL.md) | orchestrator, interactive with the human | 58 |
-| [orchestrate](orchestrate/SKILL.md) | orchestrator, autonomous | 67 |
-| [plan](plan/SKILL.md) | planner subagent (resumed per review round) | 50 |
-| [implement](implement/SKILL.md) | implementer subagent (resumed per review round) | 51 |
-| [review](review/SKILL.md) | fresh reviewer subagent (new every pass) | 51 |
-| [delegate](delegate/SKILL.md) | every frontier agent | 46 |
+| [prototype](../../../skills/prototype/SKILL.md) | human + agent, paired session | 39 |
+| [scope](../../../skills/scope/SKILL.md) | orchestrator, interactive with the human | 59 |
+| [orchestrate](../../../skills/orchestrate/SKILL.md) | orchestrator, autonomous | 71 |
+| [plan](../../../skills/plan/SKILL.md) | `plan-author` (resumed per review round) | 52 |
+| [implement](../../../skills/implement/SKILL.md) | `implementer` (resumed per review round) | 51 |
+| [review](../../../skills/review/SKILL.md) | `reviewer` (new every pass) | 52 |
+| [delegate](../../../skills/delegate/SKILL.md) | every frontier agent | 47 |
 
-The total is about 360 lines. The current path uses about 2,500 lines plus templates.
+The total is about 370 lines. The current path uses about 2,500 lines plus templates.
 
 ## Flow
 
@@ -24,20 +24,20 @@ prototype ─► scope ─► orchestrate ─┬─ plan ⇄ review(plan)     �
                                    then review(epic-diff) ─► PR process
 ```
 
-## How the drafts were written
+## How the skills were written
 
 - **Outcome first.** Each skill opens with what to produce and why, in 2–4 sentences.
 - **Short rules.** Steps and artifact outlines appear only where the output must have a shape. Do's and don'ts appear only where a strong model could plausibly go wrong, and carry the reason so they generalize.
 - **No ceremony.** Nothing a frontier model does anyway: no "read before editing", "run tests", or TDD scripts.
 - **No templates.** Artifact sections are listed in a few lines. The model writes the document.
-- **Shared conventions are stated once each.** Handoffs are files first (`plan.md` Handoff section, ledger entries), then `self_compact`, then a short reply of paths. Disk is the memory: `state.json`, `review.md`, git. Whoever writes a plan-directory file commits it, so a dirty tree always means an interrupted session. The cap is 4 review passes. Every launch has a deadline and every child a budget. Delegation patterns are in `delegate`.
+- **Shared conventions are stated once each.** Handoffs are files first (`plan.md` Handoff section, ledger entries), then a short reply of paths. Subagents call `self_compact` only when a context warning asks; the orchestrator compacts after each child (see plan.md §5.1 for why). Disk is the memory: `state.json`, `review.md`, git. Whoever writes a plan-directory file commits it, so a dirty tree always means an interrupted session. The cap is 4 review passes. Every launch has a deadline and every child a budget. Delegation patterns are in `delegate`.
 
 ## Agents these skills assume
 
 | Agent | Class | Tools | Notes |
 |---|---|---|---|
 | orchestrator | frontier | read, bash, edit, write, subagent, self_compact | The interactive session; uses `scope`, then `orchestrate` |
-| planner | frontier | read, bash, edit, write, subagent, self_compact | Resumed across plan review rounds |
+| plan-author | frontier | read, bash, edit, write, subagent, self_compact | Resumed across plan review rounds |
 | implementer | frontier | read, bash, edit, write, subagent, self_compact | Resumed across code review rounds |
 | reviewer | frontier | read, bash, edit, subagent | New session every pass; appends to and commits only `review.md` |
 | oracle | frontier, max reasoning | read, bash | Settles disputes and course-setting forks |

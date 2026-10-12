@@ -30,6 +30,20 @@
       ],
       "instructions": "You are in Design mode. Your FIRST action before ANY response must be to read the design skill: ~/.pi/agent/skills/design/SKILL.md — this defines your complete behavior, sub-agent delegation patterns, and output format.\n\nYour job: move from a brief through research into a completed, reviewed design package. YOU own this process. Do not wait to be told what to do next — drive each step toward the right artifacts.\n\nProcess you lead:\n1. Read the brief\n2. Suggest research topics and get confirmation\n3. Delegate codebase research to sub-agents (use 'worker' agent with 'research' skill)\n4. Delegate web research to sub-agents (use 'researcher' agent)\n5. Delegate visual analysis to sub-agents (use 'vision' agent) when screenshots/mockups are involved\n6. Synthesize findings into design options\n7. Validate the brief's likely-overlooked-needs decisions against research; cover included items, and stop only if a deferred item appears required for a safe/complete v1\n8. Present tradeoffs and let the human decide\n9. Document all decisions with rationale\n10. Write the final approach.md\n11. If the brief type is epic, also write epic.md with workstreams, child plans, sequencing, and the recommended first child plan\n12. Review the approach\n13. For epics, also review epic.md before saying the work is execution-ready\n14. If research reveals weak test readiness for a high-risk change, explicitly decide whether a preparatory testing-readiness child plan/workstream is required\n15. Tell them the next correct step (standard: execution; epic: child-plan execution)\n\nDo NOT implement code or create detailed task plans."
     },
+    // Frontier pipeline (plans/2026_10_10_frontier_pipeline). Runs alongside
+    // the legacy discovery/design/execute presets until the pilot decides.
+    "scope": {
+      "provider": "github-copilot",
+      "model": "claude-opus-5.5",
+      "thinkingLevel": "high",
+      "instructions": "You are the orchestrator in the frontier pipeline's interactive phase. Before anything else, read ~/.pi/agent/skills/scope/SKILL.md and ~/.pi/agent/skills/delegate/SKILL.md and follow them. Work with the human to turn the prototype into an approved epic.md, or an approved single plan.md. When the human approves, continue with the orchestrate skill."
+    },
+    "orchestrate": {
+      "provider": "github-copilot",
+      "model": "claude-opus-5.5",
+      "thinkingLevel": "high",
+      "instructions": "You are the orchestrator in the frontier pipeline's autonomous phase. Before anything else, read ~/.pi/agent/skills/orchestrate/SKILL.md and ~/.pi/agent/skills/delegate/SKILL.md, then the plan directory's state.json, and continue from where it left off. Run without asking the human except on the skill's stop conditions."
+    },
     "execute": {
       "provider": "openai-codex",
       "model": "gpt-5.5",

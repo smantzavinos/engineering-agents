@@ -1,6 +1,7 @@
 ---
 name: delegate
 description: Offload read-heavy, low-judgment work to fast, cheap subagents so your own context and tokens go to judgment. Use whenever a job means reading a lot to learn a little.
+compatibility: pi
 ---
 
 # Delegate

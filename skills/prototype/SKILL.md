@@ -1,6 +1,7 @@
 ---
 name: prototype
 description: Human-paired build-to-learn session. Produce a fast, throwaway prototype that shows the behavior we want, handed off as a pushed branch plus PROTOTYPE.md. Use when the quickest way to specify the work is to see it working.
+harnesses: [pi]
 ---
 
 # Prototype

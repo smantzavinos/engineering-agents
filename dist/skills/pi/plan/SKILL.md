@@ -1,6 +1,7 @@
 ---
 name: plan
-description: Write a short, decisive implementation plan for one child of an epic (or for a single plan), revise it from review findings, and hand back compacted. Used by the planner subagent.
+description: Write a short, decisive implementation plan for one child of an epic (or for a single plan), revise it from review findings, and hand back. Used by the plan-author subagent.
+compatibility: pi
 ---
 
 # Plan
@@ -37,8 +38,9 @@ For each finding in `review.md`, either fix it, or reject it with a one-line rea
 
 ## Handoff
 1. Commit `plan.md` and your `review.md` responses.
-2. `self_compact`, with a note listing the plan path, the key decisions and anything still open.
-3. After compaction, reply in a few lines: a summary, sizing or course-setting flags, and the open risks.
+2. Reply in a few lines: a summary, sizing or course-setting flags, and the open risks.
+
+Everything the next session needs is on disk, so you can be resumed or replaced. Call `self_compact` only when a context warning asks for it, and say so in your reply.
 
 ## Do
 - Make the decisions. A plan that defers design to the implementer is not done.

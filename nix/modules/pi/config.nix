@@ -1024,6 +1024,11 @@ let
     "researcher"
     "vision"
     "oracle"
+    # Frontier pipeline (pilot); oracle and researcher are shared.
+    "plan-author"
+    "implementer"
+    "reviewer"
+    "helper"
   ];
 
 in

@@ -28,7 +28,9 @@ role procedure; never restate the contract from memory.
 3. **Verify the code-review gate**: read `<plan-dir>/code_review.md`; its
    latest pass must be COMPLETE (zero open Blocker/Critical/Major). If not,
    stop and route to `review-code` — do not author or review a PR past an
-   open code review.
+   open code review. Frontier-pipeline plan directories have `review.md`
+   instead: its latest code or epic-diff pass must be approved (no open
+   blocker or major); if not, route to the `review` skill.
 4. Load every file the manifest's `review-inputs` section names.
 5. Completion check: you can state the repo's verification commands, evidence
    method, and merge gate without re-reading.

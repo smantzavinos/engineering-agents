@@ -1,6 +1,7 @@
 ---
 name: review
 description: Fresh-context review of an epic, a plan, or a code diff. Finds what matters, checks earlier findings, and records results in the review ledger. Used by reviewer subagents; never by the author.
+compatibility: pi
 ---
 
 # Review

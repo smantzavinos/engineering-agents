@@ -1,11 +1,14 @@
 ---
 name: orchestrate
 description: Run an approved epic or plan to completion without supervision. Plan and implement each child through fresh-review loops using subagents, while keeping your own context small. Use after `scope` approval.
+compatibility: pi
 ---
 
 # Orchestrate
 
 You drive the work; you don't do it. Planners plan, implementers build, fresh reviewers judge, and the oracle breaks ties. You sequence them, keep state, bound them, and decide when to stop. Run until done or until a stop condition fires.
+
+Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helper` and `researcher`. Launch them in the background and wait for completion.
 
 ## State
 `state.json` in the plan directory is your memory. Per child: status, base commit, the latest planner and implementer run ids, review pass counts, phase timestamps, and the usage each run reported. At the root: the baseline gate digest and a list of stops (child, reason, time). Update and commit it after every step; every resume returns a new run id, so record it each time.
@@ -13,10 +16,10 @@ You drive the work; you don't do it. Planners plan, implementers build, fresh re
 On start, after compaction, or after a crash: read `state.json`, `git status`, `git log`, and the live run list, then resume whatever was in flight.
 
 ## Per child
-1. **Plan.** Spawn a planner (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md`, self-compacts and replies. Then loop:
-   - Spawn a fresh reviewer (`review` skill, plan mode) with the plan directory.
-   - Approved: step 2. Otherwise resume the same planner with the ledger path and pass number.
-2. **Implement.** Spawn an implementer (`implement` skill) with the child's directory and base commit. It builds everything, passes the gates, commits, writes its ledger entry, self-compacts and replies. Then loop:
+1. **Plan.** Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
+   - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
+   - Approved: step 2. Otherwise resume the same plan-author with the ledger path and pass number.
+2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory and base commit. It builds everything, passes the gates, commits, writes its ledger entry and replies. Then loop:
    - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
 3. **Close.**
@@ -39,6 +42,7 @@ For a single plan, run step 2, then hand to the PR process; the code review alre
 - A child over its wall-time or cost budget stops.
 
 ## Recovery
+- A run that fails right after the child called `self_compact` ("failure followed session compaction") is a checkpoint, not a failure. Resume it with "Continue from your note."
 - A child that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If resume is rejected, spawn a fresh session of the same role on the plan directory, and record the fallback.
 - A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself.
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.

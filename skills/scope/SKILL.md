@@ -1,6 +1,7 @@
 ---
 name: scope
 description: Turn a prototype into an agreed, reviewed scope with the human (an epic of child plans, or a single plan) that can then run autonomously. Interactive; the human approves the result.
+harnesses: [pi]
 ---
 
 # Scope
@@ -42,8 +43,8 @@ Keep it to a few pages.
 
 ## Single plan
 There is no `epic.md`, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
-1. Spawn the planner (`plan` skill), writing `plan.md` at the plan directory root, with the agreed scope in the task.
-2. Relay the human's feedback by resuming the same planner.
+1. Spawn a `plan-author` (`plan` skill), writing `plan.md` at the plan directory root, with the agreed scope in the task.
+2. Relay the human's feedback by resuming the same plan-author.
 3. Get a fresh review and the human's approval.
 
 Execution then runs only the implement loop and hands to the PR process.

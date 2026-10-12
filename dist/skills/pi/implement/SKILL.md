@@ -1,6 +1,7 @@
 ---
 name: implement
-description: Build an entire approved plan top to bottom, pass the quality gates, fix review findings, and hand back compacted. Used by the implementer subagent.
+description: Build an entire approved plan top to bottom, pass the quality gates, fix review findings, and hand back. Used by the implementer subagent.
+compatibility: pi
 ---
 
 # Implement
@@ -17,7 +18,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
   - in a detail: do the right thing and note it;
   - in substance: stop and report, with what you found.
 - Commit in logical units with conventional messages.
-- If your context grows large mid-build, commit, `self_compact` with a note, and continue.
+- If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Gates
 1. At the end, run every gate the plan lists, once, fast gates first. Have a subagent run long suites and digest the logs (`delegate`).
@@ -37,8 +38,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 ## Handoff
 1. Leave the tree clean, with everything committed.
 2. Append `## implementation` (or `## fix pass N`) to `review.md`: commands run, pass/fail and duration per gate, flakes and baseline failures seen, log paths, deviations from the plan, follow-ups, and what the reviewer should look at closely. Commit it. The reviewer treats these as claims to check, so be exact.
-3. `self_compact`, with a note covering what was built, the commits, and open issues.
-4. After compaction, reply in a few lines: a summary and the ledger path.
+3. Reply in a few lines: a summary and the ledger path.
 
 ## Do
 - Match the codebase's existing patterns.
