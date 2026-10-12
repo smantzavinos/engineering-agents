@@ -70,7 +70,7 @@ Abort early if a child stops more than twice on mechanics (not scope), or if one
 
 ## Known gaps going in
 
-- **Blocker for compaction:** pi-checkpoint's summary request fails with 401 on GitHub Copilot, so `self_compact` does nothing and leaves a locked, failed handoff (plan.md §5.1). Fix or work around this before the pilot depends on compaction. Until then, subagents don't compact at the end of a round.
+- pi-checkpoint runs with two local patches (plan.md §5.1): it keeps the Copilot Business/Enterprise endpoint and passes the session thinking level. Without them every compaction fails, including Pi's automatic one. Re-check both on any pi-checkpoint bump.
 - pi-checkpoint's thresholds can't be passed to children. 1M-window models compact at 225k/250k tokens; smaller windows use the patched 55/65/75% fallback.
 - pi-mcp-adapter 5.x connects its servers at startup, so missing credentials (e.g. `ZAI_API_KEY`) show as startup errors rather than errors on first use.
 - ADR 0007 is not written yet. Write it after the decision, recording what the pilot showed.

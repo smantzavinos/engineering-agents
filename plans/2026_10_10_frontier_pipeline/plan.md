@@ -158,8 +158,8 @@ When the last child is done:
 | Session | Lifetime | Model class | Compaction |
 |---|---|---|---|
 | Orchestrator | Whole epic; interactive, then autonomous | frontier | After epic approval, after each child, and whenever it crosses its threshold |
-| Planner (per child) | Spawned once, resumed per review round | frontier | Only when its context warning fires (§5.1) |
-| Implementer (per child) | Spawned once, resumed per review round | frontier | Only when its context warning fires (§5.1) |
+| Planner (per child) | Spawned once, resumed per review round | frontier | `self_compact` at the end of every call |
+| Implementer (per child) | Spawned once, resumed per review round | frontier | `self_compact` at the end of every call, and mid-run if it grows large |
 | Plan/code/epic reviewer | One pass | frontier | Never; it is short-lived |
 | Oracle | One question | frontier (max reasoning) | Never |
 | Helpers | One errand | fast/cheap | Never |
@@ -170,9 +170,10 @@ Mechanics:
 - **Self-compaction** uses `@nicknisi/pi-checkpoint`'s `self_compact({ note_to_self })`. Every handback works the same way:
   1. Finish the work.
   2. Write durable state to disk: the artifact, the ledger entry, commits.
-  3. Reply briefly: a verdict or summary plus paths, never content the parent could read from disk.
+  3. Call `self_compact` with a note covering what was done, where it lives, what's open, and how to continue.
+  4. After compaction, the continuation turn writes a short reply. That reply is what the parent receives: a verdict or summary plus paths, never content the parent could read from disk.
 
-  The orchestrator, a top-level session, self-compacts after each child. Subagents compact only when pi-checkpoint's context warning fires. Compaction on GitHub Copilot is currently broken (§5.1). If `self_compact` fails or is unavailable, the handoff is already on disk, so a later "resume" can become a fresh session seeded with the artifacts. Nothing is lost but some reasoning context.
+  If `self_compact` fails or is unavailable, the handoff is already on disk (step 2), so the session replies and ends. A later "resume" of that child becomes a fresh session seeded with the artifacts. Nothing is lost but some reasoning context.
 - **Resume** uses pi-subagents `resume` on the retained child run. Each resume returns a *new* run id; the orchestrator stores the latest planner and implementer run ids per child in `state.json` after every call, so a crashed orchestrator can pick them up again. Failed and timed-out children are resumable; stopped ones are not.
 - **Deadlines.** pi-subagents ends a foreground run after 30 minutes unless told otherwise. The orchestrator launches every planner and implementer with a deadline derived from the child's budget in `epic.md`, and reviewers and helpers with shorter ones. A child that hits its deadline is resumed, not restarted.
 - **The source of truth is files**:
@@ -193,12 +194,14 @@ Recovery, in order of likelihood:
 
 Run in the repo's sandbox (`scripts/pi-dev.sh`), with GitHub Copilot models:
 - **Foreground children don't get `self_compact`.** They never load ambient extensions. Background children (the default) do.
-- **Compaction itself fails on GitHub Copilot.** pi-checkpoint's summary request returns `401 Unauthorized`, for Claude and GPT models alike, in subagents and in a top-level session. The handoff goes to `failed` (pi-checkpoint is fail-closed by design), so no compaction and no continuation happen. The child's turn ends at the tool call and pi-subagents reports the run as failed with no output. A resume then continues the *uncompacted* session. A second `self_compact` is refused while the failed handoff is still locked.
-- **Not yet tested:** a *successful* compaction inside a subagent. Its note is delivered as a new turn after the session goes idle, and it is not yet known whether pi-subagents waits for that turn or ends the run first.
+- **Compaction works in a background subagent, end to end.** `self_compact` compacts once the child goes idle, the note comes back as a new turn, and the child's reply after compaction is the run's output. The run completes normally. A detail held only in conversation survived through the summary.
+- **Resume** reuses the same session file across rounds; each resume has a new run id.
+- **pi-checkpoint needed two patches** (applied at build time, see `nix/modules/pi/config.nix`). Without them every compaction fails, including manual `/compact` and Pi's automatic one, because pi-checkpoint replaces the summarizer for all of them:
+  - *Copilot Business/Enterprise endpoint.* pi-checkpoint passes an explicit API key but drops the `baseUrl` that `getApiKeyAndHeaders` resolves. With an explicit key Pi skips OAuth resolution, so the summary goes to the Individual endpoint: `401 Unauthorized`. This is the same failure Pi itself fixed in #6768 and #7579.
+  - *Thinking level.* pi-checkpoint summarizes with no thinking level, and some Copilot Claude models reject the provider's "thinking off" request with `400`. The patch passes the session level, as Pi does.
+- **A failed compaction leaves the handoff locked.** A later `self_compact` is refused until it is recovered. With the patches this no longer comes up, but a failure is still visible: the run ends after the tool call with no reply.
 
-Likely cause: the summary request does not use the credential-resolved Copilot endpoint, the same class of bug as Pi issues #6768 and #7579. Next: test native `/compact` on Pi 1.1 with Copilot in the real environment, then read pi-checkpoint's summary call.
-
-Until this works, subagents hand back through files and a reply and don't compact at the end of a round. With 1M-token windows, plan and review rounds rarely need it. The orchestrator's own compaction depends on the same fix.
+Both patches should go upstream to pi-checkpoint; the owner decides whether to file them.
 
 ## 6. Testing and quality gates
 
@@ -363,8 +366,8 @@ Writing rules for the new skills:
 | Item | Status / mitigation |
 |---|---|
 | `@nicknisi/pi-checkpoint` requires Pi ≥ 0.87.0 | Done: the pilot branch pins Pi 1.1.0. Its thresholds are CLI flags only; the vendored copy is patched so windows below ~300k tokens fall back to 55/65/75% instead of blocking every tool call. |
-| `self_compact` inside a subagent: does the post-compaction continuation become the child's returned output? | Unknown. Compaction itself fails with 401 on GitHub Copilot (§5.1), so this could not be tested. The pilot doesn't compact subagents at the end of rounds. |
-| pi-subagents `resume` revives from the persisted session file; it must carry the compacted context, not the pre-compaction transcript | Resume of an uncompacted child works across rounds. Resume after a real compaction is untested (§5.1). |
+| `self_compact` inside a subagent: does the post-compaction continuation become the child's returned output? | Yes, with the two pi-checkpoint patches (§5.1). |
+| pi-subagents `resume` revives from the persisted session file; it must carry the compacted context, not the pre-compaction transcript | Resume across rounds works. Resume after a real compaction is still to check in the pilot. |
 | pi-mcp-adapter 5.x and Pi's built-in MCP | Done: the adapter reads `mcp-adapter.json`, and the built-in is disabled in settings. |
 | pi-subagents ends foreground runs after 30 minutes by default; a whole-child implementer runs for hours | The orchestrator passes an explicit deadline per launch, sized from the child's budget. Confirm in the spike that a deadline-killed child is resumable and that the checkpoint-before-deadline steer reaches it. |
 | Nested delegation: frontier subagents launching helper subagents | Confirm it is allowed and budgeted under the pi-subagents spawn limits. A 12-child epic in one orchestrator session makes on the order of 100 launches; confirm the session-wide spawn budget allows it or is raised. |

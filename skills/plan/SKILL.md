@@ -38,9 +38,10 @@ For each finding in `review.md`, either fix it, or reject it with a one-line rea
 
 ## Handoff
 1. Commit `plan.md` and your `review.md` responses.
-2. Reply in a few lines: a summary, sizing or course-setting flags, and the open risks.
+2. `self_compact` with a note: what you decided and why, what's open, and how to continue.
+3. After compaction, reply in a few lines: a summary, sizing or course-setting flags, and the open risks.
 
-Everything the next session needs is on disk, so you can be resumed or replaced. Call `self_compact` only when a context warning asks for it, and say so in your reply.
+Everything the next session needs is on disk, so you can be resumed or replaced.
 
 ## Do
 - Make the decisions. A plan that defers design to the implementer is not done.

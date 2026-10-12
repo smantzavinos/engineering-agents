@@ -495,6 +495,24 @@ let
       return { ok: true, thresholds: { contextWindow, softTokens: fs, warningTokens: fw, hardTokens: fh, cap }, compactPromptOverride };
     }'
 
+      # pi-checkpoint summarizes with an explicit apiKey but drops the
+      # credential-resolved baseUrl that getApiKeyAndHeaders returns. With an
+      # explicit key Pi skips OAuth resolution, so GitHub Copilot Business and
+      # Enterprise summaries go to the Individual endpoint and fail with 401.
+      # Apply auth.baseUrl to the model, as Pi's own compaction does. It also
+      # summarizes with no thinking level, which some Copilot Claude models
+      # reject with 400; pass the session's level, as Pi does.
+      sc="$out/node_modules/@nicknisi/pi-checkpoint/extensions/self-compact/self-compact.ts"
+      test "$(grep -Fc 'streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context, options),' "$sc")" -eq 1
+      substituteInPlace "$sc" \
+        --replace-fail 'streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context, options),' '// engineering-agents patch: summarize at the session thinking level, as
+        // Pi does. With none, providers send thinking "off", which some models
+        // reject (400) instead of falling back.
+        streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context,
+          options?.reasoning || !m.reasoning || pi.getThinkingLevel() === "off" ? options : { ...options, reasoning: pi.getThinkingLevel() }),
+        // engineering-agents patch: keep the credential-resolved endpoint.
+        ...(auth.baseUrl ? { model: { ...model, baseUrl: auth.baseUrl } } : {}),'
+
       # jscpd 5 execs a prebuilt glibc binary from its platform package;
       # point it at Nix's loader and libgcc_s (pi-lens-tools wraps the CLI).
       jscpd_bins=( "$out"/node_modules/jscpd/node_modules/jscpd-linux-*-gnu/bin/jscpd )

@@ -30,7 +30,7 @@ prototype ─► scope ─► orchestrate ─┬─ plan ⇄ review(plan)     �
 - **Short rules.** Steps and artifact outlines appear only where the output must have a shape. Do's and don'ts appear only where a strong model could plausibly go wrong, and carry the reason so they generalize.
 - **No ceremony.** Nothing a frontier model does anyway: no "read before editing", "run tests", or TDD scripts.
 - **No templates.** Artifact sections are listed in a few lines. The model writes the document.
-- **Shared conventions are stated once each.** Handoffs are files first (`plan.md` Handoff section, ledger entries), then a short reply of paths. Subagents call `self_compact` only when a context warning asks; the orchestrator compacts after each child (see plan.md §5.1 for why). Disk is the memory: `state.json`, `review.md`, git. Whoever writes a plan-directory file commits it, so a dirty tree always means an interrupted session. The cap is 4 review passes. Every launch has a deadline and every child a budget. Delegation patterns are in `delegate`.
+- **Shared conventions are stated once each.** Handoffs are files first (`plan.md` Handoff section, ledger entries), then `self_compact`, then a short reply of paths. The orchestrator compacts after each child. Disk is the memory: `state.json`, `review.md`, git. Whoever writes a plan-directory file commits it, so a dirty tree always means an interrupted session. The cap is 4 review passes. Every launch has a deadline and every child a budget. Delegation patterns are in `delegate`.
 
 ## Agents these skills assume
 

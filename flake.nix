@@ -13,8 +13,9 @@
     # Match the reviewed dotfiles llmAgents pin (Pi 1.1.0) for standalone
     # development and managed-package compatibility. Upstream main currently
     # resolves a newer Pi; do not float the core runtime without its own audit.
-    # Historical Copilot Enterprise compaction issue to re-test before apply:
-    # https://github.com/earendil-works/pi/issues/6768
+    # Copilot Enterprise compaction (earendil-works/pi#6768) is fixed in core
+    # Pi. pi-checkpoint replaces the summarizer and needs its own endpoint
+    # patch; see the pi-checkpoint patches in nix/modules/pi/config.nix.
     # Review temporary overlays before future Pi bumps:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {

@@ -38,7 +38,8 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 ## Handoff
 1. Leave the tree clean, with everything committed.
 2. Append `## implementation` (or `## fix pass N`) to `review.md`: commands run, pass/fail and duration per gate, flakes and baseline failures seen, log paths, deviations from the plan, follow-ups, and what the reviewer should look at closely. Commit it. The reviewer treats these as claims to check, so be exact.
-3. Reply in a few lines: a summary and the ledger path.
+3. `self_compact` with a note: what you built, any deviations, what's fragile, and how to continue.
+4. After compaction, reply in a few lines: a summary and the ledger path.
 
 ## Do
 - Match the codebase's existing patterns.
