@@ -42,7 +42,7 @@ For a single plan, run step 2, then hand to the PR process; the code review alre
 - A child over its wall-time or cost budget stops.
 
 ## Recovery
-- A run that fails right after the child called `self_compact` ("failure followed session compaction") is a checkpoint, not a failure. Resume it with "Continue from your note."
+- A run that ends right after the child called `self_compact` is a checkpoint, not a failure. Resume it with "Continue from your note."
 - A child that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If resume is rejected, spawn a fresh session of the same role on the plan directory, and record the fallback.
 - A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself.
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.
