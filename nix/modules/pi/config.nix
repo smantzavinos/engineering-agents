@@ -502,6 +502,7 @@ let
       # Apply auth.baseUrl to the model, as Pi's own compaction does. It also
       # summarizes with no thinking level, which some Copilot Claude models
       # reject with 400; pass the session's level, as Pi does.
+      # Upstream: https://github.com/nicknisi/pi-extensions/issues/165
       sc="$out/node_modules/@nicknisi/pi-checkpoint/extensions/self-compact/self-compact.ts"
       test "$(grep -Fc 'streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context, options),' "$sc")" -eq 1
       substituteInPlace "$sc" \

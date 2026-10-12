@@ -99,17 +99,20 @@ _No items yet._
 
 ## Blocked
 
-### TASK-0004 — Un-pin llmAgents input once upstream Copilot Enterprise compaction fix lands
-- Status: Blocked
-- Summary: `flake.nix` pins the `llmAgents` input to `github:numtide/llm-agents.nix/70ff0e7f69a5fe712d675ac29b484e91e98daff0` (pi **0.80.7**), rolling back from latest (pi 0.80.10) because pi >=0.80.8 broke `/compact` and auto-compaction for GitHub Copilot Enterprise accounts (`Error: Compaction failed: Turn prefix summarization failed: 421 Misdirected Request`). Root cause: the 0.80.8 "Unified model runtime and provider authentication" (`ModelRuntime`) refactor stopped threading the resolved Enterprise base URL into the compaction/summarization call path, so it falls back to the individual-account Copilot endpoint and gets rejected.
-- Source: Chat discussion diagnosing Atlas-worktree2 compaction failures (2026-07-20); upstream bug https://github.com/earendil-works/pi/issues/6768.
-- Notes: A community fix exists but is unmerged as of 2026-07-20: https://github.com/earendil-works/pi/compare/main...Marvae:fix/copilot-summarization-base-url. To un-pin: watch https://github.com/numtide/llm-agents.nix/commits/main/packages/pi/hashes.json for a bump to a pi version where #6768 is closed, then in `flake.nix` restore `url = "github:numtide/llm-agents.nix";` and run `nix flake lock --update-input llmAgents`. Re-verify `pi --version` and test `/compact` on a Copilot Enterprise session before considering this done.
+_No items yet._
 
 ## Icebox
 
 _No items yet._
 
 ## Done
+
+### TASK-0004 — Un-pin llmAgents input once upstream Copilot Enterprise compaction fix lands
+- Status: Done
+- Summary: `flake.nix` pins the `llmAgents` input to `github:numtide/llm-agents.nix/70ff0e7f69a5fe712d675ac29b484e91e98daff0` (pi **0.80.7**), rolling back from latest (pi 0.80.10) because pi >=0.80.8 broke `/compact` and auto-compaction for GitHub Copilot Enterprise accounts (`Error: Compaction failed: Turn prefix summarization failed: 421 Misdirected Request`). Root cause: the 0.80.8 "Unified model runtime and provider authentication" (`ModelRuntime`) refactor stopped threading the resolved Enterprise base URL into the compaction/summarization call path, so it falls back to the individual-account Copilot endpoint and gets rejected.
+- Source: Chat discussion diagnosing Atlas-worktree2 compaction failures (2026-07-20); upstream bug https://github.com/earendil-works/pi/issues/6768.
+- Notes: A community fix exists but is unmerged as of 2026-07-20: https://github.com/earendil-works/pi/compare/main...Marvae:fix/copilot-summarization-base-url. To un-pin: watch https://github.com/numtide/llm-agents.nix/commits/main/packages/pi/hashes.json for a bump to a pi version where #6768 is closed, then in `flake.nix` restore `url = "github:numtide/llm-agents.nix";` and run `nix flake lock --update-input llmAgents`. Re-verify `pi --version` and test `/compact` on a Copilot Enterprise session before considering this done.
+- Resolution (2026-10-12): Pi fixed #6768 and #7579 in core ("Fixed GitHub Copilot compaction and branch summaries using the Individual endpoint instead of the credential-resolved Business or Enterprise endpoint"). The 0.80.7 pin was lifted in `0ff58f4`; `pilot/frontier-pipeline` pins Pi 1.1.0. The same class of bug in pi-checkpoint's summarizer is patched at build time (`1266657`) and reported upstream as nicknisi/pi-extensions#165. Verified in the sandbox: `self_compact` compaction succeeds on a Copilot Enterprise account with Claude and GPT models, top level and in a subagent.
 
 ### TASK-0007 — Fix two stale specs failing on clean main (repo-readiness-docs, skill-content)
 - Status: Done

@@ -201,7 +201,7 @@ Run in the repo's sandbox (`scripts/pi-dev.sh`), with GitHub Copilot models:
   - *Thinking level.* pi-checkpoint summarizes with no thinking level, and some Copilot Claude models reject the provider's "thinking off" request with `400`. The patch passes the session level, as Pi does.
 - **A failed compaction leaves the handoff locked.** A later `self_compact` is refused until it is recovered. With the patches this no longer comes up, but a failure is still visible: the run ends after the tool call with no reply.
 
-Both patches should go upstream to pi-checkpoint; the owner decides whether to file them.
+Both are reported upstream as nicknisi/pi-extensions#165; drop the patches once it is fixed.
 
 ## 6. Testing and quality gates
 
