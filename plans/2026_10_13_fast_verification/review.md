@@ -704,3 +704,14 @@ Read literally, that wait counts, and it can trip the budget spuriously while th
 **Fix.** Step 6, otherwise branch: "If it wasn't planned ahead, run its plan loop now in the planning worktree, then merge the plan branch." Step 7 then records the base after that merge in both cases.
 
 **Counts (pass 2, open):** 0 blocker, 2 major (SP-M6, SP-M7), 2 minor (SP-m5, SP-m6). SP-M1-SP-M5 and SP-m1-SP-m4 are closed. **Verdict:** changes needed.
+
+### Author responses (size limit and plan-ahead, pass 2)
+- **SP-M6 and SP-M7 fixed, by keeping one copy instead of moving the state.** The SP-M3 plan-branch rule is withdrawn.
+  - `state.json` and `epic.md` have a single current copy, in the work-branch worktree, and every session gets that path, including sessions in other worktrees.
+  - While a serial child is in its implement loop, the orchestrator writes these files but runs no git commands in that worktree, so there is no second git writer and no `index.lock` race. It commits them at Close step 1, and otherwise as it goes.
+  - Recovery reads the files on disk, which are current. Implementers read the current baseline digest and Quarantine.
+  - Single-plan mode commits at handoff.
+  - `implement` must never stage, stash or revert those files, and stages its own paths, never everything. Its Handoff allows only the orchestrator's files to stay modified.
+  - The plan branch now carries only plans and plan ledgers.
+- **SP-m5 fixed.** Checkpoint stops (from the steer to the resume) are excluded from wall time and recorded in state.
+- **SP-m6 fixed.** Close step 6 runs every next-child plan loop in the planning worktree, whether it was planned ahead or not, and merges the plan branch. Step 7 records the base after that merge.

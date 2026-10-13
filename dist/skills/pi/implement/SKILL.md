@@ -56,7 +56,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
   - append `## integration` or `## checkpoint fix` to the ledger named.
 
 ## Handoff
-1. Leave the tree clean, with everything committed.
+1. Leave the tree clean, with all your work committed. Only the orchestrator's files may stay modified.
 2. Append `## implementation` (or `## fix pass N`) to `review.md` with:
    - the commands run, with pass/fail and duration per gate;
    - the T1 selection and why each spec was picked;
@@ -73,6 +73,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 - Update the docs the change affects, in this same child.
 
 ## Don't
+- Stage, stash or revert the orchestrator's `state.json` or `epic.md`. Stage your own paths, never everything.
 - Run full suites mid-build.
 - Expand scope. Note follow-ups in your handoff.
 - Weaken, skip or delete tests to get green.
