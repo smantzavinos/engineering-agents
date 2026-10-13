@@ -468,3 +468,44 @@ The pass cap has been reached. These fixes follow the reviewer's suggested fixes
   - The clean point is narrowed to "a child stopped by the checkpoint-failures steer", so a child waiting for review no longer qualifies.
   - A new orchestrate rule, "Merging into an unfinished child", covers a stopped serial child and a paused lane. A helper builds the child's new base (its old base with the same incoming commit merged in, detached, in the checkpoint worktree), and the orchestrator records it. T1 and code review then see only the child's own changes.
 - **FV-m9 fixed.** A conflicted merge-back resolution gets a fresh code review, from the checkpoint branch's pre-merge tip. The resolved tip counts as green after T1 on the conflicted paths, and the next checkpoint's full run covers the rest. This trade is stated in the skill.
+
+## code pass 5
+
+Scope: `c0afc71..b1eb735`. The owner authorized this pass beyond the cap. The pass-4 findings were checked against the fix commit `b1eb735`, which changes only orchestrate lines 25-26 and 61-62. Re-read in full: orchestrate, `references/{lanes,checkpoint-failures}.md`, implement and review. `node tools/render-skills.mjs --check` reports no drift. `skill-content-spec` (40/40) and `skill-render-spec` (75/75) pass. I checked the merge-base arithmetic in a scratch repo (below).
+
+### Pass-4 findings
+- **FV-M15: fixed for a clean merge.**
+  - Orchestrate 25 narrows the serial clean point to "a child stopped by the checkpoint-failures steer". A child in its review loop no longer qualifies.
+  - Orchestrate 26 adds "Merging into an unfinished child", for both a stopped serial child and a paused lane (`lanes.md:39`, `checkpoint-failures.md:17-21`).
+  - The new base is the old base with the same incoming commit merged in. When the merge is clean, the diff from that base to the child's merged tip is exactly the child's own work. That holds for a serial child (the incoming commit is the green checkpoint tip) and for a lane (the incoming commit is the work-branch tip, which already contains the old lane base).
+  - Review 24 and orchestrate 34 take the base from state, so later reviewers get the new base.
+  - Two gaps remain. Both were caused by this fix and its interaction with the FV-M13/FV-m9 conflict path: FV-M16 and FV-m10.
+- **FV-m9: fixed.** Checkpoints step 2.4 (orchestrate 61) adds a fresh code-mode review of the resolution, from the checkpoint branch's tip before the merge. Step 2.5 (62) states the trade: green after T1 on the conflicted paths, with the next checkpoint's full run covering the rest. The Bounds pass cap applies. This matches `lanes.md:30` and `checkpoint-failures.md:14`.
+
+**Consistency of the new rules.**
+- **With implement:** implement 30 and review 24 both work from "the base commit"; orchestrate 26 replaces that base. The steered child stopped with "Commit, stop, and reply" (`checkpoint-failures.md:17`; implement 38), so its tree is clean, and orchestrate 25 can treat it as a clean point.
+- **With `lanes.md`:** line 39 (a paused lane merges the work branch) is covered by orchestrate 26.
+- **With `checkpoint-failures.md`:** step 3 hands the merge to Checkpoints step 2, as expected.
+- **Where it breaks:** the conflict branch of step 2, when the work branch carries a stopped serial child's commits (FV-M16).
+
+### FV-M16 · major · `skills/orchestrate/SKILL.md:26, 57-62`: a conflicted merge-back into a stopped serial child moves the child's own commits into its new base
+**Problem.** This was caused by the FV-M13, FV-m9 and FV-M15 fixes together. A stopped serial child is exactly the case where merge-back conflicts are likely: it was steered because it builds on the code the checkpoint fix changes. On a conflict, step 2.2 has a fresh implementer merge the **work branch** into the checkpoint branch. The work branch holds the stopped child's work-in-progress commits, so they are now in the resolved tip. Step 2.5 then merges that tip into the work branch. Orchestrate 26 then builds the child's new base as "its old base with the same incoming commit merged in". The incoming commit is the resolved tip, which contains the child's own commits, so:
+- **The child's diff from its new base is empty.** I checked this in a scratch repo: W0 → checkpoint fix; work branch W0 → child WIP that touches the same line plus a new file; the merge-back conflicts; resolve on the checkpoint branch; merge back; new base = W0 merged with the resolved tip; `git diff <new base> <child tip>` is empty. With W0 merged with the **green** tip as the base, the diff correctly shows the child's two files.
+- **Effect:** the child's pre-stop work drops out of its T1 selection (implement 30) and out of its code review (review 24). That is unreviewed, untested code reaching the PR, which is the problem FV-M15 set out to fix.
+- **The 2.4 resolution review is also aimed wrong.** It reviews the stopped child's unfinished work, against the last closed child's plan and ledger (orchestrate 60). It will raise findings on code that is deliberately incomplete, and its fixes land in another child's work.
+
+**Fix.** Do one of the following.
+- **(a) Preferred: route this conflict to the stopped child.** In step 2, if the work-branch worktree holds a stopped serial child, abort, then resume that child's implementer. It is already in the worktree. It merges the green checkpoint tip and resolves. The new base is the old base merged with the green tip. The resolution then sits inside the child's own diff, gets its T1 and its normal code review, and steps 2.2-2.4 are not needed for this case.
+- **(b) Keep the fresh resolver, and fix the base.** In orchestrate 26, define "the incoming commit" as the green checkpoint tip before any conflict resolution, for a serial child (for a lane: the work-branch commit merged). Also say that the 2.4 review covers only the conflicted paths, not the stopped child's work in progress.
+
+### FV-m10 · minor · `skills/orchestrate/SKILL.md:26`, `references/checkpoint-failures.md:21`: the resumed implementer isn't told its new base
+**Problem.** This was caused by the FV-M15 fix. Orchestrate 26 says only "Record that base". Reviewers get it, because orchestrate 34 passes the base from state. But the implementer computes T1 from the base in its original task (implement 12, 30), and the resume at `checkpoint-failures.md:21` says only "Then continue". So the T1 half of FV-M15 rests on the orchestrator inferring that it should pass the new base. Pass 4's suggested fix said "Pass that base to the resumed implementer".
+
+Separately, building the base "in the checkpoint worktree" can collide with checkpoint C+1's run when a paused lane merges after C has merged. The one-writer rule (orchestrate 21) covers that, but an off-tree build avoids it.
+
+**Fix.**
+- **Line 26:** "Record that base and give it to the resumed implementer."
+- **`checkpoint-failures.md:21`:** "Then continue, with the new base (orchestrate → Where work runs)."
+- **Optional:** "or build it off-tree with `git merge-tree --write-tree` and `git commit-tree`".
+
+**Counts (pass 5, open):** 0 blocker, 1 major (FV-M16), 1 minor (FV-m10). **Verdict:** changes needed. This pass is already past the cap, so FV-M16 goes to the owner, or to the oracle, to decide.
