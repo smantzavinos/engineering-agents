@@ -22,7 +22,7 @@ One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
 - **Planning ahead:** in the planning worktree (see Plan ahead).
-- **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. While a serial child is actively building, write these files but run no git commands there. Commit them at Close step 1, or before a merge into a stopped child. Otherwise, commit them as you go.
+- **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. While a serial child's implementer or code reviewer is running, write these files but run no git commands there. Commit them at Close step 1, or before a merge into a stopped child. Otherwise, commit them as you go.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
 - **Merging into the work branch:** only when no one is writing there, and its tree is clean once you have committed your own files. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
 - **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. The child's new base is the incoming commit: the green checkpoint tip, or the work-branch commit merged. Its old base is always an ancestor of that commit. Record the new base and give it to the resumed implementer, so T1 and code review still see only the child's own changes.
@@ -41,7 +41,7 @@ One writer per worktree at any time.
    3. A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Merge any green checkpoint branch that is waiting (Checkpoints step 2).
    4. If this was the last child before a checkpoint, start the checkpoint.
    5. Note anything that changes later children, and adjust their epic entries if the change stays within scope. Commit the state.
-   6. Plan the next child.
+   6. Plan the next child. Skip steps 6 and 7 when the next child is a sibling in the same parallel group: it is already running.
       - **If it was planned ahead:**
         - wait for its plan loop to be approved;
         - resume its plan-author to refresh (`plan` → Refresh);

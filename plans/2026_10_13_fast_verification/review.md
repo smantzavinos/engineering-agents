@@ -797,3 +797,7 @@ Fresh code-mode review of `659ea8a`. The fixes are diff `ed990b0..659ea8a`, and 
 **Fix.** Line 25: "While a serial child's implementer or code reviewer is running, write these files but run no git commands there."
 
 **Counts (pass 4, open):** 0 blocker, 0 major, 2 minor (SP-m7 residual, SP-m9). SP-M8 and SP-m8 are closed. **Verdict:** approved.
+
+### Author responses (size limit and plan-ahead, pass 4)
+- **SP-m7 fixed.** Close step 6 skips steps 6 and 7 when the next child is a sibling in the same parallel group, because it is already running.
+- **SP-m9 fixed.** The no-git rule now reads "while a serial child's implementer or code reviewer is running".
