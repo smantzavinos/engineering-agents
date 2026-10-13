@@ -715,3 +715,55 @@ Read literally, that wait counts, and it can trip the budget spuriously while th
   - The plan branch now carries only plans and plan ledgers.
 - **SP-m5 fixed.** Checkpoint stops (from the steer to the resume) are excluded from wall time and recorded in state.
 - **SP-m6 fixed.** Close step 6 runs every next-child plan loop in the planning worktree, whether it was planned ahead or not, and merges the plan branch. Step 7 records the base after that merge.
+
+## size limit and plan-ahead, pass 3
+Fresh code-mode review of `2af32b3`. The fixes are diff `8da183a..2af32b3`, and the full change is `edf23d8..2af32b3`. Checked against plan §13 (the last three bullets) and §14. `node tools/render-skills.mjs --check` passes: `dist/` matches the skills. Mid-implementation splits stay out of scope, per the owner's ruling. The SP-M3 plan-branch approach is withdrawn. I checked the single-copy rule (orchestrate 25) against every git operation in the work-branch worktree while a serial child implements.
+
+### Earlier findings, verified in the artifacts
+- **SP-M6 fixed.** The orchestrator no longer commits in the planning worktree. Its files stay in the work-branch worktree (orchestrate 25), and the plan branch carries only plans and ledgers (65). Plan-author and plan reviewers are the only writers there, one after another.
+- **SP-M7 fixed** for the three cases raised:
+  - There is one current copy, and every session gets its path (25). Recovery reads that copy (18).
+  - The implementer reads the baseline digest and Quarantine from the live file (implement 12). Checkpoint triage writes to the same file.
+  - Single plan commits the files before the PR hand-off (56).
+
+  The new rule causes SP-M8 and SP-m8.
+- **SP-m5 fixed.** Checkpoint stops are excluded from wall time (103) and recorded per child (15).
+- **SP-m6 fixed** for serial children (orchestrate 44-51): every next-child plan loop merges before step 7 records the base. The new "Otherwise" branch causes SP-m7.
+
+### The single-copy rule against git in the work-branch worktree
+- **Implementer commits:** safe. Implement 76 says to stage its own paths only and never stash or revert the orchestrator's files. Handoff 59 allows those files to stay modified. The "commit first" before `self_compact` (26) falls under the same rule.
+- **Checkpoint-failures steer ("commit, stop"):** the implementer's commit is safe. The merge that has to follow is not; see SP-M8.
+- **Merges at clean points:** safe between serial children, because Close step 1 commits first. They break at a steer stop (SP-M8).
+- **Lane integration:** safe. There is no serial implement loop in that worktree during a group, so the files are committed as you go. The reset on red T1 (lanes 27) only affects committed state.
+- **Recovery's dirty-tree rule:** broken (SP-M8).
+- **Single-plan mode:** safe (56).
+- **Code reviewer's ledger commit:** not covered (SP-m8).
+
+### SP-M8 · major · `skills/orchestrate/SKILL.md:25, 27, 77, 108`; `references/checkpoint-failures.md:3, 17-21`: the work-branch worktree is never clean during an implement loop, but three rules still need it clean or need git there (caused by the SP-M7 fix)
+**Problem.** Line 25 leaves `state.json` and `epic.md` modified for the whole implement loop and forbids git there until Close step 1. Three rules conflict with that:
+- **Steer stop.** A serial child stopped by the checkpoint-failures steer is still in its implement loop; it hasn't closed. To resume, it must first get the green checkpoint branch through a merge into the work branch (checkpoint-failures 17-21; orchestrate 77). Line 27 names this stop as a clean point, and allows merging "only when its worktree is clean". The tree isn't clean, because of the orchestrator's own files, and line 25 forbids the git command anyway. Read literally, the merge can never happen, so the stopped child never resumes. Otherwise the orchestrator breaks one of the rules without guidance. Checkpoint-failures 3 adds to the conflict. It says "everything here happens on the checkpoint branch… the work branch… untouched", yet the same file's Quarantine, baseline and regression writes (6, 7, 15) must go to the work-branch copy. If they went to the checkpoint worktree's copy instead, the green merge would collide with the dirty files.
+- **Recovery (108).** "A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard." This is the SP-M7 scenario: after a mid-loop `self_compact` or a crash, Recovery runs `git status` (18). The tree is always dirty with the orchestrator's own files. The rule then has the orchestrator resume the implementer to "commit or discard" them. At best that is a wasted resume, since implement 76 forbids touching them. At worst the implementer follows the task message and discards them, losing N's run id and pass count and N+1's planner run ids. That is exactly the state SP-M7 set out to protect.
+
+**Fix.**
+- **Line 25:** "…run no git commands there while its implementer or reviewer is running. At a checkpoint-failures stop, commit your files before merging."
+- **Line 27:** "only when its worktree is clean apart from your own files, and you have committed those first."
+- **Recovery 108:** "A dirty tree, apart from your own files, belongs to an interrupted session."
+- **Checkpoint-failures 3:** "Your own files (`state.json`, `epic.md`) stay in the work-branch worktree (orchestrate → Where work runs)."
+
+### SP-m7 · minor · `skills/orchestrate/SKILL.md:44-51`; `references/lanes.md:6, 10`: Close step 6 plans every next child in the planning worktree, including group members (caused by the SP-m6 fix)
+**Problem.** "Otherwise: run its plan loop now… Either way, plan loops run in the planning worktree." Two cases go wrong:
+- **Serial child followed by a group.** Step 6 plans the first member in the planning worktree and merges its plan into the work branch before its lane starts. That contradicts lanes.md 6 and 10, and orchestrate 63.
+- **A lane child's Close.** Its "next child" is usually a sibling that is already planned or running in its own lane. Step 6 tells the orchestrator to plan it again. Step 7 then records a base for it, which doesn't apply, since lanes share one base (lanes 6).
+
+**Fix.** Step 6: "Plan the next child if it is serial, including the first child after a group (Plan ahead). Group members plan in their lanes (`references/lanes.md`)." Apply step 7's base to serial children only.
+
+### SP-m8 · minor · `skills/review/SKILL.md:52`; `skills/implement/SKILL.md:30`: other sessions in the work-branch worktree don't account for the orchestrator's uncommitted files (caused by the SP-M7 fix)
+**Problem.**
+- **The code reviewer.** It runs in the work-branch worktree during the implement loop and must "Commit the ledger" (review 52). Only `implement` was told to stage its own paths. A reviewer that runs `git commit -a` or `git add -A` sweeps the orchestrator's files into its review commit. That loses no data, but it is a second session committing them mid-loop, against line 25's intent.
+- **T1 selection.** Implement 30 computes T1 from `git diff <base>`, which includes the working tree. It now always contains `state.json` and `epic.md`, and the reviewer's "T1 selection covers the actual diff" check (review 35) sees the same noise. Usually that selects nothing, but a repo whose test map or widening rules cover `plans/` or docs would mis-select.
+
+**Fix.**
+- **Review 52:** "Commit the ledger, staging only that file."
+- **Implement 30:** "…from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`."
+
+**Counts (pass 3, open):** 0 blocker, 1 major (SP-M8), 2 minor (SP-m7, SP-m8). SP-M6, SP-M7, SP-m5 and SP-m6 are closed. **Verdict:** changes needed.
