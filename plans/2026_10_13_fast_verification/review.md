@@ -428,3 +428,36 @@ Mirror the change in frontier §4.6 step 2.
 - **FV-m8 fixed.**
   - A dependent child is steered at once with the failure digest: don't fix it, commit, stop and reply. Implement treats a failure that is being fixed on a checkpoint branch as not its own, and honors a stop.
   - A culprit that is the checkpoint's own base-merge commit uses the last child's plan and ledger.
+
+## code pass 4
+
+Scope: `c0afc71..a0950b1`, with the pass-3 findings checked against the fix commit `a0950b1`. Read in full: orchestrate, `references/{checkpoint-failures,lanes}.md`, implement, fast-verification plan §3.3, and the frontier §4.5, §4.6 and §6 edits. A grep for the old routing terms ("next reply", "carried", "fix forward", "commit its work in progress") finds only the plan's own revision note. `node tools/render-skills.mjs --check` reports no drift. `skill-content-spec` (40/40) and `skill-render-spec` (75/75) pass. The seven skills total 487 lines; orchestrate is 108.
+
+### Pass-3 findings
+- **FV-M13 fixed.** Orchestrate 25 allows merges into the work branch only at a clean point, and the mid-work WIP commit is gone. Close (37) merges a waiting green branch. Checkpoints step 2 (56-60) names the conflict owner (a fresh implementer in the checkpoint worktree, merging the work branch into the checkpoint branch), T1 for the conflicted paths, and the `## checkpoint merge` ledger entry. The bound is "green and merged" (61-62, plan §3.3). Close merges before it starts the next checkpoint, so C+1's branch contains C. No deadlock: a steered child is a clean point, and lane mode merges at any time. Two problems follow from the clean-point rule: FV-M15 and FV-m9.
+- **FV-M14 fixed.** Epic close step 2 (67-71) runs the fixes in the work-branch worktree: the resumed last child if it ran serially, or a fresh implementer given that child's plan and ledger if it ran in a lane. Step 3's checkpoint branch is cut from that worktree's commit, so the fixes are gated and reach the PR. Frontier §4.6 step 2 matches.
+- **FV-m7 fixed.** Frontier 143 and 218, orchestrate 76 ("except where this skill names a fresh one") and plan §3.3 "Running a checkpoint" step 1 now describe the checkpoint branch.
+- **FV-m8 fixed.** `checkpoint-failures.md:17` steers the dependent child at once with the digest and "don't fix; commit, stop, reply", and implement 38 honors both. `checkpoint-failures.md:11` routes a culprit that is the base-merge commit to the last child's plan and ledger.
+
+### FV-M15 · major · `skills/orchestrate/SKILL.md:25`, `references/checkpoint-failures.md:17-21`, `references/lanes.md:39`: a merge into an unfinished child breaks its base commit for T1 and review
+**Problem.** This was caused by the pass-2 and pass-3 fixes. A green checkpoint branch can now merge into a child that hasn't closed:
+- **Serial mode:** the clean-point rule allows "while a stopped child is waiting". The steered dependent child is meant to get the fix this way. A child between implementer passes, waiting for its code review, also fits the wording.
+- **Lane mode:** a paused lane merges the work branch into its lane branch.
+
+The merge brings in the base-branch delta, the checkpoint fix and, in lane mode, other lanes' work. The child keeps its original base commit (orchestrate 15, 32-33). Two things use that base:
+- **T1 selection.** It comes from `git diff <base>` (implement 30). Changed-file lint, `--changed <base>` units and test-map specs now cover all the upstream paths. Implement 38's "anything else you fix" then aims the child at upstream code.
+- **The code review.** It covers "the child's diff from the base commit" (review 24). The reviewer judges upstream changes against this child's plan, and the claim check (FV-M10) flags upstream files as out of claim.
+
+Pass 1's design avoided this, because the base branch merged only into an idle work branch, followed by "record the new base commit".
+
+**Fix.**
+- **Serial mode:** in orchestrate 25, narrow "while a stopped child is waiting" to "while a child stopped by `checkpoint-failures.md` step 4 is waiting". Say that a child in its review loop is not a clean point.
+- **After any merge into an unfinished child (serial or lane):** the orchestrator records a new base for that child: the old base commit with the same incoming commit merged in, built off-tree with `git merge-tree --write-tree` and `git commit-tree`, or in the checkpoint worktree. Pass that base to the resumed implementer and to later reviewers.
+- **Lane mode:** add the same rule to `lanes.md:39`.
+
+### FV-m9 · minor · `skills/orchestrate/SKILL.md:56-60`: the resolved merge-back is neither re-gated nor reviewed
+**Problem.** This was caused by the FV-M13 fix. After a conflicted merge-back, the checkpoint branch's tip is the resolved merge, which only had T1 on the conflicted paths. Line 54 defines green as "the full gates passed on the tip", so it's unclear whether step 4 ("merge again") needs a recheck. A lane integration conflict also gets a fresh review (`lanes.md:30`); this resolution gets none.
+
+**Fix.** Add to step 3: "The resolved tip counts as green without a full rerun; the next checkpoint covers it. A fresh reviewer reviews the resolution (code mode, from the checkpoint branch's tip before the merge), with the normal pass cap." Or state that no review is needed, and say why.
+
+**Counts (pass 4, open):** 0 blocker, 1 major (FV-M15), 1 minor (FV-m9). **Verdict:** changes needed. This is pass 4, so under orchestrate's Bounds the loop stops here for the human (or the oracle) to decide on FV-M15.
