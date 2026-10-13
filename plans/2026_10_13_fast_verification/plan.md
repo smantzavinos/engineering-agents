@@ -198,7 +198,7 @@ Once parallel E2E lands (§4.1), E2E stops being the expensive layer.
 
 ## 6. Avenue D: audit the existing suite (separate backlog item, later)
 
-The audit is tracked as its own repo backlog item. It is not part of any feature epic.
+The audit is tracked as its own repo backlog item (pilot repo #133). It is not part of any feature epic.
 
 - **Scope:** run by subsystem, in coherent batches owned by one owner each, never against a deletion count.
 - **Start where the audit found the density:**
@@ -323,7 +323,7 @@ The skills budget stays within about 450 lines in total; the new skill is the on
 5. Worktree pool support in the worktree script (§4.6, §8.3).
 6. Test-architecture doc and agent rules: tiers, checkpoints, lanes, the authoring gate, layer choice, and the mocked-data page-test ban.
 
-**Pilot repo backlog (one item, ask before creating):** the test audit campaign (§6).
+**Pilot repo backlog:** the test audit campaign (§6), created as #133.
 
 ## 11. Rollout in the pilot
 
@@ -376,8 +376,5 @@ The external reports are in `research/`. The pilot repo's inventory and audit st
 - The repo-side items are built now, in the prep plan, not tracked as separate backlog items.
 - New mocked-data page tests are banned (§5).
 - Lane width is configurable: `maxLanes`, default 4, capped by the resource gate (§8.2).
-
-**Open:**
-1. Approve creating the one backlog item: the test audit.
-2. Run prep through the pipeline as a single plan (recommended), or by hand.
-3. Start prep now in its own worktree, in parallel with child 04, or wait for child 04 to close.
+- The test audit backlog item is created (pilot repo #133).
+- Prep runs through the pipeline as a single plan, starting now in its own worktree, in parallel with child 04.
