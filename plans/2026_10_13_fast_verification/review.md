@@ -776,3 +776,24 @@ Fresh code-mode review of `2af32b3`. The fixes are diff `8da183a..2af32b3`, and 
   - `checkpoint-failures.md` names the merge into a stopped child as the one exception to "the work branch stays untouched".
 - **SP-m7 fixed.** Close step 6 says parallel-group members plan in their lane worktrees.
 - **SP-m8 fixed.** The review skill commits the ledger by staging only that file. Implement's T1 selection excludes the orchestrator's files.
+
+## size limit and plan-ahead, pass 4
+Fresh code-mode review of `659ea8a`. The fixes are diff `ed990b0..659ea8a`, and the full change is `edf23d8..659ea8a`. Checked against plan §13 (the last three bullets) and §14. `node tools/render-skills.mjs --check` passes: `dist/` matches the skills. Mid-implementation splits stay out of scope, per the owner's ruling. This is the last pass under the cap.
+
+### Earlier findings, verified in the artifacts
+- **SP-M8 fixed.** All three conflicts are resolved:
+  - **Steer stop.** The no-git rule now covers only a child that is actively building, and the orchestrator commits its own files before a merge into a stopped child (orchestrate 25). The merge rule needs a clean tree once those files are committed (27), so the merge at a steer stop can happen. `checkpoint-failures.md` 3 names that merge as the one exception to "the work branch stays untouched".
+  - **Conflict path.** When the merge conflicts (orchestrate 79), the resumed implementer merges while the orchestrator's files may be modified again. That merge is safe. The checkpoint branch never changes `state.json` or `epic.md`, because their only copy is in the work-branch worktree (25), so `git merge` doesn't touch the dirty paths.
+  - **Recovery.** Recovery exempts the orchestrator's files: they're its to commit, and never to discard (108). The SP-M7 state can no longer be discarded by a resumed session.
+- **SP-m8 fixed.** The review skill commits the ledger by staging only that file (review 52). T1 selection excludes `state.json` and `epic.md` (implement 30).
+- **SP-m7 partly fixed; still open (minor).**
+  - **Fixed:** the serial-then-group case. Close step 6 now sends group members' plan loops to their lane worktrees (orchestrate 50), matching lanes 6 and 10.
+  - **Not fixed:** a lane child's own Close. Steps 6 and 7 still run unconditionally. When a group member that isn't last closes, its "next child" is a sibling that is already planned and possibly implementing in its lane. Step 6 then says to wait for its plan loop to be approved and resume its plan-author to refresh. That plan-author keeps the lane worktree (29), where the sibling's implementer may be running, which contradicts 66 and "one writer per worktree". Step 7 also records a base for that sibling, though lanes share one base (lanes 6).
+  - **Fix:** in Close step 6, add: "Skip steps 6 and 7 when the next child has already started, as a sibling in a group does. After the group's last member closes, they apply to the child after the group." An orchestrator will probably skip the sibling anyway, so this stays minor.
+
+### SP-m9 · minor · `skills/orchestrate/SKILL.md:25`: "actively building" doesn't say whether the code reviewer's run counts (caused by the SP-M8 fix)
+**Problem.** Before the SP-M8 fix, the no-git window was the whole implement loop. It is now "while a serial child is actively building". The code reviewer runs in the same worktree and commits its ledger (review 52), and that can be read as not "building". Under that reading, the orchestrator may commit `state.json` and `epic.md` while a code reviewer is running. Plan-ahead makes this routine: planner run ids and pass counts change while N is in review. Two git writers in one worktree bring back the `index.lock` race. And if the orchestrator has just staged its files, the reviewer's plain `git commit` sweeps them into the review commit, even though the reviewer staged only the ledger.
+
+**Fix.** Line 25: "While a serial child's implementer or code reviewer is running, write these files but run no git commands there."
+
+**Counts (pass 4, open):** 0 blocker, 0 major, 2 minor (SP-m7 residual, SP-m9). SP-M8 and SP-m8 are closed. **Verdict:** approved.
