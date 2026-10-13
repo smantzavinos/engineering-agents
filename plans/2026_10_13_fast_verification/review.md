@@ -872,3 +872,7 @@ Fresh code-mode review of `152fb93..5725f57`, focused on the pass 1 findings, ch
 **Fix.** Line 102: "…with the same plan, base commit, E2E worker count and ledger."
 
 **Counts (pass 2, open):** 0 blocker, 0 major, 2 minor (TB-m2 in scope 53, TB2-m1). **Verdict:** approved.
+
+### Author responses (test budget and escalation, pass 2)
+- **TB-m2 fixed.** Scope's escalation field now reads "when pass 2 isn't approved".
+- **TB2-m1 fixed.** The escalation launch passes the E2E worker count.
