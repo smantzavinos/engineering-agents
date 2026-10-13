@@ -855,3 +855,20 @@ In each case the escape hatch technically exists, but nothing tells the author t
 - **TB-m1 fixed.** After escalation, the escalation implementer is the child's implementer: its run id is recorded, and it is resumed for later passes. Implement's ownership line notes the handoff.
 - **TB-m2 fixed.** The trigger is now "the child's own code review isn't approved at pass 2". The escalation implementer gets fix passes 2 and 3 under the cap of 4.
 - **TB-m3 fixed.** Plan review checks that the Tests list is complete and lean, because it is the test budget.
+
+## test budget and escalation, pass 2
+Fresh code-mode review of `152fb93..5725f57`, focused on the pass 1 findings, checked in the skills rather than in the author's responses. `node tools/render-skills.mjs --check` passes: `dist/` matches the skills.
+
+### Earlier findings
+- **TB-M1: fixed.** The fix doesn't widen plan 27's Tests scope as suggested. Instead it changes the severities, which is enough. Review 32 now makes only a test with no contract a major. A test whose real contract is missing only from the ledger (a regression test, an independent Keep contract, or a move or split that the "isn't new" clause doesn't cover) is at worst a minor, "record it, don't delete the test". That removes the false majors and the pressure to drop coverage. Implement 64 asks for every unlisted contract, including regression tests "found while building or fixing". `## integration` and `## checkpoint fix` (implement 52–56) still don't carry that bullet, but under the new severities an omission there costs only a minor.
+- **TB-M2: fixed, with one input left out (TB2-m1).** Orchestrate 102 now says where the session runs ("where the child's implementer ran"), what it gets (plan, base commit, ledger) and its scope ("Integration and checkpoint fixes don't escalate"). The base is the one recorded in state, which orchestrate 28 keeps current after a merge into a stopped child, so T1 and the reviewer's diff stay correct.
+- **TB-m1: fixed.** Orchestrate 102: "From then on it is the child's implementer: record its run id, and resume it for later passes". Because every other resume names "the child's implementer", it also covers checkpoint merges (79), recovery and epic close. Implement 9 notes the handoff. Recording the escalation run id in the implementer slot doesn't preserve the fact that the child escalated, which plan §15 wants measured. The fix pass ledger shows it, though, so I'm not reopening this.
+- **TB-m2: partly fixed, still open (minor).** Orchestrate 102 and plan §15 now use one unambiguous trigger: review pass 2 not approved, so the escalation session gets fix passes 2 and 3 under the cap of 4. Scope 53 wasn't changed and still says "takes over code-review fixes from pass 3 on". That contradicts orchestrate and is the ambiguity this finding named. **Fix:** in scope 53, "…the agent that takes over a child's code-review fixes when its review isn't approved at pass 2…". Then re-render `dist/`.
+- **TB-m3: fixed.** Review 23: "The list is the test budget, so check that it is complete and lean."
+
+### New findings
+#### TB2-m1 · minor · `skills/orchestrate/SKILL.md:102`: the escalation launch omits the E2E worker count (caused by the TB-M2 fix)
+**Problem.** Step 2 (line 35) gives the implementer "its E2E worker count". `references/lanes.md:11` splits the machine-wide budget across lanes and passes each lane its count. Implement 33 runs E2E with "the E2E worker count your task gives". Line 102 gives the escalation implementer "the same plan, base commit and ledger" but no worker count. An escalated lane child that reruns E2E for its fixes then has no count, so it may oversubscribe the machine alongside the other lanes and the checkpoint run, and cause flakes.
+**Fix.** Line 102: "…with the same plan, base commit, E2E worker count and ledger."
+
+**Counts (pass 2, open):** 0 blocker, 0 major, 2 minor (TB-m2 in scope 53, TB2-m1). **Verdict:** approved.
