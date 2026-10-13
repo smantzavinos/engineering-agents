@@ -23,7 +23,7 @@ The pool is created once with the repo's worktree tooling, then reused.
 Integrate lanes in child order, as they close, in the idle work-branch worktree.
 1. Merge the lane branch.
 2. A helper runs that child's T1 on the merged tree.
-3. If the merge conflicts or T1 is red, the **integrator** is the implementer of the child being merged, resumed in its lane worktree.
+3. If the merge conflicts, abort it. If T1 is red, reset the work branch to its commit before the merge. Either way, the **integrator** is the implementer of the child being merged, resumed in its lane worktree.
    - It merges the work branch into its lane branch and resolves the conflict there.
    - It runs T1 for both children.
    - It appends `## integration` to its own ledger.
@@ -34,6 +34,6 @@ Integrate lanes in child order, as they close, in the idle work-branch worktree.
 - Each group member's claims are in `epic.md`.
 - A plan that must change files outside its claim, except the merge-friendly files the epic names, stops that lane. The child then runs serially after the group, or is re-scoped under Decisions.
 
-## Checkpoint fixes in lane mode
-- A culprit fix runs in the culprit's lane worktree when that worktree is idle and not yet re-pointed.
-- Otherwise, a fresh implementer gets the culprit's plan and ledger. It runs in a free pool worktree, on a fix branch from the work-branch tip, and the fix merges like a lane.
+## Checkpoints in lane mode
+- Checkpoint fixes happen on the checkpoint branch (`checkpoint-failures.md`), never in a lane worktree.
+- A paused lane merges the work branch into its lane branch once the checkpoint branch has merged, then continues.

@@ -35,7 +35,7 @@ The models did not slow this down; the process did. Work was cut into 17 tasks p
 3. **Small sessions, not small tasks.** One planner session and one implementer session per child plan. Each self-compacts before handing back, so it stays resumable and cheap to continue.
 4. **Fresh eyes for every review.** Every review pass is a new session. Authors are never fresh; reviewers always are.
 5. **Say what, not how.** Skills state goals, outputs, constraints and stop conditions, and trust the model with the method. A skill that needs a template to work is too long.
-6. **Test at the right altitude.** Run targeted tests while building and the full gates once at the end. Never run the full suite per step.
+6. **Test at the right altitude.** Run targeted tests while building and once at child close. Run the full gates at checkpoints in the background, and at epic close ([fast verification](../2026_10_13_fast_verification/plan.md) §3). Never run the full suite per step.
 7. **Disk is the memory.** Anything that must survive compaction or a crash lives in a file in the plan directory or in git, not in chat. Handoffs between sessions are files; chat replies are pointers to them.
 8. **Bound everything.** Every loop has a cap, every launch has a deadline, every child has a budget. Autonomy without bounds is how a quiet failure becomes an expensive one.
 
@@ -52,7 +52,7 @@ The models did not slow this down; the process did. Work was cut into 17 tasks p
         ├─ PLAN LOOP       planner (resumed, compacted) ⇄ fresh plan reviewer
         ├─ IMPLEMENT LOOP  implementer (resumed, compacted) ⇄ fresh code reviewer
         │                    disputes → oracle
-        └─ CLOSE           record state, integrate base branch, orchestrator self-compacts, next child
+        └─ CLOSE           record state, integrate (base branch at checkpoints), orchestrator self-compacts, next child
         ▼
 EPIC CLOSE                   one fresh whole-epic review → PR process (existing)
 ```
@@ -164,7 +164,7 @@ When the last child is done:
 | Oracle | One question | frontier (max reasoning) | Never |
 | Helpers | One errand | fast/cheap | Never |
 
-Parallelism is deliberately narrow: children run in sequence because each plan depends on the code the previous one left behind, and past attempts at parallel execution in this repo cost more in coordination than they saved (ADR 0006). What runs concurrently is cheap and independent: helper errands, independent gates, and the baseline gate run alongside the first plan loop.
+Parallelism started narrow: children ran in sequence because each plan depends on the code the previous one left behind, and past attempts at parallel execution in this repo cost more in coordination than they saved (ADR 0006). What ran concurrently was cheap and independent: helper errands, independent gates, and the baseline gate run alongside the first plan loop. Fast verification (§8) adds opt-in parallel lanes, for children the epic declares independent, with claims and an integrator, plus background checkpoint runs.
 
 Mechanics:
 - **Self-compaction** uses `@nicknisi/pi-checkpoint`'s `self_compact({ note_to_self })`. Every handback works the same way:
@@ -382,7 +382,7 @@ Writing rules for the new skills:
 | The `pull-request` skill gates on `code_review.md` being COMPLETE | Teach it to accept a `review.md` whose latest code or epic-diff pass is approved. One-line change, done in the Write step. |
 | Compaction loses a detail that mattered | Mitigated by "disk is the memory": plan, review ledger, git and `state.json` hold everything needed to continue. |
 | Whole-plan implementation produces a large diff that is hard to review | Plans stay child-sized, and the planner may ask for a split. The implementer commits in logical units. The reviewer may use scouts to gather context. |
-| Fewer gates mid-flight means regressions surface later | Accepted trade. The end-of-implementation full gate and fresh review catch them, which is cheaper than paying for gates on every step. |
+| Fewer gates mid-flight means regressions surface later | Accepted trade. Each child's targeted T1 and fresh review catch most of them; background checkpoints and epic close catch the rest. Each checkpoint regression is bisected to its culprit and widens the test map ([fast verification](../2026_10_13_fast_verification/plan.md) §3.3). |
 | "Flake" becomes the excuse for a real failure | A flake must pass alone *and* be outside the child's changes, and it is recorded where the reviewer sees it. |
 | A child silently burns budget (long E2E loops, a hung service) | Deadlines on every launch, a budget per child in `epic.md`, and a stop when it is exceeded. |
 | Epics already in flight depend on the installed skills | Build the new skills side by side under new names. Retire nothing until the pilot passes. |

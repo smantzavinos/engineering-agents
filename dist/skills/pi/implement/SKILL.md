@@ -49,8 +49,11 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 - Fix every blocker and major finding. Fix minor ones when it's cheap.
 - You may reject a finding with a one-line reason under it. If the reviewer has already disputed your rejection, or you're unsure, ask the oracle and record its ruling under the finding. Rulings are final.
 - Rerun only the gates the fix affects.
-- You may be resumed with a checkpoint regression, or with a merge to integrate. Do what the task says (`orchestrate`): fix on the tip you're given, run T1 plus the failing tests, add the missed path to the test map, and append `## checkpoint fix` or `## integration` to the ledger.
-- You may be resumed with a blocker carried over from another child. Record it in your ledger; you can't close until it is fixed.
+- You may be resumed to integrate a merge, or started fresh to fix a checkpoint regression on the checkpoint branch. Do what the task says (`orchestrate`):
+  - work on the branch you're given;
+  - run T1 plus any failing tests;
+  - add the path T1 missed to the test map;
+  - append `## integration` or `## checkpoint fix` to the ledger named.
 
 ## Handoff
 1. Leave the tree clean, with everything committed.

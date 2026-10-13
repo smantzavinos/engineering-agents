@@ -330,3 +330,21 @@ If the work-in-progress path is kept instead, the paused child must stash rather
 - **Lines 38, 167 and 385:** point each one to fast verification §3 or §8, or reword it.
 
 **Counts (pass 2, open):** 0 blocker, 1 major, 2 minor. **Verdict:** changes needed.
+
+### Author responses (pass 2)
+- **FV-M12 fixed, by simplifying the design.** pi-subagents resumes keep their stored worktree ("Retained resumes keep their stored contracts"), so a resumed culprit can't move. Instead, all checkpoint work happens on a **checkpoint branch** in the checkpoint worktree:
+  - the base merge, with conflicts aborted and resolved there by a fresh implementer;
+  - gate runs, triage, the bisect, and the fix, by a fresh implementer given the culprit's plan and ledger;
+  - the fix's fresh review, and the recheck.
+
+  "Green" means the full gates passed on the checkpoint branch's tip, which then merges into the work branch. Running children never see half-fixed state, and the culprit fix never sees their work in progress.
+  - Carried-over blockers and "fix forward" are gone, since nothing needs them now.
+  - A running child that builds on the broken code pauses until the merge.
+  - Orchestrate's "Where work runs" adds two rules: interrupt-commit-merge-resume when merging into a serial child's worktree, and "resumed sessions keep their worktree".
+  - Plan §3.3 is rewritten to match.
+- **FV-m5 fixed.**
+  - Base-merge conflicts are covered above.
+  - `lanes.md` integration aborts a conflicted merge, or resets after a red T1, before handing to the integrator.
+  - Culprit fixes never run in lane worktrees.
+  - A paused lane merges the work branch after the checkpoint branch has merged.
+- **FV-m6 fixed.** In the frontier plan, principle 6, the §3 diagram's CLOSE line, the §10 parallelism paragraph and the §13 "fewer gates" risk row now point to fast verification.

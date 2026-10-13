@@ -21,8 +21,9 @@ On start, after compaction, or after a crash: read `state.json`, `git status`, `
 One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
-- **Checkpoint runs, triage and bisects:** only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
-- **Before anyone else writes in a running child's worktree:** interrupt that child, and have it commit its work in progress.
+- **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
+- **Merging into the work branch while a serial child runs there:** interrupt the child, have it commit its work in progress, merge, then resume it.
+- **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
 ## Per child
 1. **Plan.** Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
@@ -31,7 +32,7 @@ One writer per worktree at any time.
 2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
    - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
-3. **Close.** A child with an open carried-over blocker can't close.
+3. **Close.**
    - Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
    - A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Record the new base commit.
    - If this was the last child before a checkpoint, start the checkpoint.
@@ -46,10 +47,11 @@ One writer per worktree at any time.
 ## Checkpoints
 `epic.md` names them, and epic close is always one. You may move, add or drop any checkpoint except epic close; record why under Decisions.
 1. **Run.**
-   - While the work-branch worktree is idle, merge the base branch in, as the repo prescribes. Merge conflicts go to the implementer of the child that just closed.
-   - Point the checkpoint worktree at the result. After a disk check, a helper runs every gate there with the given E2E worker count.
+   - In the checkpoint worktree, create the checkpoint branch from the work-branch commit, and merge the base branch into it, as the repo prescribes.
+   - On a conflict, abort the merge. A fresh implementer then resolves it there, given the last child's plan and ledger.
+   - After a disk check, a helper runs every gate with the given E2E worker count.
    - The next child goes on meanwhile.
-2. **Green** means the full gates passed on that commit, or on a later commit that contains the fix. Targeted reruns don't count.
+2. **Green** means the full gates passed on the checkpoint branch's tip. Targeted reruns don't count. Merge the green checkpoint branch into the work branch.
    - The run for C+1 waits until C is green.
    - No child after C+1 in child order may start (a serial child) or be integrated (a lane child) until C is green.
 3. **Failures:** follow `references/checkpoint-failures.md`.

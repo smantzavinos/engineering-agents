@@ -110,15 +110,16 @@ A **checkpoint** is a named point in the epic's child order where the full gates
 
 **The bound:** work may not pass checkpoint C+1 until C is green. At most one checkpoint is unverified at any time.
 
-**When a checkpoint fails** (a failure not in the baseline and not a known flake):
+**When a checkpoint fails** (a failure not in the baseline and not a known flake), everything happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green.
 1. **Triage, by a helper:**
    - rerun the failing tests alone once;
-   - if they still fail, find the culprit with `git bisect run` over the commits since the last green checkpoint, running only the failing tests, which is cheap;
-   - digest the failure.
-2. **Route it:**
-   - **Pause and fix in the culprit child** when the failure sits in code that the running child builds on. Pause the running child, resume the culprit's implementer (its session is kept) to fix on top of the branch tip, run T1 for the fix plus the failing tests, then resume.
-   - **Fix forward** otherwise. The failure goes into the running child's ledger as a blocker finding carried over from the culprit. That child cannot close until it is fixed.
-3. **Record:** the regression goes in `state.json` (culprit child, test, which tier caught it, what T1 missed), and the test map widens so the same miss can't recur.
+   - if they still fail, check them on the base branch's tip, where a failure is base-side and joins the baseline;
+   - otherwise find the culprit with `git bisect run` over the commits since the last green checkpoint, running only the failing tests, which is cheap.
+2. **Fix:** a fresh implementer, given the culprit's plan and ledger, fixes it on the checkpoint branch. A resumed session would still be in its old worktree. The fix gets T1, a test-map entry, a `## checkpoint fix` ledger entry and a fresh code review. The full gates then rerun on the checkpoint branch, which merges into the work branch when green.
+3. **Running children:** one that builds on the broken code pauses until the merge, then picks up the fix (a lane merges the work branch in). Others continue untouched.
+4. **Record** the regression in `state.json` (culprit child, test, which tier caught it, what T1 missed).
+
+*(Revised after code review pass 2. The earlier design either paused a child to fix in the culprit, or carried the failure forward as a blocker in the next child. Fixing on the checkpoint branch keeps running children's work out of the fix and the recheck.)*
 
 ### 3.4 Flakes
 
