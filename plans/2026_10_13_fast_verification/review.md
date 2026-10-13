@@ -519,3 +519,100 @@ Separately, building the base "in the checkpoint worktree" can collide with chec
   - `checkpoint-failures.md` says "continue with its new base".
   - `implement` says to compute T1 from a new base once given one.
   - With no helper-built commit, nothing has to be built in the checkpoint worktree.
+
+## size limit and plan-ahead, pass 1
+Fresh code-mode review of `a595ff6` (diff `edf23d8..a595ff6`) against plan §13 (the last three bullets) and §14. `dist/` matches the skills (`node tools/render-skills.mjs --check`). Splitting a child mid-implementation is out of scope, per the owner's ruling.
+
+**What holds.**
+- The size limit is consistent across the skills: `scope` sets it (scope 53), `plan` checks it first (plan 44), review checks it in epic and plan modes (review 14, 20), and orchestrate splits into real children (orchestrate 102-104). `state.json` gains the estimate (orchestrate 15).
+- The planning worktree does keep the plan-author and its reviewers out of the serial implementer's worktree, and a resumed plan-author doing the Refresh is still in its own worktree (orchestrate 28).
+- Before a refresh, the plan branch touches only the N+1 directory, so the merges in both directions are clean when nothing else writes to it (but see SP-M3).
+
+### SP-M1 · major · `skills/orchestrate/SKILL.md:37-42, 48-51`; `skills/plan/SKILL.md:48-53`: the "At N's close" steps aren't ordered against Close, and the refresh misses what Close changes
+**Problem.** Close (37-42) and "At N's close" (48-51) are two separate lists with no order between them. Close does several things a refresh has to see:
+- it merges a waiting green checkpoint branch;
+- it records the new base commit;
+- it adjusts later children's epic entries;
+- it then calls `self_compact`, naming the next child.
+
+If the refresh runs first, the N+1 plan is refreshed without the checkpoint fix or its own adjusted entry. Even when the order is right, Refresh step 2 (plan 51) checks the plan only against "its diff and ledger". It doesn't check the epic entry, Decisions or Follow-ups, or a checkpoint merge that came in since planning started.
+
+Two more gaps:
+- **N can close before N+1's plan loop is approved.** A short child against a long plan loop makes this likely. Step 1 then resumes a plan-author that is still running, or is between review passes. Nothing says to wait.
+- **N+1's base commit.** Close records the base before the plan branch merges, so N+1's base sits before its own `plan.md`.
+
+**Fix.** Put plan-ahead into Close as numbered steps:
+1. mark done, do the lane or checkpoint merges, adjust the epic entries, and commit the state;
+2. wait for N+1's plan loop to be approved;
+3. Refresh;
+4. review, if needed (SP-M2);
+5. merge the plan branch;
+6. record N+1's base;
+7. `self_compact`.
+
+In `plan` → Refresh step 2, add "and against changes to `epic.md` (your entry, Decisions, Follow-ups) and any checkpoint merge since you planned."
+
+### SP-M2 · major · `skills/orchestrate/SKILL.md:50`, `:91`: the post-refresh review is "one" review, with no path when it doesn't approve and no rule for counting passes
+**Problem.** "If the design changed, run one fresh plan review." Read literally, the review isn't a loop. A changes-needed verdict has no defined next step, so the orchestrator either implements an unapproved plan or improvises. The Bounds cap (91) doesn't say whether these passes continue N+1's earlier count. If they do, a plan approved at pass 3 gets one try. The refresh is also exactly where the estimate can grow past the size limit, and nothing re-checks it.
+
+**Fix.** "If the design or estimate changed, re-enter step 1's review loop with a fresh reviewer. The refresh starts a new pass count under the normal cap. If the estimate is now over the size limit, resize (Sizing and scope) before implementing." Refresh step 4 (plan 53) should report the estimate as well.
+
+### SP-M3 · major · `skills/orchestrate/SKILL.md:14, 21-28, 102`: plan-ahead makes the orchestrator write to the implementer's worktree during N's implementation
+**Problem.** "Update and commit it after every step" (14). `state.json` and `epic.md` live in the plan directory, on the work branch, in the work-branch worktree. During a serial child, that worktree belongs to N's implementer (21-22). Plan-ahead adds orchestrator steps that happen while N is being built, and each one must be committed:
+- N+1's planner run ids and plan-review pass counts;
+- a resize of N+1 into `NN+1a`/`NN+1b`, which edits the epic's children and Decisions (102);
+- follow-ups and "can't plan yet" fallbacks.
+
+Every one of those commits is a second writer in the implementer's worktree. That is the `index.lock` problem §14 cites as the reason for the planning worktree. Uncommitted edits are worse: the implementer's commits sweep them up. The problem partly predates this change, since code-review state is already written during serial implementation, but plan-ahead makes it routine and the skill now claims to prevent it.
+
+**Fix.** Name a home for orchestrator writes while a serial child is implementing. The simplest:
+- "While a serial child is implementing, commit `state.json` and `epic.md` changes in the planning worktree, on the plan branch. The refresh merge and the plan-branch merge carry them to the work branch."
+- If the planning worktree is idle (plan-ahead skipped), use it anyway.
+- The work branch then has only the implementer as a writer until close, so the refresh merge can't conflict on `state.json`.
+
+### SP-M4 · major · `skills/orchestrate/SKILL.md:44-52`; `references/lanes.md:5-6`: plan-ahead is undefined in lane mode
+**Problem.** "The default" is to start N+1's plan loop "as soon as child N's implementer starts". In a parallel group, several Ns start at once. Which child is "N+1", and when does it start?
+- **If N+1 is a group member:** lanes.md 6 says its plan-author launches in its pool worktree. Plan ahead says the planning worktree. A pool worktree may not be allocated yet; `maxLanes`, memory and disk gate that.
+- **If N+1 is the first child after the group:** it must plan against several approved plans, and refresh only after every member is integrated (lanes.md 23). "At N's close" fires per lane, so it would refresh several times, or too early.
+- lanes.md doesn't mention plan-ahead at all.
+
+**Fix.** Pick a rule and state it in both places. Simplest: "Plan ahead only when N and N+1 are both serial. For the first child after a group: start it when the group's last member starts implementing, plan against all the members' approved plans, and refresh after the last member is integrated. Group members plan in their own lane worktrees (`lanes.md`)." Add one line to `lanes.md`.
+
+### SP-M5 · major · `skills/orchestrate/SKILL.md:15, 92-93`: a planned-ahead child's wall-time budget counts the time it spends waiting for N
+**Problem.** "A child over its wall-time or cost budget stops" (93). Wall time isn't defined; the only data is "phase timestamps". With plan-ahead, N+1's first phase starts when N's implementer starts. So N+1's clock includes all of N's implementation, roughly the 3 h size limit, before its own implementer starts. Measured from first phase to close, nearly every planned-ahead child will overrun a 4 h budget like the pilot's and stop for the human, spuriously, while running unattended. The reverse reading (implementer start to close) is also unwritten. The orchestrator has to guess either way.
+
+**Fix.** Define it in Bounds: "A child's wall time is the sum of its active phases (plan loop, refresh, implement loop). For a planned-ahead child, the wait between plan approval and N's close doesn't count." Record those phases in the per-child timestamps (15).
+
+### SP-m1 · minor · `skills/orchestrate/SKILL.md:32, 46`; `skills/review/SKILL.md:18-21`: plan-mode reviewers aren't told the plan was written ahead
+**Problem.** N+1's reviewers launch in a worktree that doesn't have N's code. A plan that builds on N's planned APIs fails "fits the codebase" and "can be built without guessing". That produces findings the author must reject, and disputes that go to the oracle, which burns passes toward the cap.
+
+**Fix.** In Plan ahead, pass the reviewer "planned ahead of N; judge references to N's work against `NN/plan.md`". Or add to review plan mode: "If the plan was written ahead, the previous child's approved plan stands in for its code."
+
+### SP-m2 · minor · `skills/orchestrate/SKILL.md:18, 47, 90`: the planning worktree's lifecycle is underspecified
+**Problem.**
+- **Creation.** "Reuse it for each child" doesn't say who creates it.
+- **Reuse.** It doesn't say that reuse means a fresh plan branch at the current work-branch tip, or when reuse is safe.
+- **A stale plan-author.** Bounds 90 says planner calls resume that child's session. Once the worktree has moved on to N+2, resuming N+1's plan-author (for example, to fold rework, line 105) would make it a second writer there.
+- **Recovery** (18) reads `git status` without saying which worktree.
+
+**Fix.**
+- "Create it once with `git worktree add`. For each child, switch it to a new plan branch at the work-branch tip, only when it is clean and the previous plan branch has merged (as `lanes.md` → The pool)."
+- "Once a child's implementer starts, plan changes go to a fresh plan-author, not a resumed one."
+- Recovery: "`git status` in every worktree in use".
+
+### SP-m3 · minor · `skills/plan/SKILL.md:45`; `skills/review/SKILL.md:21`; `skills/orchestrate/SKILL.md:33, 38`: out-of-scope follow-ups live only in the plan-author's reply
+**Problem.** Plan 45 puts follow-ups "in your reply, not into the plan". The reviewer can't see the reply, so "unrecorded extra work" (review 21) has no record to check against. Orchestrate never moves planner-reported follow-ups into `epic.md` Follow-ups: Close (38) handles the child's own follow-ups at close, long after the planner's reply has been compacted away. The scope-growth rule's side items can therefore be lost.
+
+**Fix.**
+- **Plan 45:** "…goes under a short Follow-ups line in `plan.md`, not into Changes."
+- **Review 21:** "Work beyond the entry, outside Follow-ups, is a major finding."
+- **Orchestrate step 1:** on approval, copy the plan's Follow-ups into `epic.md`.
+
+### SP-m4 · minor · `skills/scope/SKILL.md:19`; `skills/review/SKILL.md:20`: the single-plan shape still uses the "one session" test that §14 says isn't a limit
+**Problem.** Scope step 3 chooses a single plan "if one implementer can build it in one session". §14 says self-compaction makes that no limit, and a single plan has no epic, so review 20 ("within the epic's size limit") has nothing to check against.
+
+**Fix.**
+- **Scope 19:** "…if it is within the size limit (see `epic.md` Size limit; record it in `plan.md`)".
+- **Review 20:** "…within the size limit (`epic.md`, or a single plan's own)".
+
+**Counts (pass 1, open):** 0 blocker, 5 major (SP-M1-SP-M5), 4 minor (SP-m1-SP-m4). **Verdict:** changes needed.
