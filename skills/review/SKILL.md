@@ -17,14 +17,22 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 - **plan:** `plan.md` against its epic entry. Check that it:
   - can be built without guessing;
   - makes sound decisions;
-  - has tests covering the scenarios and the risky logic;
-  - fits the codebase.
+  - names the contracts to prove, at sensible layers (`test-quality`);
+  - fits the codebase;
+  - has a T1 selection, widening or escalation that fits what changes;
+  - for a parallel child, claims that don't overlap its siblings'.
 - **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
   - updates the affected docs.
 
-  The implementer's ledger entry holds the gate evidence. Treat it as claims: check that the commands match the plan's gates, that flakes are outside the diff, and run a targeted test when you doubt something. Never repeat the full suite.
+  Apply `test-quality` to every new or changed test, with its severities.
+
+  The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
+  - the commands and the T1 selection match the plan and cover what changed;
+  - flakes are outside the diff.
+
+  Run a targeted test when you doubt something. Never run full suites.
 - **epic-diff:** the whole epic's diff. Check the seams between children, and parity with every acceptance scenario. Name, for each finding, the child whose review should have caught it.
 
 ## Earlier passes

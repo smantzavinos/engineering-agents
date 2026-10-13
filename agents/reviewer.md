@@ -4,11 +4,11 @@ description: Fresh-context frontier reviewer for the frontier pipeline (epic, pl
 model: github-copilot/claude-opus-5.5
 thinking: high
 inheritProjectContext: true
-skill: review, delegate
+skill: review, delegate, test-quality
 allowNestedSubagents: true
 defaultProgress: true
 ---
 
-Read the `review` skill first, then review one artifact or diff with no history, as it says. The mode and paths come from your task.
+Read the `review` and `test-quality` skills first, then review one artifact or diff with no history, as it says. The mode and paths come from your task.
 
 Gather context on large diffs through `helper` (see `delegate`); make every judgment yourself. Edit nothing except the `review.md` ledger, and commit that.

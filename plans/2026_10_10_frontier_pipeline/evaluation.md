@@ -44,6 +44,22 @@ The §15 measures in [plan.md](plan.md), all read from the pipeline's own artifa
 | Escaped defects: found at epic-diff or PR review, or after merge, that the child review should have caught | no worse than baseline | epic-root ledger and PR review |
 | Human interventions | only §8 stop conditions | `state.json` stops |
 
+### Fast verification (from the first child after the switch)
+
+[Fast verification](../2026_10_13_fast_verification/plan.md) changes the gates mid-pilot. Children before the switch are the "before" group and children after it the "after" group. Compare the two on:
+
+| Measure | Target | Source |
+|---|---|---|
+| Wall time per child, M / L | ≤ 2 h / ≤ 3 h | `state.json` phase timestamps |
+| Full-suite runs on a child's critical path | 0, or 1 when the plan escalates | ledger entries |
+| Test share of implementer wall time | ≤ 20% | implementer session log: test-command time + helper gate waits ÷ session wall time |
+| Regressions caught at a checkpoint, epic close or PR that T1 missed | each fixed before the next checkpoint; the count trends down as the test map grows | `state.json` regressions |
+| Checkpoint wall time, and time from checkpoint start to green | trend | `state.json` checkpoints |
+| Lanes: epic wall time ÷ sum of child wall times | ≤ 0.7 once lanes run | `state.json` |
+| Lanes: integration cost (integrator time, conflicts, red T1 after merge) | trend | `state.json`, ledgers |
+| Test lines ÷ production lines per child, and review findings under `test-quality` | trend down | ledgers, `review.md` |
+| Cost per child | ≤ the before group | session logs, summing per-run usage; count each run once, excluding the copies of the transcript |
+
 Also record per child, in a few lines each:
 - **Mechanics incidents:**
   - compaction checkpoints and resumes;

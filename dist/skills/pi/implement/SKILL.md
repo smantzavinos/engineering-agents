@@ -9,11 +9,16 @@ compatibility: pi
 Build the whole plan in one pass, as a senior engineer would. Settle the details, write the code and its tests, then prove it with the gates. You will be resumed with review findings, so this session owns the code until it is approved.
 
 ## Inputs
-`plan.md` (including its Handoff section), the child's `review.md` ledger, the base commit, and the baseline gate digest in `state.json`.
+`plan.md` (including its Handoff section), the child's `review.md` ledger, the base commit, and the baseline gate digest in `state.json`. Tests follow `test-quality`.
 
 ## Build
-- Implement all of it. Write the tests the plan calls for alongside the code. Each acceptance scenario this child owns gets a test.
-- While building, run only targeted checks: the test file you're working in, one E2E test by name, a typecheck. Keep built artifacts and services warm between runs where the repo allows; cold boots were the single largest cost in the old process.
+- Implement all of it. Write the tests the plan calls for alongside the code. Each contract the plan names gets proof at its owning layer.
+- While building, run only T0 checks:
+  - tests related to the files you changed;
+  - one E2E spec by name against a warm harness;
+  - an incremental typecheck.
+
+  Keep built artifacts and services warm between runs; cold boots are the largest cost.
 - When the plan is wrong:
   - in a detail: do the right thing and note it;
   - in substance: stop and report, with what you found.
@@ -21,23 +26,36 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Gates
-1. At the end, run every gate the plan lists, once, fast gates first. Have a subagent run long suites and digest the logs (`delegate`).
-2. Fix the failures and rerun only what failed.
-3. Finish with one full green pass.
+1. At the end, run T1 once: the plan's Gates commands and selection, against the base commit (selection flags default to uncommitted changes, which select nothing after a commit).
+   - Fast gates go first.
+   - A helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
+2. Fix the failures. Rerun only what failed and what the fix touches.
+3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path, unless the plan escalates this child.
 
 A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry, touching only processes you started; if it persists, report it instead of spending more time.
 
 ## Offload
-Your context is the expensive part. Delegate scouting, log reading, claim checks and mechanical sweeps. For example, once you've adopted a new component at one call site, hand the pattern, your example and the remaining sites to a fast subagent, then review its diff.
+Your context is the expensive part. Delegate scouting, log reading, claim checks and mechanical sweeps.
+- **Example:** once you've adopted a new component at one call site, hand the pattern, your example and the remaining sites to a fast subagent, then review its diff.
+- **Size:** delegate only errands worth about 5 minutes or more of your own time. Batch sweeps, and keep errand prompts short: point to the plan and your example rather than restating them.
+- **No bookkeeping:** skip task-list and other bookkeeping tools; the ledger is the record.
 
 ## Review findings
 - Fix every blocker and major finding. Fix minor ones when it's cheap.
 - You may reject a finding with a one-line reason under it. If the reviewer has already disputed your rejection, or you're unsure, ask the oracle and record its ruling under the finding. Rulings are final.
 - Rerun only the gates the fix affects.
+- You may be resumed to fix a regression found at a checkpoint. Fix it on the branch tip, then run T1 for the fix plus the failing tests.
 
 ## Handoff
 1. Leave the tree clean, with everything committed.
-2. Append `## implementation` (or `## fix pass N`) to `review.md`: commands run, pass/fail and duration per gate, flakes and baseline failures seen, log paths, deviations from the plan, follow-ups, and what the reviewer should look at closely. Commit it. The reviewer treats these as claims to check, so be exact.
+2. Append `## implementation` (or `## fix pass N`) to `review.md` with:
+   - the commands run, with pass/fail and duration per gate;
+   - the T1 selection and why each spec was picked;
+   - test lines vs production lines added, and the tests removed or consolidated;
+   - flakes and baseline failures seen, and log paths;
+   - deviations from the plan, follow-ups, and what the reviewer should look at closely.
+
+   Commit it. The reviewer treats these as claims to check, so be exact.
 3. `self_compact` with a note: what you built, any deviations, what's fragile, and how to continue.
 4. After compaction, reply in a few lines: a summary and the ledger path.
 
@@ -46,7 +64,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 - Update the docs the change affects, in this same child.
 
 ## Don't
-- Run the full test suite mid-build.
+- Run full suites, unless the plan escalates this child.
 - Expand scope. Note follow-ups in your handoff.
 - Weaken, skip or delete tests to get green.
 - Kill processes you didn't start.

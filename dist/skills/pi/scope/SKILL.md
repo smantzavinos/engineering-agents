@@ -32,8 +32,18 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Scope:** in and out.
 - **Acceptance scenarios:** those from `PROTOTYPE.md` plus agreed additions, each mapped to the child that delivers it.
 - **Children, in order:** `NN_slug`, with its goal, what it depends on, and when it's done. A few lines each, each sized for one implementer session.
+- **Parallel groups:** children that may build at the same time. Members have no dependency among them, their claims don't overlap, and none changes test infrastructure. Also set `maxLanes` (default 4).
 - **Disposal and branch.**
-- **Gates:** the repo's quality-gate commands. Say which run in full at every child close, and which slow suites run scoped per child and in full only at epic close, with the measured duration that justifies it.
+- **Gates:**
+  - the repo's T1 (targeted) and full-gate commands, with measured durations;
+  - the test map and smoke set.
+- **Checkpoints:** where the full gates run in the background. Place them:
+  - after foundation children;
+  - before fan-outs;
+  - after children that widen T1 (schema, authorization, the shared shell, dependencies);
+  - no more than about a day of children apart.
+
+  Epic close is always one.
 - **Budget:** wall time and cost per child. Exceeding it stops execution.
 - **Autonomy:** what the human wants to decide personally beyond the standard stop conditions, and what execution may do without asking: push the branch, open the PR, file tracker items.
 - **Decisions:** the human's decisions so far, with reasons. Execution appends to this.
@@ -53,6 +63,7 @@ Execution then runs only the implement loop and hands to the PR process.
 - Push back on scope creep, and raise gaps the human hasn't considered.
 - Size children as vertical slices around reviewable diffs, not layers: a slice ends with a scenario that can be tested; a layer ends with nothing to show.
 - Order children so the course-setting decisions land early, where a stop costs least.
+- Group independent children for parallel lanes. Being independent and being a checkpoint are separate questions.
 
 ## Don't
 - Write task lists, implementation detail or test checklists. That is the planner's job.

@@ -244,7 +244,7 @@ Plan review checks each child's claims against its siblings'. A plan that needs 
 3. Lanes integrate in the epic's child order as they close:
    - The orchestrator merges each lane branch into the epic branch.
    - A clean merge runs T1 for that child on the merged tree. It is short, and it catches semantic conflicts that text merges miss.
-   - A conflict, or a red T1 after a merge, goes to an **integrator**: a fresh implementer session given both children's plans and ledgers. It resolves the conflict, runs T1 for both children, and records what it changed. Its diff gets a code review.
+   - A conflict, or a red T1 after a merge, goes to an **integrator**: one of the two children's implementer sessions, resumed with the other child's plan and ledger. It already knows half of the conflict, which is cheaper than a fresh session. It resolves the conflict, runs T1 for both children, and records what it changed. Its diff gets a code review.
 4. Checkpoints (§3.3) apply to the integrated epic branch, not to lane branches.
 
 **Width.** `epic.md` sets `maxLanes` (default 4). The lanes actually running are the smallest of:
@@ -309,11 +309,13 @@ Together with lanes (§8.4), a 12-child epic of about 50 h would drop to about 2
 | `skills/plan/SKILL.md` | Gates declare T1 selection and escalation; contracts and their owning layer per scenario; claims for children in a parallel group |
 | `skills/review/SKILL.md` | Check the T1 selection and sibling claims; apply `test-quality` to new tests with the severities above |
 | `skills/scope/SKILL.md` | `epic.md` Gates names checkpoints, smoke set and test map; parallel groups with claims |
-| `agents/` | No new agent; the integrator is an `implementer` session with an integration task |
+| `agents/` | No new agent. `plan-author`, `implementer` and `reviewer` load `test-quality`. The integrator is a resumed `implementer` session. |
 | `plans/2026_10_10_frontier_pipeline/plan.md` §6 | Replace the gate table with §3; link here |
 | `plans/2026_10_10_frontier_pipeline/evaluation.md` | Add the §2 measures, the regression log, lane overlap and integration cost, and cost read from session logs (dedupe the transcript copies) |
 
-The skills budget stays within about 450 lines in total; the new skill is the only addition.
+The new skill is the only addition. The pipeline's skills grow from 373 to about 500 lines; `orchestrate` is the largest, at about 90.
+
+**Status:** done on branch `pilot/fast-verification` (2026-10-13).
 
 **Pilot repo: the prep plan scope (§11), built now, no tracker items:**
 1. Parallel E2E with per-worker backends (§4.1).

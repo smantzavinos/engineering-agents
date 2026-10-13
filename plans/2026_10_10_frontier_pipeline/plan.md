@@ -207,22 +207,24 @@ Both are reported upstream as nicknisi/pi-extensions#165; drop the patches once 
 
 The repo defines its gates; the pipeline defines when to run them. Test execution was ~70% of wall time under the old process, so this section is where most of the time goes or is saved.
 
-| When | What |
-|---|---|
-| Baseline (epic start, and after each base-branch integration) | A helper runs every gate once on the untouched tree and records the digest in `state.json`. Pre-existing failures are now facts, not arguments, and "it was already red" is checkable. |
-| While implementing | Whatever the implementer judges useful: single test files, a single E2E test by name, a type check. Never the full suite. Keep built artifacts and services warm across runs where the repo allows; a cold E2E boot per run was the single largest cost in the baseline. |
-| End of implementation | Every gate the plan lists, run once in full, fast gates first so E2E only runs on a tree that already typechecks and passes unit tests. Independent gates may run concurrently if the machine allows. Fix the failures, then re-run only what failed. Finish with one full green pass. |
-| Code review | The reviewer reads the gate evidence in the ledger. It runs targeted tests only when it doubts a claim, and never repeats the full suite. |
-| Review fix passes | Only the gates the fix touches. |
-| Epic close | One full gate run on the final tree. |
+Superseded in detail by [fast verification](../2026_10_13_fast_verification/plan.md) §3 (2026-10-13). In short:
 
-**Slow suites.** When a suite is slow enough that one full run per child dominates the child (the epic says which, with the measured duration), the epic may designate it *scoped per child, full at epic close*: each child runs the specs the plan maps to its changes, and the full suite runs once at epic close and after any base-branch integration. The trade is explicit: cross-area regressions surface at epic close instead of child close.
+| Tier | When | What |
+|---|---|---|
+| Baseline | Epic start, and after each base-branch integration | A helper runs every gate once on the untouched tree and records the digest in `state.json`. Pre-existing failures are then facts, not arguments, and "it was already red" is checkable. |
+| T0 | While implementing | Tests related to the changed files, single E2E specs against a warm harness, an incremental typecheck. Never the full suite. |
+| T1 | End of implementation, once | The plan's targeted selection against the base commit: scenario specs, test-map specs, smoke set, changed-file lint, typecheck and build. It widens for risky areas and escalates to full gates for test-infrastructure changes. Fix, then rerun only what failed. There is no final full pass. |
+| Code review | | The reviewer checks the gate evidence and the T1 selection, runs targeted tests only when it doubts a claim, and never runs full suites. |
+| T2 checkpoint | At epic-declared checkpoints, in the background | Every gate, in full, in a reusable checkpoint worktree. Work may not pass the next checkpoint until this one is green. Failures are bisected to the culprit child, then fixed in that child or carried forward as a blocker. |
+| T3 | Epic close | The epic-diff review, then the final checkpoint on the critical path. |
+
+Test quality, meaning which tests to write, keep or remove, is the `test-quality` skill.
 
 Gate runs are long and their logs are large, so the implementer hands them to a fast subagent (the run-and-digest pattern, §9). It returns a digest: pass or fail and duration per gate, failing test names, the key assertion lines, and log paths. Logs stay out of git. The implementer reads a full log only when the digest is not enough.
 
 Flaky tests: a failure that passes on an isolated re-run, and whose subject the child did not touch, is recorded in the ledger entry and counts as a pass. The reviewer may re-run it. A flake class seen twice becomes a tracker item. Baseline failures are not the child's to fix unless the plan says so.
 
-Repo-side speedups are separate from this process but often still needed. They are reusing the built app and a warm backend across E2E runs, and running E2E in parallel workers. Track them in that repo's backlog.
+The tiers depend on repo-side support: a warm harness, parallel E2E workers, a test map and smoke set, changed-file lint, and reusable worktrees. These are listed in fast verification §4.
 
 ## 7. Review policy
 
@@ -335,7 +337,7 @@ Retired from this pipeline:
 
 ## 12. Skills to write
 
-Targets: each skill ≤ ~80 lines, and the whole pipeline ≤ ~400 lines (~2,500 today). No reference templates beyond a short skeleton inside the skill.
+Targets: each skill ≤ ~80 lines, and the whole pipeline ≤ ~400 lines (~2,500 today). Fast verification added checkpoints, lanes and `test-quality`, which raised the total to about 500 lines. No reference templates beyond a short skeleton inside the skill.
 
 Drafts live in [`skills/`](skills/README.md) next to this plan.
 
@@ -348,6 +350,7 @@ Drafts live in [`skills/`](skills/README.md) next to this plan.
 | `implement` | implementer | `execute-task` |
 | `review` (modes: epic, plan, code, epic-diff) | reviewer | `review-epic`, `review-plan`, `review-code` + templates |
 | `delegate` | every frontier agent | Scattered delegation guidance in presets and agent files |
+| `test-quality` (added 2026-10-13, [fast verification](../2026_10_13_fast_verification/plan.md) §5) | planner, implementer, reviewer, test audits | Test-writing guidance scattered across `create-plan`, `execute-task` and `review-code` |
 
 The interactive skill is named `scope` rather than `epic` because it produces either an epic or a single plan.
 
