@@ -382,3 +382,37 @@ The external reports are in `research/`. The pilot repo's inventory and audit st
 - Lane width is configurable: `maxLanes`, default 4, capped by the resource gate (§8.2).
 - The test audit backlog item is created (pilot repo #133).
 - Prep runs through the pipeline as a single plan, starting now in its own worktree, in parallel with child 04.
+- **Child size limit** (§14): `scope` sets a numeric limit (default about 3 h estimated implementer time, plus a diff reviewable in one pass). A child over it is split into separate children, as vertical slices, each with its own loop and close.
+- **Plan ahead** (§14): planning the next child while the current one is implemented is the default, across the board.
+- **Rejected:** splitting a child because it overran its estimate mid-implementation. It would cut work in flight and achieve nothing useful.
+
+## 14. Child sizing and plan-ahead (added 2026-10-13)
+
+**Evidence from pilot child 04** (sized M, 4 h budget):
+- The plan author projected about 5–6 h at planning time, and the child was split into 04a and 04b *inside* the same child. 04b alone was then estimated at 5–6.5 h, and nothing split it further.
+- After about 7 h, the child is 13.1k lines added, of which 8.9k are tests.
+- In 04b, the implementer model's own turns took 77% of wall time: 419 turns, 280k output tokens, $45. Test commands took about 30 min.
+- It found broken existing E2E tests only at the end, which cost about 80 min of fix-and-rerun.
+- Re-reading context was only about 12% of the implementer's cost. So a big plan is not disproportionately expensive in tokens.
+
+The losses for the epic as a whole are elsewhere:
+- breakage is found late;
+- review passes over large diffs are expensive;
+- no parallelism, because one big child is one serial unit;
+- more work is exposed to a crash or wrong turn;
+- side items get added without a natural point to cut them.
+
+"One implementer session" was not a limit at all, because self-compaction lets a session run indefinitely.
+
+**Changes:**
+- `scope` sets a numeric **size limit** in `epic.md`.
+- `plan` estimates first. Over the limit, it proposes a split into vertical slices instead of writing the plan, and it lists work outside the child's entry as follow-ups.
+- `review` (plan mode) checks the estimate and treats unrecorded extra work as a major finding.
+- `orchestrate` turns a split into separate children (`NNa`, `NNb`).
+
+**Plan ahead.** Child N+1's plan loop starts when child N's implementer starts, working from N's approved plan.
+- It runs in a planning worktree: a plain git worktree, no install, on a plan branch. That keeps a second writer out of the implementer's worktree. (Child 04 already hit a stale `index.lock`.)
+- At N's close, the N+1 plan-author merges the work branch and refreshes its plan against N's diff and ledger. If the design changed, one fresh plan review follows. The plan branch then merges in.
+- This takes plan writing and review (about 30–45 min per child) off the critical path.
+- Skip it when N+1 depends on something N's plan leaves open.
+

@@ -12,7 +12,7 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 
 ## State
 `state.json` in the plan directory is your memory. Update and commit it after every step; every resume returns a new run id, so record it each time.
-- **Per child:** status, lane, base commit, the latest planner and implementer run ids, review pass counts, phase timestamps, and reported usage.
+- **Per child:** status, lane, estimate, base commit, the latest planner and implementer run ids, review pass counts, phase timestamps, and reported usage.
 - **At the root:** the baseline gate digest, checkpoints (commit, status, run), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
 
 On start, after compaction, or after a crash: read `state.json`, `git status`, `git log`, and the live run list, then resume whatever was in flight.
@@ -21,13 +21,14 @@ On start, after compaction, or after a crash: read `state.json`, `git status`, `
 One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
+- **Planning ahead:** in the planning worktree (see Plan ahead).
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
 - **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
 - **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. The child's new base is the incoming commit: the green checkpoint tip, or the work-branch commit merged. Its old base is always an ancestor of that commit. Record the new base and give it to the resumed implementer, so T1 and code review still see only the child's own changes.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
 ## Per child
-1. **Plan.** Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
+1. **Plan**, ahead of time where possible (see Plan ahead). Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
    - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
    - Approved: step 2. Otherwise resume the same plan-author with the ledger path and pass number.
 2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
@@ -39,6 +40,16 @@ One writer per worktree at any time.
    - If this was the last child before a checkpoint, start the checkpoint.
    - Note anything that changes later children, and adjust their epic entries if the change stays within scope.
    - Commit the state. `self_compact`, with a note naming the next child.
+
+## Plan ahead
+Plan the next child while the current one is being implemented. This is the default; plan only one child ahead.
+- **Start** child N+1's plan loop as soon as child N's implementer starts. N+1's plan-author works from N's approved plan, because N's code isn't built yet.
+- **Where:** a planning worktree, which is a plain git worktree with no install needed, on a plan branch from the work-branch tip. Reuse it for each child. Its plan-author and reviewers launch there.
+- **At N's close:**
+  1. resume N+1's plan-author, which merges the work branch into its plan branch and refreshes the plan against N's diff and ledger (`plan` → Refresh);
+  2. if the design changed, run one fresh plan review;
+  3. merge the plan branch into the work branch, then implement N+1.
+- **Don't plan ahead** when N+1 depends on something N's plan leaves open, or when its plan-author reports that it can't plan yet. Plan it after N closes instead.
 
 **Single plan:**
 1. Run step 2.
@@ -88,7 +99,9 @@ One writer per worktree at any time.
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.
 
 ## Sizing and scope
-- A planner that reports the child as too large or too small: split or merge children yourself when scope and acceptance scenarios are unchanged, and record it under Decisions. That is a resize, not a scope change.
+- **A planner that reports the child over the epic's size limit, or as trivially small:** split or merge it, as long as scope and acceptance scenarios are unchanged, and record it under Decisions. That is a resize, not a scope change.
+  - The pieces become separate children (`NNa`, `NNb`), each with its own plan loop, review and close. Don't keep them inside one child.
+  - Split into vertical slices, each ending in a scenario that can be tested.
 - A discovery that invalidates a completed child: fold the rework into the current or next plan when scope holds, and record it. If it drops a scenario or contradicts the epic, stop.
 
 ## Stop for the human only when

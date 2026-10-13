@@ -11,12 +11,14 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 ## Modes
 - **epic:** `epic.md` against `PROTOTYPE.md`. Check that:
   - the scope is complete, and the gaps the prototype skipped are addressed;
-  - the children are ordered sensibly and each is sized for one implementer session;
+  - the children are ordered sensibly and each is within the size limit;
   - every acceptance scenario has an owner;
   - gates, budgets and pre-authorizations are explicit enough to run unattended.
 - **plan:** `plan.md` against its epic entry. Check that it:
   - can be built without guessing;
   - makes sound decisions;
+  - has an estimate within the epic's size limit;
+  - stays inside the child's entry. Unrecorded extra work is a major finding;
   - names the contracts to prove, at sensible layers (`test-quality`);
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
