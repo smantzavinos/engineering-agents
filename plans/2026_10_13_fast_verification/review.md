@@ -267,3 +267,66 @@ The integrator's worktree is covered in FV-B1.
   - Checkpoint failure handling moves to `orchestrate/references/checkpoint-failures.md`, and lanes to `orchestrate/references/lanes.md`.
   - The escalation clause appears once.
   - Line counts after the fixes: orchestrate 96, scope 77, implement 75, plan 64, review 60, test-quality 53, delegate 47. That is 472 in total, plus 2 reference files of about 60 lines read only when needed.
+
+## code pass 2
+
+Scope: `c0afc71..a07dfcb`, with pass 1's findings checked against the fix commit `a07dfcb`. Read in full: the seven pipeline skills, `orchestrate/references/{lanes,checkpoint-failures}.md`, `test-quality/references/audit.md`, the three agent files, and the frontier `plan.md`/`evaluation.md` edits. `node tools/render-skills.mjs --check` reports no drift. `skill-content-spec` (40/40), `skill-render-spec` (75/75) and `repo-structure-spec` (85/85) pass. Seven-skill total is 472 lines (orchestrate 96), plus 73 lines of on-demand references, within plan §10's revised "about 500".
+
+### Pass-1 findings
+- **FV-B1 fixed.** Orchestrate "Where work runs" (lines 20-25) puts serial children in the work-branch worktree and checkpoint runs, triage and bisect in the checkpoint worktree. `lanes.md:6` sets every lane role's cwd to the lane worktree. `lanes.md:19, 26` keep an un-integrated lane worktree for its integrator. `lanes.md:38-39` names the culprit-fix worktree, with a fresh-implementer fallback. Carried-over blockers are written by the receiving implementer (`checkpoint-failures.md:16`, `implement:53`). The serial-mode choice to commit the paused child's work in progress causes a new problem, FV-M12.
+- **FV-M1 fixed.** Close names the serial and lane cases (orchestrate 36). The base branch merges at each checkpoint before the full run (49). Base-side failures join the baseline (`checkpoint-failures.md:7`). Frontier §4.5 and the §6 Baseline row match. The §2 diagram is stale; see FV-m6.
+- **FV-M2 fixed.** Orchestrate 52-54 defines green, the C+1 wait, and "past" for serial and lane children.
+- **FV-M3 fixed.** `checkpoint-failures.md` routes per running child, merge culprits and epic close. It names `## checkpoint fix` in the culprit's ledger, a fresh review, the fixer's test-map update, and the recheck. Orchestrate 34 blocks close while a carried-over blocker is open.
+- **FV-M4 fixed.** Orchestrate 41-44 adds the single-plan full run. Plan 20-23 and scope 62 carry the full-gate commands, test map and smoke set.
+- **FV-M5 fixed.** Scope 43-45 records which repo support exists. The fallbacks are in plan 32 (no test map), implement 18 (cold harness), orchestrate 24 (no checkpoint worktree) and `lanes.md:3` (no pool). Having no smoke set needs no rule.
+- **FV-M6 fixed.** Plan 28-32 and implement 30-32 cover this.
+- **FV-M7 fixed.** Implement 21 adds the stale-server check. Implement 40 scopes processes by port and has helpers stop the servers they start.
+- **FV-M8 fixed.** Scope 38 sets the budget. Orchestrate 31 and 50 and `lanes.md:9-10` pass the worker count and check disk. Implement 33 uses the given count.
+- **FV-M9 fixed.** Scope 57 adds Quarantine. `checkpoint-failures.md:6` covers flakes, implement 33 turns retries off, and frontier §6 matches.
+- **FV-M10 fixed.** Claims are recorded in scope 36-37. Plan 35 and 45, review 23 and `lanes.md:33-35` follow them.
+- **FV-M11 fixed.** `lanes.md:22-31` covers this.
+- **FV-m1 fixed.** Plan §3.1's T3 row and frontier §4.6 are updated, and orchestrate 59 says "in child order".
+- **FV-m2 fixed.** Orchestrate 47 and scope 49 are updated.
+- **FV-m3 fixed in part; the rejection is accepted.** test-quality restores "independent" (line 41), marks Banned as major (26) and makes a false negative control major (34). The SDK, platform and exact-prompt-text items come from the owner, which is a good reason.
+- **FV-m4 fixed.** Audit, checkpoint failures and lanes moved to references, and the escalation clause appears once.
+
+### FV-M12 · major · `skills/orchestrate/SKILL.md:25`, `references/checkpoint-failures.md:15, 22`: in serial mode, the running child's work in progress enters the culprit fix, the recheck and the bisect range
+**Problem.** This was caused by the FV-B1 fix. In serial mode, the culprit's implementer works in the work-branch worktree, which is also the running child's worktree. Line 25 makes the running child commit its work in progress first, and that commit lands on the work branch. Every later step then sees half-built work:
+- **The fixer's T1.** "T1 plus the failing tests" runs on a tree with half-built code from another child, so typecheck, build or the smoke set can fail for reasons that aren't the fixer's.
+- **The recheck.** "Rerun the checkpoint on the fixed commit" runs the full gates on a commit that contains the work in progress. Under orchestrate 52, a commit that contains the fix counts as green, so C's green status now depends on an unfinished child.
+- **Triage of a red recheck.** Triage bisects into the work-in-progress commit and routes the failure to the running child. C stays red until that child finishes, and the C+1 run is blocked meanwhile (line 53).
+
+This applies to both routes in serial mode, because the culprit always fixes.
+
+**Fix.** Keep the running child's work off the fix path. One option:
+- In serial mode, the culprit fix runs in the checkpoint worktree, which is idle after triage, on a fix branch from C's commit. Use the resumed culprit implementer if resume can take that cwd; otherwise a fresh implementer with its plan and ledger, as in `lanes.md:39`.
+- The fixer's T1 and the recheck run on the fix commit.
+- The orchestrator then merges the fix branch into the work branch, interrupting the running child only for that merge.
+- Say that "green" covers the fix commit on that branch.
+
+If the work-in-progress path is kept instead, the paused child must stash rather than commit, so that the branch tip stays clean.
+
+### FV-m5 · minor · `skills/orchestrate/SKILL.md:49`, `references/lanes.md:24-31, 38`, `references/checkpoint-failures.md:15`: lane-mode details created by the fixes
+**Problem.** Four lane-mode cases are underspecified:
+- **Base-merge conflicts.** At a checkpoint, these go to "the implementer of the child that just closed". For a lane child, that session's cwd is its lane worktree, but the conflicted merge sits in the work-branch worktree.
+- **A conflicted lane merge.** It is left half-done in the work-branch worktree. Nothing says to abort it before the integrator works on the lane branch and the orchestrator merges again.
+- **A culprit fix in an idle, un-re-pointed lane worktree** (`lanes.md:38`). That worktree is still on the culprit's old lane branch. Nothing says to switch it to a fix branch from the work-branch tip.
+- **A paused lane that builds on the broken code.** Nothing says that it merges the work branch once the fix is integrated. Without that merge, it resumes on the broken base.
+
+**Fix.** Add one line for each case:
+- **Base merge:** abort the conflicted base merge, and have the implementer resolve it in a free worktree on a branch from the work-branch tip, then merge that branch.
+- **Lane merge:** abort a conflicted lane merge before handing off to the integrator.
+- **Culprit fix:** in either worktree, the fix branch starts at the work-branch tip.
+- **Paused lane:** it merges the work branch after the fix lands, then continues.
+
+### FV-m6 · minor · `plans/2026_10_10_frontier_pipeline/plan.md:55` and related lines: stale gate model
+**Problem.** The FV-M1 fix moved the base-branch merge to checkpoints, but the §2 flow diagram's CLOSE line still says "integrate base branch". The same sweep would also catch three other lines that still describe the old model:
+- **Line 38:** "the full gates once at the end";
+- **Line 167:** "children run in sequence ... parallelism is deliberately narrow", which lanes now contradict;
+- **Line 385:** "the end-of-implementation full gate ... catch[es] them".
+
+**Fix.**
+- **Line 55:** "integrate (base branch at checkpoints)".
+- **Lines 38, 167 and 385:** point each one to fast verification §3 or §8, or reword it.
+
+**Counts (pass 2, open):** 0 blocker, 1 major, 2 minor. **Verdict:** changes needed.
