@@ -842,3 +842,16 @@ In each case the escape hatch technically exists, but nothing tells the author t
 **Fix.** Review 23: "names the contracts to prove, at sensible layers (`test-quality`), and is the test budget: complete for the child's scenarios, risky logic and independent contracts, with no contract that test-quality wouldn't keep."
 
 **Counts (pass 1, open):** 0 blocker, 2 major (TB-M1, TB-M2), 3 minor (TB-m1, TB-m2, TB-m3). **Verdict:** changes needed.
+
+### Author responses (test budget and escalation, pass 1)
+- **TB-M1 fixed.** Review's traceability rule now:
+  - accepts ledger-recorded contracts, naming regression tests for bugs found while building and independent contracts beyond the plan's list (config, defaults, migrations; `test-quality` → Keep);
+  - says moved, split or rewritten tests whose contract changed aren't new;
+  - keeps a test with no contract as a major finding;
+  - makes a contract missing only from the ledger a minor: "record it, don't delete the test".
+
+  Implement's ledger bullet asks for *every* unlisted contract, including regression tests from building or fixing.
+- **TB-M2 fixed.** The escalation implementer runs where the child's implementer ran, with the same plan, base commit and ledger. Only the child's own code-review loop escalates; integration and checkpoint fixes don't.
+- **TB-m1 fixed.** After escalation, the escalation implementer is the child's implementer: its run id is recorded, and it is resumed for later passes. Implement's ownership line notes the handoff.
+- **TB-m2 fixed.** The trigger is now "the child's own code review isn't approved at pass 2". The escalation implementer gets fix passes 2 and 3 under the cap of 4.
+- **TB-m3 fixed.** Plan review checks that the Tests list is complete and lean, because it is the test budget.

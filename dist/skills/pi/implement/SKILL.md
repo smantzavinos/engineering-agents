@@ -6,7 +6,7 @@ compatibility: pi
 
 # Implement
 
-Build the whole plan in one pass, as a senior engineer would. Settle the details, write the code and its tests, then prove it with the gates. You will be resumed with review findings, so this session owns the code until it is approved.
+Build the whole plan in one pass, as a senior engineer would. Settle the details, write the code and its tests, then prove it with the gates. You will be resumed with review findings, so this session owns the code until it is approved, unless the orchestrator hands it to an escalation implementer.
 
 ## Inputs
 `plan.md` (including its Handoff section), the child's `review.md` ledger, the base commit, and the baseline gate digest in `state.json`. Tests follow `test-quality`.
@@ -61,7 +61,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
    - the commands run, with pass/fail and duration per gate;
    - the T1 selection and why each spec was picked;
    - test lines vs production lines added, and the tests removed or consolidated;
-   - any contract you proved that the plan didn't list, and why;
+   - every contract you proved that the plan didn't list, and why, including regression tests for bugs found while building or fixing;
    - flakes and baseline failures seen, and log paths;
    - deviations from the plan, follow-ups, and what the reviewer should look at closely.
 

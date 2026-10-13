@@ -20,7 +20,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - has an estimate within the size limit (`epic.md`, or a single plan's own);
   - stays inside the child's entry. Work beyond it that isn't on the plan's Follow-ups line is a major finding;
   - if it was planned ahead, judge references to earlier children's work against their approved plans, not the code;
-  - names the contracts to prove, at sensible layers (`test-quality`);
+  - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean;
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
   - for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims there.
@@ -29,7 +29,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - is consistent with the codebase;
   - updates the affected docs.
 
-  Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract in the plan's Tests, or one the ledger adds with a reason. Any other test is a major finding. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
+  Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract: one in the plan's Tests, or one the ledger records with a reason. That includes regression tests for bugs found while building, and independent contracts the plan's list doesn't reach, such as config, defaults or migrations (`test-quality` → Keep). A test moved, split or rewritten because its contract changed isn't new. A test with no contract is a major finding. A test whose contract is missing only from the ledger is a minor: record it, don't delete the test. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
 
   The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
   - the commands match the plan, and the T1 selection covers the actual diff;
