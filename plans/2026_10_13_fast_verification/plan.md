@@ -1,10 +1,10 @@
-# Fast verification: cutting test time per child without losing quality
+# Fast verification and parallel children: cutting wall time per epic without losing quality
 
-**Status:** draft for owner review · **Date:** 2026-10-13 · **Extends:** `plans/2026_10_10_frontier_pipeline/plan.md` §6 (testing and quality gates)
+**Status:** draft, owner rulings of 2026-10-13 applied · **Date:** 2026-10-13 · **Extends:** `plans/2026_10_10_frontier_pipeline/plan.md` §6 (testing and quality gates)
 
 ## 1. Why
 
-The frontier pipeline cut a child from about 10 h to about 3.5–6 h. Verification is still the largest addressable cost. The measurements below are from the pilot repo (TypeScript monorepo, Vitest units, Playwright E2E against a local backend):
+The frontier pipeline cut a child from about 10 h to about 3.5–6 h. Verification is still the largest addressable cost, and children still run one at a time. The measurements below are from the pilot repo (TypeScript monorepo, Vitest units, Playwright E2E against a local backend):
 
 | Child | Size | Wall time | Note |
 |---|---|---|---|
@@ -31,95 +31,104 @@ Child 01 in detail (205 min):
   - The E2E suite grows with every child: 158 → 171 → 180 → 199 tests.
 - **Tests written:**
   - Child 01 added about 3,900 test lines for about 1,700 production lines.
-  - A sample audit put about 10–15% of new and existing test lines in low-value patterns. These concentrate in mock-heavy page tests (ordered `mockReturnValueOnce` queues, class and computed-style assertions, re-export identity checks). Backend authorization, visibility and persistence tests were almost all high-value.
+  - A sample audit put about 10–15% of new and existing test lines in low-value patterns. These concentrate in mock-heavy page tests. Backend authorization, visibility and persistence tests were almost all high-value.
 
-**What drives the time:** repeated full-suite runs on the critical path, a serial E2E suite with a cold boot per invocation, and more test code than the contracts need. Deleting existing tests is a minor lever: the audit shows a modest low-value share, so the gain is signal and maintenance, not minutes.
+**What drives the time:**
+- repeated full-suite runs on the critical path;
+- a serial E2E suite with a cold boot per invocation;
+- more test code than the contracts need;
+- strictly sequential children.
 
-Research inputs are summarized in §10; the external reports are in `research/`. The pilot repo's inventory and audit stay with that repo.
+Deleting existing tests is a minor lever: the audit shows a modest low-value share, so the gain is signal and maintenance, not minutes.
 
 ## 2. Targets
 
 | Measure | Now (children 01–03) | Target |
 |---|---|---|
 | Child wall time, M / L | 3.4 h / 3.7–5.7 h | ≤ 2 h / ≤ 3 h |
-| Full-suite runs on a child's critical path | 2–3 | 0, or 1 when escalated (§3.2) |
+| Full-suite runs on a child's critical path | 2–3 | 0; 1 only for the escalation in §3.1 |
 | Test time share of implementer wall time | ~46% | ≤ 20% |
-| Test lines per production line, new code | ~2.3 | report only; no quota |
-| Regressions found after a child closed (by background, epic-close or PR gates) | not tracked | tracked; ≤ 1 per 3 children, each fixed within the next child |
+| Epic wall time | sum of children | ≤ 0.7 × sum of children, once parallel lanes run (§8) |
+| Regressions found at a checkpoint, epic close or PR that T1 missed | not tracked | tracked; each fixed before the next checkpoint |
 | Escaped defects at epic close and PR review | baseline from pilot | no worse |
 
-## 3. Avenue A: tiered verification (on the critical path, run only what the change can break)
+## 3. Avenue A: tiered verification and checkpoints
 
 ### 3.1 Tiers
 
 | Tier | When | What runs | Who |
 |---|---|---|---|
-| **T0 inner loop** | while building | Tests related to what you just changed (`vitest related <files>`), single E2E specs by name against a warm harness (§4), and incremental typecheck | implementer |
-| **T1 child close** | once, at the end of implementation | Full typecheck and build for the touched packages; lint and format on changed files; unit tests selected against the child's base commit (`--changed <base>`; a change to config, setup or a shared module reruns the whole package); E2E: the specs citing this child's scenarios, the specs the repo's test map links to the touched paths, and the repo's smoke set | implementer, through a helper |
-| **T2 full gates** | on every closed child, in the background (§3.3) | Every gate, in full | orchestrator, through a helper, in a separate worktree |
+| **T0 inner loop** | while building | Tests related to what you just changed (`vitest related <files>`), single E2E specs by name against a warm harness (§4.2), incremental typecheck | implementer |
+| **T1 child close** | once, at the end of implementation | Full typecheck and build for the touched packages; lint and format on changed files; unit tests selected against the child's base commit (`--changed <base>`; a change to config, setup or a shared module reruns the whole package); E2E: the specs citing this child's scenarios, the specs the test map (§4.3) links to the touched paths, and the smoke set | implementer, through a helper |
+| **T2 checkpoint** | at each checkpoint the epic declares, in the background (§3.3) | Every gate, in full | orchestrator, through a helper, in the checkpoint worktree |
 | **T3 epic close** | once | Every gate, in full, on the final tree; then the epic-diff review | orchestrator |
 
-**Escalation.** T1 becomes a full run on the critical path when the child touches:
+**Escalation.** A child that changes the test harness or test infrastructure runs the full gates at T1, on the critical path, because the selection itself can't be trusted then.
+
+Children that touch the following get a *wider* T1 (the whole affected packages and every mapped spec) and are good places for a checkpoint:
 - schema, migrations or seed data;
 - authorization or visibility rules;
-- the test harness or test infrastructure;
 - the shared layout or navigation shell;
 - dependency versions or build config.
 
-The plan says so in its Gates section. These are the changes a selection is most likely to miss.
-
-**One green pass, not two.** T1 runs once. Fix what fails and rerun only what failed, plus anything related to the fix. There is no extra "final full green pass": T2 provides that, off the critical path. Review-fix passes run the T1 subset the fix touches.
+**One green pass, not two.** T1 runs once. Fix what fails and rerun only what failed, plus anything related to the fix. There is no extra "final full green pass": checkpoints provide that, off the critical path. Review-fix passes run the T1 subset the fix touches.
 
 **Selection must be honest.**
 - `--changed` and `--only-changed` default to *uncommitted* changes, so they select nothing after a commit. Always pass the child's base commit.
-- Playwright's `--only-changed` selects only changed spec files, never specs affected by a source change. E2E selection therefore comes from the repo's test map (§4.3) and the scenario citations.
+- Playwright's `--only-changed` selects only changed spec files, never specs affected by a source change. E2E selection therefore comes from the test map and the scenario citations.
 - The implementer lists the selected specs and the reason for each in the ledger, so the reviewer can check the selection, not just the result.
 
-### 3.2 Where the plan declares it
+### 3.2 Where it is declared
 
-The plan's **Gates** section names:
-- the T1 commands, with the selection;
-- the scenario specs;
-- whether escalation applies and why.
+- **The plan's Gates section** names:
+  - the T1 commands, with the selection;
+  - the scenario specs;
+  - whether escalation or a wider T1 applies, and why.
 
-The reviewer checks this in plan review, like any other decision. `epic.md` **Gates** names the T2 and T3 commands, the smoke set, and the measured durations.
+  The reviewer checks this in plan review, like any other decision.
+- **`epic.md` Gates** names:
+  - the T2/T3 commands;
+  - the smoke set;
+  - the measured durations;
+  - the **checkpoints** (§3.3).
 
-### 3.3 Background full gates with a WIP limit of one
+### 3.3 Checkpoints
 
-When child N closes, the orchestrator does the following:
-1. It creates a detached worktree at N's end commit, with its own E2E port, and starts a helper there running every gate (T2).
-2. Meanwhile it plans and builds child N+1 as usual.
+A **checkpoint** is a named point in the epic's child order where the full gates run in the background.
 
-The rule that bounds the risk: **child N+2 does not start until T2(N) is green.** At most one closed child is unverified at any time.
+**Placement**, decided at scope time and adjustable by the orchestrator with a recorded decision:
+- after the foundation children that most later children build on;
+- before a fan-out of children that depend on the same base;
+- after a child in the wider-T1 classes (§3.1);
+- so that no stretch between checkpoints exceeds about a working day of children (roughly 3–4 children);
+- epic close (T3) is always the last checkpoint.
 
-When T2(N) reports a failure that is not in the baseline and not a known flake:
+**Running a checkpoint:**
+1. When the last child before checkpoint C closes and is integrated, the orchestrator points the reusable checkpoint worktree (§8.3) at that commit.
+2. A helper runs every gate there.
+3. Work continues past C while it runs.
+
+**The bound:** work may not pass checkpoint C+1 until C is green. At most one checkpoint is unverified at any time.
+
+**When a checkpoint fails** (a failure not in the baseline and not a known flake):
 1. **Triage, by a helper:**
    - rerun the failing tests alone once;
-   - if they still fail, find the culprit (N's diff, or `git bisect run` over N's commits);
+   - if they still fail, find the culprit with `git bisect run` over the commits since the last green checkpoint, running only the failing tests, which is cheap;
    - digest the failure.
 2. **Route it:**
-   - **Pause and fix in N** when N+1 is still being planned, or when the failure sits in code N+1 builds on. Pause N+1, resume N's implementer (its session is kept) to fix on top of the branch tip, run T1 for the fix plus the failing tests, then resume N+1.
-   - **Fix forward in N+1** otherwise. The failure goes into N+1's ledger as a blocker finding carried over from N. N+1 cannot close until it is fixed and T2(N) is green on the fix.
-3. **Record:** the regression goes in `state.json` (child, test, which tier caught it, what T1 missed) and widens the test map so the same miss can't recur.
-
-**Alternative, when the machine can't run two stacks:** run T2 after every K children (a *tranche*, K = 3 by default) and at epic close. A failure is bisected across the tranche. This trades a bigger fix radius for no parallel load. The epic's Gates section picks one mode.
-
-**Resource rules for T2:**
-- separate worktree, port and data directory;
-- a dependency install from the shared store;
-- logs go outside git;
-- the worktree is removed with `git worktree remove` when it's green;
-- disk headroom is checked before each start, and T2 is skipped and the orchestrator stops when headroom is below the repo's floor.
+   - **Pause and fix in the culprit child** when the failure sits in code that the running child builds on. Pause the running child, resume the culprit's implementer (its session is kept) to fix on top of the branch tip, run T1 for the fix plus the failing tests, then resume.
+   - **Fix forward** otherwise. The failure goes into the running child's ledger as a blocker finding carried over from the culprit. That child cannot close until it is fixed.
+3. **Record:** the regression goes in `state.json` (culprit child, test, which tier caught it, what T1 missed), and the test map widens so the same miss can't recur.
 
 ### 3.4 Flakes
 
 - A failure that passes alone and lies outside the change is recorded and does not block.
 - A flake seen twice becomes a tracker item with an owner, and is quarantined from gating until it is fixed: it moves to a non-gating list in `epic.md`, with an expiry.
-- Gates run with retries off. A retry is allowed only in T2 triage.
+- Gates run with retries off. A retry is allowed only in checkpoint triage.
 
 ## 4. Avenue B: make each run cheaper (repo-side work)
 
-These are changes to the repo's test setup, not to the pipeline. Each is a separate tracker item in that repo, sequenced before the next epic or between children with the owner's consent.
+These are changes to the repo's test setup, not to the pipeline. Each is a separate tracker item in that repo.
 
 1. **Parallel E2E.** Give each worker its own backend, data directory and app server, keyed by worker index. The pilot repo already has per-worker ports wired but unused. Serial-only specs (those that reset shared data) either move to per-worker data or keep a named lock. The measured test time is 364 s; with 4 workers that is roughly 100 s plus the fixed cost.
 2. **Warm harness for T0/T1.**
@@ -128,8 +137,9 @@ These are changes to the repo's test setup, not to the pipeline. Each is a separ
    - This removes most of the per-invocation overhead (about 38 s each, 29 times in child 01).
    - Never reuse a server across commits without a rebuild check, since stale code passes tests.
 3. **Test map.** Keep a checked-in map from source paths to E2E specs (or spec tags), plus a small smoke set of critical flows (about 1 min). T1 selection reads it, and every regression T1 missed adds an entry.
-4. **Changed-file lint.** Run lint and format on changed files at T1 and the full lint at T2 and T3. The full lint takes 70–90 s of the non-E2E gates.
-5. **Agent-friendly reporters.** Use failure-only output (Vitest's `minimal` reporter, the Playwright list reporter with `--quiet`) so digests stay short.
+4. **Changed-file lint.** Run lint and format on changed files at T1 and the full lint at checkpoints. The full lint takes 70–90 s of the non-E2E gates.
+5. **Failure-only reporters** (Vitest `minimal`, Playwright list with `--quiet`), so digests stay short.
+6. **Worktree pool support** (§8.3): the repo's worktree script gains a non-interactive mode, a test-port allocation alongside the dev ports, and a `reuse` path that re-points an existing worktree instead of creating one.
 
 ## 5. Avenue C: write fewer, better tests (going forward)
 
@@ -145,8 +155,16 @@ A new short skill, `test-quality`, carries these rules. `plan`, `implement` and 
 - Pure logic, invariants, parsers, security normalization and data rules are unit tests.
 - Authorization, visibility, persistence and API contracts are backend tests through the real mutation and query path.
 - User flows and acceptance scenarios are E2E.
-- A page or component test is for interaction logic the E2E can't reach cheaply. Never use one to re-check data wiring through mocked query queues.
-- Agents make most of their mistakes at boundaries (schema drift, wiring, orchestration), so put new proof there. Once parallel E2E lands (§4.1), E2E stops being the expensive layer.
+- A page or component test is for interaction logic that E2E can't reach cheaply: keyboard handling, validation states, URL state, focus.
+
+**Mocked-data page tests.** The pilot's page tests often look like this:
+1. Mock the data hook to return six canned results in the exact order the page calls it.
+2. Render the page.
+3. Assert that the canned data appears.
+
+This proves little. The mock supplies the behavior being asserted, so the test is nearly tautological. And reordering the page's queries breaks it with no change in behavior, so it is a change detector. Whether the page shows real data from the real queries is a wiring question that E2E answers properly.
+
+**The rule:** don't write new page tests whose purpose is "the page renders what the mocked queries return". Prove that in E2E, and keep page tests for interaction logic. Once parallel E2E lands (§4.1), E2E stops being the expensive layer.
 
 **Considered harmful (review findings, not style notes):**
 - *Tautological tests:* the expected value comes from the code under test, a mock supplies the behavior being asserted, or the test asserts what it set up itself.
@@ -173,11 +191,14 @@ A new short skill, `test-quality`, carries these rules. `plan`, `implement` and 
 - Code review applies the authoring gate to every new or changed test. Severity is *major* for tautological tests, change detectors or a duplicate contract, and *minor* for naming or fixture issues.
 - The implementer's ledger reports test lines against production lines, and the tests removed or consolidated.
 
-## 6. Avenue D: audit the existing suite (separate campaign, not in an epic)
+## 6. Avenue D: audit the existing suite (separate backlog item, later)
+
+The audit is tracked as its own repo backlog item. It is not part of any feature epic.
 
 - **Scope:** run by subsystem, in coherent batches owned by one owner each, never against a deletion count.
 - **Start where the audit found the density:**
-  - mock-heavy page and route tests (ordered query-mock queues, class and style assertions);
+  - mocked-data page tests (§5);
+  - class and style assertions;
   - re-export identity and inventory tests;
   - near-duplicate validator cases.
 - **Method for each candidate:**
@@ -187,60 +208,124 @@ A new short skill, `test-quality`, carries these rules. `plan`, `implement` and 
   - delete any production seam that only the test used;
   - run the owner's and siblings' tests and the changed checks;
   - get a fresh review.
-- **Report:** causes, contracts retained, proof and cost, production vs test lines removed, follow-ups.
-- **Value signal:** run mutation testing (Stryker with the Vitest runner, incremental, scoped to one module) on two or three modules before and after a batch. Tests that kill no mutants are candidates. A batch must not reduce the mutation score.
-- **Authority:** each batch is its own tracker item and PR. It is never mixed into feature children.
+- **Value signal:** run mutation testing (Stryker with the Vitest runner, incremental, scoped to one module) before and after a batch. Tests that kill no mutants are candidates. A batch must not reduce the mutation score.
+- **Expected gain:** cleaner signal and less churn when agents refactor, and maybe 5–10% off unit-test time.
 
-Expected gain: a cleaner signal, less churn when agents refactor, and maybe 5–10% off unit-test time. It is not the main time lever.
-
-## 7. Avenue E: implementer turn efficiency (not test-related, measured alongside)
+## 7. Avenue E: implementer turn efficiency
 
 Model turns are the other half of implementer time.
 
 - **Fewer, larger errands.** Delegation coordination took 28% of model time: 42 calls, with long prompts and follow-up messages. Delegate only errands worth at least about 5 min of the implementer's own time. Batch sweeps per pattern, and keep task prompts short, naming the plan and the example rather than restating them.
 - **No bookkeeping turns.** Task-list tools and diagnostic-mark calls cost about 7 min. They are not needed: the ledger is the record.
-- **Don't wait idle.** When a helper runs T1, the implementer writes the ledger entry and reviews the helper diffs meanwhile. It doesn't block on the wait.
+- **Don't wait idle.** While a helper runs T1, the implementer writes the ledger entry and reviews the helper diffs.
 
-## 8. Expected effect (child 01 profile, 205 min)
+## 8. Avenue F: parallel lanes
+
+This is separate from checkpoints. Checkpoints decide *when to verify everything*. Lanes decide *which children build at the same time*. The two often fall at different points.
+
+### 8.1 Declaring lanes
+
+At scope time, `epic.md` marks **parallel groups**: sets of children that can be built at the same time. A child may join a group only if:
+- it doesn't depend on another child in the group;
+- each child's **claims** (the directories, routes, tables and shared components it expects to change) don't overlap another's, except for files the epic names as merge-friendly, such as route doc indexes or a changelog;
+- none of them is in the escalation class (test infrastructure) or changes the schema in a way a sibling reads.
+
+Plan review checks each child's claims against its siblings'. A plan that needs to break its claims stops for the orchestrator, which either serializes that child or re-scopes it.
+
+### 8.2 Running and merging
+
+1. Each child in a group gets a lane: a worktree from the pool (§8.3), a branch off the same base, and its own plan, implement and review loop.
+2. The orchestrator runs the loops concurrently. One writer per worktree, always.
+3. Lanes integrate in the epic's child order as they close:
+   - The orchestrator merges each lane branch into the epic branch.
+   - A clean merge runs T1 for that child on the merged tree. It is short, and it catches semantic conflicts that text merges miss.
+   - A conflict, or a red T1 after a merge, goes to an **integrator**: a fresh implementer session given both children's plans and ledgers. It resolves the conflict, runs T1 for both children, and records what it changed. Its diff gets a code review.
+4. Checkpoints (§3.3) apply to the integrated epic branch, not to lane branches.
+
+**Limits:**
+- start with 2 lanes;
+- raise the number only when machine load, model rate limits and disk allow it, as measured in the run;
+- concurrent E2E in lanes needs per-lane ports (§8.3).
+
+### 8.3 Reusable worktree pool
+
+Creating a worktree is expensive in the pilot repo: dependency install, build, dev backend and auth setup. So the pool is created once and reused.
+
+- **Setup:** the repo's worktree script creates N lane worktrees plus one checkpoint worktree. Each gets its own dev, test-backend and app ports, recorded in the worktree's env files.
+- **Reuse:** to start a new child, the orchestrator switches the lane worktree to a new branch at the child's base and keeps:
+  - `node_modules` and build caches;
+  - the dev backend;
+  - the env files.
+
+  It reinstalls dependencies only if the lockfile changed, and rebuilds only the packages that changed. The checkpoint worktree is re-pointed to the checkpoint commit in the same way.
+- **Hygiene:**
+  - before reuse, the worktree must be clean, with everything committed;
+  - test data directories are reset, not deleted;
+  - a lane never kills processes outside its own ports.
+- **Disk:** check headroom before starting a lane or a checkpoint run, and stop below the repo's floor.
+
+### 8.4 Expected effect
+
+Per-child time doesn't change. Epic wall time drops by roughly the share of children that can run in pairs, minus the integration cost. For a 12-child epic with 4 pairable pairs, that is about 25–30%.
+
+## 9. Expected effect per child (child 01 profile, 205 min)
 
 | Change | Saving (min) |
 |---|---|
 | No repeated full runs on the critical path; T1 selection instead (§3.1) | 30–35 |
 | Review-fix pass reruns only its T1 subset | 10–15 |
 | Warm harness for T0/T1 E2E (§4.2) | 10–15 |
-| Parallel E2E, when T1 escalates or T2 runs (§4.1) | 5 on the critical path, 5 min per T2 off it |
+| Parallel E2E (§4.1) | about 5 on the critical path; checkpoint runs drop from about 12 min to about 5 |
 | Fewer, better tests written (§5) | 10–15 |
 | Turn efficiency (§7) | 10–15 |
-| **Total** | **≈ 75–100, so 205 → ~110–130 min** |
+| **Total per child** | **≈ 75–100, so 205 → ~110–130 min** |
 
-That is about a 40–50% cut. A further step change needs throughput work rather than per-child work: smaller children, with two implementers building independent children in separate worktrees under the same WIP-limited T2. That is out of scope here and noted as the next lever.
+Together with lanes (§8.4), a 12-child epic of about 50 h would drop to about 20–25 h.
 
-## 9. Changes to make
+## 10. Changes to make
 
 **Pipeline (this repo):**
 
 | File | Change |
 |---|---|
 | `skills/test-quality/SKILL.md` (new, ≤ 60 lines) | §5 rules; audit method from §6 |
-| `skills/implement/SKILL.md` | Gates: the T0/T1 rules, no final full pass, selection reasons in the ledger, test-to-production line ratio in the ledger; Offload: the errand threshold and no idle waits |
-| `skills/orchestrate/SKILL.md` | T2 background runs with a WIP limit of 1, or the tranche mode; failure routing; regressions in `state.json`; disk check |
-| `skills/plan/SKILL.md` | Gates section declares T1 selection and escalation; contracts and their owning layer per scenario |
-| `skills/review/SKILL.md` | Check the T1 selection; apply `test-quality` to new tests with the severities above |
-| `skills/scope/SKILL.md` | `epic.md` Gates names T2 mode, smoke set and test map |
+| `skills/implement/SKILL.md` | Gates: the T0/T1 rules, no final full pass, selection reasons in the ledger, test-to-production line ratio; Offload: the errand threshold and no idle waits |
+| `skills/orchestrate/SKILL.md` | Checkpoints with the one-unverified bound; failure triage and routing; lanes, the worktree pool and the integrator; regressions in `state.json`; disk check |
+| `skills/plan/SKILL.md` | Gates declare T1 selection and escalation; contracts and their owning layer per scenario; claims for children in a parallel group |
+| `skills/review/SKILL.md` | Check the T1 selection and sibling claims; apply `test-quality` to new tests with the severities above |
+| `skills/scope/SKILL.md` | `epic.md` Gates names checkpoints, smoke set and test map; parallel groups with claims |
+| `agents/` | No new agent; the integrator is an `implementer` session with an integration task |
 | `plans/2026_10_10_frontier_pipeline/plan.md` §6 | Replace the gate table with §3; link here |
-| `plans/2026_10_10_frontier_pipeline/evaluation.md` | Add the §2 measures, the regression log, and cost read from session logs (dedupe the transcript copies) |
+| `plans/2026_10_10_frontier_pipeline/evaluation.md` | Add the §2 measures, the regression log, lane overlap and integration cost, and cost read from session logs (dedupe the transcript copies) |
 
-The skills budget stays within about 440 lines in total; the new skill is the only addition.
+The skills budget stays within about 450 lines in total; the new skill is the only addition.
 
-**Pilot repo (tracker items, owner approval first):**
+**Pilot repo (backlog items; ask before creating):**
 1. Parallel E2E with per-worker backends (§4.1).
 2. Warm harness mode (§4.2).
 3. Test map and smoke set (§4.3).
 4. Changed-file lint script (§4.4).
-5. Test-architecture doc: tiers, the authoring gate and layer choice, the slow-suite policy.
-6. First audit batch (§6): page and route tests with ordered mock queues.
+5. Worktree pool support in the worktree script (§4.6, §8.3).
+6. Test-architecture doc: tiers, checkpoints, the authoring gate and layer choice.
+7. Test audit campaign (§6), later and separate.
 
-## 10. Evidence (summarized)
+## 11. Rollout in the pilot
+
+The current epic continues to child 04's close, then pauses as the owner instructed. After that:
+
+1. **Prep branch.** In the pilot repo, branch off the pilot branch at child 04's close. Build the repo-side items 1–6 there.
+   - Run it through the pipeline itself as a single plan, so it is dogfooded and reviewed.
+   - Items 1 (parallel E2E) and 5 (worktree pool) are the largest. If prep runs long, the order is 3, 4, 2, 6, then 5, then 1. Lanes need 5; checkpoints and T1 don't need 1.
+2. **Pipeline changes.** Make the §10 skill changes on the pipeline branch, rebuild and verify them with a smoke run.
+3. **Demarcation.** Start a new branch for children 05–12 from the prep branch's tip, and update `epic.md`:
+   - Gates: tiers and checkpoints;
+   - parallel groups with claims;
+   - a decision entry recording the switch.
+4. **Comparison.** `evaluation.md` reads children 01–04 as "before" and 05+ as "after", on the §2 measures.
+
+## 12. Evidence (summarized)
+
+The external reports are in `research/`. The pilot repo's inventory and audit stay with that repo.
 
 - **Selection:**
   - Vitest `--changed`/`related` follow the import graph. Their blind spots are dynamic imports, file-system fixtures and the uncommitted-only default.
@@ -249,7 +334,7 @@ The skills budget stays within about 440 lines in total; the new skill is the on
 - **Tiering:**
   - Google runs only fast, reliable tests presubmit and the rest post-submit, and accepts rollbacks.
   - Merge queues (GitHub, Uber SubmitQueue) test on top of the queue and drop the culprit rather than halting.
-  - Uber's speculative builds aborted 40–65% of runs before tuning, so the WIP limit keeps speculation to one child.
+  - Uber's speculative builds aborted 40–65% of runs before tuning, which is why only one checkpoint may be unverified at a time.
 - **Playwright:**
   - workers and `fullyParallel` run tests in parallel; sharding is by file unless `fullyParallel` is set;
   - worker-scoped fixtures are the hook for per-worker services;
@@ -261,17 +346,19 @@ The skills budget stays within about 440 lines in total; the new skill is the on
   - Agents game tests (METR 2025), and weak tests inflate agent pass rates (SWE-bench audits).
   - A dependency map of tests cut agent regressions; TDD procedure prompts raised them (TDAD, arXiv 2603.17973).
   - Mutation testing is the most objective per-test value signal.
-- **Pilot inventory:**
-  - about 2,100 web unit tests, 866 backend, 416 CLI and 158–199 E2E;
-  - E2E is serial, by design in v1;
-  - the slowest E2E files are access-management and list or detail flows;
-  - the slowest unit files are browser-backed component tests.
 
-## 11. Owner decisions needed
+## 13. Owner rulings and open questions
 
-1. **T2 mode:** background with a WIP limit of 1 (recommended), or a tranche of K = 3.
-2. **Escalation list (§3.1):** accept as written, or add to it.
-3. **Repo-side items 1–4:** approve creating the tracker items, and say whether to land any before the pilot's child 05. Child 04 pauses for confirmation anyway.
-4. **New page tests that re-check data wiring through mocked query queues:** stop writing them (recommended), or only discourage them.
-5. **Audit campaign (§6):** start after the pilot epic, or run the first batch in parallel in another worktree.
-6. **Adopting this in the running pilot:** apply it from child 05. The orchestrator would then update `epic.md` Gates and record a decision.
+**Rulings (2026-10-13):**
+- Full gates run in the background at epic-declared **checkpoints**, not after every child or a fixed count.
+- Checkpoints and parallel groups are separate concepts.
+- Parallel children run in **reused** worktrees from a pool built with the repo's worktree script.
+- Tiered verification is adopted.
+- The test audit is a separate backlog item. It is tracked, but it is not the main lever.
+- The pilot adopts this after child 04, on a prep branch first and then a new branch for the rest of the epic.
+
+**Open:**
+1. Approve creating backlog items 1–7 in the pilot repo.
+2. The mocked-data page-test rule (§5): adopt it as "don't write new ones", or only discourage them.
+3. Lane count to start with: 2 (recommended).
+4. Run prep through the pipeline as a single plan (recommended), or by hand.
