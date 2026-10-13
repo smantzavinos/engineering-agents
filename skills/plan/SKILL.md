@@ -17,18 +17,22 @@ Write the plan a strong engineer needs to build this child in one session withou
 Scout widely with subagents (`delegate`), and read the critical paths yourself.
 
 ## plan.md
-- **Goal:** what this child delivers, and the acceptance scenarios it owns. For a single plan there is no epic, so this section also carries scope in/out, disposal, gates, budget and autonomy limits as agreed with the human.
+- **Goal:** what this child delivers, and the acceptance scenarios it owns. For a single plan there is no epic, so this section also carries what was agreed with the human:
+  - scope in and out, and disposal;
+  - the full-gate commands, the test map and the smoke set;
+  - budget and autonomy limits.
 - **Context:** links to the code, docs and earlier decisions that matter.
 - **Design:** the key decisions and why. Name rejected alternatives when the choice isn't obvious.
 - **Changes:** by area or module, what changes and where. Enough to start, not a script.
 - **Tests:** the contracts each acceptance scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`). This is not a test checklist.
-- **Gates (T1):** the commands, run once at the end of implementation, and the selection:
-  - this child's scenario specs;
-  - the specs the test map links to the changed paths;
-  - the smoke set.
+- **Gates (T1):** the commands, run once at the end of implementation:
+  - typecheck and build for the touched packages;
+  - lint and format on the changed files;
+  - units selected against the base commit, plus a whole-package rerun when its config, test setup or a shared module changes;
+  - E2E: this child's scenario specs, the test-map specs for the changed paths, and the smoke set. Without a test map, name the specs for the paths you expect to change.
 
-  Widen T1 to the whole affected packages and all mapped specs when the child touches schema, migrations, seed data, authorization or visibility, the shared shell, dependencies or build config. Escalate to full gates when it touches test infrastructure. Say which applies, and why.
-- **Claims** (only for a child in a parallel group): the directories, routes, tables and shared components it will change.
+  **Widen** T1 to the whole affected packages and all mapped specs when the child touches schema, migrations, seed data, authorization or visibility, the shared shell, dependencies or build config. **Escalate** to full gates when it touches test infrastructure. Say which applies, and why.
+- **Claims** (only for a child in a parallel group): restate the child's claim from `epic.md`, refined to the files, routes, tables and shared components it will change. Stay inside it.
 - **Done when:** observable criteria.
 - **Risks:** what could go wrong, and how to handle it.
 - **Handoff:** a few lines for the implementer, written last: what review settled, where you were unsure, what to watch.
@@ -38,7 +42,7 @@ Aim for under 150 lines.
 ## Judgment calls
 - **Course-setting decisions**, the ones that shape most of the remaining children: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the orchestrator stops for the human.
 - **Sizing:** if this child can't be built in one implementer session or its diff won't be reviewable, or if it is trivially small, say so with a proposed split or merge. Don't silently plan half of it.
-- **Claims:** if the design needs to break the child's claims, say so in your reply. The orchestrator serializes or re-scopes the child.
+- **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply. The orchestrator serializes or re-scopes the child.
 
 ## Revising
 For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding.

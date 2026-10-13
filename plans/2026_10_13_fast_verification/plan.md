@@ -61,7 +61,7 @@ Deleting existing tests is a minor lever: the audit shows a modest low-value sha
 | **T0 inner loop** | while building | Tests related to what you just changed (`vitest related <files>`), single E2E specs by name against a warm harness (§4.2), incremental typecheck | implementer |
 | **T1 child close** | once, at the end of implementation | Full typecheck and build for the touched packages; lint and format on changed files; unit tests selected against the child's base commit (`--changed <base>`; a change to config, setup or a shared module reruns the whole package); E2E: the specs citing this child's scenarios, the specs the test map (§4.3) links to the touched paths, and the smoke set | implementer, through a helper |
 | **T2 checkpoint** | at each checkpoint the epic declares, in the background (§3.3) | Every gate, in full | orchestrator, through a helper, in the checkpoint worktree |
-| **T3 epic close** | once | Every gate, in full, on the final tree; then the epic-diff review | orchestrator |
+| **T3 epic close** | once | The epic-diff review and its fixes, then every gate in full on the final tree, on the critical path. A single plan runs the full gates once after code review approves. | orchestrator |
 
 **Escalation.** A child that changes the test harness or test infrastructure runs the full gates at T1, on the critical path, because the selection itself can't be trusted then.
 

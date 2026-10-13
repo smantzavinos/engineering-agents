@@ -140,7 +140,7 @@ loop:
 The orchestrator does the following:
 1. Mark the child done in `state.json`, with its timestamps and reported usage.
 2. Record follow-ups the planner or implementer noted in a `Follow-ups` section of `epic.md`. File tracker items only if the epic pre-authorized that; otherwise they go to the human at epic close.
-3. **Integrate the base branch.** Merge the default branch into the work branch (or whatever integration the repo prescribes), at child boundaries only, so the epic never drifts more than one child from what it will merge into. No conflicts: a helper re-runs the gates as the new baseline. Conflicts or a red post-merge gate: resume the implementer that just finished, which still holds the context to resolve them. Record the new base commit.
+3. **Integrate.** A serial child is already on the work branch. A lane child's branch is merged (`orchestrate` → `references/lanes.md`). The default branch is merged in at each checkpoint, before its full run; conflicts go to the implementer that just finished. Record the new base commit. *(Changed 2026-10-13 by [fast verification](../2026_10_13_fast_verification/plan.md): the base branch was previously merged and re-baselined at every child close.)*
 4. Self-compact. Its note is: the epic path, the next child, and anything learned that changes later children.
 5. Start the next child.
 
@@ -150,7 +150,7 @@ If a learning invalidates part of `epic.md`, the orchestrator may update unstart
 
 When the last child is done:
 1. One fresh review of the full epic diff against `epic.md` and `PROTOTYPE.md`, focused on cross-child seams and parity with the acceptance scenarios. Its findings go in the epic-root `review.md` and each names the child that should have caught it, so §15 can count review escapes.
-2. Fix any findings through a resumed implementer session (the last child's), which re-runs the full gates once.
+2. Fix any findings through a resumed implementer session: that of the last child in child order. It runs T1 for its fixes, then the final checkpoint runs the full gates on the critical path.
 3. Hand off to the existing `pull-request` process. Pushing the work branch and opening the PR must be pre-authorized in `epic.md`'s autonomy section; otherwise this is a stop. One PR per epic is the default; the epic may choose per-child PRs if the repo's merge policy needs smaller units, in which case the PR step runs at each child close instead.
 
 ## 5. Sessions, compaction, and memory
@@ -211,7 +211,7 @@ Superseded in detail by [fast verification](../2026_10_13_fast_verification/plan
 
 | Tier | When | What |
 |---|---|---|
-| Baseline | Epic start, and after each base-branch integration | A helper runs every gate once on the untouched tree and records the digest in `state.json`. Pre-existing failures are then facts, not arguments, and "it was already red" is checkable. |
+| Baseline | Epic start; refreshed at checkpoints | A helper runs every gate once on the untouched tree and records the digest in `state.json`. Pre-existing failures are then facts, not arguments, and "it was already red" is checkable. A checkpoint failure that also fails on the base branch's tip joins the baseline. |
 | T0 | While implementing | Tests related to the changed files, single E2E specs against a warm harness, an incremental typecheck. Never the full suite. |
 | T1 | End of implementation, once | The plan's targeted selection against the base commit: scenario specs, test-map specs, smoke set, changed-file lint, typecheck and build. It widens for risky areas and escalates to full gates for test-infrastructure changes. Fix, then rerun only what failed. There is no final full pass. |
 | Code review | | The reviewer checks the gate evidence and the T1 selection, runs targeted tests only when it doubts a claim, and never runs full suites. |
@@ -222,7 +222,12 @@ Test quality, meaning which tests to write, keep or remove, is the `test-quality
 
 Gate runs are long and their logs are large, so the implementer hands them to a fast subagent (the run-and-digest pattern, §9). It returns a digest: pass or fail and duration per gate, failing test names, the key assertion lines, and log paths. Logs stay out of git. The implementer reads a full log only when the digest is not enough.
 
-Flaky tests: a failure that passes on an isolated re-run, and whose subject the child did not touch, is recorded in the ledger entry and counts as a pass. The reviewer may re-run it. A flake class seen twice becomes a tracker item. Baseline failures are not the child's to fix unless the plan says so.
+**Flaky tests.**
+- Gates run with retries off; a retry happens only in triage.
+- A failure that passes on an isolated rerun, and whose subject the child did not touch, is recorded in the ledger entry and counts as a pass. The reviewer may rerun it.
+- A flake seen twice goes on the epic's Quarantine list (non-gating, with an owner and an expiry). It also becomes a tracker item if the epic pre-authorizes filing; otherwise it becomes a follow-up.
+
+Baseline failures are not the child's to fix unless the plan says so.
 
 The tiers depend on repo-side support: a warm harness, parallel E2E workers, a test map and smoke set, changed-file lint, and reusable worktrees. These are listed in fast verification §4.
 

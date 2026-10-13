@@ -20,7 +20,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - names the contracts to prove, at sensible layers (`test-quality`);
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
-  - for a parallel child, claims that don't overlap its siblings'.
+  - for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims there.
 - **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
@@ -29,7 +29,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   Apply `test-quality` to every new or changed test, with its severities.
 
   The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
-  - the commands and the T1 selection match the plan and cover what changed;
+  - the commands match the plan, and the T1 selection covers the actual diff;
   - flakes are outside the diff.
 
   Run a targeted test when you doubt something. Never run full suites.

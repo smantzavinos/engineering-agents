@@ -223,3 +223,47 @@ The integrator's worktree is covered in FV-B1.
 **Fix.** Apply these cuts. Put the new orchestrate text (FV-B1, M2, M3, M11) in terse bullets.
 
 **Counts:** 1 blocker, 11 major, 4 minor. **Verdict:** changes needed.
+
+### Author responses (pass 1)
+- **FV-B1 fixed.**
+  - orchestrate "Where work runs": one writer per worktree; serial children in the work-branch worktree; checkpoint runs, triage and bisect only in the checkpoint worktree; interrupt the running child and have it commit before anyone else writes there.
+  - `references/lanes.md`: lane roles launch with their cwd in the lane worktree; integration and lane-mode culprit fixes name their worktree.
+  - Carried-over blockers reach the running implementer by resume, and it writes them into its own ledger.
+- **FV-M1 fixed.**
+  - Close names each case: a serial child is already on the work branch; a lane child merges per `lanes.md`.
+  - The base branch merges at each checkpoint, in the idle work-branch worktree, before the full run.
+  - Failures that also fail on the base tip join the baseline.
+  - Frontier §4.5 and the §6 Baseline row are updated to match.
+- **FV-M2 fixed.** Green means the full gates passed on C or on a later commit containing the fix. C+1's run waits for C. "Past C+1" means starting (serial) or integrating (lane) a child after C+1 in child order.
+- **FV-M3 fixed.** `references/checkpoint-failures.md` covers routing for each running child, merge culprits, epic close, the `## checkpoint fix` ledger entry with its fresh review, the test-map update by the fixer, and the recheck. Close blocks while a carried-over blocker is open.
+- **FV-M4 fixed.**
+  - Orchestrate's single-plan path runs the full gates once after code review, before the PR.
+  - In plan Goal and scope's Single plan, the gates include the full-gate commands, the test map and the smoke set.
+  - Plan §3.1's T3 row is updated.
+- **FV-M5 fixed.** Scope's Gates record which repo support exists, and the disk floor. The fallbacks:
+  - no test map: the plan names the specs;
+  - no warm harness: T0 runs cold;
+  - no checkpoint worktree: checkpoints run between children;
+  - no pool: no lanes.
+- **FV-M6 fixed.** Plan's Gates (T1) lists typecheck and build, changed-file lint, unit selection with the whole-package rule, and E2E. Implement computes the selection from `git diff <base>` and applies the whole-package rule.
+- **FV-M7 fixed.** Implement T0 adds the stale-server check. The process rule is now scoped to the worktree's ports, and helpers stop the servers they start unless told otherwise.
+- **FV-M8 fixed.** Scope sets the E2E worker budget (default cores ÷ 4). The orchestrator passes each implementer and each checkpoint run its worker count, and checks disk before checkpoint runs and lanes (`lanes.md`). Implement runs E2E with the given count.
+- **FV-M9 fixed.** Scope adds a Quarantine section. Triage records flakes, and a second sighting goes to Quarantine with an expiry, plus a tracker item if pre-authorized. Implement runs gates with retries off. The frontier §6 flake paragraph is updated.
+- **FV-M10 fixed.** Scope's parallel groups give each member a claim, name the merge-friendly files, and exclude schema a sibling reads. The plan restates and refines its `epic.md` claim; review checks against `epic.md`; going outside the claim stops the lane.
+- **FV-M11 fixed** in `lanes.md`:
+  - the integrator is the implementer of the child being merged, in its lane worktree;
+  - it merges the work branch into the lane branch, runs T1 for both children, and writes `## integration` in its own ledger;
+  - a fresh code review covers both plans, from the work-branch commit before the merge, with the normal cap.
+- **FV-m1 fixed.** Plan §3.1's T3 row and frontier §4.6 now say: review, fixes, then the full gates. "The last child" now reads "the last child in child order".
+- **FV-m2 fixed.** Orchestrate may move, add or drop checkpoints except epic close. Scope refers to `plan`'s widen list.
+- **FV-m3 partly fixed:**
+  - the "independent" qualifier is restored;
+  - Banned is marked (major);
+  - a false negative control is now major.
+
+  **Rejected:** dropping SDK, platform and prompt-byte. They come from the owner's own retention list, given in the session that commissioned this plan. "Prompt-byte" is reworded as "exact-prompt-text" for clarity.
+- **FV-m4 fixed.**
+  - The audit method moves to `test-quality/references/audit.md`.
+  - Checkpoint failure handling moves to `orchestrate/references/checkpoint-failures.md`, and lanes to `orchestrate/references/lanes.md`.
+  - The escalation clause appears once.
+  - Line counts after the fixes: orchestrate 96, scope 77, implement 75, plan 64, review 60, test-quality 53, delegate 47. That is 472 in total, plus 2 reference files of about 60 lines read only when needed.

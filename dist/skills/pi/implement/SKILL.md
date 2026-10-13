@@ -15,10 +15,10 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - Implement all of it. Write the tests the plan calls for alongside the code. Each contract the plan names gets proof at its owning layer.
 - While building, run only T0 checks:
   - tests related to the files you changed;
-  - one E2E spec by name against a warm harness;
+  - one E2E spec by name, against a warm harness if the repo has one (otherwise cold);
   - an incremental typecheck.
 
-  Keep built artifacts and services warm between runs; cold boots are the largest cost.
+  Keep built artifacts and services warm between runs; cold boots are the largest cost. Before trusting a warm server, check that it was built from the current source, and rebuild or restart it if not. Stale code passes tests.
 - When the plan is wrong:
   - in a detail: do the right thing and note it;
   - in substance: stop and report, with what you found.
@@ -26,13 +26,18 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Gates
-1. At the end, run T1 once: the plan's Gates commands and selection, against the base commit (selection flags default to uncommitted changes, which select nothing after a commit).
-   - Fast gates go first.
-   - A helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
+1. At the end, run T1 once, with the plan's Gates commands.
+   - **Selection:** compute it from `git diff <base>`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.
+   - **E2E specs:** the test map gives the specs for the changed paths. The plan supplies the rest.
+   - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
+   - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.
+   - **Delegation:** a helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
 2. Fix the failures. Rerun only what failed and what the fix touches.
-3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path, unless the plan escalates this child.
+3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child.
 
-A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry, touching only processes you started; if it persists, report it instead of spending more time.
+A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
+
+Processes: touch only processes bound to your worktree's ports, never others. Helpers stop the servers they start, unless you tell them to leave them warm for you.
 
 ## Offload
 Your context is the expensive part. Delegate scouting, log reading, claim checks and mechanical sweeps.
@@ -44,7 +49,8 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 - Fix every blocker and major finding. Fix minor ones when it's cheap.
 - You may reject a finding with a one-line reason under it. If the reviewer has already disputed your rejection, or you're unsure, ask the oracle and record its ruling under the finding. Rulings are final.
 - Rerun only the gates the fix affects.
-- You may be resumed to fix a regression found at a checkpoint. Fix it on the branch tip, then run T1 for the fix plus the failing tests.
+- You may be resumed with a checkpoint regression, or with a merge to integrate. Do what the task says (`orchestrate`): fix on the tip you're given, run T1 plus the failing tests, add the missed path to the test map, and append `## checkpoint fix` or `## integration` to the ledger.
+- You may be resumed with a blocker carried over from another child. Record it in your ledger; you can't close until it is fixed.
 
 ## Handoff
 1. Leave the tree clean, with everything committed.
@@ -64,7 +70,6 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 - Update the docs the change affects, in this same child.
 
 ## Don't
-- Run full suites, unless the plan escalates this child.
+- Run full suites mid-build.
 - Expand scope. Note follow-ups in your handoff.
 - Weaken, skip or delete tests to get green.
-- Kill processes you didn't start.

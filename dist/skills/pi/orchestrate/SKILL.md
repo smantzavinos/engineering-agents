@@ -13,50 +13,55 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 ## State
 `state.json` in the plan directory is your memory. Update and commit it after every step; every resume returns a new run id, so record it each time.
 - **Per child:** status, lane, base commit, the latest planner and implementer run ids, review pass counts, phase timestamps, and reported usage.
-- **At the root:** the baseline gate digest, checkpoints (commit, status, run), regressions (culprit, test, the tier that caught it, what T1 missed), and stops (child, reason, time).
+- **At the root:** the baseline gate digest, checkpoints (commit, status, run), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
 
 On start, after compaction, or after a crash: read `state.json`, `git status`, `git log`, and the live run list, then resume whatever was in flight.
+
+## Where work runs
+One writer per worktree at any time.
+- **Serial children:** run in the work branch's worktree.
+- **Lanes:** see `references/lanes.md`.
+- **Checkpoint runs, triage and bisects:** only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
+- **Before anyone else writes in a running child's worktree:** interrupt that child, and have it commit its work in progress.
 
 ## Per child
 1. **Plan.** Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
    - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
    - Approved: step 2. Otherwise resume the same plan-author with the ledger path and pass number.
-2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory and base commit. It builds everything, passes the gates, commits, writes its ledger entry and replies. Then loop:
+2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
    - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
-3. **Close.**
-   - Mark the child done. Move follow-ups the planner or implementer noted into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
-   - Integrate the child into the epic branch. If the merge brought in other work, a helper runs the child's T1 on the merged tree. On conflicts or red gates, resume the implementer to resolve them. Record the new base commit.
-   - After integrating the base branch, or the last child before a checkpoint, start the checkpoint.
+3. **Close.** A child with an open carried-over blocker can't close.
+   - Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
+   - A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Record the new base commit.
+   - If this was the last child before a checkpoint, start the checkpoint.
    - Note anything that changes later children, and adjust their epic entries if the change stays within scope.
    - Commit the state. `self_compact`, with a note naming the next child.
 
-For a single plan, run step 2, then hand to the PR process; the code review already saw the whole diff.
+**Single plan:**
+1. Run step 2.
+2. A helper runs the full gates once on the final tree. Failures go back to the same implementer, inside the normal loop.
+3. Hand to the PR process.
 
 ## Checkpoints
-`epic.md` names them, and epic close is always one. You may add one after a child that widened T1; record it under Decisions.
-- **Run:** a helper runs every gate in the background, in the reusable checkpoint worktree at the checkpoint commit. The next child goes on meanwhile, but no child starts past the next checkpoint until this one is green.
-- **Triage** a failure that is not in the baseline and not a known flake: a helper reruns it alone, then bisects the commits since the last green checkpoint, running only the failing tests.
-- **Route:**
-  - if the running child builds on the broken code, pause it and resume the culprit's implementer to fix it;
-  - otherwise, add the failure to the running child's ledger as a carried-over blocker.
-- **Record** it in `state.json`, and add the path T1 missed to the test map.
-
-## Lanes
-Run up to `maxLanes` children of an `epic.md` parallel group at once. Each runs in a pool worktree, on its own branch off the same base, with its own loops.
-- **Before a lane starts,** check free memory (about 6 GB per lane), disk, and the machine-wide E2E worker budget. On model rate-limit errors, drop a lane until the next group.
-- **The pool** is created once with the repo's worktree tooling, then reused: a new branch at the base, a reinstall only if the lockfile changed, and reset test data. Never reuse a dirty worktree.
-- **Integrate** lanes in child order. On a conflict or red T1, resume one implementer as integrator, with the other child's plan and ledger. A fresh reviewer checks the integration diff, in code mode.
-- **Claims:** a plan that must break its claims runs serially, or is re-scoped under Decisions.
+`epic.md` names them, and epic close is always one. You may move, add or drop any checkpoint except epic close; record why under Decisions.
+1. **Run.**
+   - While the work-branch worktree is idle, merge the base branch in, as the repo prescribes. Merge conflicts go to the implementer of the child that just closed.
+   - Point the checkpoint worktree at the result. After a disk check, a helper runs every gate there with the given E2E worker count.
+   - The next child goes on meanwhile.
+2. **Green** means the full gates passed on that commit, or on a later commit that contains the fix. Targeted reruns don't count.
+   - The run for C+1 waits until C is green.
+   - No child after C+1 in child order may start (a serial child) or be integrated (a lane child) until C is green.
+3. **Failures:** follow `references/checkpoint-failures.md`.
 
 ## Epic close
 1. Spawn a fresh reviewer on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger.
-2. Send its findings to the resumed implementer of the last child. It fixes them and runs T1 for the fixes.
-3. Run the final checkpoint: the full gates on the final tree, on the critical path.
+2. Send its findings to the resumed implementer of the last child in child order. It fixes them and runs T1 for the fixes.
+3. Run the final checkpoint on the critical path.
 4. Hand off to the PR process. Pushing and opening the PR need the epic's pre-authorization; otherwise stop.
 
 ## Bounds
-- Every review is a new session. Every planner or implementer call resumes that child's session. One writer per worktree.
+- Every review is a new session. Every planner or implementer call resumes that child's session.
 - A loop not approved after pass 4 stops.
 - Every launch gets a deadline: planner and implementer from the child's budget in `epic.md`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
 - A child over its wall-time or cost budget stops.

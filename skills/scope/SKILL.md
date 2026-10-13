@@ -32,15 +32,21 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Scope:** in and out.
 - **Acceptance scenarios:** those from `PROTOTYPE.md` plus agreed additions, each mapped to the child that delivers it.
 - **Children, in order:** `NN_slug`, with its goal, what it depends on, and when it's done. A few lines each, each sized for one implementer session.
-- **Parallel groups:** children that may build at the same time. Members have no dependency among them, their claims don't overlap, and none changes test infrastructure. Also set `maxLanes` (default 4).
+- **Parallel groups:** children that may build at the same time.
+  - Give each member a **claim**: the directories, routes, tables and shared components it may change. Claims must not overlap, except for the merge-friendly files the epic names, such as indexes and changelogs.
+  - Members have no dependency among them. None changes test infrastructure, and none changes schema that a sibling reads.
+  - Set `maxLanes` (default 4) and the machine-wide E2E worker budget (default cores ÷ 4).
 - **Disposal and branch.**
 - **Gates:**
   - the repo's T1 (targeted) and full-gate commands, with measured durations;
-  - the test map and smoke set.
+  - the test map and smoke set;
+  - which repo support exists (test map, smoke set, warm harness, parallel E2E, worktree pool, checkpoint worktree), and the disk floor.
+
+  Missing support degrades as the skills say. For example, with no pool there are no lanes.
 - **Checkpoints:** where the full gates run in the background. Place them:
   - after foundation children;
   - before fan-outs;
-  - after children that widen T1 (schema, authorization, the shared shell, dependencies);
+  - after children that widen T1 (see `plan`);
   - no more than about a day of children apart.
 
   Epic close is always one.
@@ -48,16 +54,17 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Autonomy:** what the human wants to decide personally beyond the standard stop conditions, and what execution may do without asking: push the branch, open the PR, file tracker items.
 - **Decisions:** the human's decisions so far, with reasons. Execution appends to this.
 - **Follow-ups:** empty at approval; execution appends to this.
+- **Quarantine:** non-gating flaky tests, each with an owner and an expiry. Empty at approval.
 
 Keep it to a few pages.
 
 ## Single plan
-There is no `epic.md`, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
+There is no `epic.md`, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself. Gates there include the full-gate commands, the test map and the smoke set.
 1. Spawn a `plan-author` (`plan` skill), writing `plan.md` at the plan directory root, with the agreed scope in the task.
 2. Relay the human's feedback by resuming the same plan-author.
 3. Get a fresh review and the human's approval.
 
-Execution then runs only the implement loop and hands to the PR process.
+Execution then runs the implement loop, then the full gates once, then hands to the PR process.
 
 ## Do
 - Push back on scope creep, and raise gaps the human hasn't considered.
