@@ -22,7 +22,8 @@ One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
-- **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a stopped child is waiting, or at any time in lane mode.
+- **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
+- **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. A helper first creates the child's new base: its old base with the same incoming commit merged in, built detached in the checkpoint worktree. Record that base, so T1 and code review still see only the child's own changes.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
 ## Per child
@@ -57,7 +58,8 @@ One writer per worktree at any time.
      1. abort the merge;
      2. a fresh implementer in the checkpoint worktree merges the work branch into the checkpoint branch and resolves the conflict there;
      3. it runs T1 for the conflicted paths and records `## checkpoint merge` in the last child's ledger;
-     4. then merge again.
+     4. a fresh reviewer reviews the resolution (code mode, from the checkpoint branch's tip before the merge);
+     5. then merge again. The resolved tip counts as green; the next checkpoint's full run covers the rest.
    - The run for C+1 waits until C is green and merged.
    - No child after C+1 in child order may start (a serial child) or be integrated (a lane child) until C is green and merged.
 3. **Failures:** follow `references/checkpoint-failures.md`.

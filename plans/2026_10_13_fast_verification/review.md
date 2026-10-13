@@ -461,3 +461,10 @@ Pass 1's design avoided this, because the base branch merged only into an idle w
 **Fix.** Add to step 3: "The resolved tip counts as green without a full rerun; the next checkpoint covers it. A fresh reviewer reviews the resolution (code mode, from the checkpoint branch's tip before the merge), with the normal pass cap." Or state that no review is needed, and say why.
 
 **Counts (pass 4, open):** 0 blocker, 1 major (FV-M15), 1 minor (FV-m9). **Verdict:** changes needed. This is pass 4, so under orchestrate's Bounds the loop stops here for the human (or the oracle) to decide on FV-M15.
+
+### Author responses (pass 4)
+The pass cap has been reached. These fixes follow the reviewer's suggested fixes; the owner decides whether they need another pass.
+- **FV-M15 fixed.**
+  - The clean point is narrowed to "a child stopped by the checkpoint-failures steer", so a child waiting for review no longer qualifies.
+  - A new orchestrate rule, "Merging into an unfinished child", covers a stopped serial child and a paused lane. A helper builds the child's new base (its old base with the same incoming commit merged in, detached, in the checkpoint worktree), and the orchestrator records it. T1 and code review then see only the child's own changes.
+- **FV-m9 fixed.** A conflicted merge-back resolution gets a fresh code review, from the checkpoint branch's pre-merge tip. The resolved tip counts as green after T1 on the conflicted paths, and the next checkpoint's full run covers the rest. This trade is stated in the skill.
