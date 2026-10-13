@@ -416,3 +416,26 @@ The losses for the epic as a whole are elsewhere:
 - This takes plan writing and review (about 30–45 min per child) off the critical path.
 - Skip it when N+1 depends on something N's plan leaves open.
 
+
+## 15. Implementer model and test traceability (added 2026-10-13)
+**Evidence.** Pilot child 04b's implementer (`gpt-6.1-sol`, medium thinking) spent 220 of its 332 minutes on model time, across 551 turns and 334k output tokens. Only 48k of those tokens (14%) were file content; the rest was reasoning, commands and messages. Per-turn measurements on this machine over 14 days, from 495 to 6,110 turns per model:
+
+| Model | Fixed delay per turn | Output speed |
+|---|---|---|
+| `gpt-6.1-sol` | about 5.3 s | about 43 tok/s |
+| Opus | about 1.5 s | about 110 tok/s |
+| Sonnet | about 1.5 s | about 155 tok/s |
+| Haiku | about 1.3 s | about 235 tok/s |
+
+At equal turns and tokens, Sonnet would have cut 04b's model time from about 220 to about 50 minutes.
+
+**Rulings (owner, 2026-10-13).**
+- **Models:** the implementer moves to Sonnet in the pilot repo from child 05. The planner stays on `gpt-6.1-sol` and the reviewer on Opus.
+- **Escalation:** an optional escalation implementer, named in `epic.md`, takes code-review fixes from pass 3 on.
+- **No line budget:** a line budget was rejected as a proxy that penalizes legitimately test-heavy code. Instead:
+  - the plan's Tests contract list is the test budget;
+  - code review rejects new tests that don't trace to it, or to a contract the ledger adds with a reason;
+  - the ledger's test-to-production ratio is a signal for closer review, not a rule.
+- **Parallel writers inside a child:** not added. They move the bottleneck to integration. `delegate` already covers mechanical fan-out on disjoint files.
+
+**Measure** (child 05 onward vs children 01–04): wall time, model time, findings by severity, fix passes, escalations, test-to-production ratio.

@@ -99,6 +99,7 @@ Plan the next child while the current one is being implemented. This is the defa
 ## Bounds
 - Every review is a new session. Every planner or implementer call resumes that child's session, except where this skill names a fresh one.
 - A loop not approved after pass 4 stops.
+- **Escalation:** if `epic.md` names an escalation implementer, code-review fix passes from pass 3 on go to a fresh one of those, given the ledger, and later passes resume it.
 - Every launch gets a deadline: planner and implementer from the child's budget in `epic.md`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
 - A child over its wall-time or cost budget stops. Its wall time is the sum of its active phases: plan loop, refresh and implement loop. Time spent waiting for the previous child, or stopped for a checkpoint (from the steer to the resume), doesn't count.
 

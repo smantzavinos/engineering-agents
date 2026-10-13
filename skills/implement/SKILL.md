@@ -61,6 +61,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
    - the commands run, with pass/fail and duration per gate;
    - the T1 selection and why each spec was picked;
    - test lines vs production lines added, and the tests removed or consolidated;
+   - any contract you proved that the plan didn't list, and why;
    - flakes and baseline failures seen, and log paths;
    - deviations from the plan, follow-ups, and what the reviewer should look at closely.
 

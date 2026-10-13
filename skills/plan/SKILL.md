@@ -24,7 +24,7 @@ Scout widely with subagents (`delegate`), and read the critical paths yourself.
 - **Context:** links to the code, docs and earlier decisions that matter.
 - **Design:** the key decisions and why. Name rejected alternatives when the choice isn't obvious.
 - **Changes:** by area or module, what changes and where. Enough to start, not a script.
-- **Tests:** the contracts each acceptance scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`). This is not a test checklist.
+- **Tests:** the contracts each acceptance scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`). This is not a test checklist. It is the test budget: code review rejects new tests that don't trace to it, so keep it complete and lean.
 - **Gates (T1):** the commands, run once at the end of implementation:
   - typecheck and build for the touched packages;
   - lint and format on the changed files;

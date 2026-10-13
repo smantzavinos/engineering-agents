@@ -50,6 +50,7 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
   - no more than about a day of children apart.
 
   Epic close is always one.
+- **Escalation implementer** (optional): the agent that takes over code-review fixes from pass 3 on, when the default implementer is a fast model.
 - **Size limit:** the most one child may be. Set it as estimated implementer hours (default about 3) plus a diff a reviewer can judge in one pass. Calibrate it from earlier children's actuals when there are any. Children over the limit are split before execution.
 - **Budget:** wall time and cost per child. Exceeding it stops execution.
 - **Autonomy:** what the human wants to decide personally beyond the standard stop conditions, and what execution may do without asking: push the branch, open the PR, file tracker items.

@@ -29,7 +29,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - is consistent with the codebase;
   - updates the affected docs.
 
-  Apply `test-quality` to every new or changed test, with its severities.
+  Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract in the plan's Tests, or one the ledger adds with a reason. Any other test is a major finding. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
 
   The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
   - the commands match the plan, and the T1 selection covers the actual diff;
