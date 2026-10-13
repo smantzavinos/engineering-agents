@@ -642,3 +642,65 @@ Every one of those commits is a second writer in the implementer's worktree. Tha
   - Review treats extra work not on that line as major.
   - Orchestrate copies the plan's Follow-ups into `epic.md` on approval.
 - **SP-m4 fixed.** Scope's single-plan test uses a size limit recorded in `plan.md`. Review checks the limit "in `epic.md`, or a single plan's own".
+
+## size limit and plan-ahead, pass 2
+Fresh code-mode review of `8a5aea0`. The fixes are diff `b314a94..8a5aea0`, and the full change is `edf23d8..8a5aea0`. Checked against plan §13 (the last three bullets) and §14. `node tools/render-skills.mjs --check` passes: `dist/` matches the skills. Mid-implementation splits stay out of scope, per the owner's ruling.
+
+### Earlier findings, verified in the artifacts
+- **SP-M1 fixed.**
+  - Close is now one ordered list (orchestrate 38-49).
+  - The refresh comes after the checkpoint merge (step 3) and the epic-entry adjustments (step 5).
+  - Step 6 waits for the plan loop to be approved.
+  - Step 7 records the base after the plan branch merges.
+  - Refresh step 2 checks `epic.md` and checkpoint merges (plan 51-54).
+  - Merging the plan branch at step 1, before the plan is approved, is safe: step 6 merges the rest, and the planning worktree switches branches only after that.
+- **SP-M2 fixed** (orchestrate 47; plan 53-54). There is a review loop with a new pass count under the cap, a resize check, and the estimate is reported.
+- **SP-M3 fixed as stated.** While a serial child implements, only the implementer writes to the work-branch worktree (orchestrate 25). The fix causes SP-M6 and SP-M7.
+- **SP-M4 fixed** (orchestrate 59-61; lanes 10).
+- **SP-M5 fixed** for the case raised (orchestrate 101; state per phase, 15). The new definition causes SP-m5.
+- **SP-m1 fixed** (orchestrate 62; review 22).
+- **SP-m2 fixed** (orchestrate 18, 63, 64).
+- **SP-m3 fixed** (plan 45; review 21; orchestrate 34).
+- **SP-m4 fixed** (scope 19; review 20).
+
+### SP-M6 · major · `skills/orchestrate/SKILL.md:21, 25, 63`: the orchestrator is now a second writer in the planning worktree (caused by the SP-M3 fix)
+**Problem.** Line 25 sends the orchestrator's `state.json` and `epic.md` commits to the planning worktree while a serial child is in its implement loop. That is exactly when N+1's plan-author and plan reviewers run and commit there (59, 63). The orchestrator commits after every step: run ids, pass counts, and N's code-review passes. On approval it also copies Follow-ups into `epic.md` (34), and a resize edits `epic.md` (110). All of that happens while a plan-author or reviewer is mid-run in the same worktree. This breaks "One writer per worktree at any time" (21). It brings back the `index.lock` collision §14 cites, now in the planning worktree, and a plan-author that commits with `-a`/`-A` sweeps up the orchestrator's half-written edits. The SP-M3 fix moved the second writer instead of removing it.
+
+**Fix.** Give the orchestrator's writes their own worktree:
+- "While a serial child is in its implement loop, commit `state.json` and `epic.md` in the state worktree: a plain `git worktree add` with no install, on a state branch cut from the work-branch tip when the implementer starts. Close step 1 merges the state branch and the plan branch."
+
+If a third worktree isn't wanted, the alternative is: "commit in the planning worktree only while no plan-author or reviewer is running there". That needs a rule for where pending state lives in the meantime, and it must survive `self_compact`.
+
+### SP-M7 · major · `skills/orchestrate/SKILL.md:18, 25, 51-54`; `skills/implement/SKILL.md:12, 38`: two copies of `state.json` and `epic.md` during an implement loop, with no rule for which is live (caused by the SP-M3 fix)
+**Problem.** During N's implement loop, the current state is on the plan branch, and the work branch's copy is stale until Close step 1. Nothing says so. Three consequences:
+- **Recovery (18)** reads "`state.json`" without saying which copy. After a mid-loop `self_compact` (allowed "whenever your context grows large", 127) or a crash, the work-branch copy lacks:
+  - N's implementer run id;
+  - its code-review pass count;
+  - N+1's planner run ids.
+
+  The orchestrator then spawns a second implementer into a worktree that already has one, or restarts the pass count and gets past the cap of 4.
+- **The implementer reads the baseline digest from `state.json` in its own worktree** (implement 12, 38). A base-side failure found by checkpoint triage during the loop is added to the baseline (checkpoint-failures 7). A flake is quarantined in `epic.md` (checkpoint-failures 6). Both edits now land on the plan branch, so a running or resumed implementer never sees them before Close. It then treats a baseline failure as its own, and spends its loop on it.
+- **Single plan (51-54)** runs step 2 but has no planning worktree and no Close. Read literally, line 25 commits state to a plan branch that nothing ever merges, so the PR hand-off leaves it behind.
+
+**Fix.**
+- Line 25: "While a serial child implements, the live `state.json` and `epic.md` are on the plan (or state) branch."
+- Recovery: "read `state.json` from that branch if it hasn't merged; otherwise from the work branch".
+- When the baseline or the Quarantine list changes mid-loop, pass the change to the implementer in its steer or resume message.
+- Single plan: either exempt it ("commit on the work branch, only between implementer runs"), or merge the state branch before the full-gate run.
+
+### SP-m5 · minor · `skills/orchestrate/SKILL.md:101`: wall time counts a checkpoint stop (caused by the SP-M5 fix)
+**Problem.** The definition excludes only waiting for the previous child. A serial child stopped by the checkpoint-failures steer, or a paused lane, waits inside its implement loop for:
+- a fix;
+- a fix review;
+- a full-gate recheck.
+
+Read literally, that wait counts, and it can trip the budget spuriously while the epic runs unattended.
+
+**Fix.** "…Time spent waiting for the previous child, or stopped for a checkpoint (from the steer to the resume), doesn't count." Record the stop and resume times with the phases (15).
+
+### SP-m6 · minor · `skills/orchestrate/SKILL.md:44-49, 65`: when the next child wasn't planned ahead, its base still comes before its own plan (caused by the SP-M1 fix)
+**Problem.** Step 7 records the next child's base at close in every case. When the next child wasn't planned ahead (65), its plan is written after that. Where the plan is written isn't specified, so `plan.md` and its plan ledger land after the base, inside the child's diff. This is the gap that SP-M1 closed only for the planned-ahead case. The diff noise is small, but code review and changed-file T1 selection both see it.
+
+**Fix.** Step 6, otherwise branch: "If it wasn't planned ahead, run its plan loop now in the planning worktree, then merge the plan branch." Step 7 then records the base after that merge in both cases.
+
+**Counts (pass 2, open):** 0 blocker, 2 major (SP-M6, SP-M7), 2 minor (SP-m5, SP-m6). SP-M1-SP-M5 and SP-m1-SP-m4 are closed. **Verdict:** changes needed.
