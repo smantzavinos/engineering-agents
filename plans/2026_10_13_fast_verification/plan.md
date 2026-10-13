@@ -431,7 +431,7 @@ At equal turns and tokens, Sonnet would have cut 04b's model time from about 220
 
 **Rulings (owner, 2026-10-13).**
 - **Models:** the implementer moves to Sonnet in the pilot repo from child 05. The planner stays on `gpt-6.1-sol` and the reviewer on Opus.
-- **Escalation:** an optional escalation implementer, named in `epic.md`, takes code-review fixes from pass 3 on.
+- **Escalation:** an optional escalation implementer, named in `epic.md`, takes over a child's code-review fixes when its review isn't approved at pass 2. Integration and checkpoint fixes don't escalate.
 - **No line budget:** a line budget was rejected as a proxy that penalizes legitimately test-heavy code. Instead:
   - the plan's Tests contract list is the test budget;
   - code review rejects new tests that don't trace to it, or to a contract the ledger adds with a reason;
