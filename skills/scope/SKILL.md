@@ -16,7 +16,7 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 1. Read `PROTOTYPE.md` and the prototype diff. Scout the codebase and research external dependencies through subagents (`delegate`).
 2. Propose the scope: what's in, what's out, and the gaps the prototype skipped. Ask only questions whose answers change the plan, and batch them.
 3. Choose the shape:
-   - a **single plan**, if one implementer can build it in one session and the diff stays reviewable;
+   - a **single plan**, if it fits within a size limit (see `epic.md` → Size limit; record the limit in `plan.md`);
    - otherwise an **epic** of ordered child plans.
 4. Choose disposal: wipe-and-rebuild (default), or clean up the prototype in place when its structure is sound.
 5. Write the artifact and iterate with the human until they agree.

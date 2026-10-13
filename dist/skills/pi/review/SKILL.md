@@ -17,8 +17,9 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 - **plan:** `plan.md` against its epic entry. Check that it:
   - can be built without guessing;
   - makes sound decisions;
-  - has an estimate within the epic's size limit;
-  - stays inside the child's entry. Unrecorded extra work is a major finding;
+  - has an estimate within the size limit (`epic.md`, or a single plan's own);
+  - stays inside the child's entry. Work beyond it that isn't on the plan's Follow-ups line is a major finding;
+  - if it was planned ahead, judge references to earlier children's work against their approved plans, not the code;
   - names the contracts to prove, at sensible layers (`test-quality`);
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;

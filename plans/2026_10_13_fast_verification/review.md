@@ -616,3 +616,29 @@ Every one of those commits is a second writer in the implementer's worktree. Tha
 - **Review 20:** "…within the size limit (`epic.md`, or a single plan's own)".
 
 **Counts (pass 1, open):** 0 blocker, 5 major (SP-M1-SP-M5), 4 minor (SP-m1-SP-m4). **Verdict:** changes needed.
+
+### Author responses (size limit and plan-ahead, pass 1)
+- **SP-M1 fixed.** Close is now a numbered sequence:
+  1. merge the plan branch (state commits plus any plan written ahead);
+  2. mark the child done;
+  3. lane and checkpoint merges;
+  4. start the checkpoint;
+  5. adjust epic entries, commit;
+  6. if planned ahead: wait for plan approval, Refresh, review if needed, merge the plan branch;
+  7. record the next child's base after its plan merges, then `self_compact`.
+
+  `plan` → Refresh also checks changes to `epic.md` (entry, Decisions, Follow-ups) and checkpoint merges.
+- **SP-M2 fixed.** If the design or estimate changed, the plan re-enters step 1's review loop with a fresh reviewer and a new pass count under the normal cap, and is resized first if it is now over the limit. Refresh updates and reports the estimate.
+- **SP-M3 fixed.** New "Where work runs" rule: while a serial child is in its implement loop, the orchestrator commits `state.json` and `epic.md` in the planning worktree, on its plan branch, even if nothing is being planned ahead. Close step 1 brings them over. The work branch has only the implementer as a writer until Close.
+- **SP-M4 fixed.** Plan-ahead applies to serial→serial pairs. For the child after a parallel group, it starts when the last member starts implementing, works from every member's plan, and refreshes after the last member is integrated. Members plan in their lane worktrees. `lanes.md` says the same.
+- **SP-M5 fixed.** Bounds defines wall time as the sum of active phases (plan loop, refresh, implement loop), excluding waiting for the previous child. State records each phase's start and end.
+- **SP-m1 fixed.** Plan ahead says to tell the plan-author and reviewers. Review plan mode judges references to earlier children's work against their approved plans.
+- **SP-m2 fixed.**
+  - The planning worktree is created once with `git worktree add`. For each child it is switched to a new plan branch at the work-branch tip, only when clean and after the previous plan branch has merged.
+  - Once a child's implementer starts, plan changes go to a fresh plan-author.
+  - Recovery runs `git status` in every worktree in use.
+- **SP-m3 fixed.**
+  - `plan` puts out-of-scope items on a Follow-ups line in `plan.md`.
+  - Review treats extra work not on that line as major.
+  - Orchestrate copies the plan's Follow-ups into `epic.md` on approval.
+- **SP-m4 fixed.** Scope's single-plan test uses a size limit recorded in `plan.md`. Review checks the limit "in `epic.md`, or a single plan's own".

@@ -12,16 +12,17 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 
 ## State
 `state.json` in the plan directory is your memory. Update and commit it after every step; every resume returns a new run id, so record it each time.
-- **Per child:** status, lane, estimate, base commit, the latest planner and implementer run ids, review pass counts, phase timestamps, and reported usage.
+- **Per child:** status, lane, estimate, base commit, the latest planner and implementer run ids, review pass counts, the start and end of each phase, and reported usage.
 - **At the root:** the baseline gate digest, checkpoints (commit, status, run), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
 
-On start, after compaction, or after a crash: read `state.json`, `git status`, `git log`, and the live run list, then resume whatever was in flight.
+On start, after compaction, or after a crash: read `state.json`, `git status` in every worktree in use, `git log`, and the live run list, then resume whatever was in flight.
 
 ## Where work runs
 One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
 - **Planning ahead:** in the planning worktree (see Plan ahead).
+- **Your own writes** (`state.json`, `epic.md`): while a serial child is in its implement loop, commit them in the planning worktree, on its plan branch, even when nothing is being planned ahead. They reach the work branch at Close step 1. Otherwise, commit them on the work branch.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
 - **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
 - **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. The child's new base is the incoming commit: the green checkpoint tip, or the work-branch commit merged. Its old base is always an ancestor of that commit. Record the new base and give it to the resumed implementer, so T1 and code review still see only the child's own changes.
@@ -30,31 +31,38 @@ One writer per worktree at any time.
 ## Per child
 1. **Plan**, ahead of time where possible (see Plan ahead). Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md` and the previous child's directory. It writes `NN_slug/plan.md` and replies. Then loop:
    - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
-   - Approved: step 2. Otherwise resume the same plan-author with the ledger path and pass number.
+   - Approved: copy the plan's Follow-ups into `epic.md`, then go to step 2. Otherwise resume the same plan-author with the ledger path and pass number.
 2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
    - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
-3. **Close.**
-   - Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
-   - A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Merge any green checkpoint branch that is waiting (Checkpoints step 2). Record the new base commit.
-   - If this was the last child before a checkpoint, start the checkpoint.
-   - Note anything that changes later children, and adjust their epic entries if the change stays within scope.
-   - Commit the state. `self_compact`, with a note naming the next child.
-
-## Plan ahead
-Plan the next child while the current one is being implemented. This is the default; plan only one child ahead.
-- **Start** child N+1's plan loop as soon as child N's implementer starts. N+1's plan-author works from N's approved plan, because N's code isn't built yet.
-- **Where:** a planning worktree, which is a plain git worktree with no install needed, on a plan branch from the work-branch tip. Reuse it for each child. Its plan-author and reviewers launch there.
-- **At N's close:**
-  1. resume N+1's plan-author, which merges the work branch into its plan branch and refreshes the plan against N's diff and ledger (`plan` → Refresh);
-  2. if the design changed, run one fresh plan review;
-  3. merge the plan branch into the work branch, then implement N+1.
-- **Don't plan ahead** when N+1 depends on something N's plan leaves open, or when its plan-author reports that it can't plan yet. Plan it after N closes instead.
+3. **Close**, in this order:
+   1. Merge the plan branch into the work branch. It holds your state commits and any plan written ahead.
+   2. Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
+   3. A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Merge any green checkpoint branch that is waiting (Checkpoints step 2).
+   4. If this was the last child before a checkpoint, start the checkpoint.
+   5. Note anything that changes later children, and adjust their epic entries if the change stays within scope. Commit the state.
+   6. If the next child was planned ahead:
+      - wait for its plan loop to be approved;
+      - resume its plan-author to refresh (`plan` → Refresh);
+      - if the design or estimate changed, re-enter step 1's review loop with a fresh reviewer, starting a new pass count, and resize first if it is now over the size limit;
+      - merge the plan branch.
+   7. Record the next child's base commit, and commit the state. `self_compact`, with a note naming the next child.
 
 **Single plan:**
 1. Run step 2.
 2. A helper runs the full gates once on the final tree. Failures go back to the same implementer, inside the normal loop.
 3. Hand to the PR process.
+
+## Plan ahead
+Plan the next child while the current one is being implemented. This is the default; plan only one child ahead.
+- **When:**
+  - If child N and child N+1 are both serial, start N+1's plan loop when N's implementer starts.
+  - For the first child after a parallel group, start it when the group's last member starts implementing. Its plan-author works from every member's plan, and refreshes after the last member is integrated.
+  - Group members plan in their lane worktrees (`references/lanes.md`).
+- **Inputs:** the previous children's approved plans stand in for their code. Tell the plan-author and its reviewers so.
+- **Where:** the planning worktree, created once with `git worktree add`, with no install. For each child, switch it to a new plan branch at the work-branch tip, but only when it is clean and the previous plan branch has merged. Plan-authors and plan reviewers launch there.
+- **After a child's implementer starts,** plan changes for that child go to a fresh plan-author, not a resumed one: the old one's worktree has moved on.
+- **Don't plan ahead** when N+1 depends on something N's plan leaves open, or when its plan-author reports that it can't plan yet. Plan it after N closes instead.
 
 ## Checkpoints
 `epic.md` names them, and epic close is always one. You may move, add or drop any checkpoint except epic close; record why under Decisions.
@@ -90,7 +98,7 @@ Plan the next child while the current one is being implemented. This is the defa
 - Every review is a new session. Every planner or implementer call resumes that child's session, except where this skill names a fresh one.
 - A loop not approved after pass 4 stops.
 - Every launch gets a deadline: planner and implementer from the child's budget in `epic.md`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
-- A child over its wall-time or cost budget stops.
+- A child over its wall-time or cost budget stops. Its wall time is the sum of its active phases: plan loop, refresh and implement loop. Time spent waiting for the previous child doesn't count.
 
 ## Recovery
 - If a run ends right after the child called `self_compact`, without a reply, treat it as a checkpoint. Resume it with "Continue from your note."

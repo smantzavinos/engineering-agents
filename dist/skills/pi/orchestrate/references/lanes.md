@@ -7,6 +7,7 @@ Read this when `epic.md` declares parallel groups. If the repo has no worktree p
 - **Before each lane starts,** check:
   - free memory, about 6 GB per lane;
   - disk, against the repo's floor in `epic.md` Gates.
+- **Planning ahead** (orchestrate → Plan ahead): group members plan in their own lane worktrees. The child after the group plans ahead in the planning worktree.
 - **E2E workers:** split the machine-wide budget (`epic.md`, default cores ÷ 4) across the running lanes and the checkpoint run. Pass each lane its E2E worker count in the task.
 - **Rate limits:** on model rate-limit errors, drop one lane until the next group.
 

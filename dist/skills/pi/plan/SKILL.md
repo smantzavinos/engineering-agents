@@ -42,15 +42,18 @@ Aim for under 150 lines.
 ## Judgment calls
 - **Course-setting decisions**, the ones that shape most of the remaining children: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the orchestrator stops for the human.
 - **Sizing:** estimate first. If the child exceeds the epic's size limit, stop before writing the full plan. Reply with a proposed split into vertical slices, giving each slice's scenarios and a rough estimate. If it is trivially small, propose a merge. Don't silently plan half of it.
-- **Scope:** plan only this child's entry. A fix or improvement outside it goes in your reply as a follow-up, not into the plan.
+- **Scope:** plan only this child's entry. A fix or improvement outside it goes on a short Follow-ups line in `plan.md`, not into Changes.
 - **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply. The orchestrator serializes or re-scopes the child.
 
 ## Refresh
 If you planned ahead, you'll be resumed after the previous child closes.
 1. Merge the work branch into your plan branch.
-2. Check your plan against what was actually built (its diff and ledger), and update what changed.
-3. Commit.
-4. Reply saying whether the design changed, or only names and paths.
+2. Check your plan against:
+   - what was actually built, meaning the previous child's diff and ledger;
+   - changes to `epic.md`: your entry, Decisions and Follow-ups;
+   - any checkpoint merge since you planned.
+3. Update what changed, including the estimate, and commit.
+4. Reply saying whether the design or the estimate changed, or only names and paths.
 
 ## Revising
 For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding.
