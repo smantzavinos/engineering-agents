@@ -801,3 +801,44 @@ Fresh code-mode review of `659ea8a`. The fixes are diff `ed990b0..659ea8a`, and 
 ### Author responses (size limit and plan-ahead, pass 4)
 - **SP-m7 fixed.** Close step 6 skips steps 6 and 7 when the next child is a sibling in the same parallel group, because it is already running.
 - **SP-m9 fixed.** The no-git rule now reads "while a serial child's implementer or code reviewer is running".
+
+## test budget and escalation, pass 1
+Fresh code-mode review of `18bfbba` (diff `152fb93..18bfbba`), against plan §15's rulings. Checked against `test-quality`, `plan`, `implement`, `review`, `orchestrate` (with `references/lanes.md` and `references/checkpoint-failures.md`) and `scope`. `node tools/render-skills.mjs --check` passes: `dist/` matches the skills. The rulings themselves (the Tests list as the budget, the ledger escape hatch, the ratio as a signal only, escalation from pass 3) are settled. These findings concern only how the text carries them out.
+
+### TB-M1 · major · `skills/review/SKILL.md:32`; `skills/plan/SKILL.md:27`; `skills/implement/SKILL.md:64`: the traceability rule flags legitimate tests that relocate or rewrite existing proof
+**Problem.** Review 32 makes "every new test" that doesn't trace to the plan's Tests, or to "a contract the ledger adds", a major finding. Three kinds of legitimate test fall outside both routes as written:
+- **Moved, split or rewritten tests.** test-quality asks for consolidation ("extend table cases… instead of near-copies"; "don't delete a test without naming… where that proof now lives"). When behavior changes, an implementer often deletes an old test and writes its replacement, or moves it to the owning layer. In the diff these are new tests. They prove existing contracts, not ones "the plan didn't list", so implement 64 doesn't prompt the implementer to record them. A fresh reviewer then raises a major. The easy way to clear it is to drop the new test, and that loses coverage whose original is already gone.
+- **Independent contracts outside the Tests scope.** Plan 27 scopes Tests to "each acceptance scenario and each risky piece of logic". test-quality's Keep list (config, default value, migration, API, exact prompt text, generated output, package) covers contracts a child often adds without their being a scenario or risky logic. "Keep it complete" doesn't override the narrower definition just before it, so these contracts are routinely left off the list.
+- **Regression tests outside the implement handoff.** Integration and checkpoint-fix loops are reviewed in code mode (lanes step 4; checkpoint-failures step 2), but `## integration` and `## checkpoint fix` entries don't carry implement 64's bullet. test-quality requires a regression test for the regression these loops fix, and that test has no route to trace through.
+
+In each case the escape hatch technically exists, but nothing tells the author to use it. The result is false majors that burn passes under a cap of 4, and push children into escalation.
+
+**Fix.**
+- **Review 32:** "Every new test proves a contract in the plan's Tests, carries over an existing test's proof that the diff moved, split or rewrote, or proves a contract the ledger adds with a reason (a regression test names its bug). Any other test is a major finding."
+- **Plan 27:** "…each acceptance scenario, each risky piece of logic, and each independent contract the child adds or changes (`test-quality` Keep)…"
+- **Implement 64:** "any contract you proved that the plan didn't list, including regression tests for bugs you found, and why; tests you moved, split or rewrote, and where each came from". Have `## integration` and `## checkpoint fix` record the same thing (implement 52–56).
+
+### TB-M2 · major · `skills/orchestrate/SKILL.md:102`: the escalation launch doesn't say where it runs, what it gets, or which loops it covers
+**Problem.** "Code-review fix passes from pass 3 on go to a fresh one of those, given the ledger." Elsewhere, a fresh session carries its context explicitly ("Resumed sessions keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs"; step 2 gives the implementer the directory, base commit and E2E worker count). This line gives only the ledger, which leaves three gaps:
+- **Worktree.** A lane child's or checkpoint fix's escalation launched with the orchestrator's default cwd lands in the work-branch worktree. There it edits the wrong branch, and is a second writer beside the serial child that may be building there. That breaks "one writer per worktree".
+- **Base.** Without the child's *current* base (it may have moved after a merge into a stopped child, orchestrate 28), T1 selection and the next reviewer's diff are computed from the wrong commit.
+- **Scope.** Code-mode loops also run for lane integration (lanes step 4), checkpoint-merge conflicts (orchestrate 83) and checkpoint fixes (checkpoint-failures step 2), each with "the normal pass cap". Read literally, escalation applies to all of them. Each needs a different worktree and different inputs (the failure digest, both plans), and none of them is stated.
+
+**Fix.** Line 102: "…go to a fresh session of that agent (`implement` skill), in the same worktree as the loop's implementer, with the same inputs (the child's directory, its current base, E2E worker count, and for integration or checkpoint loops, the plans, ledgers and digest that loop names) plus the ledger. Later passes resume it." Also state whether integration and checkpoint loops escalate. If they don't, say "child implement loops only".
+
+### TB-m1 · minor · `skills/orchestrate/SKILL.md:14, 37, 100`; `skills/implement/SKILL.md:9`; `references/lanes.md:24`: after escalation, "that child's implementer" is ambiguous
+**Problem.** Several places resume "the child's implementer": Bounds 100, Close/epic close 92 ("resume it"), the checkpoint-merge conflict (79), the lane integrator (lanes 24) and Recovery. After escalation there are two such sessions. State 14 keeps only "the latest … implementer run ids", and implement 9 still tells the original that "this session owns the code until it is approved". Plan §15 also wants escalations measured, but the state has no field for them.
+
+**Fix.** Bounds 102, add: "From then on, the escalation session is that child's implementer for every later resume (integration, checkpoint merge, epic close, recovery)." In State, record the escalation run id and the pass at which it took over. Implement 9: "…until it is approved or escalated."
+
+### TB-m2 · minor · `skills/orchestrate/SKILL.md:102`; `skills/scope/SKILL.md:53`: "from pass 3 on… later passes resume it" is effectively one pass
+**Problem.** Fix pass N answers review pass N (implement 61; orchestrate 37). A loop not approved after review pass 4 stops (101). So the only escalated fix is fix pass 3, and "later passes resume it" never runs. An orchestrator could also count "pass 3" as the third implementer turn (after review pass 2), which gives the escalation implementer two attempts. The two readings differ in both cost and outcome.
+
+**Fix.** Name the pass by its review: "the fixes for review pass 3 onward (with the cap at 4, that is one fix pass)". Or, if the owner meant two escalated attempts, "from review pass 2's fixes on". Mirror the wording in scope 53.
+
+### TB-m3 · minor · `skills/review/SKILL.md:23`: plan review doesn't check the Tests list as a budget
+**Problem.** Plan 27 now makes Tests the test budget and says to "keep it complete and lean". The plan-mode check is still just "names the contracts to prove, at sensible layers". A padded list defeats the budget, and an incomplete one causes TB-M1's false majors. Nobody checks either until code review.
+
+**Fix.** Review 23: "names the contracts to prove, at sensible layers (`test-quality`), and is the test budget: complete for the child's scenarios, risky logic and independent contracts, with no contract that test-quality wouldn't keep."
+
+**Counts (pass 1, open):** 0 blocker, 2 major (TB-M1, TB-M2), 3 minor (TB-m1, TB-m2, TB-m3). **Verdict:** changes needed.
