@@ -1,6 +1,6 @@
 # Checkpoint failures
 
-Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failure. Everything here happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green.
+Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failure. Everything here happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green. The one exception is the merge into a stopped child (orchestrate → Where work runs).
 
 1. **Triage.** A failure already in the baseline is not a regression. For any other failure, a helper reruns it alone:
    - **It passes alone:** record a flake. A second sighting of the same flake puts it on the epic's Quarantine list, with an expiry. It also gets a tracker item if the epic pre-authorizes filing; otherwise it goes under Follow-ups.

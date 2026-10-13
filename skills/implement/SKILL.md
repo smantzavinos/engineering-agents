@@ -27,7 +27,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 
 ## Gates
 1. At the end, run T1 once, with the plan's Gates commands.
-   - **Selection:** compute it from `git diff <base>`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.
+   - **Selection:** compute it from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.
    - **E2E specs:** the test map gives the specs for the changed paths. The plan supplies the rest.
    - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
    - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.

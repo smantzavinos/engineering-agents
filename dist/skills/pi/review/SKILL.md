@@ -49,7 +49,7 @@ Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or 
 - **major:** will cause real problems, and must be fixed before approval.
 - **minor:** worth fixing if it's cheap.
 
-Don't record nits. The work is approved when no blocker or major finding remains open. Commit the ledger.
+Don't record nits. The work is approved when no blocker or major finding remains open. Commit the ledger, staging only that file.
 
 ## Reply
 Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path.

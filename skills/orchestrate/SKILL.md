@@ -22,9 +22,9 @@ One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
 - **Planning ahead:** in the planning worktree (see Plan ahead).
-- **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. While a serial child is in its implement loop, write these files but run no git commands there; commit them at Close step 1. Otherwise, commit them as you go.
+- **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. While a serial child is actively building, write these files but run no git commands there. Commit them at Close step 1, or before a merge into a stopped child. Otherwise, commit them as you go.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
-- **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
+- **Merging into the work branch:** only when no one is writing there, and its tree is clean once you have committed your own files. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
 - **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. The child's new base is the incoming commit: the green checkpoint tip, or the work-branch commit merged. Its old base is always an ancestor of that commit. Record the new base and give it to the resumed implementer, so T1 and code review still see only the child's own changes.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
@@ -47,7 +47,7 @@ One writer per worktree at any time.
         - resume its plan-author to refresh (`plan` → Refresh);
         - if the design or estimate changed, re-enter step 1's review loop with a fresh reviewer, starting a new pass count, and resize first if it is now over the size limit.
       - **Otherwise:** run its plan loop now (step 1).
-      - Either way, plan loops run in the planning worktree. Merge the plan branch when the loop is done.
+      - Either way, plan loops run in the planning worktree, except for parallel-group members, which plan in their lane worktrees. Merge the plan branch when the loop is done.
    7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact`, with a note naming the next child.
 
 **Single plan:**
@@ -105,7 +105,7 @@ Plan the next child while the current one is being implemented. This is the defa
 ## Recovery
 - If a run ends right after the child called `self_compact`, without a reply, treat it as a checkpoint. Resume it with "Continue from your note."
 - A child that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If resume is rejected, spawn a fresh session of the same role on the plan directory, and record the fallback.
-- A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself.
+- A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself. Your own files are the exception: they're yours to commit, and never to discard.
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.
 
 ## Sizing and scope

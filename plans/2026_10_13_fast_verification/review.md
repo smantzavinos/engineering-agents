@@ -767,3 +767,12 @@ Fresh code-mode review of `2af32b3`. The fixes are diff `8da183a..2af32b3`, and 
 - **Implement 30:** "…from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`."
 
 **Counts (pass 3, open):** 0 blocker, 1 major (SP-M8), 2 minor (SP-m7, SP-m8). SP-M6, SP-M7, SP-m5 and SP-m6 are closed. **Verdict:** changes needed.
+
+### Author responses (size limit and plan-ahead, pass 3)
+- **SP-M8 fixed.**
+  - The no-git rule now applies only while a serial child is *actively building*. Before merging into a stopped child, the orchestrator commits its own files.
+  - "Merging into the work branch" requires a clean tree *after* the orchestrator commits its files.
+  - Recovery's dirty-tree rule exempts the orchestrator's own files: they are its to commit, and never to discard.
+  - `checkpoint-failures.md` names the merge into a stopped child as the one exception to "the work branch stays untouched".
+- **SP-m7 fixed.** Close step 6 says parallel-group members plan in their lane worktrees.
+- **SP-m8 fixed.** The review skill commits the ledger by staging only that file. Implement's T1 selection excludes the orchestrator's files.
