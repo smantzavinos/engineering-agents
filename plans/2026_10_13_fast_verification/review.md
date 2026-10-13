@@ -348,3 +348,71 @@ If the work-in-progress path is kept instead, the paused child must stash rather
   - Culprit fixes never run in lane worktrees.
   - A paused lane merges the work branch after the checkpoint branch has merged.
 - **FV-m6 fixed.** In the frontier plan, principle 6, the §3 diagram's CLOSE line, the §10 parallelism paragraph and the §13 "fewer gates" risk row now point to fast verification.
+
+## code pass 3
+
+Scope: `c0afc71..7bddf77`, with the pass-2 findings checked against the fix commit `7bddf77`. Read in full: orchestrate, `references/{checkpoint-failures,lanes}.md`, implement, plan §3.3, and the frontier `plan.md` edits. A grep for the old routing terms ("carried", "fix forward", "culprit") found leftover text only in the frontier plan (FV-m7). `node tools/render-skills.mjs --check` reports no drift. `skill-content-spec` (40/40) and `skill-render-spec` (75/75) pass. The seven skills total 477 lines; orchestrate is 98.
+
+### Pass-2 findings
+- **FV-M12 fixed.** Base merge, gate runs, triage, bisect, fix, review and recheck all happen on the checkpoint branch in the checkpoint worktree (orchestrate 24, 50-54; `checkpoint-failures.md:3, 9-14`). That branch starts from C's work-branch commit, so the fixer's T1, the recheck and the bisect range can't contain a running child's work in progress. The only remaining WIP commit is the one orchestrate 25 needs to merge the green branch back. That merge-back has its own gap, FV-M13.
+- **FV-m5 fixed.**
+  - Base-merge conflicts are aborted and resolved in the checkpoint worktree (orchestrate 51).
+  - A conflicted lane merge is aborted, and a red T1 is reset (`lanes.md:26`).
+  - Culprit fixes never run in a lane worktree (`lanes.md:38`).
+  - A paused lane merges the work branch before it continues (`lanes.md:39`, `checkpoint-failures.md:16-18`).
+- **FV-m6 fixed** for the four lines named: frontier 38, 55, 167 and 385 now match. The redesign left two other frontier lines stale; see FV-m7.
+
+**Consistency of the redesign.** Orchestrate, `checkpoint-failures.md`, `lanes.md`, implement 52-56 and plan §3.3 agree on the following:
+- the checkpoint branch and worktree;
+- a fresh implementer for the fix, since a resumed session can't move;
+- the fix's T1, test-map entry, `## checkpoint fix` ledger entry and fresh review;
+- "green" meaning a full-gate pass on the branch tip, then a merge into the work branch;
+- children that build on the broken code pause until that merge.
+
+Two gaps remain: who resolves a conflicted merge-back (FV-M13), and where epic-close fixes land in lane mode (FV-M14, which the new "resumed sessions keep their worktree" rule makes explicit).
+
+### FV-M13 · major · `skills/orchestrate/SKILL.md:25, 54`, `references/checkpoint-failures.md:14`: no owner for a conflicted merge of the checkpoint branch into the work branch
+**Problem.** This was caused by the pass-2 fix. The checkpoint branch now carries the base-branch merge and any regression fix, both based on C. Meanwhile the work branch has moved on: in serial mode, the next child commits there, and in lane mode, other lanes integrate. So merging the green checkpoint branch back can conflict. Before pass 2, the base branch merged straight into an idle work branch, and the implementer that had just closed resolved any conflict. Now nothing says who resolves a conflict at this merge, and the cases break as follows:
+- **Serial mode.** Line 25 interrupts the running child, commits its work in progress, and merges inside its worktree. A conflict leaves a half-done merge in a live child's worktree. The orchestrator may not resolve it ("Never commit code yourself", line 74). The child is resumed onto a conflicted tree, or the run stalls.
+- **Lane mode.** The merge runs in the idle work-branch worktree, but the same question applies: who resolves it?
+- **Verification.** Nothing says whether a resolved merge needs T1 before the work branch carries it.
+
+**Fix.** Add one rule to orchestrate Checkpoints step 2, for example:
+- **When to merge:** merge only into a clean tree, meaning the idle work-branch worktree or a serial child stopped at a reply. This also drops line 25's mid-work interrupt and WIP commit.
+- **On a conflict:** abort the merge. A serial child's implementer, which is already in that worktree, merges and resolves. In lane mode, a fresh implementer in the checkpoint worktree merges the work branch into the checkpoint branch and resolves there, after which the orchestrator merges again.
+- **After resolving:** run T1 for the conflicted paths, and record the resolution in the ledger of the child whose files conflicted.
+
+### FV-M14 · major · `skills/orchestrate/SKILL.md:61-62`, frontier `plan.md:153`: in lane mode, epic-close fixes land on a lane branch that the final checkpoint never sees
+**Problem.** Epic close step 2 resumes "the implementer of the last child in child order". Line 26 now states that resumed sessions keep their original worktree. If that child ran in a lane, its session is in its lane worktree, on its lane branch. Its fixes for the epic-diff findings are committed there.
+
+Step 3 then runs the final checkpoint, and Checkpoints step 1 creates the checkpoint branch "from the work-branch commit". Nothing merges the lane branch first. So the epic-diff fixes are missing from the gated tree and from the PR. Also, the fixes are made on a lane base that lacks later checkpoint merges.
+
+**Fix.** In Epic close step 2, add one of these:
+- "If the last child ran in a lane, its fixes integrate as `references/lanes.md` Integrating says before step 3."
+- Or: "A lane child's fixes are made by a fresh implementer in the idle work-branch worktree, given that child's plan and ledger."
+
+Mirror the change in frontier §4.6 step 2.
+
+### FV-m7 · minor · frontier `plan.md:143, 218`, `skills/orchestrate/SKILL.md:66`, fast-verification `plan.md` §3.3 "Running a checkpoint" step 1: text the redesign left stale
+**Problem.** Four places still describe the old design:
+- **Frontier line 143** still says base-merge conflicts "go to the implementer that just finished". They now go to a fresh implementer in the checkpoint worktree.
+- **Frontier line 218** (T2 row) still says failures are "fixed in that child or carried forward as a blocker". That is the routing pass 2 removed.
+- **Orchestrate line 66** says "Every planner or implementer call resumes that child's session". This conflicts with line 26, and with the fresh implementers for base-merge conflicts and checkpoint fixes.
+- **Plan §3.3 step 1** says the orchestrator "points the checkpoint worktree at that commit". It doesn't mention the checkpoint branch or the base merge that orchestrate 50 now places there.
+
+**Fix.**
+- **Line 143:** "conflicts are resolved on the checkpoint branch (`orchestrate`)".
+- **Line 218:** "fixed on the checkpoint branch by a fresh implementer, then merged when green".
+- **Line 66:** add "except checkpoint work, which uses fresh sessions".
+- **§3.3 step 1:** "creates the checkpoint branch at that commit in the checkpoint worktree and merges the base branch into it".
+
+### FV-m8 · minor · `references/checkpoint-failures.md:10, 16`: pausing a dependent child, and merge-commit culprits
+**Problem.** Two cases are underspecified:
+- **Pausing at the next reply doesn't pause anything.** An implementer replies only at handoff, so a dependent child that is building keeps going on the broken code. Its own T1 may then hit the regression. Implement 38 tells it to fix "anything else", so it may fix the regression in its own tree. That duplicates the checkpoint fix, and the two fixes conflict at merge-back (FV-M13).
+- **A base-merge culprit has no children.** If the bisect lands on the checkpoint's own base-merge commit (a semantic clash between base and epic), "the merged children's plans and ledgers" names nothing. The `## checkpoint fix` entry then has no ledger to go in.
+
+**Fix.**
+- **Line 16:** "steer it now with the failure digest: don't fix this failure, it is being fixed on the checkpoint branch; then pause it at its next reply".
+- **Line 10:** "for the base-merge commit: the last child's plan and ledger, as for a base-merge conflict".
+
+**Counts (pass 3, open):** 0 blocker, 2 major (FV-M13, FV-M14), 2 minor (FV-m7, FV-m8). **Verdict:** changes needed.
