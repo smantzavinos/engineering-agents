@@ -826,13 +826,13 @@ In each case the escape hatch technically exists, but nothing tells the author t
 
 **Fix.** Line 102: "…go to a fresh session of that agent (`implement` skill), in the same worktree as the loop's implementer, with the same inputs (the child's directory, its current base, E2E worker count, and for integration or checkpoint loops, the plans, ledgers and digest that loop names) plus the ledger. Later passes resume it." Also state whether integration and checkpoint loops escalate. If they don't, say "child implement loops only".
 
-### TB-m1 · minor · `skills/orchestrate/SKILL.md:14, 37, 100`; `skills/implement/SKILL.md:9`; `references/lanes.md:24`: after escalation, "that child's implementer" is ambiguous
-**Problem.** Several places resume "the child's implementer": Bounds 100, Close/epic close 92 ("resume it"), the checkpoint-merge conflict (79), the lane integrator (lanes 24) and Recovery. After escalation there are two such sessions. State 14 keeps only "the latest … implementer run ids", and implement 9 still tells the original that "this session owns the code until it is approved". Plan §15 also wants escalations measured, but the state has no field for them.
+### TB-m1 · minor · `skills/orchestrate/SKILL.md:14, 37, 100`; `skills/implement/SKILL.md:9`; `references/lanes.md:27`: after escalation, "that child's implementer" is ambiguous
+**Problem.** Several places resume "the child's implementer": Bounds 100, Close/epic close 92 ("resume it"), the checkpoint-merge conflict (79), the lane integrator (lanes 27) and Recovery. After escalation there are two such sessions. State 14 keeps only "the latest … implementer run ids", and implement 9 still tells the original that "this session owns the code until it is approved". Plan §15 also wants escalations measured, but the state has no field for them.
 
 **Fix.** Bounds 102, add: "From then on, the escalation session is that child's implementer for every later resume (integration, checkpoint merge, epic close, recovery)." In State, record the escalation run id and the pass at which it took over. Implement 9: "…until it is approved or escalated."
 
 ### TB-m2 · minor · `skills/orchestrate/SKILL.md:102`; `skills/scope/SKILL.md:53`: "from pass 3 on… later passes resume it" is effectively one pass
-**Problem.** Fix pass N answers review pass N (implement 61; orchestrate 37). A loop not approved after review pass 4 stops (101). So the only escalated fix is fix pass 3, and "later passes resume it" never runs. An orchestrator could also count "pass 3" as the third implementer turn (after review pass 2), which gives the escalation implementer two attempts. The two readings differ in both cost and outcome.
+**Problem.** Fix pass N answers review pass N (implement 60; orchestrate 37). A loop not approved after review pass 4 stops (101). So the only escalated fix is fix pass 3, and "later passes resume it" never runs. An orchestrator could also count "pass 3" as the third implementer turn (after review pass 2), which gives the escalation implementer two attempts. The two readings differ in both cost and outcome.
 
 **Fix.** Name the pass by its review: "the fixes for review pass 3 onward (with the cap at 4, that is one fix pass)". Or, if the owner meant two escalated attempts, "from review pass 2's fixes on". Mirror the wording in scope 53.
 
