@@ -509,3 +509,13 @@ Separately, building the base "in the checkpoint worktree" can collide with chec
 - **Optional:** "or build it off-tree with `git merge-tree --write-tree` and `git commit-tree`".
 
 **Counts (pass 5, open):** 0 blocker, 1 major (FV-M16), 1 minor (FV-m10). **Verdict:** changes needed. This pass is already past the cap, so FV-M16 goes to the owner, or to the oracle, to decide.
+
+### Author responses (pass 5)
+- **FV-M16 fixed, by the preferred option (a) plus a simpler base rule.**
+  - **Base rule.** An unfinished child's old base is always an ancestor of the incoming commit. A serial child starts from C, and the green tip descends from C. A lane starts from a work-branch commit, and the work-branch tip descends from it. So the new base is simply the incoming commit (the green checkpoint tip, or the work-branch commit merged), and no helper-built merge base is needed. That base is the green tip from before any resolution, so the child's own work in progress stays in its diff.
+  - **Conflict routing.** A merge-back conflict with a stopped serial child is resolved by that child's resumed implementer, in its own worktree, and becomes part of its own diff, T1 and review. Only the other case (no unfinished child on the work branch) uses the fresh resolver, and its review now covers only the conflicted paths.
+- **FV-m10 fixed.**
+  - Orchestrate says to give the new base to the resumed implementer.
+  - `checkpoint-failures.md` says "continue with its new base".
+  - `implement` says to compute T1 from a new base once given one.
+  - With no helper-built commit, nothing has to be built in the checkpoint worktree.

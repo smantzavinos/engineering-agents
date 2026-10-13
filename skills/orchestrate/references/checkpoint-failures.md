@@ -18,5 +18,5 @@ Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failur
      - a lane child then merges the work branch into its lane branch;
      - a serial child gets the fix through that merge.
 
-     Then continue.
+     Then continue with its new base (orchestrate → Where work runs).
    - **Others** go on untouched.
