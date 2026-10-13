@@ -128,7 +128,7 @@ A **checkpoint** is a named point in the epic's child order where the full gates
 
 ## 4. Avenue B: make each run cheaper (repo-side work)
 
-These are changes to the repo's test setup, not to the pipeline. Each is a separate tracker item in that repo.
+These are changes to the repo's test setup, not to the pipeline. In the pilot they are built together, in the prep plan (§11), not as separate tracker items.
 
 1. **Parallel E2E.** Give each worker its own backend, data directory and app server, keyed by worker index. The pilot repo already has per-worker ports wired but unused. Serial-only specs (those that reset shared data) either move to per-worker data or keep a named lock. The measured test time is 364 s; with 4 workers that is roughly 100 s plus the fixed cost.
 2. **Warm harness for T0/T1.**
@@ -164,7 +164,12 @@ A new short skill, `test-quality`, carries these rules. `plan`, `implement` and 
 
 This proves little. The mock supplies the behavior being asserted, so the test is nearly tautological. And reordering the page's queries breaks it with no change in behavior, so it is a change detector. Whether the page shows real data from the real queries is a wiring question that E2E answers properly.
 
-**The rule:** don't write new page tests whose purpose is "the page renders what the mocked queries return". Prove that in E2E, and keep page tests for interaction logic. Once parallel E2E lands (§4.1), E2E stops being the expensive layer.
+**The rule (banned):** new page or component tests whose purpose is "the page renders what the mocked queries return" are not written.
+- Code review flags them as *major*.
+- Prove the wiring in E2E instead, and keep page tests for interaction logic.
+- Existing ones are removed through the audit (§6), not ad hoc inside feature children.
+
+Once parallel E2E lands (§4.1), E2E stops being the expensive layer.
 
 **Considered harmful (review findings, not style notes):**
 - *Tautological tests:* the expected value comes from the code under test, a mock supplies the behavior being asserted, or the test asserts what it set up itself.
@@ -242,10 +247,20 @@ Plan review checks each child's claims against its siblings'. A plan that needs 
    - A conflict, or a red T1 after a merge, goes to an **integrator**: a fresh implementer session given both children's plans and ledgers. It resolves the conflict, runs T1 for both children, and records what it changed. Its diff gets a code review.
 4. Checkpoints (§3.3) apply to the integrated epic branch, not to lane branches.
 
-**Limits:**
-- start with 2 lanes;
-- raise the number only when machine load, model rate limits and disk allow it, as measured in the run;
-- concurrent E2E in lanes needs per-lane ports (§8.3).
+**Width.** `epic.md` sets `maxLanes` (default 4). The lanes actually running are the smallest of:
+- `maxLanes`;
+- the number of ready children in the current parallel group;
+- what the resource gate allows.
+
+The resource gate, checked before each lane starts:
+- **Memory:** at least about 6 GB free per new lane.
+- **Disk:** headroom above the repo's floor.
+- **E2E workers:** a machine-wide budget, default cores ÷ 4, shared across lanes and the checkpoint run. With 4 lanes, each lane's E2E gets about 2 workers, not 4.
+- **Rate limits:** after model rate-limit errors (HTTP 429), drop one lane until the next group.
+
+Concurrent E2E in lanes needs per-lane ports (§8.3).
+
+The pilot machine has 32 cores and 62 GB, with about 28 GB typically free, and each worktree takes about 2 GB of disk. So 4 lanes plus the checkpoint worktree fit, with the E2E worker budget as the binding limit.
 
 ### 8.3 Reusable worktree pool
 
@@ -300,21 +315,23 @@ Together with lanes (§8.4), a 12-child epic of about 50 h would drop to about 2
 
 The skills budget stays within about 450 lines in total; the new skill is the only addition.
 
-**Pilot repo (backlog items; ask before creating):**
+**Pilot repo: the prep plan scope (§11), built now, no tracker items:**
 1. Parallel E2E with per-worker backends (§4.1).
 2. Warm harness mode (§4.2).
 3. Test map and smoke set (§4.3).
 4. Changed-file lint script (§4.4).
 5. Worktree pool support in the worktree script (§4.6, §8.3).
-6. Test-architecture doc: tiers, checkpoints, the authoring gate and layer choice.
-7. Test audit campaign (§6), later and separate.
+6. Test-architecture doc and agent rules: tiers, checkpoints, lanes, the authoring gate, layer choice, and the mocked-data page-test ban.
+
+**Pilot repo backlog (one item, ask before creating):** the test audit campaign (§6).
 
 ## 11. Rollout in the pilot
 
 The current epic continues to child 04's close, then pauses as the owner instructed. After that:
 
-1. **Prep branch.** In the pilot repo, branch off the pilot branch at child 04's close. Build the repo-side items 1–6 there.
+1. **Prep branch.** In the pilot repo, branch off the pilot branch and build the repo-side items 1–6 there as one prep plan.
    - Run it through the pipeline itself as a single plan, so it is dogfooded and reviewed.
+   - It can start before child 04 closes, in its own worktree with its own test port, and merge child 04 in when that closes. The prep work touches the test harness and scripts; child 04 touches features.
    - Items 1 (parallel E2E) and 5 (worktree pool) are the largest. If prep runs long, the order is 3, 4, 2, 6, then 5, then 1. Lanes need 5; checkpoints and T1 don't need 1.
 2. **Pipeline changes.** Make the §10 skill changes on the pipeline branch, rebuild and verify them with a smoke run.
 3. **Demarcation.** Start a new branch for children 05–12 from the prep branch's tip, and update `epic.md`:
@@ -356,9 +373,11 @@ The external reports are in `research/`. The pilot repo's inventory and audit st
 - Tiered verification is adopted.
 - The test audit is a separate backlog item. It is tracked, but it is not the main lever.
 - The pilot adopts this after child 04, on a prep branch first and then a new branch for the rest of the epic.
+- The repo-side items are built now, in the prep plan, not tracked as separate backlog items.
+- New mocked-data page tests are banned (§5).
+- Lane width is configurable: `maxLanes`, default 4, capped by the resource gate (§8.2).
 
 **Open:**
-1. Approve creating backlog items 1–7 in the pilot repo.
-2. The mocked-data page-test rule (§5): adopt it as "don't write new ones", or only discourage them.
-3. Lane count to start with: 2 (recommended).
-4. Run prep through the pipeline as a single plan (recommended), or by hand.
+1. Approve creating the one backlog item: the test audit.
+2. Run prep through the pipeline as a single plan (recommended), or by hand.
+3. Start prep now in its own worktree, in parallel with child 04, or wait for child 04 to close.
