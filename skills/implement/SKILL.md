@@ -35,7 +35,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 2. Fix the failures. Rerun only what failed and what the fix touches.
 3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child.
 
-A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
+A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. The same goes for a failure you were told is being fixed on a checkpoint branch. If you are steered to stop, commit and reply. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
 
 Processes: touch only processes bound to your worktree's ports, never others. Helpers stop the servers they start, unless you tell them to leave them warm for you.
 

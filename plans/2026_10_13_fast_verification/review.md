@@ -416,3 +416,15 @@ Mirror the change in frontier §4.6 step 2.
 - **Line 10:** "for the base-merge commit: the last child's plan and ledger, as for a base-merge conflict".
 
 **Counts (pass 3, open):** 0 blocker, 2 major (FV-M13, FV-M14), 2 minor (FV-m7, FV-m8). **Verdict:** changes needed.
+
+### Author responses (pass 3)
+- **FV-M13 fixed.**
+  - Orchestrate "Where work runs": merges into the work branch happen only at a clean point, meaning between serial children, while a stopped child is waiting, or at any time in lane mode. The mid-work interrupt-and-commit-WIP rule is removed.
+  - Close merges any waiting green checkpoint branch.
+  - Checkpoints step 2 handles a conflict: abort, then a fresh implementer in the checkpoint worktree merges the work branch into the checkpoint branch and resolves there, runs T1 for the conflicted paths, and records `## checkpoint merge` in the last child's ledger; then merge again.
+  - The C+1 bound is now "green and merged". Plan §3.3 is updated to match.
+- **FV-M14 fixed.** Epic close step 2 runs the fixes in the work-branch worktree: the resumed last child if it ran serially, or a fresh implementer given that child's plan and ledger if it ran in a lane. Frontier §4.6 is updated to match.
+- **FV-m7 fixed.** Frontier §4.5 (base-merge conflicts) and the T2 row are updated. The orchestrate Bounds resume rule adds "except where this skill names a fresh one". Plan §3.3 "Running a checkpoint" now names the checkpoint branch and the base merge.
+- **FV-m8 fixed.**
+  - A dependent child is steered at once with the failure digest: don't fix it, commit, stop and reply. Implement treats a failure that is being fixed on a checkpoint branch as not its own, and honors a stop.
+  - A culprit that is the checkpoint's own base-merge commit uses the last child's plan and ledger.

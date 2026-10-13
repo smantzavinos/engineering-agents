@@ -140,7 +140,7 @@ loop:
 The orchestrator does the following:
 1. Mark the child done in `state.json`, with its timestamps and reported usage.
 2. Record follow-ups the planner or implementer noted in a `Follow-ups` section of `epic.md`. File tracker items only if the epic pre-authorized that; otherwise they go to the human at epic close.
-3. **Integrate.** A serial child is already on the work branch. A lane child's branch is merged (`orchestrate` → `references/lanes.md`). The default branch is merged in at each checkpoint, before its full run; conflicts go to the implementer that just finished. Record the new base commit. *(Changed 2026-10-13 by [fast verification](../2026_10_13_fast_verification/plan.md): the base branch was previously merged and re-baselined at every child close.)*
+3. **Integrate.** A serial child is already on the work branch. A lane child's branch is merged (`orchestrate` → `references/lanes.md`). The default branch is merged in at each checkpoint, on the checkpoint branch, before its full run; conflicts are resolved there (`orchestrate`). Record the new base commit. *(Changed 2026-10-13 by [fast verification](../2026_10_13_fast_verification/plan.md): the base branch was previously merged and re-baselined at every child close.)*
 4. Self-compact. Its note is: the epic path, the next child, and anything learned that changes later children.
 5. Start the next child.
 
@@ -150,7 +150,7 @@ If a learning invalidates part of `epic.md`, the orchestrator may update unstart
 
 When the last child is done:
 1. One fresh review of the full epic diff against `epic.md` and `PROTOTYPE.md`, focused on cross-child seams and parity with the acceptance scenarios. Its findings go in the epic-root `review.md` and each names the child that should have caught it, so §15 can count review escapes.
-2. Fix any findings through a resumed implementer session: that of the last child in child order. It runs T1 for its fixes, then the final checkpoint runs the full gates on the critical path.
+2. Fix any findings through the implementer of the last child in child order, in the work-branch worktree: its resumed session if it ran serially, or a fresh one if it ran in a lane. It runs T1 for its fixes, then the final checkpoint runs the full gates on the critical path.
 3. Hand off to the existing `pull-request` process. Pushing the work branch and opening the PR must be pre-authorized in `epic.md`'s autonomy section; otherwise this is a stop. One PR per epic is the default; the epic may choose per-child PRs if the repo's merge policy needs smaller units, in which case the PR step runs at each child close instead.
 
 ## 5. Sessions, compaction, and memory
@@ -215,7 +215,7 @@ Superseded in detail by [fast verification](../2026_10_13_fast_verification/plan
 | T0 | While implementing | Tests related to the changed files, single E2E specs against a warm harness, an incremental typecheck. Never the full suite. |
 | T1 | End of implementation, once | The plan's targeted selection against the base commit: scenario specs, test-map specs, smoke set, changed-file lint, typecheck and build. It widens for risky areas and escalates to full gates for test-infrastructure changes. Fix, then rerun only what failed. There is no final full pass. |
 | Code review | | The reviewer checks the gate evidence and the T1 selection, runs targeted tests only when it doubts a claim, and never runs full suites. |
-| T2 checkpoint | At epic-declared checkpoints, in the background | Every gate, in full, in a reusable checkpoint worktree. Work may not pass the next checkpoint until this one is green. Failures are bisected to the culprit child, then fixed in that child or carried forward as a blocker. |
+| T2 checkpoint | At epic-declared checkpoints, in the background | Every gate, in full, on a checkpoint branch (work-branch commit plus the base branch) in a reusable checkpoint worktree. Failures are bisected to the culprit, fixed on the checkpoint branch by a fresh implementer, reviewed and rechecked. The branch merges into the work branch when green. Work may not pass the next checkpoint until this one is green and merged. |
 | T3 | Epic close | The epic-diff review, then the final checkpoint on the critical path. |
 
 Test quality, meaning which tests to write, keep or remove, is the `test-quality` skill.

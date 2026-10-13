@@ -104,11 +104,12 @@ A **checkpoint** is a named point in the epic's child order where the full gates
 - epic close (T3) is always the last checkpoint.
 
 **Running a checkpoint:**
-1. When the last child before checkpoint C closes and is integrated, the orchestrator points the reusable checkpoint worktree (§8.3) at that commit.
+1. When the last child before checkpoint C closes and is integrated, the orchestrator creates the checkpoint branch at that commit, in the reusable checkpoint worktree (§8.3), and merges the base branch into it.
 2. A helper runs every gate there.
 3. Work continues past C while it runs.
+4. When green, the checkpoint branch merges into the work branch at the next clean point. A merge conflict is resolved on the checkpoint branch by a fresh implementer.
 
-**The bound:** work may not pass checkpoint C+1 until C is green. At most one checkpoint is unverified at any time.
+**The bound:** work may not pass checkpoint C+1 until C is green and merged. At most one checkpoint is unverified at any time.
 
 **When a checkpoint fails** (a failure not in the baseline and not a known flake), everything happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green.
 1. **Triage, by a helper:**

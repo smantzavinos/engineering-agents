@@ -22,7 +22,7 @@ One writer per worktree at any time.
 - **Serial children:** run in the work branch's worktree.
 - **Lanes:** see `references/lanes.md`.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
-- **Merging into the work branch while a serial child runs there:** interrupt the child, have it commit its work in progress, merge, then resume it.
+- **Merging into the work branch:** only when its worktree is clean and no one is writing there. That means between serial children, while a stopped child is waiting, or at any time in lane mode.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
 ## Per child
@@ -34,7 +34,7 @@ One writer per worktree at any time.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
 3. **Close.**
    - Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
-   - A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Record the new base commit.
+   - A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Merge any green checkpoint branch that is waiting (Checkpoints step 2). Record the new base commit.
    - If this was the last child before a checkpoint, start the checkpoint.
    - Note anything that changes later children, and adjust their epic entries if the change stays within scope.
    - Commit the state. `self_compact`, with a note naming the next child.
@@ -51,19 +51,29 @@ One writer per worktree at any time.
    - On a conflict, abort the merge. A fresh implementer then resolves it there, given the last child's plan and ledger.
    - After a disk check, a helper runs every gate with the given E2E worker count.
    - The next child goes on meanwhile.
-2. **Green** means the full gates passed on the checkpoint branch's tip. Targeted reruns don't count. Merge the green checkpoint branch into the work branch.
-   - The run for C+1 waits until C is green.
-   - No child after C+1 in child order may start (a serial child) or be integrated (a lane child) until C is green.
+2. **Green** means the full gates passed on the checkpoint branch's tip. Targeted reruns don't count.
+   - **Merge** the green branch into the work branch at the next clean point (see Where work runs).
+   - **On a conflict:**
+     1. abort the merge;
+     2. a fresh implementer in the checkpoint worktree merges the work branch into the checkpoint branch and resolves the conflict there;
+     3. it runs T1 for the conflicted paths and records `## checkpoint merge` in the last child's ledger;
+     4. then merge again.
+   - The run for C+1 waits until C is green and merged.
+   - No child after C+1 in child order may start (a serial child) or be integrated (a lane child) until C is green and merged.
 3. **Failures:** follow `references/checkpoint-failures.md`.
 
 ## Epic close
 1. Spawn a fresh reviewer on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger.
-2. Send its findings to the resumed implementer of the last child in child order. It fixes them and runs T1 for the fixes.
+2. The fixes go to the implementer of the last child in child order, in the work-branch worktree:
+   - if that child ran serially, resume it;
+   - if it ran in a lane, spawn a fresh implementer there, given that child's plan and ledger.
+
+   It fixes the findings and runs T1 for the fixes.
 3. Run the final checkpoint on the critical path.
 4. Hand off to the PR process. Pushing and opening the PR need the epic's pre-authorization; otherwise stop.
 
 ## Bounds
-- Every review is a new session. Every planner or implementer call resumes that child's session.
+- Every review is a new session. Every planner or implementer call resumes that child's session, except where this skill names a fresh one.
 - A loop not approved after pass 4 stops.
 - Every launch gets a deadline: planner and implementer from the child's budget in `epic.md`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
 - A child over its wall-time or cost budget stops.
