@@ -1105,3 +1105,59 @@ GI1–GI11 stay fixed: lanes 25 (GI1), 27–31 (GI2), 36 (GI3), 35 (GI4), 32 and
 
 ### Author response: pass 3
 - **GI17:** the integration reviewer's task now names the ledger (that of the last integrator's member in child order) and the heading `## integration pass N`. Review code mode says to use the ledger and heading the task names. No further pass, since the finding is minor.
+
+## size limit for a fast implementer, pass 1
+Fresh plan-mode review of `bae5d55` (skills only), against plan §17 and §14. The owner's ruling that splits and merges are at the orchestrator's discretion is settled. I read the full current text of scope, orchestrate (Sizing and scope, Plan ahead, Close, Refresh, Bounds), `references/lanes.md`, plan and review. `node tools/render-skills.mjs --check` passes. No other skill still states the old limit (about 3 hours, or 4k lines).
+
+### SL1 · major · `scope/SKILL.md:54`; `plan/SKILL.md:20, 44, 55-56`; `review/SKILL.md:20`; `orchestrate/SKILL.md:15, 48`: the limit is in changed lines, but every estimate is in hours
+**Problem.**
+- The limit is now "a diff a reviewer can judge in one pass (default about 7k changed lines…)". §17 says the line count is what decides.
+- The plan's Goal still estimates only "the implementer's hours" (plan 20). Plan review checks "an estimate within the size limit" (review 20). Refresh reports an old and new estimate, and orchestrate 48 triggers a second pass at a 20% move. None of these says which unit to use. A planner that estimates 2 h on a fast model can't tell whether it is under 7k lines, and the reviewer can't check it. Two planners will convert in different ways.
+- "With the implementer model's hours for it", and "calibrate … on the same implementer model", mix two quantities. What a reviewer can judge in one pass doesn't depend on the implementer model. The implementer's hours per line do, and those set budgets and deadlines. As written, the orchestrator can't tell which number to recalibrate from actuals, or how.
+
+**Fix.**
+- **Scope 54:** "**Size limit:** the changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). Record next to it the implementer model's hours for that diff, for budgets and deadlines. Calibrate the hours from earlier children's actuals on the same model."
+- **Plan 20:** "an estimate in changed lines, and the implementer's hours for it". Refresh step 4 reports both.
+- Review 20 and the 20% trigger at orchestrate 48 then refer to the line estimate.
+
+### SL2 · major · `plan/SKILL.md:44`; `orchestrate/SKILL.md:113, 116`; `scope/SKILL.md:34`: the merge direction has no trigger, no data and no point at which it can happen
+**Problem.**
+- **No trigger.** A merge reaches the orchestrator only when "a planner … reports the child … as trivially small" (orchestrate 113, plan 44). The new rule merges serial children that *together fit*. A 3k child followed by a 3k serial child is neither trivially small nor over the limit, so no planner reports it, and orchestrate 116 never fires. §17's evidence case, a backend slice followed by its page slice, stays split.
+- **No data.** A planner estimates only its own child. Epic entries carry no estimates (scope 34: "a few lines each"), so neither the orchestrator nor an epic reviewer (review 14) knows whether two neighbours fit together.
+- **No point.** With plan-ahead, N+1's plan loop starts when N's implementer starts (orchestrate 61). By the time N+1 has an estimate, N is already being built and can't absorb it. The only point that works at execution time is while child N is being planned: N, plus the next child, which is not yet planned.
+- **Unsafe pairs.** "Children that must run one after another" doesn't exclude a group member. If serial A merges into group member B, B's siblings that depend on A now depend on a sibling, which breaks lanes' membership rule.
+- **No result defined.** A split names its pieces `NNa`, `NNb`. A merge doesn't say what the merged child is: which `NN`, its entry, and its scenarios.
+
+**Fix.**
+- **Scope 34:** each child entry carries a rough line estimate.
+- **Plan 44:** "Estimate first. If the next child in order is serial and not yet planned, estimate it roughly from its entry. If the two together fit the limit, stop and propose merging it into this child."
+- **Orchestrate 113:** add "or that the child and the next serial, unplanned child fit together". At 116: "Merge only consecutive serial children, never a group member. The merged child keeps the first child's number; its entry and scenarios are the union of both."
+
+### SL3 · major · `orchestrate/SKILL.md:113-116`; `plan/SKILL.md:44`; `references/lanes.md:10, 38-40`: an under-limit split into "parallel lanes" never becomes a valid parallel group
+**Problem.** "Split only into slices that can run in parallel lanes" says nothing about how the slices satisfy the rules that make lanes safe, or how they become a group:
+- **Membership.** It doesn't refer to scope's rules (scope 36-37): no dependency among members, disjoint claims, no test infrastructure, and no schema that a sibling reads. A planner may treat "independent enough" as parallel.
+- **Claims.** Lanes 40 and review's plan-mode claim check judge each member against its `epic.md` claim. Slices split from a serial child have none. Slices of a group member have only the parent's claim, shared between them. Nothing tells the planner to propose claims, or the orchestrator to write the new group and claims into `epic.md`. Lanes then run with no claim check, which is the collision §8's claims exist to prevent.
+- **Support.** With no worktree pool, every child runs serially (lanes 3), so a slice "that can run in parallel lanes" never can. The rule doesn't say that an under-limit split is then never made.
+- **Trigger and placement.** Orchestrate 113 reacts only to "over the limit, or trivially small", not to a planner's proposal to split under the limit. Nothing says that slices of a child planned in the planning worktree get fresh plan loops in lane worktrees (lanes 10), or how slices of an existing group member fit `maxLanes`.
+
+**Fix.**
+- **Plan 44:** "…only into slices that can run in parallel lanes (scope → Parallel groups: no dependency among them, no test infrastructure or schema a sibling reads), each with a proposed claim inside the child's own claim, if it has one."
+- **Orchestrate 113-116:** add "or proposes a parallel split". Then: "Write the slices into `epic.md` as a parallel group with those claims (slices of a group member join its group). With no worktree pool, don't split under the limit. Each slice runs its own plan loop in its lane worktree."
+
+### SL4 · major · `scope/SKILL.md:56`; `orchestrate/SKILL.md:103-104, 113`: per-child budgets and deadlines aren't tied to the new limit or carried through a resize
+**Problem.** The limit grows from about 4k lines to 7k, and serial children now merge into children of up to 7k. The Budget item (scope 56) is still "wall time and cost per child", with no link to the limit. Launch deadlines come from that budget (orchestrate 103), and a child over it stops (104). By §16-§17, a 7k child on the fast model costs about 1 h of planning, 2-2.5 h of implementing and 0.5-1 h of review, about 4 h of counted wall time. That is at or over a budget sized for the old children, such as the pilot's 4 h. A merge under orchestrate 113 doesn't restate the budget either. Unattended runs would then stop for the human on budget at exactly the merges the rule asks for.
+
+**Fix.**
+- **Scope 56:** "…per child, set for a child at the size limit: its implementer hours plus the per-child fixed cost."
+- **Orchestrate 113:** "A merged child's budget is the sum of its parts' budgets; each slice keeps the per-child budget. Record it with the resize."
+
+### SL5 · minor · `scope/SKILL.md:55`: the rationale hard-codes a pilot measurement and the old fixed-cost list
+**Problem.** "…of about an hour" is a measurement from one repo's pilot (§17 says 1-1.5 h, and adds the new implementer reading in). The list omits plan writing, which plan-ahead hides, and the implementer's read-in, which it doesn't, so it reads as exhaustive when it isn't. The skills should stay generic.
+
+**Fix.** "Each child adds a fixed cost to the critical path (plan review, refresh, a new implementer reading in, code review, integration, close) that only parallel lanes hide. So split under the limit only into slices that can run in parallel lanes; serial children that together fit the limit are one child."
+
+### Not raised
+- The refresh resize (orchestrate 48) is over-limit only. It doesn't conflict with the new rule: an over-limit split may still be serial, and the merge point that SL2 proposes happens before refresh.
+- Plan-mode review isn't asked to second-guess a resize. That fits the owner's ruling that resizes are the orchestrator's discretion, and epic-mode review checks the initial shape (review 14).
+
+**Counts (pass 1, open):** 0 blocker, 4 major (SL1-SL4), 1 minor (SL5). **Verdict:** changes needed.
