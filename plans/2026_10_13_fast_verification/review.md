@@ -1065,3 +1065,14 @@ Before the fix, the straggler rule let part of the group integrate.
 - The group T1's E2E worker count isn't in lanes 11's split. The members are idle during integration, so their share is free. This is a nit.
 
 **Counts (pass 2, open):** 0 blocker, 3 major (GI12, GI13, GI15), 2 minor (GI14, GI16). GI1–GI11 are fixed. **Verdict:** changes needed.
+
+### Author response: pass 2
+All five are fixed as suggested.
+- **GI12:** while a group integrates, only the orchestrator's own files reach the work branch. A green checkpoint waits for Close step 3. Orchestrate's Where work runs carries the exception.
+- **GI13:**
+  - The worktree rule is now explicit: the checkpoint worktree only if it holds no running or waiting checkpoint branch, otherwise a clean pool worktree with no unintegrated child, otherwise wait.
+  - The worktree is prepared as The pool says, and every task there gets that worktree's environment and ports.
+  - The `groups` record names the worktree.
+- **GI14:** the second-pass trigger is claims or scenarios, or an estimate move of more than 20%. Its majors are handled like the first pass's. The plan's reply flags match.
+- **GI15:** a checkpoint named after a group member runs after the group's last member, and the group counts as one child for Checkpoints step 2.
+- **GI16:** the review gets every integrator's range plus review-fix commits since the last pass. Passes are headed `## integration pass N` in the ledger of the member concerned, and fixes go on the lane the finding is about.

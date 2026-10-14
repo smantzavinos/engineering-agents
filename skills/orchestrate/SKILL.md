@@ -13,7 +13,7 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; every resume returns a new run id, so record it each time.
 - **Per child:** status, lane, estimate, base commit, the latest planner and implementer run ids, review pass counts, the start and end of each phase and of each checkpoint stop, and reported usage.
-- **At the root:** the baseline gate digest, checkpoints (commit, status, run), groups (members, base, merged members, T1 run, integrator and review runs, start and end), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
+- **At the root:** the baseline gate digest, checkpoints (commit, status, run), groups (members, worktree, base, merged members, T1 run, integrator and review runs, start and end), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
 
 On start, after compaction, or after a crash: read `state.json`, `git status` in every worktree in use, `git log`, and the live run list, then resume whatever was in flight.
 
@@ -24,7 +24,7 @@ One writer per worktree at any time.
 - **Planning ahead:** in the planning worktree (see Plan ahead).
 - **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. While a serial child's implementer or code reviewer is running, write these files but run no git commands there. Commit them at Close step 1, or before a merge into a stopped child. Otherwise, commit them as you go.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
-- **Merging into the work branch:** only when no one is writing there, and its tree is clean once you have committed your own files. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode.
+- **Merging into the work branch:** only when no one is writing there, and its tree is clean once you have committed your own files. That means between serial children, while a child stopped by the checkpoint-failures steer is waiting, or at any time in lane mode except during a group integration.
 - **Merging into an unfinished child:** this happens to a stopped serial child, or to a paused lane that merges the work branch. The child's new base is the incoming commit: the green checkpoint tip, or the work-branch commit merged. Its old base is always an ancestor of that commit. Record the new base and give it to the resumed implementer, so T1 and code review still see only the child's own changes.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
@@ -45,7 +45,7 @@ One writer per worktree at any time.
       - **If it was planned ahead:**
         - wait for its plan loop to be approved;
         - resume its plan-author to refresh (`plan` → Refresh);
-        - if only names and paths changed, no review. If the plan is now over the size limit, resize. Otherwise one fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the integrated range: the plan's approval commit to the merge from Refresh step 1. Majors it finds are fixed by the plan-author, and their IDs go to the implementer's code reviewer. Other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if Changes, claims or scenarios changed, or the estimate moved by more than 20%.
+        - if only names and paths changed, no review. If the plan is now over the size limit, resize. Otherwise one fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the integrated range: the plan's approval commit to the merge from Refresh step 1. Majors it finds are fixed by the plan-author, and their IDs go to the implementer's code reviewer. Other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed, or the estimate moved by more than 20%. Its majors are handled like the first pass's.
       - **Otherwise:** run its plan loop now (step 1).
       - Either way, plan loops run in the planning worktree, except for parallel-group members, which plan in their lane worktrees. Merge the plan branch when the loop is done.
    7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact` after a serial child or an integrated group, with a note naming what is in flight: each running child, its phase and its run id.
