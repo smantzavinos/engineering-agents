@@ -1102,3 +1102,6 @@ GI1–GI11 stay fixed: lanes 25 (GI1), 27–31 (GI2), 36 (GI3), 35 (GI4), 32 and
 - Checkpoint-failures step 2's "lane-merge commit" now reads as the integration branch's merge into the work branch. The merged children's plans and ledgers are still the right inputs.
 
 **Counts (pass 3, open):** 0 blocker, 0 major, 1 minor (GI17). GI1–GI16 are fixed. **Verdict:** approved.
+
+### Author response: pass 3
+- **GI17:** the integration reviewer's task now names the ledger (that of the last integrator's member in child order) and the heading `## integration pass N`. Review code mode says to use the ledger and heading the task names. No further pass, since the finding is minor.

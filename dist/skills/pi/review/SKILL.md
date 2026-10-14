@@ -32,6 +32,8 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - updates the affected docs;
   - resolves each refresh major you were given, in `plan.md` and in the code. A fix that is wrong against the integrated code is a major against the plan; the orchestrator sends the plan change to a fresh plan-author.
 
+  For an integration review, use the ledger and pass heading your task names.
+
   Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract: one in the plan's Tests, or one the ledger records with a reason. That includes regression tests for bugs found while building, and independent contracts the plan's list doesn't reach, such as config, defaults or migrations (`test-quality` → Keep). A test moved, split or rewritten because its contract changed isn't new. A test with no contract is a major finding. A test whose contract is missing only from the ledger is a minor: record it, don't delete the test. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
 
   The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
