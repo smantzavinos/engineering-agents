@@ -1076,3 +1076,29 @@ All five are fixed as suggested.
 - **GI14:** the second-pass trigger is claims or scenarios, or an estimate move of more than 20%. Its majors are handled like the first pass's. The plan's reply flags match.
 - **GI15:** a checkpoint named after a group member runs after the group's last member, and the group counts as one child for Checkpoints step 2.
 - **GI16:** the review gets every integrator's range plus review-fix commits since the last pass. Passes are headed `## integration pass N` in the ledger of the member concerned, and fixes go on the lane the finding is about.
+
+## group integration and review level, pass 3
+Confirming review of `8cd3139`, `6c415c4` and `c4cda0c` (skills only), in plan mode. I read the §16 rulings as settled. I verified each earlier finding against the current text of orchestrate, `references/lanes.md`, `references/checkpoint-failures.md`, review, plan and implement, not against the author response. `node tools/render-skills.mjs --check` passes, and the changed lines stay generic.
+
+### Pass-2 findings
+- **GI12 (major): fixed.** Lanes 29 freezes the work branch from step 1 to step 6, except for the orchestrator's own files. A green checkpoint waits for Close step 3 (orchestrate 41). Orchestrate 27 carries the exception. The only commits that can land on the work branch during an integration touch `state.json` and `epic.md`, and no lane stages those (implement → Don't), so the step 6 merge can't conflict. The waiting checkpoint's merge afterwards goes through Checkpoints step 2, which owns its conflicts.
+- **GI13 (major): fixed.** Lanes 28 orders the choice: the checkpoint worktree only when it holds no running or waiting checkpoint branch, then a clean pool worktree with no unintegrated child, then wait. The wait can't deadlock: before step 1 a green checkpoint may still merge (orchestrate 27), which frees the checkpoint worktree, and a red one is fixed on its own branch without the group. The worktree is prepared as The pool says and gets its own environment and ports. Orchestrate 16 records it.
+- **GI14 (minor): fixed.** Orchestrate 48 triggers the second pass only on claims, scenarios, or an estimate move above 20%, and handles its majors like the first pass's. Plan 56 reports exactly those flags.
+- **GI15 (major): fixed.** Lanes 25 moves a checkpoint named after a group member to after the group's last member, and treats the group as one child for Checkpoints step 2. With group {C, C+1, C+2} and a checkpoint after C, the checkpoint now starts at the last member's Close step 4, after integration, so nothing waits on itself. A group right after a running checkpoint counts as C+1 and may integrate.
+- **GI16 (minor): fixed.** Lanes 35 gives the reviewer every integrator's range plus the review-fix commits since the last pass, names the heading, and sends each fix to the lane its finding is about. Its ledger placement causes GI17.
+
+### Pass-1 findings (spot check)
+GI1–GI11 stay fixed: lanes 25 (GI1), 27–31 (GI2), 36 (GI3), 35 (GI4), 32 and 34 with implement 52–56 (GI5), 33 (GI6), orchestrate 48 with plan 56 and review 28 (GI7), orchestrate 36 with review 33 (GI8), review 47 (GI9), plan 52 with orchestrate 48 (GI10), and orchestrate 16 (GI11).
+
+### GI17 · minor · `references/lanes.md:35`; `review/SKILL.md:44, 50`: an integration review with two integrators has no single ledger, and the review skill doesn't know the heading (caused by the GI16 fix)
+**Problem.**
+- Step 5 puts `## integration pass N` "in the ledger of the member concerned". With two integrators (the case GI16 added), one pass concerns two members. The reviewer may split the pass, or pick one ledger. The pass-2 reviewer is told to read "the ledger" first (review 44), and may miss half of the pass-1 findings. The pass count against the cap is then unclear too.
+- Review 50 tells a code-mode reviewer to append `## code pass N`. Only lanes knows about `## integration pass N`, and lanes doesn't tell the orchestrator to pass the heading in the task. A reviewer that follows its own skill writes a `## code pass N` that collides with the member's own code-review numbering.
+
+**Fix.** In lanes 35: "…in the ledger of the last integrating member in child order. Give the reviewer that ledger path and the heading." Or add an **Integration** paragraph to review code mode, like the Plan refresh one: "Head the pass `## integration pass N`. Review only the ranges you were given."
+
+### Not raised
+- Orchestrate 50 ("merge the plan branch when the loop is done") can fall inside the lanes 29 freeze, for the post-group child's plan. Lanes 29 and orchestrate 27 forbid that merge until step 6, and the plan branch only adds that child's directory, so waiting costs nothing.
+- Checkpoint-failures step 2's "lane-merge commit" now reads as the integration branch's merge into the work branch. The merged children's plans and ledgers are still the right inputs.
+
+**Counts (pass 3, open):** 0 blocker, 0 major, 1 minor (GI17). GI1–GI16 are fixed. **Verdict:** approved.
