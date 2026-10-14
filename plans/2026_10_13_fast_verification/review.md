@@ -876,3 +876,108 @@ Fresh code-mode review of `152fb93..5725f57`, focused on the pass 1 findings, ch
 ### Author responses (test budget and escalation, pass 2)
 - **TB-m2 fixed.** Scope's escalation field now reads "when pass 2 isn't approved".
 - **TB2-m1 fixed.** The escalation launch passes the E2E worker count.
+
+## group integration and review level, pass 1
+Fresh review of `8cd3139` (skills only), treated as plan mode: is the process sound, complete, consistent, and runnable unattended. I read the §16 rulings as settled and judged only how the skill text carries them out. I read the full current text of orchestrate, `references/lanes.md`, `references/checkpoint-failures.md`, review, plan and implement. `node tools/render-skills.mjs --check` passes. The changed lines contain no product or repo names.
+
+### GI1 · major · `references/lanes.md:25`; `orchestrate/SKILL.md:41, 62, 86, 25-27`: a partly integrated group has no defined Close timing
+**Problem.** Lanes 25 lets a member still in code review be left out: "integrate the rest, and integrate it alone when it is approved". Orchestrate 41 runs Close steps 4–7 "once the group is integrated", but nothing says whether a group without its straggler counts as integrated. Checkpoints 86 can cause the same split: when a group straddles C+1 and C isn't green, the members past C+1 can't be integrated, and nothing says whether the whole group waits or only part of it integrates. If the orchestrator reads a partial integration as "integrated", it runs the last member's steps 4–7:
+- it starts the checkpoint without the straggler;
+- the post-group child refreshes and records its base without the straggler, although orchestrate 62 says it refreshes "after the last member is integrated";
+- if that child is serial, it occupies the work-branch worktree. Orchestrate 25 and 27 then forbid merging there, so the straggler can't be integrated until that child closes, and a child that depends on the straggler is built without it.
+
+**Fix.** In lanes 25, add: "The group counts as integrated, for Close steps 4–7 and orchestrate → Plan ahead, only when every member is. Integrating part of a group early only surfaces conflicts and red T1 sooner." Apply the same rule to the Checkpoints 86 case: either the whole group waits, or the members up to C+1 integrate and the rest follow under the straggler rule.
+
+### GI2 · major · `references/lanes.md:26, 30`; `orchestrate/SKILL.md:14, 25, 41, 50`: resetting to the group base discards everything else committed to the work branch
+**Problem.** Step 5 resets the work branch to the group base after a red T1. Between step 1 and the red result (several merges plus a T1 run that may take tens of minutes), the orchestrator may legitimately commit to the work branch:
+- `state.json` and `epic.md`: orchestrate 14 says to update and commit after every step, and 25 says "at any time in lane mode". Recording the group base itself is one such commit.
+- a waiting green checkpoint branch (Close step 3);
+- the post-group child's plan branch (Close steps 1 and 6).
+
+A hard reset drops those commits and reverts the only copy of `state.json` (orchestrate 25), including the integration-in-progress record that Recovery (orchestrate 18) depends on. The old procedure had the same hazard, but over a window of one merge and one T1.
+
+**Fix.** In lanes 26: "Commit your own files first, then record the group base. Until the group is integrated, merge nothing else into the work branch, and leave your own files uncommitted." In step 5: "Before resetting, save `state.json` and `epic.md`, and restore them afterwards." An alternative is to merge onto a temporary integration branch at the work-branch tip and fast-forward the work branch only once the group is green.
+
+### GI3 · major · `references/lanes.md:28-31`: the conflict and red-T1 paths never reach "integrated"
+**Problem.** Only step 3 declares a group integrated, and only for "clean merges and green T1". After a conflict (step 4) or an integrator fix (step 5), nothing says:
+- when the group is integrated. Is it green T1 alone, or green T1 plus an approved step 6 review?
+- where step 6's review sits relative to the merges. Step 4 says "Then continue merging", so the resolved lane is already on the work branch before its review runs.
+- what happens when that review finds a major. The integrator fixes it in its lane, but nothing says to merge the lane again and rerun the group T1.
+- whether T1 reruns after step 5's "merge the group again". If the merges are clean, the tree matches the integrator's lane tip, where it already ran the group T1.
+- what happens if T1 is red again. No cap applies; "the normal pass cap" in step 6 covers only the review.
+
+An unattended orchestrator can declare the group done before the review approves, start a serial post-group child in the work-branch worktree, and then have no legal point to merge the review's fixes (orchestrate 27).
+
+**Fix.** Add a final step: "The group is integrated when every lane has merged, the group T1 is green, and any integration review is approved. Review fixes are committed on the integrator's lane, then the lane is merged again and the group T1 rerun, unless the merged tree equals the integrator's lane tip and the integrator's T1 there was green. A second red T1 after an integrator fix counts as a pass toward the cap of 4."
+
+### GI4 · major · `references/lanes.md:31`; `review/SKILL.md:29`: the integration review has no diff range
+**Problem.** Code mode reviews "the child's diff (from the base commit you were given)". Step 6 says the reviewer sees "only the integrator's changes" but names no base or range. Neither obvious base works:
+- **Conflict (step 4):** the resolution lives inside the merge commit. A diff from the work-branch commit shows the whole member; a diff from the old lane tip shows every earlier member. Neither isolates the resolution.
+- **Red T1 (step 5):** the integrator's fix sits on top of merges of the other lanes. A diff from its lane base shows the whole group.
+
+The old text gave a base ("from the work-branch commit before the merge"). Without one, the reviewer either reviews whole members again, which is the cost §16 removes, or guesses.
+
+**Fix.** Lanes step 6: "The integrator's `## integration` entry names its range: for a conflict, the merge commit, reviewed as `git show --remerge-diff <merge>` (or the resolved paths against an automatic merge); for a fix, the commit after its last merge of the other lanes, as the base. The reviewer gets that range."
+
+### GI5 · minor · `implement/SKILL.md:52-56`; `references/lanes.md:29-30`: the integrator instructions don't match either integrator case
+**Problem.** Implement 54–55 tells every integrator to "run T1 plus any failing tests" and "add the path T1 missed to the test map". Under the new procedure:
+- **Conflict:** the group T1 runs after the merges, so the integrator's own T1 is duplicate work, and it runs from its old lane base, so it selects the other members' changes as well. No T1 missed anything.
+- **Red T1:** the integrator must run *the group's* T1 against the group base. Lanes 30 doesn't tell the orchestrator to give it the group base as its new base (implement 52).
+
+**Fix.** In lanes 29–30, state each task: "conflict: resolve and commit only; the group T1 follows" and "red T1: new base is the group base; run the group T1 and add the path the members' T1 missed to the test map". Implement 52–56 can then just defer to the task.
+
+### GI6 · minor · `references/lanes.md:27`: the group T1 isn't defined, though it is now the only integration check on the clean path
+**Problem.** "One T1 … covering every member's changes" doesn't say:
+- that it is the union of the members' Gates: each plan's scenario specs and the smoke set (plan 32), whole-package reruns, and any member's widening or escalation;
+- which E2E worker count it uses (lanes 11 splits the budget between lanes and the checkpoint run);
+- how a failure is triaged before it counts as red. Implement 38's flake and baseline rules bind the implementer, not a helper.
+
+A helper that selects only from the diff and the test map leaves out sibling scenario specs. That is exactly where one member breaking another shows up. A flake would trigger step 5's reset and integrator for nothing.
+
+**Fix.** "The group T1 is the union of the members' Gates commands, with selection computed from the group base. Widening or escalation by any member applies to the group. Pass it an E2E worker count. A failure that passes alone and is outside the group's diff, or that is in the baseline, is not red (implement → Gates)."
+
+### GI7 · minor · `orchestrate/SKILL.md:48`; `plan/SKILL.md:56`; `review/SKILL.md:28, 46`: the refresh review's trigger and second pass are loosely specified
+**Problem.**
+- Line 48 reads "if the design or estimate changed, resize first if it is now over the size limit. Otherwise one fresh reviewer…". "Otherwise" can bind to the outer condition, which would mean reviewing only unchanged refreshes. "First" suggests a review also follows a resize.
+- The second-pass trigger needs "changed scope" and the size of the estimate change. Plan 56's reply reports neither, so the orchestrator has to read the plan.
+- "Changed scope" isn't defined. Going beyond the entry is already a major (review 21), and a scope change is a stop (orchestrate 119).
+- What a second pass covers is undefined: the fix commits, or the refresh again.
+- The refresh pass's ledger heading and pass number are undefined. If a refresh reviewer counts its pass as pass 1, review 46's "Pass 1 is the deep pass: be complete" pulls against "review only the refresh commit".
+
+**Fix.**
+- Orchestrate 48: "If only names and paths changed, no review. Otherwise, if the plan is now over the size limit, resize. If not, one fresh reviewer reviews the refresh commit only…".
+- Plan 56: the reply gives the old and new estimate, and says whether Changes, claims or scenarios changed.
+- Name the second pass's scope: the plan-author's fix commits.
+- Review 28: head refresh passes `## plan refresh pass N`. The deep-pass rule doesn't apply to them.
+
+### GI8 · minor · `orchestrate/SKILL.md:36, 48`; `review/SKILL.md:29-41`: nothing tells code review to verify the refresh majors, or what to do if a fix is wrong
+**Problem.** Line 48 names the fixed refresh majors in the implementer's task "for code review to verify". The code reviewer's launch (line 36) gets only the directory and base commit, and code mode says nothing about refresh findings. The generic Earlier passes rule covers it only if the reviewer treats plan-mode findings as its own to verify. Nothing says what happens when the plan-author's fix is itself wrong. Code mode judges code against `plan.md`, so a wrong fix can be built faithfully and approved. The route for a plan change at that point is a fresh plan-author (orchestrate 66), and nothing connects that route to this case.
+
+**Fix.** Orchestrate 36: "…and the IDs of any fixed refresh majors." Review code mode: "Verify each named refresh major in `plan.md` and in the code. A fix that is wrong against the integrated code is a major against the plan, and its plan change goes to a fresh plan-author (orchestrate → Plan ahead)."
+
+### GI9 · minor · `review/SKILL.md:23, 25, 46`: the post-pass-1 list doesn't say where test-budget and T1 issues fall
+**Problem.** Line 46 limits new plan majors after pass 1 to "design, boundaries, claims, scope or size", and calls "a fix's test mechanics" minors. Line 23, however, treats some Tests-list issues as contract-level rather than mechanics: a missing contract, the wrong layer, a contract another test already owns. Line 25 adds T1 selection and widening. After pass 1, a reviewer can't tell whether a fix that drops an authorization contract, or adds a migration without widening T1, may be a major: it is neither "mechanics" nor in the list. Two reviewers will grade it differently. Under §16's evidence, these should probably be minors, except where they are boundaries.
+
+**Fix.** Line 46: "…must concern design, boundaries (including a missing contract for authorization, visibility or data integrity), claims, scope or size. Other Tests-list and T1 findings after pass 1 are minors."
+
+### GI10 · minor · `plan/SKILL.md:52`; `review/SKILL.md:28`: refresh inputs still name one previous child
+**Problem.** Plan Refresh step 2 checks against "the previous child's diff and ledger". For the child after a group, orchestrate 62 makes it refresh against every member. The refresh reviewer must check fit with "the code that was integrated since it was approved", but it is given only the refresh commit, not that range.
+
+**Fix.** Plan 52: "the previous child's (or every group member's) diff and ledger". Orchestrate 48: pass the reviewer the plan-approval commit and the merge commit from Refresh step 1, as the integrated range.
+
+### GI11 · minor · `orchestrate/SKILL.md:15-18`; `references/lanes.md:26`: state has no slot for a group integration
+**Problem.** Lanes 26 says "Record the … group base", but State (orchestrate 15–16) has per-child phases and root records, and no group integration. That leaves nowhere to record:
+- the group base;
+- which members have merged;
+- the integrator and integration-review run ids;
+- the start and end times.
+
+Recovery after compaction or a crash in the middle of an integration (orchestrate 18) needs these: which lanes are merged, and where to reset. So does §16's measure, "integration minutes per group".
+
+**Fix.** State, at the root: "groups: members, base, merged members, T1 run, integrator and review runs, start and end".
+
+### Not raised
+- Dropping the review after clean merges and green T1 is the owner's ruling. Its residual risk: textual merges of the merge-friendly files that compile but are semantically wrong (duplicate keys, registry order), and one member breaking a sibling's behavior outside the group T1. Only checkpoints and the epic-diff review catch these. GI6 narrows the second.
+- Compaction at Close step 7 fits overlapping lanes: lanes run one group at a time, and step 7 runs once per group, after it is integrated (it is skipped for siblings). GI1 is the only case where "integrated" is unclear.
+
+**Counts (pass 1, open):** 0 blocker, 4 major (GI1–GI4), 7 minor (GI5–GI11). **Verdict:** changes needed.
