@@ -439,3 +439,21 @@ At equal turns and tokens, Sonnet would have cut 04b's model time from about 220
 - **Parallel writers inside a child:** not added. They move the bottleneck to integration. `delegate` already covers mechanical fan-out on disjoint files.
 
 **Measure** (child 05 onward vs children 01–04): wall time, model time, findings by severity, fix passes, escalations, test-to-production ratio.
+
+## 16. Group integration, review level, refresh and compaction (added 2026-10-14)
+**Evidence** from the pilot's first five parallel groups (ten children, Sonnet implementer, two lanes):
+- A group of two children took about 1.7 h. Per child: implementing 25–45 min, code review and fixes 15–40 min, integration 15–50 min. Integration ran once per child, serially, and each one had its own T1 and its own integration review, even after a clean merge.
+- Planning cost about 1 h per child (plan-author about 0.55 h, plan review about 0.4 h), the same per child as before the re-size, with the same models. Children are now a third of the size, so planning costs more than implementing (about 0.9 h). The cost is in review rounds, not plan length: plans run 100–110 lines.
+- Pass 1 with only minors is already approved. Minors never cause a round of their own.
+- Of about 30 plan-stage majors, about two thirds were about concepts, boundaries, claims or size, for example a visibility leak, silently dropped edits, unclaimed shared changes, or duplicated state ownership. These were worth catching. About a third were test mechanics: duplicate tests, proofs that pass without the fix, locators, assertion construction. Those chained: a fix added proof machinery, and the next pass found a major in it. One plan took 4 passes this way; one refresh took 4 passes and 47 min on the critical path, one new locator detail per pass.
+- The orchestrator compacted five times in about 16 h, every time because its context was full (about 228k tokens), never at a clean point. "Self-compact after each child" doesn't fit overlapping lanes.
+
+**Rulings (owner, 2026-10-14).**
+- **Integrate once per group.** Merge every member's lane branch in child order, then run one T1 on the merged tree. An integration review runs only when an integrator changed something (a conflict resolution or a fix), and it covers only those changes. A clean merge with green T1 adds nothing that each child's code review didn't already see. The epic-diff review at close checks the seams.
+- **Plan review judges contracts, not mechanics.** At plan time, the Tests list is checked for what each contract proves, at which layer, and whether another test already owns it. Locators, assertion construction, fixture detail and whether a planned test can fail are code-review findings; at plan time they are minors for the implementer. After pass 1, a new plan-stage major must concern design, boundaries, claims, scope or size.
+- **Refresh review checks only the change.** One pass, scoped to the refresh commit: does the plan still fit the integrated code? Majors in the changed parts are fixed by the plan-author and named in the implementer's task, so code review verifies them. Findings on unchanged text are notes for the implementer. A second pass only when the refresh changed scope, or the estimate by more than 20%.
+- **Splits stay at the orchestrator's discretion.** Splitting at planning time, within scope and acceptance scenarios, is a resize recorded under Decisions, not a stop. Autonomy matters more than approving each split.
+- **Compact at clean points.** The orchestrator self-compacts after each group integrates (and after each serial child closes), once its state is committed, plus whenever its context grows large. Checkpoints are too rare to be the only point.
+- **Not changed:** the planner stays on its model; plan and code review stay separate from authoring (a reviewer that edits approves its own fix); minors stay non-blocking.
+
+**Measure** (next groups vs these five): integration minutes per group, plan review passes, plan-stage majors by kind, refresh passes, orchestrator compactions at clean points vs size-triggered.

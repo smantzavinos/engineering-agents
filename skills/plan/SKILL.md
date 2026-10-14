@@ -52,8 +52,8 @@ If you planned ahead, you'll be resumed after the previous child closes.
    - what was actually built, meaning the previous child's diff and ledger;
    - changes to `epic.md`: your entry, Decisions and Follow-ups;
    - any checkpoint merge since you planned.
-3. Update what changed, including the estimate, and commit.
-4. Reply saying whether the design or the estimate changed, or only names and paths.
+3. Update what changed, including the estimate, and commit it as one refresh commit. Its review covers only that commit.
+4. Reply with the refresh commit, and say whether the design or the estimate changed, or only names and paths.
 
 ## Revising
 For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding.

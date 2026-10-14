@@ -38,17 +38,17 @@ One writer per worktree at any time.
 3. **Close**, in this order:
    1. Commit your files. If the next child was planned ahead, merge the plan branch.
    2. Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
-   3. A serial child is already on the work branch. A lane child merges as `references/lanes.md` says. Merge any green checkpoint branch that is waiting (Checkpoints step 2).
+   3. A serial child is already on the work branch. A lane child is integrated with its group (`references/lanes.md` → Integrating); run the remaining steps once the group is integrated. Merge any green checkpoint branch that is waiting (Checkpoints step 2).
    4. If this was the last child before a checkpoint, start the checkpoint.
    5. Note anything that changes later children, and adjust their epic entries if the change stays within scope. Commit the state.
    6. Plan the next child. Skip steps 6 and 7 when the next child is a sibling in the same parallel group: it is already running.
       - **If it was planned ahead:**
         - wait for its plan loop to be approved;
         - resume its plan-author to refresh (`plan` → Refresh);
-        - if the design or estimate changed, re-enter step 1's review loop with a fresh reviewer, starting a new pass count, and resize first if it is now over the size limit.
+        - if the design or estimate changed, resize first if it is now over the size limit. Otherwise one fresh reviewer reviews the refresh commit only (`review` → plan refresh). Majors it finds are fixed by the plan-author and named in the implementer's task, for code review to verify; other findings are notes for the implementer. Run a second refresh pass only if the refresh changed scope, or the estimate by more than 20%.
       - **Otherwise:** run its plan loop now (step 1).
       - Either way, plan loops run in the planning worktree, except for parallel-group members, which plan in their lane worktrees. Merge the plan branch when the loop is done.
-   7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact`, with a note naming the next child.
+   7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact` after a serial child or an integrated group, with a note naming what is in flight: each running child, its phase and its run id.
 
 **Single plan:**
 1. Run step 2.
@@ -127,7 +127,7 @@ Otherwise, decide. Record tricky decisions in the `epic.md` Decisions section: t
 ## Do
 - Pass paths, not pasted content. Subagents read files themselves.
 - Keep what you take in small: verdicts, counts, paths and short summaries.
-- Self-compact after each child, and whenever your context grows large.
+- Self-compact at clean points (Close step 7), and whenever your context grows large.
 
 ## Don't
 - Plan, implement or review yourself.

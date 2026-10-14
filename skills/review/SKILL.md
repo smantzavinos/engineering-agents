@@ -20,10 +20,12 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - has an estimate within the size limit (`epic.md`, or a single plan's own);
   - stays inside the child's entry. Work beyond it that isn't on the plan's Follow-ups line is a major finding;
   - if it was planned ahead, judge references to earlier children's work against their approved plans, not the code;
-  - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean;
+  - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean. Judge each contract, not its mechanics: what it proves, at which layer, and whether another test already owns it. Locators, assertion construction, fixture detail and whether a planned test can fail are for code review; here they are minors for the implementer;
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
   - for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims there.
+
+  **Plan refresh:** review only the refresh commit you were given. Check that the plan still fits the code that was integrated since it was approved. Findings on text the refresh didn't change are minors.
 - **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
@@ -41,7 +43,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 ## Earlier passes
 Read the ledger first. For each earlier finding, verify in the artifact or diff, not in the response, whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled. If you disagree with a rejection, say so once; the author must then take it to the oracle.
 
-Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it.
+Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it. In plan mode, a new major after pass 1 must concern design, boundaries, claims, scope or size; a fix's test mechanics are minors.
 
 ## Findings
 Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or at the plan root for epic and epic-diff modes). Each finding has an ID, a severity, a location, the problem and a suggested fix. Severities:
