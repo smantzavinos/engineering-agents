@@ -1168,3 +1168,32 @@ Fresh plan-mode review of `bae5d55` (skills only), against plan §17 and §14. T
 - **SL3:** an under-limit split must meet scope's Parallel groups rules, with a claim per slice, and only with a worktree pool. Orchestrate writes the group and claims into `epic.md`, and each slice plans in its lane worktree. A planner's proposal of a parallel split is now a trigger.
 - **SL4:** the budget is set for a child at the size limit (implementer hours plus fixed cost). A merged child sums its parts' budgets.
 - **SL5:** the fixed cost has no number, the list includes reading in, and it says only parallel lanes hide it.
+
+## size limit for a fast implementer, pass 2
+Fresh plan-mode review of `bae5d55` and `ebbfff1` (cumulative `git diff bae5d55^ ebbfff1 -- skills/`), against plan §17. The owner's ruling that splits and merges are at the orchestrator's discretion is settled. I checked each pass-1 finding in the full current text of scope, orchestrate, `references/lanes.md`, plan and review, not in the response. `node tools/render-skills.mjs --check` passes. No skill still states the old limit.
+
+### Earlier findings
+- **SL1 · fixed.** Scope 54 sets the limit in changed lines (generated files excluded), and records the implementer model's hours next to it for budgets and deadlines, calibrated per model. Plan 20 estimates lines plus hours; Refresh step 4 reports both; orchestrate 48's 20% trigger names the line estimate. Review 20 now checks against a limit that is in lines.
+- **SL2 · fixed.** Scope 34 gives each entry a rough line estimate. Plan 44 has the planner estimate the next serial, unplanned child and propose a merge if both fit, which is the one point where a merge can still happen. Orchestrate 113 accepts the proposal as a trigger; 117 restricts merges to consecutive serial children, never a group member, and defines the result (first number, union of entries and scenarios).
+- **SL3 · fixed.** Plan 44 ties an under-limit split to scope → Parallel groups and asks for a claim per slice. Orchestrate 113 makes the proposal a trigger; 116 requires a worktree pool, writes the group and claims into `epic.md`, puts slices of a group member into its group, and plans each slice in its lane worktree. Scope 55 repeats the pool condition. Two wording slips in plan 44 are SL6.
+- **SL4 · fixed.** Scope 56 sizes the per-child budget for a child at the limit (implementer hours plus fixed cost), so orchestrate 103's deadlines follow. Orchestrate 118 sums a merged child's budget and keeps the per-child budget for each slice, recorded with the resize.
+- **SL5 · fixed.** Scope 55 has no measured number, includes the implementer's read-in, and says only parallel lanes hide the cost.
+
+### SL6 · minor · `plan/SKILL.md:44`: the under-limit split sentence paraphrases scope's rule loosely, and "the child's own" claim is undefined for a serial child
+**Problem.**
+- "(no dependency among them, no test infrastructure or schema a sibling reads)" reads as allowing test-infrastructure changes that no sibling reads. Scope 37 forbids any test-infrastructure change in a group member.
+- "each with a proposed claim inside the child's own" assumes the child has a claim. Only group members do (scope 36), so a planner of a serial child can't satisfy it literally.
+
+**Fix.** "Under the limit, propose a split only into slices that meet `scope` → Parallel groups, each with a proposed claim (inside the child's own claim, if it has one)." Dropping the parenthetical paraphrase leaves the rule in one place.
+
+### SL7 · minor · `plan/SKILL.md:44` against `orchestrate/SKILL.md:117`: a group member's planner is told to propose merges the orchestrator must refuse
+**Problem.** Plan 44 asks for a merge proposal whenever "the next child in order is serial and not yet planned". It doesn't require this child to be serial. The last member of a group always sees the first child after the group as serial and, by Plan ahead, not yet planned, so it proposes a merge that orchestrate 117 ("never a group member") rejects. That costs a round trip and a stalled plan loop.
+
+**Fix.** "If this child and the next one in order are both serial, and the next is not yet planned, …"
+
+### Not raised
+- A merged child's budget is the sum of its parts', which is looser than the per-child budget it already fits. That only widens the margin; it can't cause a spurious stop.
+- Who plans a merged child isn't spelled out, but resuming the plan-author that proposed it, with the merged entry, is the only reading that fits Bounds (resume the child's session).
+- A checkpoint named after an absorbed child moves with the merge under orchestrate 70's discretion.
+
+**Counts (pass 2, open):** 0 blocker, 0 major, 2 minor (SL6, SL7). **Verdict:** approved.
