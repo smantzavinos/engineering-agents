@@ -998,3 +998,70 @@ Recovery after compaction or a crash in the middle of an integration (orchestrat
 - **GI9:** boundaries include a missing contract for authorization, visibility or data integrity. Other Tests-list and T1 findings after pass 1 are minors.
 - **GI10:** Refresh checks against every group member's diff. The refresh reviewer gets the integrated range: the plan's approval commit to the Refresh step 1 merge.
 - **GI11:** state gets a root `groups` record.
+
+## group integration and review level, pass 2
+Fresh review of `8cd3139` plus `6c415c4`, skills only, in plan mode. I read the §16 rulings as settled. I verified each pass-1 finding against the current text of orchestrate, `references/lanes.md`, `references/checkpoint-failures.md`, review, plan and implement, not against the author response. `node tools/render-skills.mjs --check` passes, and the changed lines stay generic.
+
+### Pass-1 findings
+- **GI1 (major): fixed.** Lanes 25 integrates only when every member is approved and Checkpoints step 2 allows all of them, and no member counts as integrated before that. Orchestrate 41 and 62 agree. The fix causes GI15.
+- **GI2 (major): fixed.** The work branch is never reset: merges go onto `integration/<group>` (lanes 27–28). The final merge back causes GI12.
+- **GI3 (major): fixed.** Lanes 33 defines "integrated". Review fixes go on the integrator's lane, which is merged again with T1 rerun (32). A red T1 after a fix counts toward the cap (31).
+- **GI4 (major): fixed.** Lanes 32 names both ranges. GI16 covers a small gap in later passes.
+- **GI5 (minor): fixed.** Each integrator task says what it runs (lanes 29, 31). Implement 52–56 defers to the task.
+- **GI6 (minor): fixed.** Lanes 30 defines the group T1: the union of the members' Gates, selection from the group base, widening and escalation, a worker count, and the flake and baseline rule.
+- **GI7 (minor): fixed.** Orchestrate 48 now orders the trigger correctly and scopes the second pass to the fix commits. Plan 56 reports the estimates and flags. Review 28 names the heading and drops the deep-pass rule. The new trigger wording causes GI14.
+- **GI8 (minor): fixed.** Orchestrate 36 and review 33 cover it.
+- **GI9 (minor): fixed.** Review 47 covers it.
+- **GI10 (minor): fixed.** Plan 52 and the integrated range in orchestrate 48 cover it.
+- **GI11 (minor): fixed.** Orchestrate 16 adds the `groups` record. GI13 adds the worktree to it.
+
+### GI12 · major · `references/lanes.md:33`; `orchestrate/SKILL.md:27, 41, 77`: the final merge into the work branch can conflict, and the merged tree is never checked (caused by the GI2 fix)
+**Problem.** Step 6 merges the integration branch into the work branch. That is a fast-forward only if the work branch hasn't moved since step 1, but it can move during an integration:
+- Orchestrate 14 and 25 commit `state.json` as you go, and lanes 27 records every step. These commits don't conflict, because no lane touches those files.
+- A checkpoint that turns green during the integration is merged "at the next clean point". Orchestrate 27 makes that "any time in lane mode". This is reachable: a group whose members are all at or before C+1 may integrate while checkpoint C runs (Checkpoints 86). Its merge brings in the base branch and any checkpoint fixes.
+
+The integration branch then merges into a work branch that holds code it was never tested against. If that merge conflicts, no rule owns it:
+- the lanes steps end at step 6;
+- Checkpoints step 2's conflict path covers merging the checkpoint branch, not this merge.
+
+An unattended orchestrator is left at a conflicted merge in the work-branch worktree.
+
+**Fix.** In lanes 27, add: "From step 1 until step 6, merge only your own files into the work branch. A green checkpoint waits, and Close step 3 merges it afterwards." In orchestrate 27, change "at any time in lane mode" to "at any time in lane mode, except during a group integration". Close step 3 already merges the waiting checkpoint after the group, and Checkpoints step 2 already owns that merge's conflicts.
+
+### GI13 · major · `references/lanes.md:20-22, 27`; `orchestrate/SKILL.md:16, 26`: the integration worktree may be unavailable, and is neither prepared nor given its own environment (caused by the GI2 fix)
+**Problem.** Lanes 27 says to use "the checkpoint worktree when no checkpoint runs there, otherwise a free pool worktree". Four gaps:
+- **No free worktree.** By lanes 20, a pool worktree can't be reused while its child isn't integrated, and during an integration no member is. If the pool has only `maxLanes` worktrees and a checkpoint is still running, which is likely right after a checkpoint placed before a fan-out, no worktree qualifies. The text gives no fallback.
+- **"Runs" is ambiguous.** A green checkpoint branch that hasn't merged yet still needs the checkpoint worktree: Checkpoints step 2's conflict path resolves there. If the integration takes the worktree first, two writers share it.
+- **No preparation.** The chosen worktree last held a checkpoint branch, which included a base-branch merge, or another child. Unlike reused pool worktrees (lanes 17–19), nothing says to reinstall when the lockfile changed or to reset the test data before the group T1.
+- **No environment.** Lanes 22 binds only lane tasks. The group T1 helper inherits the orchestrator's environment, and so the ports of the work-branch worktree, and maybe the ports of a concurrent checkpoint run. A run against another worktree's server is stale code passing tests, the false green that `a7c7a40` fixed for lanes.
+
+Recovery (orchestrate 18) also needs to know which worktree holds the integration, but the `groups` record doesn't say.
+
+**Fix.** In lanes 27, replace the worktree sentence with: "Use the checkpoint worktree if it holds no checkpoint branch that is running or waiting to merge. Otherwise use a pool worktree that is clean and holds no unintegrated child. If neither exists, wait. Prepare it as The pool says, and give every task there that worktree's environment and ports." Add "worktree" to the `groups` record in orchestrate 16.
+
+### GI14 · minor · `orchestrate/SKILL.md:48`: the second refresh pass runs on almost every reviewed refresh (caused by the GI7 fix)
+**Problem.** A refresh reaches review only when more than names and paths changed. In practice that almost always means `Changes` changed, and `Changes` is now a trigger for the second pass. So the second pass becomes the default whenever the first pass finds majors. §16 limits it to a change of scope, or of the estimate by more than 20%. Scope means the entry, its scenarios and its claims, not the Changes section. Also, nothing says what happens to majors found in the second pass.
+
+**Fix.** Change the trigger to "only if claims or scenarios changed, or the estimate moved by more than 20%". Add: "Its majors are handled like the first pass's."
+
+### GI15 · major · `references/lanes.md:25`; `orchestrate/SKILL.md:41-42, 86`: a checkpoint after a group member that isn't last in the group deadlocks (caused by the GI1 fix)
+**Problem.** Scope 75 keeps grouping and checkpoints independent, and scope 46–50 places checkpoints after children that widen T1, which a group member can do. Take a group {C, C+1, C+2} with a checkpoint after C. The two rules then wait on each other:
+- Lanes 25 integrates the group only when Checkpoints 86 allows every member, so not until C is green and merged, because C+2 is after C+1.
+- C's checkpoint starts at Close step 4, which for a lane child runs only after the group is integrated (orchestrate 41).
+
+Before the fix, the straggler rule let part of the group integrate.
+
+**Fix.** In lanes 25, add: "A checkpoint named after a group member runs after the group's last member, and the members are numbered as one step for Checkpoints 85–86." Alternatively, have scope place checkpoints only at group boundaries, and have orchestrate move any such checkpoint and record it under Decisions.
+
+### GI16 · minor · `references/lanes.md:29-32`: integration-review details for later passes and multiple integrators (caused by the GI3 and GI4 fixes)
+**Problem.**
+- The conflict range, `--remerge-diff <merge>`, doesn't include the review-fix commits that step 5 adds, so pass 2 has no range for them.
+- A group can have two integrators, for example a conflict in one member and a red T1 traced to another. Step 5 speaks of "the integrator's range" and "the integrator's lane" in the singular.
+- The review appends `## code pass N` to a member's ledger, which already holds that child's code passes. Nothing says how integration passes are named or counted against the cap.
+
+**Fix.** In step 5: "The reviewer gets every integrator's range, plus any review-fix commits since the last pass. Fixes go on the lane the finding is about. Head passes `## integration pass N`."
+
+### Not raised
+- The group T1's E2E worker count isn't in lanes 11's split. The members are idle during integration, so their share is free. This is a nit.
+
+**Counts (pass 2, open):** 0 blocker, 3 major (GI12, GI13, GI15), 2 minor (GI14, GI16). GI1–GI11 are fixed. **Verdict:** changes needed.
