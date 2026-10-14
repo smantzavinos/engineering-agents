@@ -457,3 +457,21 @@ At equal turns and tokens, Sonnet would have cut 04b's model time from about 220
 - **Not changed:** the planner stays on its model; plan and code review stay separate from authoring (a reviewer that edits approves its own fix); minors stay non-blocking.
 
 **Measure** (next groups vs these five): integration minutes per group, plan review passes, plan-stage majors by kind, refresh passes, orchestrator compactions at clean points vs size-triggered.
+
+## 17. Size limit for a fast implementer (added 2026-10-14)
+
+**Evidence from the pilot**, after the switch to the fast implementer model:
+- The limit stayed at about 3 implementer hours on the old model, or about 4k changed lines. The fast model needs about 0.3× the old model's hours, so the line count decided every split.
+- Most original children were estimated at 5–6k lines, so almost every one was split. Merged children came out at 2.2–4.5k changed lines each.
+- Code review took 1–2 passes at every size, the same as the 6–16k-line children before the switch. Nothing shows that a 4k cap made reviews better.
+- The implementer builds about 3k lines an hour. Each child also costs about 1–1.5 h of fixed work on the critical path: plan review, refresh, code review, integration, close, and a new implementer reading in. Plan-ahead hides only the plan writing.
+- Splits that ran as parallel lanes paid off. Splits whose slices ran one after another (for example a backend slice then its page slice) added that fixed cost without any parallelism.
+
+**Changes:**
+- **`scope`:** the size limit is a diff a reviewer can judge in one pass, default about 7k changed lines, calibrated on the implementer model actually used. Under the limit, a child is split only into slices that can run in parallel lanes. Serial children that together fit the limit are one child.
+- **`plan` and `orchestrate`:** use the same rule when proposing and executing splits and merges.
+- **`review` (epic mode):** checks it.
+
+**Owner ruling (2026-10-14):** splits and merges stay at the orchestrator's discretion.
+
+**Measure:** child count, changed lines per child, code-review passes by diff size, and critical-path hours per child.

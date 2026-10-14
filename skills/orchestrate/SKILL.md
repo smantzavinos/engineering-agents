@@ -113,6 +113,7 @@ Plan the next child while the current one is being implemented. This is the defa
 - **A planner that reports the child over the epic's size limit, or as trivially small:** split or merge it, as long as scope and acceptance scenarios are unchanged, and record it under Decisions. That is a resize, not a scope change.
   - The pieces become separate children (`NNa`, `NNb`), each with its own plan loop, review and close. Don't keep them inside one child.
   - Split into vertical slices, each ending in a scenario that can be tested.
+  - Under the limit, split only into slices that can run in parallel lanes. Merge children that must run one after another and together fit the limit.
 - A discovery that invalidates a completed child: fold the rework into the current or next plan when scope holds, and record it. If it drops a scenario or contradicts the epic, stop.
 
 ## Stop for the human only when
