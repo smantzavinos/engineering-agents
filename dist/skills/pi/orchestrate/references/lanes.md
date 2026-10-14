@@ -19,6 +19,7 @@ The pool is created once with the repo's worktree tooling, then reused.
   - reset the test data.
 - **Never reuse** a dirty worktree, or one whose child is not yet integrated.
 - Each worktree has its own ports. Processes are touched only through their own worktree's ports.
+- Subagents inherit this session's environment, and per-worktree settings such as ports are not reloaded for a lane's directory. Every lane task says to load the lane worktree's own environment and check its port before running services, unless the repo's tooling already refuses a mismatched port.
 
 ## Integrating
 Integrate lanes in child order, as they close, in the idle work-branch worktree.
