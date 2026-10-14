@@ -45,7 +45,7 @@ One writer per worktree at any time.
       - **If it was planned ahead:**
         - wait for its plan loop to be approved;
         - resume its plan-author to refresh (`plan` → Refresh);
-        - if only names and paths changed, no review. If the plan is now over the size limit, resize. Otherwise one fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the integrated range: the plan's approval commit to the merge from Refresh step 1. Majors it finds are fixed by the plan-author, and their IDs go to the implementer's code reviewer. Other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed, or the estimate moved by more than 20%. Its majors are handled like the first pass's.
+        - if only names and paths changed, no review. If the plan is now over the size limit, resize. Otherwise one fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the integrated range: the plan's approval commit to the merge from Refresh step 1. Majors it finds are fixed by the plan-author, and their IDs go to the implementer's code reviewer. Other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed, or the line estimate moved by more than 20%. Its majors are handled like the first pass's.
       - **Otherwise:** run its plan loop now (step 1).
       - Either way, plan loops run in the planning worktree, except for parallel-group members, which plan in their lane worktrees. Merge the plan branch when the loop is done.
    7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact` after a serial child or an integrated group, with a note naming what is in flight: each running child, its phase and its run id.
@@ -110,10 +110,12 @@ Plan the next child while the current one is being implemented. This is the defa
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.
 
 ## Sizing and scope
-- **A planner that reports the child over the epic's size limit, or as trivially small:** split or merge it, as long as scope and acceptance scenarios are unchanged, and record it under Decisions. That is a resize, not a scope change.
+- **A planner that reports the child over the epic's size limit, proposes a parallel split, or proposes a merge:** split or merge it, as long as scope and acceptance scenarios are unchanged, and record it under Decisions. That is a resize, not a scope change.
   - The pieces become separate children (`NNa`, `NNb`), each with its own plan loop, review and close. Don't keep them inside one child.
   - Split into vertical slices, each ending in a scenario that can be tested.
-  - Under the limit, split only into slices that can run in parallel lanes. Merge children that must run one after another and together fit the limit.
+  - **Under the limit:** split only into a parallel group, and only with a worktree pool. Write the slices into `epic.md` as a group with their claims; slices of a group member join its group. Each slice runs its own plan loop in its lane worktree.
+  - **Merge:** only consecutive serial children, never a group member. The merged child keeps the first child's number, and its entry and scenarios are the union of both.
+  - **Budget:** a merged child's budget is the sum of its parts'; each slice keeps the per-child budget. Record it with the resize.
 - A discovery that invalidates a completed child: fold the rework into the current or next plan when scope holds, and record it. If it drops a scenario or contradicts the epic, stop.
 
 ## Stop for the human only when

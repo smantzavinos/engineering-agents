@@ -31,7 +31,7 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Goal:** one paragraph.
 - **Scope:** in and out.
 - **Acceptance scenarios:** those from `PROTOTYPE.md` plus agreed additions, each mapped to the child that delivers it.
-- **Children, in order:** `NN_slug`, with its goal, what it depends on, and when it's done. A few lines each, each within the size limit, and split below it only for parallel lanes.
+- **Children, in order:** `NN_slug`, with its goal, what it depends on, and when it's done. A few lines each, with a rough estimate in changed lines, each within the size limit, and split below it only for parallel lanes.
 - **Parallel groups:** children that may build at the same time.
   - Give each member a **claim**: the directories, routes, tables and shared components it may change. Claims must not overlap, except for the merge-friendly files the epic names, such as indexes and changelogs.
   - Members have no dependency among them. None changes test infrastructure, and none changes schema that a sibling reads.
@@ -51,9 +51,9 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 
   Epic close is always one.
 - **Escalation implementer** (optional): the agent that takes over a child's code-review fixes when pass 2 isn't approved, when the default implementer is a fast model.
-- **Size limit:** the most one child may be: a diff a reviewer can judge in one pass (default about 7k changed lines, not counting generated files), with the implementer model's hours for it. Calibrate it from earlier children's actuals on the same implementer model, when there are any. Children over the limit are split before execution.
-  - Each child has a fixed cost on the critical path (plan review, refresh, code review, integration, close), of about an hour. So split a child under the limit only into slices that can run in parallel lanes. Children that must run one after another and together fit the limit are one child.
-- **Budget:** wall time and cost per child. Exceeding it stops execution.
+- **Size limit:** the changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). Record next to it the implementer model's hours for that diff, for budgets and deadlines, calibrated from earlier children's actuals on the same model. Children over the limit are split before execution.
+  - Each child adds a fixed cost to the critical path (plan review, refresh, a new implementer reading in, code review, integration, close) that only parallel lanes hide. So split under the limit only into slices that meet the Parallel groups rules, and only with a worktree pool. Serial children that together fit the limit are one child.
+- **Budget:** wall time and cost per child, set for a child at the size limit: its implementer hours plus the per-child fixed cost. Exceeding it stops execution.
 - **Autonomy:** what the human wants to decide personally beyond the standard stop conditions, and what execution may do without asking: push the branch, open the PR, file tracker items.
 - **Decisions:** the human's decisions so far, with reasons. Execution appends to this.
 - **Follow-ups:** empty at approval; execution appends to this.

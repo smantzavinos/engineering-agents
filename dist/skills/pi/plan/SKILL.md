@@ -17,7 +17,7 @@ Write the plan a strong engineer needs to build this child in one session withou
 Scout widely with subagents (`delegate`), and read the critical paths yourself.
 
 ## plan.md
-- **Goal:** what this child delivers, the acceptance scenarios it owns, and an estimate of the implementer's hours. For a single plan there is no epic, so this section also carries what was agreed with the human:
+- **Goal:** what this child delivers, the acceptance scenarios it owns, and an estimate in changed lines, with the implementer's hours for it. For a single plan there is no epic, so this section also carries what was agreed with the human:
   - scope in and out, and disposal;
   - the full-gate commands, the test map and the smoke set;
   - budget and autonomy limits.
@@ -41,7 +41,7 @@ Aim for under 150 lines.
 
 ## Judgment calls
 - **Course-setting decisions**, the ones that shape most of the remaining children: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the orchestrator stops for the human.
-- **Sizing:** estimate first. If the child exceeds the epic's size limit, stop before writing the full plan. Reply with a proposed split into vertical slices, giving each slice's scenarios and a rough estimate. Under the limit, propose a split only into slices that can run in parallel lanes. If it is trivially small, propose a merge. Don't silently plan half of it.
+- **Sizing:** estimate first. If the child exceeds the epic's size limit, stop before writing the full plan. Reply with a proposed split into vertical slices, giving each slice's scenarios and a rough estimate. Under the limit, propose a split only into slices that meet `scope` → Parallel groups (no dependency among them, no test infrastructure or schema a sibling reads), each with a proposed claim inside the child's own. If the next child in order is serial and not yet planned, estimate it roughly from its entry; if the two together fit the limit, propose merging it into this child. If it is trivially small, propose a merge. Don't silently plan half of it.
 - **Scope:** plan only this child's entry. A fix or improvement outside it goes on a short Follow-ups line in `plan.md`, not into Changes.
 - **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply. The orchestrator serializes or re-scopes the child.
 
@@ -53,7 +53,7 @@ If you planned ahead, you'll be resumed after the previous child closes.
    - changes to `epic.md`: your entry, Decisions and Follow-ups;
    - any checkpoint merge since you planned.
 3. Update what changed, including the estimate, and commit it as one refresh commit. Its review covers only that commit.
-4. Reply with the refresh commit, the old and new estimate, and whether claims or scenarios changed, or only names and paths.
+4. Reply with the refresh commit, the old and new estimate in lines and hours, and whether claims or scenarios changed, or only names and paths.
 
 ## Revising
 For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding.

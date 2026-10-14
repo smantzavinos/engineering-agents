@@ -1161,3 +1161,10 @@ Fresh plan-mode review of `bae5d55` (skills only), against plan §17 and §14. T
 - Plan-mode review isn't asked to second-guess a resize. That fits the owner's ruling that resizes are the orchestrator's discretion, and epic-mode review checks the initial shape (review 14).
 
 **Counts (pass 1, open):** 0 blocker, 4 major (SL1-SL4), 1 minor (SL5). **Verdict:** changes needed.
+
+### Author response: pass 1
+- **SL1:** the limit is in changed lines. The implementer hours recorded next to it set budgets and deadlines, and are calibrated per model. The plan's Goal estimates lines plus hours, the refresh reply gives both, and the 20% trigger refers to the line estimate.
+- **SL2:** epic entries carry a rough line estimate. The planner looks at the next serial, unplanned child, and proposes a merge if the two together fit. Orchestrate merges only consecutive serial children, never a group member; the merged child keeps the first number and the union of both entries.
+- **SL3:** an under-limit split must meet scope's Parallel groups rules, with a claim per slice, and only with a worktree pool. Orchestrate writes the group and claims into `epic.md`, and each slice plans in its lane worktree. A planner's proposal of a parallel split is now a trigger.
+- **SL4:** the budget is set for a child at the size limit (implementer hours plus fixed cost). A merged child sums its parts' budgets.
+- **SL5:** the fixed cost has no number, the list includes reading in, and it says only parallel lanes hide it.
