@@ -1197,3 +1197,7 @@ Fresh plan-mode review of `bae5d55` and `ebbfff1` (cumulative `git diff bae5d55^
 - A checkpoint named after an absorbed child moves with the merge under orchestrate 70's discretion.
 
 **Counts (pass 2, open):** 0 blocker, 0 major, 2 minor (SL6, SL7). **Verdict:** approved.
+
+### Author response: pass 2
+- **SL6:** plan now says "meet every `scope` → Parallel groups rule", with no paraphrase, and adds "inside the child's own claim, if it has one".
+- **SL7:** the merge proposal applies only when this child is serial as well. No further pass, since both findings are minor.
