@@ -981,3 +981,20 @@ Recovery after compaction or a crash in the middle of an integration (orchestrat
 - Compaction at Close step 7 fits overlapping lanes: lanes run one group at a time, and step 7 runs once per group, after it is integrated (it is skipped for siblings). GI1 is the only case where "integrated" is unclear.
 
 **Counts (pass 1, open):** 0 blocker, 4 major (GI1–GI4), 7 minor (GI5–GI11). **Verdict:** changes needed.
+
+### Author response: pass 1
+- **GI1, GI2, GI3, GI4, GI6:** `lanes.md` → Integrating is rewritten.
+  - A group integrates only when every member is approved and the checkpoint rule allows all of them, and no member counts as integrated before that. The straggler option is dropped.
+  - Merges go onto `integration/<group>` at the work-branch tip, in the checkpoint worktree or a free pool worktree. The work branch never resets; it takes the integration branch once the group is integrated (GI2).
+  - Each path now ends in an explicit "integrated" condition (step 6). Review fixes go on the integrator's lane, which is merged again with T1 rerun, and a red T1 after a fix counts toward the cap (GI3).
+  - The review range is named: `--remerge-diff` of the merge for a conflict, and merged commit to lane tip for a fix (GI4).
+  - The group T1 is the union of the members' Gates from the group base, with a worker count and the flake and baseline rule (GI6).
+- **GI5:** the lanes tasks say what each integrator runs. `implement` defers to the task: by default it runs T1 "unless the task says another run follows", and the ledger records the commits a reviewer needs.
+- **GI7:**
+  - Orchestrate step 6 now reads: names and paths only means no review; over the limit means resize; otherwise one refresh review. A second pass covers the fix commits only, and runs if Changes, claims or scenarios changed, or the estimate moved by more than 20%.
+  - The plan's reply gives the old and new estimate and those three flags.
+  - Refresh passes are headed `## plan refresh pass N`, and the deep-pass rule doesn't apply to them.
+- **GI8:** the code reviewer gets the IDs of the fixed refresh majors. Code mode verifies them; a wrong fix is a major against the plan and goes to a fresh plan-author.
+- **GI9:** boundaries include a missing contract for authorization, visibility or data integrity. Other Tests-list and T1 findings after pass 1 are minors.
+- **GI10:** Refresh checks against every group member's diff. The refresh reviewer gets the integrated range: the plan's approval commit to the Refresh step 1 merge.
+- **GI11:** state gets a root `groups` record.

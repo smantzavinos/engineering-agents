@@ -22,13 +22,15 @@ The pool is created once with the repo's worktree tooling, then reused.
 - Subagents inherit this session's environment, and per-worktree settings such as ports are not reloaded for a lane's directory. Every lane task says to load the lane worktree's own environment and check its port before running services, unless the repo's tooling already refuses a mismatched port.
 
 ## Integrating
-Integrate a group once, when every member's code is approved, in the idle work-branch worktree. A member still in code review after the others are approved can be left for later: integrate the rest, and integrate it alone when it is approved.
-1. Record the work-branch commit (the group base), then merge the lane branches in child order.
-2. A helper runs one T1 on the merged tree, against the group base, covering every member's changes.
-3. **Clean merges and green T1:** the group is integrated. No integration review: each member's code review already covered its diff, and the epic-diff review checks the seams.
-4. **A merge conflicts:** abort it. The **integrator** is the implementer of the member being merged, resumed in its lane worktree. It merges the work branch, with the members already merged, into its lane branch and resolves the conflict there. Then continue merging.
-5. **T1 is red:** reset the work branch to the group base. A helper traces the failure to a member; if unclear, take the last member in child order. Its implementer is the integrator: in its lane worktree it merges the other members' lane branches, fixes the failure and runs the group's T1. Then merge the group again, that lane last.
-6. An integrator appends `## integration` to its own ledger. A fresh reviewer then reviews only the integrator's changes, in code mode, against the members' plans. The normal pass cap applies.
+A group integrates once, when every member's code is approved and Checkpoints step 2 allows every member to integrate. Until then, no member counts as integrated, for Close steps 4–7 or for Plan ahead.
+
+Integrate on an integration branch, so the work branch only moves forward. Use the checkpoint worktree when no checkpoint runs there, otherwise a free pool worktree. Record each step under the group in `state.json`.
+1. Create `integration/<group>` at the work-branch tip; that commit is the group base. Merge the lane branches into it in child order.
+2. **A merge conflicts:** abort it. Resume that member's implementer in its lane worktree. Its task: merge the integration branch into the lane branch, resolve, commit, and name the merge commit in `## integration`. The group T1 follows, so it runs no T1. Then merge its lane again and continue.
+3. **Group T1:** a helper runs the union of the members' Gates, with selection from the group base. Any member's widening or escalation applies to the group. Pass it an E2E worker count. A failure that passes alone and lies outside the group's diff, or that is in the baseline, is not red (`implement` → Gates).
+4. **T1 is red:** a helper traces the failure to a member; if that's unclear, take the last member in child order. Its implementer gets the group base as its new base. In its lane worktree it merges the integration branch, fixes the failure, runs the group T1, adds the path the members' T1 missed to the test map, and names the commit it merged in `## integration`. Merge its lane into the integration branch; the tree now matches its green lane tip, so T1 doesn't rerun. Each red T1 after a fix counts as a pass toward the cap.
+5. **Integration review:** only when an integrator changed something. A fresh reviewer, in code mode, against the members' plans, gets the integrator's range: `git show --remerge-diff <merge>` for a conflict, and from the merged commit to the lane tip for a fix. Its fixes go on the integrator's lane. Merge the lane again and rerun the group T1. The normal pass cap applies.
+6. **Integrated:** every lane is merged, the group T1 is green, and any integration review is approved. Merge the integration branch into the work branch, and record the end time.
 
 ## Claims
 - Each group member's claims are in `epic.md`.

@@ -25,11 +25,12 @@ You have no history with this work. Judge it against what it was meant to do. Fi
   - has a T1 selection, widening or escalation that fits what changes;
   - for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims there.
 
-  **Plan refresh:** review only the refresh commit you were given. Check that the plan still fits the code that was integrated since it was approved. Findings on text the refresh didn't change are minors.
+  **Plan refresh:** head the pass `## plan refresh pass N`. Review only the refresh commit, against the integrated range you were given: does the plan still fit that code? The deep-pass rule doesn't apply. Findings on text the refresh didn't change are minors.
 - **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
-  - updates the affected docs.
+  - updates the affected docs;
+  - resolves each refresh major you were given, in `plan.md` and in the code. A fix that is wrong against the integrated code is a major against the plan; the orchestrator sends the plan change to a fresh plan-author.
 
   Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract: one in the plan's Tests, or one the ledger records with a reason. That includes regression tests for bugs found while building, and independent contracts the plan's list doesn't reach, such as config, defaults or migrations (`test-quality` → Keep). A test moved, split or rewritten because its contract changed isn't new. A test with no contract is a major finding. A test whose contract is missing only from the ledger is a minor: record it, don't delete the test. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
 
@@ -43,7 +44,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 ## Earlier passes
 Read the ledger first. For each earlier finding, verify in the artifact or diff, not in the response, whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled. If you disagree with a rejection, say so once; the author must then take it to the oracle.
 
-Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it. In plan mode, a new major after pass 1 must concern design, boundaries, claims, scope or size; a fix's test mechanics are minors.
+Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it. In plan mode, a new major after pass 1 must concern design, boundaries (including a missing contract for authorization, visibility or data integrity), claims, scope or size. Other Tests-list and T1 findings after pass 1 are minors.
 
 ## Findings
 Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or at the plan root for epic and epic-diff modes). Each finding has an ID, a severity, a location, the problem and a suggested fix. Severities:

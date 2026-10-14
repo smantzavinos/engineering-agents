@@ -13,7 +13,7 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; every resume returns a new run id, so record it each time.
 - **Per child:** status, lane, estimate, base commit, the latest planner and implementer run ids, review pass counts, the start and end of each phase and of each checkpoint stop, and reported usage.
-- **At the root:** the baseline gate digest, checkpoints (commit, status, run), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
+- **At the root:** the baseline gate digest, checkpoints (commit, status, run), groups (members, base, merged members, T1 run, integrator and review runs, start and end), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), and stops (child, reason, time).
 
 On start, after compaction, or after a crash: read `state.json`, `git status` in every worktree in use, `git log`, and the live run list, then resume whatever was in flight.
 
@@ -33,7 +33,7 @@ One writer per worktree at any time.
    - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
    - Approved: copy the plan's Follow-ups into `epic.md`, then go to step 2. Otherwise resume the same plan-author with the ledger path and pass number.
 2. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
-   - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit.
+   - Spawn a fresh reviewer (`review` skill, code mode) with the child's directory and base commit, and the IDs of any refresh majors fixed in its plan.
    - Approved: step 3. Otherwise resume the same implementer with the ledger path and pass number.
 3. **Close**, in this order:
    1. Commit your files. If the next child was planned ahead, merge the plan branch.
@@ -45,7 +45,7 @@ One writer per worktree at any time.
       - **If it was planned ahead:**
         - wait for its plan loop to be approved;
         - resume its plan-author to refresh (`plan` → Refresh);
-        - if the design or estimate changed, resize first if it is now over the size limit. Otherwise one fresh reviewer reviews the refresh commit only (`review` → plan refresh). Majors it finds are fixed by the plan-author and named in the implementer's task, for code review to verify; other findings are notes for the implementer. Run a second refresh pass only if the refresh changed scope, or the estimate by more than 20%.
+        - if only names and paths changed, no review. If the plan is now over the size limit, resize. Otherwise one fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the integrated range: the plan's approval commit to the merge from Refresh step 1. Majors it finds are fixed by the plan-author, and their IDs go to the implementer's code reviewer. Other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if Changes, claims or scenarios changed, or the estimate moved by more than 20%.
       - **Otherwise:** run its plan loop now (step 1).
       - Either way, plan loops run in the planning worktree, except for parallel-group members, which plan in their lane worktrees. Merge the plan branch when the loop is done.
    7. Record the next child's base commit (after its plan has merged), and commit the state. `self_compact` after a serial child or an integrated group, with a note naming what is in flight: each running child, its phase and its run id.
