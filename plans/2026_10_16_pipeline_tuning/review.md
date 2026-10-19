@@ -377,3 +377,58 @@ Otherwise use the full procedure. State the same exclusion in C9's identical-tre
 - P2-05: provisional budget from the `epic.md` estimate at plan start.
 - P2-06: no-pool Start base; the three lane-worktree planning lines listed for removal; `scope` step 3 pointer.
 - P2-07: dead reviewer/scout/helper: discard its uncommitted ledger edit, relaunch fresh; only plan-authors and implementers are resumed.
+
+## plan pass 3
+
+Scope: `plan.md` at cf42308, checked against the current `orchestrate` (+ `lanes.md`, `checkpoint-failures.md`) and `scope`. Open findings were verified in the plan text. New findings are limited to blockers and majors, or to issues the latest revision caused.
+
+### Open findings
+- P1-04: resolved. C1 step 2 starts the range at the commit the plan branch was cut from. C2 Planning records that commit and C10 stores it, so code integrated during the plan loop is in range.
+- P2-01: partly resolved. The direct case is fixed: C2 gates only C+1's child on C, and adds the dependency-order rule. The rule is too narrow to prove "the gate can't deadlock", though, so the issue continues as P3-01. P-g lists the ungated start.
+- P2-02: resolved. C2 "Claims for every child" edits `plan` → Claims, `review` plan mode and `lanes.md` → Claims, and `scope` limits the no-overlap rule to within a group. The new fallback creates P3-03.
+- P2-03: the starvation part is resolved: members start individually, and the lowest-numbered ready child goes first. The case of a group larger than the pool is not resolved. Such a group now starts but can never integrate. It is carried, with the new cross-group case, as P3-02.
+- P2-04: resolved. §2 and C2 add the group-of-one plain merge, C9 compares trees ignoring orchestrator and plan files, and P-h lists the change. The merge is still an integration, so the checkpoint gate and the "no merge during a group integration" rule apply to it, and a code change on the work branch falls back to the full procedure. That is correct.
+- P2-05: resolved (C3 `scope` → Budget, provisional budget at plan start).
+- P2-06: resolved. C1 step 1 states the no-pool base, C2 Planning lists the three lane-worktree lines, and C2 `scope` updates Steps 3.
+- P2-07: resolved. In C8, a dead reviewer, scout or helper has its uncommitted ledger edit discarded and is relaunched fresh. Only plan-authors and implementers are resumed.
+
+### P3-01 — major (design) — The checkpoint dependency-order rule doesn't cover transitive dependencies or groups, so the gate can still deadlock
+**Location:** §3 C2 "Checkpoint placement" ("a checkpoint's child may not depend on a later checkpoint's child … so the gate can't deadlock"); `lanes.md` → Integrating ("A checkpoint named after a group member runs after the group's last member; for Checkpoints step 2 the group counts as one child").
+**Problem:**
+- Checkpoint C runs only once its child and every child it depends on are integrated. A group member counts as integrated only when its whole group integrates. Under C2, checkpoint C+1's child (the whole group, if it is a member) may not integrate until C is green.
+- The rule checks only *direct* dependencies, so two shapes still deadlock:
+  - **Transitive:** C's child depends on X, and X depends on C+1's child.
+  - **Group:** C's child depends on member d of group G, and C+1 is named after another member of G. For example, G = {2, 6}, child 4 depends on 2, and the checkpoints come after 4 and after 6. Then 2 can't integrate without 6, 6 waits for C, and C waits for 2.
+- Neither shape is ruled out by `scope`. Nothing stops the run, and §2 removes the child-order integration that used to prevent it.
+
+**Fix:** state the rule over the closure. "Everything that must integrate before checkpoint C can run includes no later checkpoint's child. That is C's child, its transitive dependencies, and every member of a group among them." The epic review checks this, and so does the orchestrator whenever it moves or adds a checkpoint.
+
+### P3-02 — major (design) — Members starting individually can fill the pool with unintegrated lanes and stall
+**Location:** §2 bullet 2 ("Group members start individually as worktrees free up and still integrate once, together"); §3 C2 `lanes.md` → Starting lanes; `lanes.md` → The pool ("Never reuse … one whose child is not yet integrated"); `lanes.md` → Integrating (worktree: "a pool worktree that is clean and holds no unintegrated child").
+**Problem:**
+- A finished member keeps its pool worktree until its group integrates, and the group integrates only when every member has finished. Two cases follow:
+  - A group with more members than the pool (or than `maxLanes`, if waiting lanes count toward it) can never integrate. This is the case P2-03 named; it now stalls after starting instead of never starting.
+  - Two groups can each start some members by readiness and lowest number. For example, with a pool of 2, groups {1, 3} and {2, 4}: 1 and 2 start, finish, and hold both worktrees. Neither 3 nor 4 can start, and neither group can integrate.
+- Integration then has no pool worktree to use either, unless the checkpoint worktree is free.
+- Before the revision this couldn't happen: one group ran at a time.
+
+**Fix:** add an admission rule in `lanes.md` → Starting lanes:
+- A member of a group may start only if the free worktrees, after it takes one, cover the unstarted members of every group that has already started. Otherwise the lowest-numbered group already in progress has priority.
+- `scope` → Parallel groups: a group has at most min(pool size − 1, `maxLanes`) members. The −1 leaves room for integration when the checkpoint worktree is busy.
+- Say that finished but unintegrated lanes count as running, both for `maxLanes` and for the start rule's claim check.
+
+### P3-03 — major (claims) — The new claim-widening and pause rule deadlocks inside a group and between paused children
+**Location:** §3 C2 "Claims for every child", `lanes.md` → Claims bullet ("If no running child's claim covers the addition, the orchestrator widens … otherwise the child pauses until those children integrate").
+**Problem:**
+- **Sibling overlap:** a group member that needs a file in a *sibling's* claim pauses until that sibling integrates. The sibling integrates only with the group, which includes the paused member, so the group never integrates. The old fallback ("runs serially after the group") took the child out of the group. The new one doesn't.
+- **Unstarted sibling:** widening checks only *running* children. It can therefore give a member a claim that overlaps an unstarted sibling's. That breaks `scope`'s no-overlap rule within a group, and the sibling can then never start: the start rule blocks it until the widened member integrates, which needs the sibling.
+- **Mutual pause:** two children can each need a file in the other's claim. Both pause, and neither integrates.
+- **Wording:** "covers" should be "overlaps". A partial overlap must also block widening.
+- Each paused lane also holds a pool worktree, which adds to P3-02.
+
+**Fix:**
+- Widen only if the addition overlaps no unintegrated child's claim. That means running, finished or paused children, and every sibling in the group, whether started or not.
+- If it overlaps a sibling: stop that member for a re-scope under Decisions. Either move the work to the sibling, or take the member out of the group so it integrates afterwards as a group of one.
+- Pause only on children outside the group that are not themselves paused. A pause that would close a cycle stops the run for a re-scope.
+
+**Verdict:** changes needed — 0 blocker, 3 major (P3-01–P3-03), 0 minor.
