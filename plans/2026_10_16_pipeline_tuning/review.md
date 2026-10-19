@@ -439,3 +439,31 @@ Simplified rather than patched:
 - P3-01: checkpoints no longer gate integration (or starts). Only "C+1's run waits until C is green and merged" and the red-checkpoint pause remain, so there is no gate to deadlock. The dependency-order placement rule is removed. P-g updated.
 - P3-02: units (a group, or a child in no group) start together when a worktree is free for every member; groups have at most `maxLanes` members; a lane counts as running until integrated; ready units start in child-number order and a later unit doesn't start while an earlier ready unit waits, so nothing is starved or stranded.
 - P3-03: widen a claim only if no unintegrated child that is unordered with it claims the files; otherwise the lane stops, the child leaves its group, gets a dependency on the overlapping child and restarts as a unit of one after it integrates. A new edge between unordered children can't form a cycle; nobody pauses on a sibling.
+
+## plan pass 4
+
+Scope: `plan.md` at baade9d, checked against the current `orchestrate` (+ `lanes.md`, `checkpoint-failures.md`) and `scope`. Open findings were verified in the plan text. New findings are limited to blockers and majors that the latest revision caused.
+
+### Open findings
+- P3-01: **resolved.** C2 Checkpoints step 2 removes the start and integration gate, and keeps only "the run for C+1 waits until C is green and merged" plus the red-checkpoint pause. Checkpoint C waits only on integrations, and integrations wait on no checkpoint, so there is no cycle. A paused lane holds its worktree, but the fix runs in the checkpoint worktree, so the pause always ends. P-g states the trade-off: children may start and integrate past an unverified foundation. Note for the skill edit: two `lanes.md` → Integrating clauses still refer to the removed gate ("Checkpoints step 2 allows every member to integrate"; "for Checkpoints step 2 the group counts as one child"). Remove them with it.
+- P3-02: **open (major, design), on one point only.** Units now start together, a lane counts as running until it is integrated, and ready units start in child-number order with no overtaking. That fixes the cross-group stranding and the starvation. The group bound, though, is `maxLanes`, not the pool, and the lanes actually available can drop below a group's size:
+  - `scope` sets `maxLanes` (default 4) independently of the pool size;
+  - `lanes.md` keeps the memory check (about 6 GB per lane) and "on model rate-limit errors, drop one lane until the next group".
+
+  If the lowest-numbered ready unit needs more worktrees or lanes than that, it never starts. Because of the no-overtaking rule, no later unit starts either, and nothing stops the run. Before this revision, such a group ran in waves.
+  **Fix (two lines, no new mechanism):**
+  - `scope`: "`maxLanes` is at most the pool size."
+  - `lanes.md` → Starting lanes: "If no lane is running and the lowest-numbered ready unit still can't start (memory, a rate-limit drop), stop for a re-scope of its group under Decisions." Restate the rate-limit line without "until the next group", for example "until the next unit starts".
+
+### P4-01 — major (claims) — The stop-and-restart rule discards running work when the overlapping child hasn't started, and the stopped lane can hold the pool
+**Location:** §3 C2 "Claims for every child", `lanes.md` → Claims ("Otherwise the child's lane stops … gets a dependency on the overlapping child, and it restarts as a unit of one after that child integrates (C1's Start step, on a new base)"); `lanes.md` → The pool ("Never reuse … one whose child is not yet integrated"); §2 ("A lane counts as running until it is integrated").
+**Problem:**
+- "Unintegrated" now includes unstarted children, which P3-03 required. But the rule always stops the child that is *running* and makes it depend on the other one. When the overlapping child B hasn't started, that ordering is the expensive one: A's build is abandoned or parked so that B, which has done nothing yet, can go first.
+- The plan doesn't say what happens to A's lane. A restart "on a new base" through C1's Start step prepares a fresh lane, so either A's work is lost or the orchestrator has to guess how to carry it over.
+- If A keeps its worktree, which the pool rule requires because A isn't integrated, B's unit may never get enough worktrees. For example, with a pool of 4 and B in a 4-member group, the run hangs. Under the no-overtaking rule, every later unit hangs with it.
+
+**Fix:** one direction rule, and one sentence on the stopped lane.
+- **B has not started:** B gets the dependency on A, leaving its group if it has one. A's claim is widened under Decisions, and A continues. Nothing is lost, and B starts later as a unit of one.
+- **B is running or finished:** A stops as written. It keeps its lane branch and worktree. Once B integrates, it merges the work branch into its lane (`orchestrate` → Merging into an unfinished child) and continues on that new base. This can't hang, because B already holds its worktrees and will integrate.
+
+**Verdict:** changes needed — 0 blocker, 2 major (P3-02 open, P4-01), 0 minor.
