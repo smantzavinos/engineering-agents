@@ -64,7 +64,7 @@ One writer per worktree at any time.
 - **Worktrees:** up to two planning worktrees, created once with `git worktree add`, with no install. For each child, switch a clean one to a new plan branch at the work-branch tip, and record that commit as the child's plan-branch cut commit. Plan-authors and plan reviewers launch there. Every child plans here, group members included.
 - **When:** a child's plan loop starts when every child it depends on has started implementing (at once if it has none). When more children qualify than worktrees are free, take the lowest-numbered.
 - **Inputs:** a dependency that isn't built yet is represented by its approved plan. Tell the plan-author and its reviewers so.
-- **Plan changes after approval** (refresh, resize, fixes from code review) go to a fresh plan-author in the child's lane worktree, not a resumed one: the old one's worktree has moved on.
+- **Plan changes after approval** (refresh, resize, fixes from code review) go to a fresh plan-author in the child's worktree (its lane, or the work-branch worktree without a pool), not a resumed one: the old one's worktree has moved on.
 - **Don't plan yet** when the child depends on something its dependency's plan leaves open, or when its plan-author reports that it can't plan yet. Plan it once that dependency is integrated.
 
 ## Checkpoints
