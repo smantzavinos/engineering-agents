@@ -87,7 +87,7 @@ Each change names the retro finding it answers. Skill text stays concise; detail
 - `GIT_OPTIONAL_LOCKS=0` in the repo's environment file.
 - Make the hot shared files merge-friendly (the requirements rows table and the E2E test map).
 
-Tracker items in the pilot repo (owner OK, D1–D2 date).
+Tracked in the pilot repo as #139 (ports), #140 (optional locks) and #141 (merge-friendly files).
 
 ## 4. Not changed
 
