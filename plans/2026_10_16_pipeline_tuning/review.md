@@ -366,3 +366,14 @@ Otherwise use the full procedure. State the same exclusion in C9's identical-tre
 **Fix:** before relaunching a dead reviewer or scout, discard its partial ledger edit, or have the fresh run take it over. Say that only implementers and plan-authors are resumed.
 
 **Verdict:** changes needed — 0 blocker, 5 major (P1-04 open, P2-01–P2-04), 3 minor (P2-05–P2-07).
+
+## author response to pass 2
+
+- P1-04: scout range now starts at the commit the plan branch was cut from, recorded in `state.json` (C1 step 2, C2 Planning, C10).
+- P2-01: gate is now "checkpoint C+1's child may not integrate until C is green and merged", with checkpoints required to follow dependency order (so C's own prerequisites are never blocked). Ungated starts listed as P-g.
+- P2-02: claims for every child: `plan` → Claims, `review` plan mode, `lanes.md` → Claims fallback (widen if no running overlap, else pause until they integrate), `scope` overlap rule within groups only.
+- P2-03: members start individually; integration stays together; lowest-numbered ready child first.
+- P2-04: group-of-one plain merge when only orchestrator and plan files moved (§2, `lanes.md` → Integrating); identical-tree comparison ignores those files (C9). Listed as P-h.
+- P2-05: provisional budget from the `epic.md` estimate at plan start.
+- P2-06: no-pool Start base; the three lane-worktree planning lines listed for removal; `scope` step 3 pointer.
+- P2-07: dead reviewer/scout/helper: discard its uncommitted ledger edit, relaunch fresh; only plan-authors and implementers are resumed.

@@ -15,7 +15,8 @@ Skill text stays generic and concise: rules only, no pilot statistics. Evidence 
 One model replaces "serial children in the work-branch worktree, lanes for groups":
 
 - **With a worktree pool, every child runs as a lane:** in its own pool worktree, on a lane branch cut from the work-branch tip, and integrated through `lanes.md` → Integrating. A child that is in no group is a group of one. The work-branch worktree holds only the orchestrator's files, plan merges and integration merges.
-- **A child (or a whole group) starts** when every child it depends on is integrated, a pool worktree is free for each member, and its claims don't overlap the claims of any running child. Groups still integrate once (D1); members of a group start together.
+- **A child starts** when every child it depends on is integrated, a pool worktree is free, and its claim doesn't overlap the claim of any running child. Group members start individually as worktrees free up and still integrate once, together (D1). When more children are ready than worktrees are free, the lowest-numbered goes first (so a group isn't starved by children after it).
+- **A group of one integrates by a plain merge** when the work branch has changed since the lane's base only in the orchestrator's files and plan directories: merge the lane branch into the work branch, with no integration worktree, integration branch or T1. This is the serial case today, with the lane's own T1 as the proof. Otherwise, the full `lanes.md` → Integrating procedure applies.
 - **Without a pool,** children run serially in the work-branch worktree, in child order, as today.
 - Group membership keeps its meaning: members may build at once and integrate together. Every child now needs a claim when the epic has a pool (`scope`).
 
@@ -27,8 +28,8 @@ This makes "start when dependencies are met" (retro decision 3) a single rule, a
 
 **`orchestrate`:** replace Close step 6's planned-ahead branch and the refresh text with a **Start** step (new Per child step, before Implement):
 
-1. Prepare the lane worktree at the work-branch tip; that commit is the child's base. Record it.
-2. **Scout.** A `helper` in the lane worktree compares the integrated range — from the commit that merged the child's approved plan into the work branch, to the base, excluding the child's own directory — with:
+1. Prepare the lane worktree at the work-branch tip; that commit is the child's base. Record it. (Without a pool: the work-branch worktree at its HEAD.)
+2. **Scout.** A `helper` in the lane worktree compares the integrated range — from the commit the child's plan branch was cut from (recorded in `state.json` when the plan loop starts), to the base, excluding the child's own directory — with:
    - every section of the plan;
    - the child's `epic.md` entry, Decisions and Follow-ups;
    - the ledgers of the children it depends on (deviations, follow-ups);
@@ -51,19 +52,25 @@ The old "only names and paths changed: no review" exemption and the ">20% estima
 **`orchestrate` and `lanes.md`:** apply §2.
 - **Where work runs:** replace the "Serial children" bullet with §2's model; keep the no-pool fallback. "Merging into an unfinished child" applies to paused lanes only (with a pool).
 - **`lanes.md` → Starting lanes:** "Run up to `maxLanes` children of one group at once" becomes "run up to `maxLanes` lanes at once, across groups, under §2's start rule". Memory, disk and E2E-worker checks stay; the E2E budget is split across all running lanes.
+- **`lanes.md` → Integrating:** add the group-of-one plain merge from §2 before step 1.
 - **Rules written in child order** become dependency or integration order:
-  - **Checkpoints step 2:** "No child after C+1 in child order may start or be integrated" → "No child may integrate after checkpoint C+1's child is integrated until C is green and merged." Starting is no longer gated: lanes are isolated until they integrate.
-  - **Checkpoint placement** (`scope`): a checkpoint is named after a child and runs once that child, and every child it depends on, is integrated.
+  - **Checkpoints step 2:** "No child after C+1 in child order may start or be integrated" → "Checkpoint C+1's child may not integrate until checkpoint C is green and merged." Other children integrate freely; a red checkpoint still pauses the children that build on the broken code (`checkpoint-failures.md` step 4). Starting is no longer gated: lanes are isolated until they integrate (P-g).
+  - **Checkpoint placement** (`scope`): a checkpoint is named after a child and runs once that child, and every child it depends on, is integrated. Checkpoints follow dependency order: a checkpoint's child may not depend on a later checkpoint's child. With that, C's child and its dependencies are never blocked by C's own gate, so the gate can't deadlock.
   - **Close step 1** (merge the next child's plan branch), **step 4** (last child before a checkpoint), **step 6** (plan the next child), **step 7** (next child's base): replaced by C1's Start step, the planning rule below, and the checkpoint rule above.
   - **Epic close** and **`checkpoint-failures.md` step 2:** "the last child in child order" → "the last child integrated".
 - **Planning (Plan ahead):**
   - Up to two planning worktrees, each switched to a new plan branch at the work-branch tip per child.
   - A child's plan loop starts when every child it depends on has started implementing (or at once, if it has none). When more children qualify than worktrees are free, take the lowest-numbered.
-  - Every child plans in a planning worktree, group members included (they no longer hold a pool worktree while planning).
+  - Every child plans in a planning worktree, group members included (they no longer hold a pool worktree while planning). Remove the lines that say otherwise: `lanes.md` → Starting lanes ("Its plan-author … launch with their cwd in that worktree"; "group members plan in their own lane worktrees") and `orchestrate` → Sizing ("Each slice runs its own plan loop in its lane worktree").
+  - Record the commit each plan branch is cut from (C1's scout range starts there).
   - When the loop is approved, merge the plan branch into the work branch (it touches only the child's directory) unless a group integration is in progress; then the planning worktree is free.
   - Plans written before a dependency is built use that dependency's approved plan in place of its code (as today).
 - **`plan` → Inputs:** "the previous child's directory" → "the plans and ledgers of the children it depends on".
-- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. The epic review checks both.
+- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. Claims must not overlap within a group; across groups they may, and the start rule keeps overlapping children from running at once. The epic review checks both. `scope` → Steps 3 points to the review-load signal (C3) instead of "Size limit".
+- **Claims for every child** (with a pool):
+  - `plan` → Claims: "every child, when the epic has a pool" (not only group members);
+  - `review` → plan mode: "claims stay inside the `epic.md` claim; for a group member, they don't overlap its siblings'";
+  - `lanes.md` → Claims, replacing "runs serially after the group": a child that needs files outside its claim reports it. If no running child's claim covers the addition, the orchestrator widens the claim in `epic.md` under Decisions and the child continues; otherwise the child pauses until those children integrate, then merges the work branch and continues.
 - **`state.json`:** see C10.
 
 ### C3. Group children by content, not size (decision 4; F3)
@@ -71,7 +78,7 @@ The old "only names and paths changed: no review" exemption and the ">20% estima
 Replacement text, by location:
 - **`scope` → epic.md Children:** "with a rough estimate in changed lines, each within the size limit, and split below it only for parallel lanes" → "with a rough estimate in changed lines. A child is a cohesive vertical slice: a piece of behaviour with its data, logic, UI and tests, ending in a testable scenario."
 - **`scope` → Size limit** becomes **Review-load signal:** "The changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). A child above it is checked for separable concerns; it is split only if its concerns are separable and the pieces can run as parallel lanes. Never split serial or inherently related work to meet the number. Calibrate estimates, in lines and implementer hours, from the first children's actuals on the implementer model in use." Remove "Children over the limit are split before execution" and the paragraph on splitting under the limit.
-- **`scope` → Budget:** "per child: the implementer hours for the plan's estimate × 1.5, plus the per-child fixed cost. Set at plan approval, updated at refresh or resize, and recorded in `state.json`." `orchestrate` → Bounds reads the budget from `state.json`.
+- **`scope` → Budget:** "per child: the implementer hours for the plan's estimate × 1.5, plus the per-child fixed cost. Set provisionally from the `epic.md` estimate when the plan loop starts, replaced at plan approval, updated at refresh or resize, and recorded in `state.json`." `orchestrate` → Bounds reads the budget from `state.json`.
 - **`scope` → Do:** keep "size children as vertical slices…"; add "group by content, not by size".
 - **`plan` → Sizing:** "Estimate first. If the estimate is above the review-load signal, say whether the child mixes separable concerns. If it does and the pieces could run in parallel, stop before writing the full plan and propose the split, each piece with its scenarios, estimate and claim. Otherwise plan it whole. Propose merging this child with one it depends on only when their content belongs together." Remove the size-driven merge-with-the-next-child rule and "If it is trivially small, propose a merge".
 - **`orchestrate` → Sizing and scope:** "reports the child over the epic's size limit, proposes a parallel split, or proposes a merge" → "proposes a split or a merge". Splits only into parallel lanes; a merge joins a child into the one it depends on when their content belongs together (not "consecutive serial children"). Record the new budget (C3) with the resize.
@@ -122,7 +129,7 @@ Test ownership stays as it is: one owning test per contract, at the boundary `te
 - Replace "On start, after compaction, or after a crash … resume whatever was in flight" with: read `state.json`, `git status` in every worktree in use and `git log`; then, for every launch not yet consumed, check its status:
   - **finished:** consume the result (its completion notice may have been lost);
   - **still running:** wait for it;
-  - **dead:** resume a writer (planner, implementer) per Recovery; relaunch a read-only run (reviewer, scout, helper).
+  - **dead:** resume a plan-author or implementer per Recovery. For a reviewer, scout or helper, discard its uncommitted ledger edit, then relaunch it fresh. Only plan-authors and implementers are resumed.
 
   Never start a writer in a worktree whose last writer isn't confirmed stopped. Record each restart in `stops`.
 
@@ -133,11 +140,11 @@ Test ownership stays as it is: one owning test per contract, at the boundary `te
   - the dev environment sets `GIT_OPTIONAL_LOCKS=0` (background git reads otherwise leave stale index locks);
   - files every child edits (requirement tables, test maps, registries) are merge-friendly: one row or file per entry, or generated. `epic.md` names them.
 - **`lanes.md` → The pool:** the same three as preconditions for lanes.
-- **Identical-tree reruns:** `implement` → Handoff records, per gate, `HEAD^{tree}` and the exact command line including selection. `implement` → Gates and `orchestrate` → Don't: don't rerun a gate whose tree and command line both match a passing run in the ledger.
+- **Identical-tree reruns:** `implement` → Handoff records, per gate, `HEAD^{tree}` and the exact command line including selection. `implement` → Gates and `orchestrate` → Don't: don't rerun a gate whose tree and command line both match a passing run in the ledger. Trees are compared ignoring the orchestrator's files and plan directories.
 
 ### C10. State fields (measurement, retro §6)
 
-`orchestrate` → State, per child: dependencies, `readyAt` (when the last dependency integrated), lane start, budget, scout outcome, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`; at the root: the launch list (C8). These feed §7 and replace ad-hoc state edits.
+`orchestrate` → State, per child: dependencies, plan-branch cut commit, `readyAt` (when the last dependency integrated), lane start, budget, scout outcome, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`; at the root: the launch list (C8). These feed §7 and replace ad-hoc state edits.
 
 ## 4. Pilot-repo work (tracked there)
 
@@ -156,6 +163,8 @@ Tracked in the pilot repo as #139 (ports), #140 (optional locks) and #141 (merge
 - **P-d. Drop the >20% estimate trigger for a second refresh pass** (C1). Estimates no longer drive splits.
 - **P-e. Budget = plan estimate's implementer hours × 1.5 plus fixed cost, set at plan approval** (C3). Estimates were off by up to 2.7×; a tight budget would stop mis-estimated children.
 - **P-f. Code pass 2 reads only the fix range** (C4), and plan pass 2 is skipped only under all of C5's conditions.
+- **P-g. Child starts are no longer gated by checkpoints** (C2). A lane is isolated until it integrates, and checkpoint C+1's child still can't integrate before C is green; a red checkpoint still pauses the children building on the broken code. Today a fan-out child can't even start past an unverified foundation, which costs time when the checkpoint is green (the usual case).
+- **P-h. A group of one integrates by a plain merge** when nothing but orchestrator and plan files moved on the work branch (§2), so a serial chain pays no extra integration T1.
 
 ## 6. Not changed
 
