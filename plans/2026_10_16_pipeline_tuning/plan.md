@@ -1,6 +1,6 @@
 # Pipeline tuning from the process retrospective
 
-**Status:** draft, revised after plan pass 1 · **Date:** 2026-10-16 · **Evidence:** `plans/2026_10_15_process_retro/retro.md` (findings F1–F13, owner decisions of 2026-10-16) · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`, `references/checkpoint-failures.md`), `plan` (+ new `references/plan-questions.md`), `implement`, `review`, `assess-repo`
+**Status:** approved (plan pass 5; owner confirmed P-a…P-h on 2026-10-16) · **Date:** 2026-10-16 · **Evidence:** `plans/2026_10_15_process_retro/retro.md` (findings F1–F13, owner decisions of 2026-10-16) · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`, `references/checkpoint-failures.md`), `plan` (+ new `references/plan-questions.md`), `implement`, `review`, `assess-repo`
 
 ## 1. Why
 
@@ -164,7 +164,7 @@ Tracked in the pilot repo as #139 (ports), #140 (optional locks) and #141 (merge
 - **D2. Implementer thinking back to high.** Medium showed no speed gain and more code majors per child (confounded by larger children). The pilot repo's agent settings are reverted; the skills don't name a thinking level.
 - **Pilot-repo tracker items** (§4) filed.
 
-**Proposed here, for the owner to confirm** (they follow from the decisions but were not decided explicitly):
+**Proposed here and confirmed by the owner on 2026-10-16:**
 - **P-a. Every child is a lane when there is a pool** (§2). Needed for "start when dependencies are met" without special cases; every child then needs a claim.
 - **P-b. Plans merge into the work branch at approval; a needed refresh is done by a fresh plan-author in the lane worktree** (C1, C2). Frees planning worktrees early; the plan-author's state is on disk.
 - **P-c. Refresh runs end without `self_compact`** (C1). Their end-of-run compaction sat on the critical path.
