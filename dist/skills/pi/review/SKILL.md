@@ -11,25 +11,29 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 ## Modes
 - **epic:** `epic.md` against `PROTOTYPE.md`. Check that:
   - the scope is complete, and the gaps the prototype skipped are addressed;
-  - the children are ordered sensibly, and each is within the size limit and split below it only for parallel lanes;
+  - each child is a cohesive slice with declared dependencies and, with a worktree pool, a claim; any child above the review-load signal has a reason not to be split;
   - every acceptance scenario has an owner;
   - gates, budgets and pre-authorizations are explicit enough to run unattended.
 - **plan:** `plan.md` against its epic entry. Check that it:
   - can be built without guessing;
   - makes sound decisions;
-  - has an estimate within the size limit (`epic.md`, or a single plan's own);
+  - states its estimate; above the review-load signal (`epic.md`, or a single plan's own), says whether its concerns are separable;
+  - answers the plan questions that apply (`plan` → plan.md). A missing answer on access and visibility, failure and concurrency, or deliverables, where the child has that concern, is a major; on the others, a minor;
   - stays inside the child's entry. Work beyond it that isn't on the plan's Follow-ups line is a major finding;
-  - if it was planned ahead, judge references to earlier children's work against their approved plans, not the code;
+  - where a dependency isn't built yet, judge references to its work against its approved plan, not the code;
   - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean. Judge each contract, not its mechanics: what it proves, at which layer, and whether another test already owns it. Locators, assertion construction, fixture detail and whether a planned test can fail are for code review; here they are minors for the implementer;
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
-  - for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims there.
+  - claims that stay inside its `epic.md` claim; for a group member, they don't overlap its siblings'.
 
-  **Plan refresh:** head the pass `## plan refresh pass N`. Review only the refresh commit, against the integrated range you were given: does the plan still fit that code? The deep-pass rule doesn't apply. Findings on text the refresh didn't change are minors.
+  Tag every major with its kind: `design`, `boundary`, `claims`, `scope` or `cohesion` (a fix needs a re-check), or `tests`, `T1` or `wording` (it doesn't).
+
+  **Plan refresh:** head the pass `## plan refresh pass N`. Review only the refresh commit, against the integrated range you were given: does the plan still fit that code, and is the edit itself correct? The deep-pass rule doesn't apply. Findings on text the refresh didn't change are minors.
 - **code:** the child's diff (from the base commit you were given) against `plan.md`. Check that it:
   - does what the plan says, and is correct and tested;
   - is consistent with the codebase;
   - updates the affected docs;
+  - delivers every Deliverable in the plan's Done when. One missing from the implementer's map, marked done but not delivered, or not done without an accepted deviation is a major;
   - resolves each refresh major you were given, in `plan.md` and in the code. A fix that is wrong against the integrated code is a major against the plan; the orchestrator sends the plan change to a fresh plan-author.
 
   For an integration review, use the ledger and pass heading your task names.
@@ -46,7 +50,9 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 ## Earlier passes
 Read the ledger first. For each earlier finding, verify in the artifact or diff, not in the response, whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled. If you disagree with a rejection, say so once; the author must then take it to the oracle.
 
-Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it. In plan mode, a new major after pass 1 must concern design, boundaries (including a missing contract for authorization, visibility or data integrity), claims, scope or size. Other Tests-list and T1 findings after pass 1 are minors.
+In code mode after pass 1, review only the range you were given, and verify each open finding there. For a merge in the range, review only its conflict resolution (`git show --remerge-diff <merge>`), not the incoming changes.
+
+Pass 1 is the deep pass: be complete, so later passes confirm rather than discover. After pass 1, raise a new finding only if it is a blocker or major, or if a fix caused it. In plan mode, a new major after pass 1 must concern design, boundaries (including a missing contract for authorization, visibility or data integrity), claims, scope or cohesion. Other Tests-list and T1 findings after pass 1 are minors.
 
 ## Findings
 Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or at the plan root for epic and epic-diff modes). Each finding has an ID, a severity, a location, the problem and a suggested fix. Severities:
@@ -57,7 +63,7 @@ Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or 
 Don't record nits. The work is approved when no blocker or major finding remains open. Commit the ledger, staging only that file.
 
 ## Reply
-Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path.
+Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path. In plan mode (not refresh), end with `pass 2 needed: yes` if any blocker or any major of a kind that needs a re-check is open, otherwise `pass 2 needed: no`.
 
 ## Do
 - On a large diff, gather context with subagents (`delegate`), but make every judgment yourself.

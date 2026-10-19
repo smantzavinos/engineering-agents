@@ -62,6 +62,9 @@ Check for presence AND quality of:
 - [ ] Requirements mechanism documents all required hooks if repo maintains requirements: store, actors/personas, use cases, workflows/scenarios, functional requirements, non-functional requirements, operational requirements, stable IDs, reference format, test citation format, traceability rules, apply approved changes, retire/change requirements, validation/query commands if any, and approval policy
 - [ ] Tool-backed task/requirement hooks document exact commands, auth/access expectations, read-only vs mutating behavior, approval requirements, and fallback when a command/tool is unavailable
 - [ ] Design rules (if UI exists)
+- [ ] If the repo uses a worktree pool or parallel E2E: test-service port ranges are outside the OS ephemeral range (or reserved from it), and the harness refuses a base that isn't
+- [ ] If the repo uses a worktree pool or parallel E2E: the dev environment sets `GIT_OPTIONAL_LOCKS=0` (background git reads otherwise leave stale index locks)
+- [ ] If the repo uses a worktree pool or parallel E2E: files every change edits (requirement tables, test maps, registries) are merge-friendly: one row or file per entry, or generated
 
 **Recommended (further improves quality):**
 - [ ] Tech stack LLM instruction files (.llm/ directory)

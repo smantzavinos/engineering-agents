@@ -9,7 +9,7 @@ harnesses: [pi]
 Build the whole plan in one pass, as a senior engineer would. Settle the details, write the code and its tests, then prove it with the gates. You will be resumed with review findings, so this session owns the code until it is approved, unless the orchestrator hands it to an escalation implementer.
 
 ## Inputs
-`plan.md` (including its Handoff section), the child's `review.md` ledger, the base commit, and the baseline gate digest in `state.json`. Tests follow `test-quality`.
+`plan.md` (including its Handoff section), the child's `review.md` ledger (including any `## refresh scout` note on what changed since the plan was written), the base commit, and the baseline gate digest in `state.json`. Tests follow `test-quality`.
 
 ## Build
 - Implement all of it. Write the tests the plan calls for alongside the code. Each contract the plan names gets proof at its owning layer.
@@ -32,7 +32,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
    - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
    - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.
    - **Delegation:** a helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
-2. Fix the failures. Rerun only what failed and what the fix touches.
+2. Fix the failures. Rerun only what failed and what the fix touches. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files) and exact command line match a passing run in the ledger.
 3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child.
 
 A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. The same goes for a failure you were told is being fixed on a checkpoint branch. If you are steered to stop, commit and reply. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
@@ -58,11 +58,12 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 ## Handoff
 1. Leave the tree clean, with all your work committed. Only the orchestrator's files may stay modified.
 2. Append `## implementation` (or `## fix pass N`) to `review.md` with:
-   - the commands run, with pass/fail and duration per gate;
+   - the commands run, with pass/fail and duration per gate, and per gate the exact command line (including selection) and `HEAD^{tree}` it ran on;
    - the T1 selection and why each spec was picked;
    - test lines vs production lines added, and the tests removed or consolidated;
    - every contract you proved that the plan didn't list, and why, including regression tests for bugs found while building or fixing;
    - flakes and baseline failures seen, and log paths;
+   - each Deliverable from the plan's Done when, with the file or test that delivers it, or *not done* with the reason. No extra test runs for this;
    - deviations from the plan, follow-ups, and what the reviewer should look at closely.
 
    Commit it. The reviewer treats these as claims to check, so be exact.
