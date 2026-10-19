@@ -15,7 +15,9 @@ Skill text stays generic and concise: rules only, no pilot statistics. Evidence 
 One model replaces "serial children in the work-branch worktree, lanes for groups":
 
 - **With a worktree pool, every child runs as a lane:** in its own pool worktree, on a lane branch cut from the work-branch tip, and integrated through `lanes.md` → Integrating. A child that is in no group is a group of one. The work-branch worktree holds only the orchestrator's files, plan merges and integration merges.
-- **A child starts** when every child it depends on is integrated, a pool worktree is free, and its claim doesn't overlap the claim of any running child. Group members start individually as worktrees free up and still integrate once, together (D1). When more children are ready than worktrees are free, the lowest-numbered goes first (so a group isn't starved by children after it).
+- **A unit starts** — a group, or a child in no group (a group of one) — when every child its members depend on is integrated and a pool worktree is free for each member. Members start together and integrate together (D1). A group may have at most `maxLanes` members (`scope`). A lane counts as running until it is integrated.
+- **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees, no later unit starts, so a group can't be starved.
+- **Claims:** two units whose claims overlap are never running at once (one waits until the other integrates). Within a group, claims don't overlap (as today).
 - **A group of one integrates by a plain merge** when the work branch has changed since the lane's base only in the orchestrator's files and plan directories: merge the lane branch into the work branch, with no integration worktree, integration branch or T1. This is the serial case today, with the lane's own T1 as the proof. Otherwise, the full `lanes.md` → Integrating procedure applies.
 - **Without a pool,** children run serially in the work-branch worktree, in child order, as today.
 - Group membership keeps its meaning: members may build at once and integrate together. Every child now needs a claim when the epic has a pool (`scope`).
@@ -54,8 +56,8 @@ The old "only names and paths changed: no review" exemption and the ">20% estima
 - **`lanes.md` → Starting lanes:** "Run up to `maxLanes` children of one group at once" becomes "run up to `maxLanes` lanes at once, across groups, under §2's start rule". Memory, disk and E2E-worker checks stay; the E2E budget is split across all running lanes.
 - **`lanes.md` → Integrating:** add the group-of-one plain merge from §2 before step 1.
 - **Rules written in child order** become dependency or integration order:
-  - **Checkpoints step 2:** "No child after C+1 in child order may start or be integrated" → "Checkpoint C+1's child may not integrate until checkpoint C is green and merged." Other children integrate freely; a red checkpoint still pauses the children that build on the broken code (`checkpoint-failures.md` step 4). Starting is no longer gated: lanes are isolated until they integrate (P-g).
-  - **Checkpoint placement** (`scope`): a checkpoint is named after a child and runs once that child, and every child it depends on, is integrated. Checkpoints follow dependency order: a checkpoint's child may not depend on a later checkpoint's child. With that, C's child and its dependencies are never blocked by C's own gate, so the gate can't deadlock.
+  - **Checkpoints step 2:** remove "No child after C+1 in child order may start or be integrated until C is green and merged." Keep "The run for C+1 waits until C is green and merged" and the red-checkpoint handling: a red checkpoint pauses the children that build on the broken code (`checkpoint-failures.md` step 4). Checkpoints no longer gate starts or integration, so they can't deadlock with readiness order (P-g).
+  - **Checkpoint placement** (`scope`): a checkpoint is named after a child and runs once that child, and every child it depends on, is integrated.
   - **Close step 1** (merge the next child's plan branch), **step 4** (last child before a checkpoint), **step 6** (plan the next child), **step 7** (next child's base): replaced by C1's Start step, the planning rule below, and the checkpoint rule above.
   - **Epic close** and **`checkpoint-failures.md` step 2:** "the last child in child order" → "the last child integrated".
 - **Planning (Plan ahead):**
@@ -66,11 +68,11 @@ The old "only names and paths changed: no review" exemption and the ">20% estima
   - When the loop is approved, merge the plan branch into the work branch (it touches only the child's directory) unless a group integration is in progress; then the planning worktree is free.
   - Plans written before a dependency is built use that dependency's approved plan in place of its code (as today).
 - **`plan` → Inputs:** "the previous child's directory" → "the plans and ledgers of the children it depends on".
-- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. Claims must not overlap within a group; across groups they may, and the start rule keeps overlapping children from running at once. The epic review checks both. `scope` → Steps 3 points to the review-load signal (C3) instead of "Size limit".
+- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. Claims must not overlap within a group; across groups they may, and the start rule keeps overlapping children from running at once. A group has at most `maxLanes` members. The epic review checks both. `scope` → Steps 3 points to the review-load signal (C3) instead of "Size limit".
 - **Claims for every child** (with a pool):
   - `plan` → Claims: "every child, when the epic has a pool" (not only group members);
   - `review` → plan mode: "claims stay inside the `epic.md` claim; for a group member, they don't overlap its siblings'";
-  - `lanes.md` → Claims, replacing "runs serially after the group": a child that needs files outside its claim reports it. If no running child's claim covers the addition, the orchestrator widens the claim in `epic.md` under Decisions and the child continues; otherwise the child pauses until those children integrate, then merges the work branch and continues.
+  - `lanes.md` → Claims, replacing "runs serially after the group": a child that needs files outside its claim reports it. If no unintegrated child that is not ordered with it (neither depends on the other) claims those files, the orchestrator widens the claim in `epic.md` under Decisions and the child continues. Otherwise the child's lane stops: under Decisions it leaves its group if it has one and gets a dependency on the overlapping child, and it restarts as a unit of one after that child integrates (C1's Start step, on a new base). Adding a dependency between two unordered children can't create a cycle.
 - **`state.json`:** see C10.
 
 ### C3. Group children by content, not size (decision 4; F3)
@@ -163,7 +165,7 @@ Tracked in the pilot repo as #139 (ports), #140 (optional locks) and #141 (merge
 - **P-d. Drop the >20% estimate trigger for a second refresh pass** (C1). Estimates no longer drive splits.
 - **P-e. Budget = plan estimate's implementer hours × 1.5 plus fixed cost, set at plan approval** (C3). Estimates were off by up to 2.7×; a tight budget would stop mis-estimated children.
 - **P-f. Code pass 2 reads only the fix range** (C4), and plan pass 2 is skipped only under all of C5's conditions.
-- **P-g. Child starts are no longer gated by checkpoints** (C2). A lane is isolated until it integrates, and checkpoint C+1's child still can't integrate before C is green; a red checkpoint still pauses the children building on the broken code. Today a fan-out child can't even start past an unverified foundation, which costs time when the checkpoint is green (the usual case).
+- **P-g. Checkpoints no longer gate starts or integration** (C2). Only the next checkpoint's run waits for the previous one to be green; a red checkpoint still pauses the children building on the broken code. Today a fan-out child can't even start past an unverified foundation, which costs time when the checkpoint is green (the usual case), and an integration gate deadlocks under readiness order.
 - **P-h. A group of one integrates by a plain merge** when nothing but orchestrator and plan files moved on the work branch (§2), so a serial chain pays no extra integration T1.
 
 ## 6. Not changed

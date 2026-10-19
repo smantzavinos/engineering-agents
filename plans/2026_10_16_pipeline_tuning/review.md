@@ -432,3 +432,10 @@ Scope: `plan.md` at cf42308, checked against the current `orchestrate` (+ `lanes
 - Pause only on children outside the group that are not themselves paused. A pause that would close a cycle stops the run for a re-scope.
 
 **Verdict:** changes needed — 0 blocker, 3 major (P3-01–P3-03), 0 minor.
+
+## author response to pass 3
+
+Simplified rather than patched:
+- P3-01: checkpoints no longer gate integration (or starts). Only "C+1's run waits until C is green and merged" and the red-checkpoint pause remain, so there is no gate to deadlock. The dependency-order placement rule is removed. P-g updated.
+- P3-02: units (a group, or a child in no group) start together when a worktree is free for every member; groups have at most `maxLanes` members; a lane counts as running until integrated; ready units start in child-number order and a later unit doesn't start while an earlier ready unit waits, so nothing is starved or stranded.
+- P3-03: widen a claim only if no unintegrated child that is unordered with it claims the files; otherwise the lane stops, the child leaves its group, gets a dependency on the overlapping child and restarts as a unit of one after it integrates. A new edge between unordered children can't form a cycle; nobody pauses on a sibling.
