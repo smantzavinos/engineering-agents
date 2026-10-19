@@ -1,6 +1,6 @@
 # Pipeline tuning from the process retrospective
 
-**Status:** draft for owner review · **Date:** 2026-10-16 · **Evidence:** `plans/2026_10_15_process_retro/retro.md` (findings F1–F13, owner decisions of 2026-10-16) · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`), `plan`, `implement`, `review`, `assess-repo`
+**Status:** draft, revised after plan pass 1 · **Date:** 2026-10-16 · **Evidence:** `plans/2026_10_15_process_retro/retro.md` (findings F1–F13, owner decisions of 2026-10-16) · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`, `references/checkpoint-failures.md`), `plan` (+ new `references/plan-questions.md`), `implement`, `review`, `assess-repo`
 
 ## 1. Why
 
@@ -8,103 +8,166 @@ The fast-verification era was the most efficient: build fell to a median of 35 m
 
 **Target:** per-child fixed overhead on the critical path of a serial chain back to about 40–50 min (from ~78), with no loss of code-review pass 1 or plan-review pass 1. Estimated saving 5–10 h per epic of the pilot's size (retro §3, not additive).
 
-## 2. Changes
+Skill text stays generic and concise: rules only, no pilot statistics. Evidence stays in this plan and the retro.
 
-Each change names the retro finding it answers. Skill text stays concise; detail goes to `references/` where needed.
+## 2. Execution model after the change
 
-### C1. Refresh only when a dependency changed something the plan relies on (F1)
+One model replaces "serial children in the work-branch worktree, lanes for groups":
 
-- **`orchestrate` → Close step 6, planned-ahead branch:** replace "resume its plan-author to refresh" with:
-  1. A `helper` compares the integrated range (the plan's approval commit to the merge) with the plan's Context, Changes, Tests and Claims, and writes a short note: what changed that the plan names or relies on, or "nothing relevant". It writes the note to the child's ledger under `## refresh scout`.
-  2. **Nothing relevant:** no refresh, no review. The implementer gets the note.
-  3. **Something relevant:** resume the plan-author to refresh, with the note. Any edit to the plan gets one fresh review pass (unchanged rule). A second refresh pass only if claims or scenarios changed.
-- **`plan` → Refresh:** start from the scout note; reply without `self_compact` (refresh runs are short, and end-of-run compaction cost ~40–45 min on the critical path across the pilot).
-- **`review` → Plan refresh:** unchanged, but note that refresh edits are where two of four refresh majors came from: review the edit, not only the fit.
+- **With a worktree pool, every child runs as a lane:** in its own pool worktree, on a lane branch cut from the work-branch tip, and integrated through `lanes.md` → Integrating. A child that is in no group is a group of one. The work-branch worktree holds only the orchestrator's files, plan merges and integration merges.
+- **A child (or a whole group) starts** when every child it depends on is integrated, a pool worktree is free for each member, and its claims don't overlap the claims of any running child. Groups still integrate once (D1); members of a group start together.
+- **Without a pool,** children run serially in the work-branch worktree, in child order, as today.
+- Group membership keeps its meaning: members may build at once and integrate together. Every child now needs a claim when the epic has a pool (`scope`).
 
-### C2. Start lanes when dependencies are met (F2)
+This makes "start when dependencies are met" (retro decision 3) a single rule, and removes the serial-child special cases instead of adding to them.
 
-- **`orchestrate` → Per child / Plan ahead, and `references/lanes.md` → Starting lanes:** a child starts when every child it depends on (per `epic.md`) is integrated and a pool worktree is free, regardless of child number or group order. Group membership only says which children may run at once (claims don't overlap).
-- **Integration stays once per group** (§16 of the fast-verification plan; owner decision D1). For the ready-set rule, a group's members count as integrated when the group is. In the pilot an approved member waited 102 min for its sibling, but the next child depended on both, so it cost nothing on the critical path; the earlier integration queues came from integrating each child in child order, which §16 already replaced.
-- **Planning worktrees:** two, not one; each plans the next ready child. Plan-ahead lead stays short: start a child's plan when its last dependency starts implementing (plans approved 2–10 h early were refreshed anyway).
-- **`state.json`:** record `readyAt` per child (when its last dependency integrated) and lane start, so ready-to-start waits are measured directly.
-- **`epic.md`:** each child's dependencies are the real dependency record. The scope review checks that they are declared (one undeclared dependency in the pilot changed the plan of record).
+## 3. Changes
 
-### C3. Group children by content, not size (F3)
+### C1. Refresh only when something the plan relies on changed (decision 2; F1)
 
-- **`scope` → epic.md Children and Size limit; `Do`:** children are cohesive vertical slices: a piece of behaviour with its data, logic, UI and tests that ends in a testable scenario. Never split serial or inherently related work to meet a number. The ≈7k changed-line figure stays only as a **review-load signal**: a child above it is checked for separable concerns; it is split only if the concerns are separable *and* the pieces can run in parallel lanes. Remove "split below it only for parallel lanes" and "serial children that together fit the limit are one child" as size rules; keep "consecutive serial children with related content may merge".
-- **`plan` → Sizing:** estimate first; over the signal, report whether the child mixes separable concerns and propose a parallel split only if it does. Drop the size-driven merge-the-next-child rule; propose a merge only when the next child's content belongs to this one.
-- **`orchestrate` → Sizing and scope:** same rule for executing splits and merges. Budget per child is set from its own estimate plus the fixed cost, not from the limit.
-- **`review` (epic and plan modes):** check cohesion and dependencies, not "within the limit and split below it only for lanes".
-- **Estimates:** calibrated from the first children's actuals on the implementer model in use (half of the pilot's last estimates overshot by 1.6–2.7×).
+**`orchestrate`:** replace Close step 6's planned-ahead branch and the refresh text with a **Start** step (new Per child step, before Implement):
 
-### C4. Code-review pass 2 checks only the fixes (F6)
+1. Prepare the lane worktree at the work-branch tip; that commit is the child's base. Record it.
+2. **Scout.** A `helper` in the lane worktree compares the integrated range — from the commit that merged the child's approved plan into the work branch, to the base, excluding the child's own directory — with:
+   - every section of the plan;
+   - the child's `epic.md` entry, Decisions and Follow-ups;
+   - the ledgers of the children it depends on (deviations, follow-ups);
+   - any checkpoint merge in the range.
 
-- **`orchestrate` → Per child step 2:** a pass after pass 1 gets the fix range (the commit pass 1 reviewed, to the implementer's fix commit) and the ledger.
-- **`review` → Earlier passes:** for code mode after pass 1, review only the fix range and verify each open finding there; same model. New findings only if a fix caused them or they are blockers. Don't reread the unchanged diff.
-- **`implement` → Review findings:** unchanged ("rerun only the gates the fix affects"); the ledger names which gates were rerun and why.
+   It appends `## refresh scout` to the child's ledger: per plan section, what changed, with paths; then `relevant` or `nothing relevant`. When unsure, it says `relevant`. It commits the ledger on the lane branch.
+3. **Nothing relevant:** go to Implement. The implementer reads the note.
+4. **Relevant:** a fresh `plan-author` refreshes the plan in the lane worktree (`plan` → Refresh), given the note. Any edit gets one fresh refresh review. Its majors are fixed by the plan-author and named in the implementer's task. A second refresh pass only if claims or scenarios changed. If the refreshed estimate passes the review-load signal, apply C3's separable-concerns check.
 
-### C5. Plan-review pass 2 only when needed (F7)
+The old "only names and paths changed: no review" exemption and the ">20% estimate change" second-pass trigger are dropped: any edit is reviewed once (decision 2), and estimate changes no longer drive anything but the budget (C3).
 
-- **`orchestrate` → Per child step 1:** after pass 1, if every open major is about tests, T1 or wording (not design, boundaries, claims, scope or size), the plan-author fixes them and the plan is approved without another pass; the code reviewer sees the fixes in the plan. Another pass runs when pass 1 had a design or boundary major, or the plan-author reports that a fix changed a contract (an interface, data shape, access rule or scenario).
-- **`plan` → Revising:** reply states whether any fix changed a contract. (In the pilot, one later-pass security defect was introduced by a pass-1 fix.)
+**`plan` → Refresh:** rewrite for a fresh session in the lane worktree: read the scout note, the plan and the ledger; update what changed, including the estimate; commit one refresh commit; reply with the commit, old and new estimate, and whether claims or scenarios changed. No `self_compact` (refresh runs are short).
 
-### C6. Questions every plan answers where they apply (F5, F13)
+**`review` → Plan refresh:** add "Check that the edit itself is correct, not only that the plan still fits the integrated code."
 
-- **`plan` → plan.md:** add a short list, answered inside the existing sections (Design, Tests, Risks), each in a line or "n/a":
-  1. **Access and visibility:** who can see and do what, including hidden or locked items; for each guard, the test that fails if the guard is removed.
-  2. **Deliverables:** the scenarios, specs, UI behaviours and tests the build must contain (the implementer's handoff checklist, C7).
-  3. **Test ownership:** each contract has one owning test at the lowest layer that proves it; contracts owned elsewhere are not re-proved. (Already in Tests; restate it as a question.)
-  4. **Failure and concurrency:** errors, retry, two users at once, live updates.
-  5. **Assumptions checked against the code:** components, seeds and helpers the plan relies on exist; specs and files outside the edit list that the change will affect.
-  6. **Limits and load:** for read-heavy features, platform limits and fan-out.
-  7. **Deviations** from the prototype or earlier decisions, with a reason.
+**`implement` → Inputs and Build:** read `## refresh scout` if present. If it shows the plan is wrong in substance, stop and report (existing rule); the orchestrator sends the plan change to a fresh plan-author.
 
-  Keep "Aim for under 150 lines". Detail and examples go to `skills/plan/references/plan-questions.md`.
-- **`review` → plan mode:** a missing answer to 1, 2 or 4 where it applies is a major (these were the escaped-defect classes); to 5–7 a minor.
+### C2. Start children when their dependencies are integrated (decision 3; F2)
 
-### C7. Implementer handoff maps deliverables to evidence (F5)
+**`orchestrate` and `lanes.md`:** apply §2.
+- **Where work runs:** replace the "Serial children" bullet with §2's model; keep the no-pool fallback. "Merging into an unfinished child" applies to paused lanes only (with a pool).
+- **`lanes.md` → Starting lanes:** "Run up to `maxLanes` children of one group at once" becomes "run up to `maxLanes` lanes at once, across groups, under §2's start rule". Memory, disk and E2E-worker checks stay; the E2E budget is split across all running lanes.
+- **Rules written in child order** become dependency or integration order:
+  - **Checkpoints step 2:** "No child after C+1 in child order may start or be integrated" → "No child may integrate after checkpoint C+1's child is integrated until C is green and merged." Starting is no longer gated: lanes are isolated until they integrate.
+  - **Checkpoint placement** (`scope`): a checkpoint is named after a child and runs once that child, and every child it depends on, is integrated.
+  - **Close step 1** (merge the next child's plan branch), **step 4** (last child before a checkpoint), **step 6** (plan the next child), **step 7** (next child's base): replaced by C1's Start step, the planning rule below, and the checkpoint rule above.
+  - **Epic close** and **`checkpoint-failures.md` step 2:** "the last child in child order" → "the last child integrated".
+- **Planning (Plan ahead):**
+  - Up to two planning worktrees, each switched to a new plan branch at the work-branch tip per child.
+  - A child's plan loop starts when every child it depends on has started implementing (or at once, if it has none). When more children qualify than worktrees are free, take the lowest-numbered.
+  - Every child plans in a planning worktree, group members included (they no longer hold a pool worktree while planning).
+  - When the loop is approved, merge the plan branch into the work branch (it touches only the child's directory) unless a group integration is in progress; then the planning worktree is free.
+  - Plans written before a dependency is built use that dependency's approved plan in place of its code (as today).
+- **`plan` → Inputs:** "the previous child's directory" → "the plans and ledgers of the children it depends on".
+- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. The epic review checks both.
+- **`state.json`:** see C10.
 
-- **`implement` → Handoff, ledger entry:** add "the plan's deliverables, each with the file or test that delivers it, or *not done* with the reason". No extra test runs.
-- **`review` → code mode:** check the map against the diff; an item marked done that isn't is a major.
-- **Not added:** an implementer break-it check (removing guards to see tests fail). The reviewer already does this in pass 1, and in the legacy process the implementer-side check never caught an issue.
+### C3. Group children by content, not size (decision 4; F3)
 
-### C8. Reconcile in-flight runs after a restart (F11)
+Replacement text, by location:
+- **`scope` → epic.md Children:** "with a rough estimate in changed lines, each within the size limit, and split below it only for parallel lanes" → "with a rough estimate in changed lines. A child is a cohesive vertical slice: a piece of behaviour with its data, logic, UI and tests, ending in a testable scenario."
+- **`scope` → Size limit** becomes **Review-load signal:** "The changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). A child above it is checked for separable concerns; it is split only if its concerns are separable and the pieces can run as parallel lanes. Never split serial or inherently related work to meet the number. Calibrate estimates, in lines and implementer hours, from the first children's actuals on the implementer model in use." Remove "Children over the limit are split before execution" and the paragraph on splitting under the limit.
+- **`scope` → Budget:** "per child: the implementer hours for the plan's estimate × 1.5, plus the per-child fixed cost. Set at plan approval, updated at refresh or resize, and recorded in `state.json`." `orchestrate` → Bounds reads the budget from `state.json`.
+- **`scope` → Do:** keep "size children as vertical slices…"; add "group by content, not by size".
+- **`plan` → Sizing:** "Estimate first. If the estimate is above the review-load signal, say whether the child mixes separable concerns. If it does and the pieces could run in parallel, stop before writing the full plan and propose the split, each piece with its scenarios, estimate and claim. Otherwise plan it whole. Propose merging this child with one it depends on only when their content belongs together." Remove the size-driven merge-with-the-next-child rule and "If it is trivially small, propose a merge".
+- **`orchestrate` → Sizing and scope:** "reports the child over the epic's size limit, proposes a parallel split, or proposes a merge" → "proposes a split or a merge". Splits only into parallel lanes; a merge joins a child into the one it depends on when their content belongs together (not "consecutive serial children"). Record the new budget (C3) with the resize.
+- **`review` → epic mode:** "each is within the size limit and split below it only for parallel lanes" → "each is a cohesive slice with declared dependencies; any child above the review-load signal has a reason not to be split".
+- **`review` → plan mode:** "has an estimate within the size limit" → "states its estimate; above the review-load signal, says whether its concerns are separable".
+- **`review` → Earlier passes:** in the plan-mode list of allowed later majors, "size" → "cohesion".
 
-- **`orchestrate` → Recovery:** after a restart or crash, before launching anything, check the status of every run recorded as in flight in `state.json` and the stop record. Consume results of runs that finished while their completion notice was lost; resume or replace the others.
+### C4. Code-review pass 2 checks only the fixes (decision 5; F6)
 
-### C9. Environment checks (F4, F10)
+- **`orchestrate` → Per child, Implement loop:** each pass after pass 1 gets the range from the commit the previous pass reviewed to the implementer's tip (C10 records the reviewed commit per pass). If a merge into the child lies in that range, the task also names it.
+- **`review` → Earlier passes, code mode:** "After pass 1, review only the range you were given, and verify each open finding there. For a merge in the range, review only its conflict resolution (`git show --remerge-diff <merge>`), not the incoming changes." The existing rule on new findings after pass 1 (blockers, majors, or caused by a fix) stays.
+- **Same model** for every pass; no change to `implement` ("rerun only the gates the fix affects"); the ledger names the gates rerun and why.
 
-- **`assess-repo`:** check that
-  - test-service port ranges are outside the OS ephemeral port range or reserved from it, and that the harness refuses a base that isn't;
-  - agent sessions set `GIT_OPTIONAL_LOCKS=0` (background status calls left stale index locks);
-  - files that every child edits (requirement tables, test maps, indexes) are merge-friendly: one row or file per entry, or generated.
-- **`references/lanes.md` → The pool:** same three points as preconditions for lanes.
-- **`implement` → Gates and `orchestrate` → Don't:** don't rerun a gate on a tree identical to one where it passed (compare tree hashes in the ledger).
+### C5. Plan-review pass 2 only when needed (decision 6; F7)
 
-## 3. Pilot-repo work (tracked in that repository, not here)
+- **`review` → plan mode, Findings and Reply:** tag every major with a kind: `design`, `boundary`, `claims`, `scope`, `cohesion` (these need a re-check) or `tests`, `T1`, `wording` (these don't). End the reply with `pass 2 needed: yes|no` — `yes` if any blocker or any major of the first group.
+- **`plan` → Revising:** reply states whether any fix changed a contract (an interface, data shape, access rule or scenario), and lists rejected findings.
+- **`orchestrate` → Per child, Plan loop:** skip pass 2 only when the reviewer said `no`, the plan-author fixed every major and rejected none, and no fix changed a contract. Then append `approved after fixes, no pass 2` to the ledger and record it in `state.json`. Otherwise run pass 2 as today.
 
-- Reserve the E2E port range at the OS level (host configuration; the owner applies it) and cap the pool allocator inside the reserved range; the harness fails loudly if its base isn't reserved.
-- `GIT_OPTIONAL_LOCKS=0` in the repo's environment file.
-- Make the hot shared files merge-friendly (the requirements rows table and the E2E test map).
+### C6. Questions every plan answers where they apply (decision 7; F5, F13)
+
+**`plan` → plan.md:** each question is answered in the section named, in a line or "n/a". Keep "aim for under 150 lines".
+
+| Question | Section |
+|---|---|
+| Access and visibility: who can see and do what, including hidden or locked items; for each guard, its owning test | Design (rules), Tests (owning test per guard) |
+| Failure and concurrency: errors, retry, two users at once, live updates | Design, Tests |
+| Assumptions checked against the code: what the plan relies on exists; specs and files outside the edit list that the change affects | Context, Gates (T1) |
+| Limits and load, for read-heavy features: platform limits and fan-out | Design, Risks |
+| Deviations from the prototype or earlier decisions, with a reason | Design |
+| Deliverables: the outcomes the build must contain — scenarios, specs, UI behaviours (not tasks) | Done when |
+
+Test ownership stays as it is: one owning test per contract, at the boundary `test-quality` prescribes. The Don't rule becomes "Write task tables, execution tiers or step-by-step checklists (the Deliverables list of outcomes is not one)".
+
+**`skills/plan/references/plan-questions.md` (new):** per question, one or two lines on what a good answer looks like and when "n/a" is right.
+
+**`review` → plan mode:** a missing answer on access and visibility, failure and concurrency, or deliverables, where the child has that concern, is a major; on the others, a minor. Whether a planned guard test can fail stays a code-review check.
+
+### C7. Implementer handoff maps deliverables to evidence (decision 8; F5)
+
+- **`implement` → Handoff, ledger entry:** add "each Deliverable from the plan's Done when, with the file or test that delivers it, or *not done* with the reason". No extra test runs.
+- **`review` → code mode:** a Deliverable that is missing from the map, marked done but not delivered, or not done without an accepted deviation is a major.
+- **Not added:** an implementer break-it check (retro §4).
+
+### C8. Reconcile in-flight runs after a restart (decision 9; F11)
+
+- **`orchestrate` → State:** record every launch at launch time — run id, agent, child, phase, worktree, start — and mark it consumed when its result is read (C10).
+- Replace "On start, after compaction, or after a crash … resume whatever was in flight" with: read `state.json`, `git status` in every worktree in use and `git log`; then, for every launch not yet consumed, check its status:
+  - **finished:** consume the result (its completion notice may have been lost);
+  - **still running:** wait for it;
+  - **dead:** resume a writer (planner, implementer) per Recovery; relaunch a read-only run (reviewer, scout, helper).
+
+  Never start a writer in a worktree whose last writer isn't confirmed stopped. Record each restart in `stops`.
+
+### C9. Environment (decision 1; F4, F10)
+
+- **`assess-repo` → Scan, Important** (when the repo uses a worktree pool or parallel E2E):
+  - test-service port ranges are outside the OS ephemeral range or reserved from it, and the harness refuses a base that isn't;
+  - the dev environment sets `GIT_OPTIONAL_LOCKS=0` (background git reads otherwise leave stale index locks);
+  - files every child edits (requirement tables, test maps, registries) are merge-friendly: one row or file per entry, or generated. `epic.md` names them.
+- **`lanes.md` → The pool:** the same three as preconditions for lanes.
+- **Identical-tree reruns:** `implement` → Handoff records, per gate, `HEAD^{tree}` and the exact command line including selection. `implement` → Gates and `orchestrate` → Don't: don't rerun a gate whose tree and command line both match a passing run in the ledger.
+
+### C10. State fields (measurement, retro §6)
+
+`orchestrate` → State, per child: dependencies, `readyAt` (when the last dependency integrated), lane start, budget, scout outcome, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`; at the root: the launch list (C8). These feed §7 and replace ad-hoc state edits.
+
+## 4. Pilot-repo work (tracked there)
 
 Tracked in the pilot repo as #139 (ports), #140 (optional locks) and #141 (merge-friendly files).
 
-## 4. Not changed
-
-Plan-review pass 1 and code-review pass 1 (full, fresh, Opus); test and proof volume rules; minors non-blocking; group integration (D1); models, apart from D2. Not adopted: an external watchdog or automatic quota retry, orchestrator bookkeeping reduction (needs its own design), direct mode, an implementer break-it check. Paused: task-graph and layer-first decomposition.
-
 ## 5. Owner decisions (2026-10-16)
 
-- **D1. Integration stays once per group.** Per-member integration only helps when a later child depends on a subset of a group, and the pilot has no case where that cost critical-path time. One T1 per group is cheaper.
+- **D1. Integration stays once per group.** Per-member integration only helps when a later child depends on part of a group, and the pilot has no case where that cost critical-path time. One T1 per group is cheaper.
 - **D2. Implementer thinking back to high.** Medium showed no speed gain and more code majors per child (confounded by larger children). The pilot repo's agent settings are reverted; the skills don't name a thinking level.
-- **Pilot-repo tracker items** (§3) may be filed.
+- **Pilot-repo tracker items** (§4) filed.
 
-## 6. Measure (next epic vs pilot era D)
+**Proposed here, for the owner to confirm** (they follow from the decisions but were not decided explicitly):
+- **P-a. Every child is a lane when there is a pool** (§2). Needed for "start when dependencies are met" without special cases; every child then needs a claim.
+- **P-b. Plans merge into the work branch at approval; a needed refresh is done by a fresh plan-author in the lane worktree** (C1, C2). Frees planning worktrees early; the plan-author's state is on disk.
+- **P-c. Refresh runs end without `self_compact`** (C1). Their end-of-run compaction sat on the critical path.
+- **P-d. Drop the >20% estimate trigger for a second refresh pass** (C1). Estimates no longer drive splits.
+- **P-e. Budget = plan estimate's implementer hours × 1.5 plus fixed cost, set at plan approval** (C3). Estimates were off by up to 2.7×; a tight budget would stop mis-estimated children.
+- **P-f. Code pass 2 reads only the fix range** (C4), and plan pass 2 is skipped only under all of C5's conditions.
 
-Per child on the critical path: refresh (and how many refreshes the scout skipped), plan-review passes, code-review pass-2 minutes, integration minutes, and ready-to-start wait (from `readyAt`). Per epic: hot-file conflicts, port failures, stale-lock failures, code majors by kind (especially planned-not-built and untested guards), and children per epic vs content grouping.
+## 6. Not changed
 
-## 7. Rollout
+Plan-review pass 1 and code-review pass 1 (full, fresh, same model); test and proof volume rules and `test-quality`; minors non-blocking; group integration (D1); models, apart from D2. Not adopted: an external watchdog or automatic quota retry, orchestrator bookkeeping reduction (beyond C10's fixed fields), direct mode, an implementer break-it check. Paused: task-graph and layer-first decomposition.
 
-1. Edit the skills on a branch; `./tests/run-tests.sh fast`; check the text is generic (`grep -iE` for product names).
-2. Fresh review of this plan, then of the skill diff (pass cap 4).
-3. Push with the owner's OK; flake bump and session restart. Applies from the next epic, or from a clean point in a running one.
+## 7. Measure (next epic vs pilot era D)
+
+From `state.json` (C10): per child on the critical path — ready-to-start wait, refresh (and scouts that skipped it), plan-review passes and pass-2 skips, code-review pass-2 minutes, integration minutes; per epic — children vs content grouping, hot-file conflicts, port and stale-lock failures, code majors by kind (especially missing deliverables and untested guards).
+
+## 8. Rollout
+
+1. Edit the skills on this branch, then `node tools/render-skills.mjs --write` and commit `dist/`.
+2. `./tests/run-tests.sh fast`; `grep -iE` for product names.
+3. Fresh review of the skill diff against this plan (pass cap 4).
+4. Push with the owner's OK; flake bump and session restart. Applies from the next epic.

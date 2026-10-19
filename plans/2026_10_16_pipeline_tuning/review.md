@@ -233,3 +233,26 @@ The next epic can't be measured against era D without those.
 - Say in one or two lines what `plan-questions.md` holds: per question, what a good answer and an n/a look like.
 
 **Verdict:** changes needed — 0 blocker, 12 major, 7 minor.
+
+## author response to pass 1
+
+All findings addressed in the plan revision; section numbers refer to the revised plan.
+- P1-01: §2 one execution model — with a pool every child is a lane (non-members are groups of one), start rule includes disjoint claims across running children, no-pool fallback is serial in child order.
+- P1-02: C2 lists each child-order rule with its replacement (checkpoint gating in integration order, placement, Close steps 1/4/6/7, epic close, checkpoint-failures step 2).
+- P1-03: C2 Planning — trigger, two worktrees, lowest-numbered first, every child plans in a planning worktree, plan branch merges at approval; `plan` → Inputs edit.
+- P1-04: C1 Start step — range from the plan-merge commit to the recorded base (lane cut at the tip, so the base cannot move), scout checks every plan section plus entry, Decisions, Follow-ups, dependency ledgers and checkpoint merges, says `relevant` when unsure, commits on the lane branch; `implement` reads the note.
+- P1-05: C1 gives the full replacement and states what is dropped and why; size check routed to C3.
+- P1-06: C3 `scope` → Budget (×1.5 margin, set at plan approval, updated at refresh/resize, in `state.json`; Bounds reads it). Margin listed as P-e for the owner.
+- P1-07: C3 gives replacement text per location.
+- P1-08: C5 — reviewer tags major kinds and states `pass 2 needed`; skip conditions include no blockers, no rejections, no contract change; recorded.
+- P1-09: C6 keeps `test-quality`'s boundary rule; the "lowest layer" wording is gone.
+- P1-10: C6 — Deliverables are outcomes in Done when, checklist ban amended; each question mapped to a section; guard item asks for the owning test only.
+- P1-11: C4 — range from the previous pass's reviewed commit; merges reviewed by remerge-diff only.
+- P1-12: C8 — launch list in `state.json`, reconcile procedure replaces the State recovery line, no second writer, restarts recorded in `stops`.
+- P1-13: C9 — tree hash and exact command line per gate; skip only when both match.
+- P1-14: C9 — Important tier, conditional on pool or parallel E2E. Setting the variable in the Pi module is not taken up: it would change git behaviour for every shell on the machine; the per-repo check plus the pilot repo's item is enough.
+- P1-15: §5 "Proposed here, for the owner to confirm" (P-a … P-f).
+- P1-16: skill text carries rules only (§1 note); pilot evidence removed from C1 and C5.
+- P1-17: C7 covers missing, falsely done and unexplained not-done deliverables.
+- P1-18: C10 state fields.
+- P1-19: §8 render step; C6 specifies `plan-questions.md`.
