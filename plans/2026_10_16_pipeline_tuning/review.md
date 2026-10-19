@@ -603,3 +603,23 @@ All fixed as suggested:
 - S1-08: A's claim widened in the B-running branch.
 - S1-09: merging a green checkpoint starts the next one if it is ready.
 - S1-10: initial hours-per-1k-lines rate, replaced by the calibrated one.
+
+## code pass 2 (skills)
+
+Scope: `git diff 02607f0 6839ec3 -- skills/ plans/2026_10_16_pipeline_tuning/plan.md`. `node tools/render-skills.mjs --check`: `dist/` is in sync (159 files). `./tests/run-tests.sh fast`: passes.
+
+**Pass-1 findings (checked in the skill text):**
+- S1-01: resolved. `lanes.md:13` now stops for the human as an environment failure when not even one member can start (memory, disk), and `:15` ends a rate-limit drop when no lane is running, so capacity can't stay at zero. `orchestrate/SKILL.md:121` lists it under Stop. `plan.md` §2 records the deviation and matches the skill.
+- S1-02: resolved. `orchestrate/SKILL.md:114`: the pieces form a new group of their own, with the child's dependencies, and start under the normal rule. A split at Start releases the child's lane, and the old group integrates without it, which is an explicit exception to `lanes.md:29`. The pieces no longer need worktrees inside a running group, so the deadlock is gone.
+- S1-03: resolved. `orchestrate/SKILL.md:39`: without a pool, the plan merges between children, before this child's Start, so the Start base and the scout range include it. `plan/SKILL.md:57` names the work-branch worktree when there is no pool. Note: `orchestrate/SKILL.md:67` (Planning → Plan changes after approval) still says "the child's lane worktree". Start step 4 ("in that worktree") governs the refresh, so this is wording only. Fix it the next time that file is touched.
+- S1-04: resolved. `lanes.md:7` covers waits for worktrees or lane capacity (count, memory).
+- S1-05: resolved. `implement/SKILL.md:35` also ignores plan directories, so it matches `orchestrate/SKILL.md:134` and C9.
+- S1-06: resolved. `lanes.md:19` now says "Checks", and they are recorded as known risks. Plan C9 says the same. No "precondition" wording remains in `skills/`.
+- S1-07: resolved. `review/SKILL.md:15` adds the checks for group size, `maxLanes` ≤ pool size and overlapping sibling claims.
+- S1-08: resolved. `lanes.md:50`: the B-running branch now widens A's claim under Decisions.
+- S1-09: resolved. `orchestrate/SKILL.md:78`: merging a green checkpoint starts the next checkpoint if its child and that child's dependencies are integrated.
+- S1-10: resolved. `scope/SKILL.md:56`: record an initial implementer-hours-per-1k-lines rate, then replace it with the calibrated rate.
+
+**New findings:** none. No fix introduced a blocker or major.
+
+**Verdict:** approved. 0 blocker, 0 major, 0 minor.
