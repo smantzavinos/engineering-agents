@@ -467,3 +467,10 @@ Scope: `plan.md` at baade9d, checked against the current `orchestrate` (+ `lanes
 - **B is running or finished:** A stops as written. It keeps its lane branch and worktree. Once B integrates, it merges the work branch into its lane (`orchestrate` → Merging into an unfinished child) and continues on that new base. This can't hang, because B already holds its worktrees and will integrate.
 
 **Verdict:** changes needed — 0 blocker, 2 major (P3-02 open, P4-01), 0 minor.
+
+## author response to pass 4
+
+Applied the reviewer's fixes as written:
+- P3-02: `maxLanes` ≤ pool size (§2, `scope`); stop for a re-scope when no lane is running and the lowest-numbered ready unit still can't start; rate-limit drop lasts "until the next unit starts".
+- P4-01: direction rule — unstarted B gets the dependency and A continues; running/finished B: A leaves its group, keeps lane and worktree, merges the work branch after B integrates and continues. Leaving the group avoids A waiting on its own group's integration.
+- Note from P3-01: the two `lanes.md` → Integrating clauses about the removed gate are listed for removal in C2.

@@ -15,7 +15,7 @@ Skill text stays generic and concise: rules only, no pilot statistics. Evidence 
 One model replaces "serial children in the work-branch worktree, lanes for groups":
 
 - **With a worktree pool, every child runs as a lane:** in its own pool worktree, on a lane branch cut from the work-branch tip, and integrated through `lanes.md` → Integrating. A child that is in no group is a group of one. The work-branch worktree holds only the orchestrator's files, plan merges and integration merges.
-- **A unit starts** — a group, or a child in no group (a group of one) — when every child its members depend on is integrated and a pool worktree is free for each member. Members start together and integrate together (D1). A group may have at most `maxLanes` members (`scope`). A lane counts as running until it is integrated.
+- **A unit starts** — a group, or a child in no group (a group of one) — when every child its members depend on is integrated and a pool worktree is free for each member. Members start together and integrate together (D1). A group may have at most `maxLanes` members, and `maxLanes` is at most the pool size (`scope`). A lane counts as running until it is integrated. If no lane is running and the lowest-numbered ready unit still can't start (memory check, a rate-limit lane drop), stop for a re-scope of that group under Decisions.
 - **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees, no later unit starts, so a group can't be starved.
 - **Claims:** two units whose claims overlap are never running at once (one waits until the other integrates). Within a group, claims don't overlap (as today).
 - **A group of one integrates by a plain merge** when the work branch has changed since the lane's base only in the orchestrator's files and plan directories: merge the lane branch into the work branch, with no integration worktree, integration branch or T1. This is the serial case today, with the lane's own T1 as the proof. Otherwise, the full `lanes.md` → Integrating procedure applies.
@@ -68,11 +68,17 @@ The old "only names and paths changed: no review" exemption and the ">20% estima
   - When the loop is approved, merge the plan branch into the work branch (it touches only the child's directory) unless a group integration is in progress; then the planning worktree is free.
   - Plans written before a dependency is built use that dependency's approved plan in place of its code (as today).
 - **`plan` → Inputs:** "the previous child's directory" → "the plans and ledgers of the children it depends on".
-- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. Claims must not overlap within a group; across groups they may, and the start rule keeps overlapping children from running at once. A group has at most `maxLanes` members. The epic review checks both. `scope` → Steps 3 points to the review-load signal (C3) instead of "Size limit".
+- **`scope` → epic.md:** each child lists its dependencies (the real dependency record) and, with a pool, a claim. Claims must not overlap within a group; across groups they may, and the start rule keeps overlapping children from running at once. A group has at most `maxLanes` members, and `maxLanes` is at most the pool size. The epic review checks both. `scope` → Steps 3 points to the review-load signal (C3) instead of "Size limit".
 - **Claims for every child** (with a pool):
   - `plan` → Claims: "every child, when the epic has a pool" (not only group members);
   - `review` → plan mode: "claims stay inside the `epic.md` claim; for a group member, they don't overlap its siblings'";
-  - `lanes.md` → Claims, replacing "runs serially after the group": a child that needs files outside its claim reports it. If no unintegrated child that is not ordered with it (neither depends on the other) claims those files, the orchestrator widens the claim in `epic.md` under Decisions and the child continues. Otherwise the child's lane stops: under Decisions it leaves its group if it has one and gets a dependency on the overlapping child, and it restarts as a unit of one after that child integrates (C1's Start step, on a new base). Adding a dependency between two unordered children can't create a cycle.
+  - `lanes.md` → Claims, replacing "runs serially after the group": a child (A) that needs files outside its claim reports it. If no unintegrated child that is not ordered with it (neither depends on the other) claims those files, the orchestrator widens the claim in `epic.md` under Decisions and the child continues. Otherwise, under Decisions, with B the overlapping child:
+    - **B has not started:** B gets a dependency on A and leaves its group if it has one; A's claim is widened and A continues.
+    - **B is running or finished:** A gets a dependency on B and leaves its group if it has one. A keeps its lane branch and worktree and waits; once B integrates, A merges the work branch into its lane (`orchestrate` → Merging into an unfinished child) and continues. B already holds its worktrees, so this can't hang.
+
+    Adding a dependency between two unordered children can't create a cycle.
+  - `lanes.md` → Starting lanes: the rate-limit rule drops one lane "until the next unit starts" (not "until the next group").
+  - `lanes.md` → Integrating: remove the two clauses that refer to the removed checkpoint gate ("Checkpoints step 2 allows every member to integrate"; "for Checkpoints step 2 the group counts as one child").
 - **`state.json`:** see C10.
 
 ### C3. Group children by content, not size (decision 4; F3)
