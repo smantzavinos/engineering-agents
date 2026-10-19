@@ -474,3 +474,25 @@ Applied the reviewer's fixes as written:
 - P3-02: `maxLanes` ≤ pool size (§2, `scope`); stop for a re-scope when no lane is running and the lowest-numbered ready unit still can't start; rate-limit drop lasts "until the next unit starts".
 - P4-01: direction rule — unstarted B gets the dependency and A continues; running/finished B: A leaves its group, keeps lane and worktree, merges the work branch after B integrates and continues. Leaving the group avoids A waiting on its own group's integration.
 - Note from P3-01: the two `lanes.md` → Integrating clauses about the removed gate are listed for removal in C2.
+
+## plan pass 5
+
+Scope: `plan.md` at 562d2e7 (diff from baade9d), checked against the current `lanes.md` and `orchestrate` → Where work runs. Open findings were verified in the plan text. New findings are limited to blockers and majors that the latest revision caused.
+
+### Open findings
+- P3-02: **resolved.** §2 and C2 `scope` both state "`maxLanes` is at most the pool size", so a group (≤ `maxLanes` members) always fits the pool. §2 adds the stop: "If no lane is running and the lowest-numbered ready unit still can't start (memory check, a rate-limit lane drop), stop for a re-scope of that group under Decisions", which ends the only remaining hang. C2 restates the rate-limit rule as "until the next unit starts". Note for the skill edit, not a finding: with no lane running, a rate-limit drop that still applies turns a transient error into a human stop for a full-size group. That is an acceptable trade-off for the simple rule. If it proves noisy, end the drop when no lane is running.
+- P4-01: **resolved.** C2 `lanes.md` → Claims now has the direction rule:
+  - **unstarted B:** B gets the dependency on A and leaves its group, and A's claim is widened and A continues. Because members start together, an unstarted B is never A's running sibling.
+  - **running or finished B:** A gets the dependency, leaves its group, keeps its lane branch and worktree, and merges the work branch after B integrates (`orchestrate` → Merging into an unfinished child).
+
+  Checked for hangs:
+  - B's integration gets the checkpoint worktree, or needs no worktree as a group-of-one plain merge.
+  - Leaving the group means A doesn't wait on its own group.
+  - In a mutual overlap, the second report finds A already ordered after B, so B is widened instead of creating a cycle.
+
+  C2 also lists the two leftover `lanes.md` → Integrating clauses about the removed gate for removal.
+
+### New findings
+None.
+
+**Verdict:** approved — 0 blocker, 0 major, 0 minor.
