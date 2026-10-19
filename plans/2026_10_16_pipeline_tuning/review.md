@@ -496,3 +496,96 @@ Scope: `plan.md` at 562d2e7 (diff from baade9d), checked against the current `la
 None.
 
 **Verdict:** approved — 0 blocker, 0 major, 0 minor.
+
+## code pass 1 (skills)
+
+Scope: `git diff 6ee5cf7 02607f0 -- skills/` against `plan.md` (§2, C1–C10, §5). `node tools/render-skills.mjs --check`: `dist/` is in sync. `./tests/run-tests.sh fast`: passes. The diff has no product names or pilot statistics.
+
+**Coverage:** C1–C10 are all present. The leftovers named in plan pass 4 (the two `lanes.md` → Integrating clauses about the checkpoint gate) are gone. No references remain to the size limit, plan ahead, serial children with a pool, child-order gating or old Close step numbers. The remaining uses of "child order" are inside a group, where they are correct.
+
+**Deviation (split instead of stop, `lanes.md:13`):** sound in principle. Group members have no dependencies among them and disjoint claims, so any partition of a group is a valid grouping. The cost is one extra group T1, and the regrouping is a resize recorded under Decisions. One gap remains, in S1-01. Also record the deviation in `plan.md` §2, so that the plan and the skills agree.
+
+### S1-01: major. The split rule has no exit when not even one lane can start
+**Location:** `skills/orchestrate/references/lanes.md:13`, `:15`.
+**Problem:** The rule "if no lane is running and the next ready unit still can't start (memory, a rate-limit drop), split its group into groups that fit" only helps a group of two or more where at least one member fits. It does nothing in these cases:
+- the unit is a group of one;
+- free memory or disk is below what one lane needs;
+- rate-limit drops have reduced capacity to zero (for example `maxLanes` 1 and one drop, or repeated drops).
+
+"Drop one lane until the next unit starts" can't end if no unit can start. The approved plan stopped for the human here. The new text has no stop, so the run hangs silently.
+**Fix:** Add two rules:
+- a rate-limit drop also ends when no lane is running;
+- if no lane is running and not even one member of the next ready unit can start (memory, disk), stop for the human as an environment failure. Add it to `orchestrate` → Stop for the human.
+
+Keep the split for groups where a subset fits.
+
+### S1-02: major. A split at refresh can deadlock a running group
+**Location:**
+- `skills/orchestrate/SKILL.md:46` (Start 4: "above the review-load signal, see Sizing and scope");
+- `:114` ("pieces of a group member join its group", each with its own plan loop);
+- `lanes.md:6`, `:9` (members start together; a lane holds its worktree until integrated).
+
+**Problem:** Refresh now runs after the unit has started, inside the lane. If a member of a running group is split there, the pieces join a group that has already started, so they can't "start together" with it. Each piece needs its own worktree. Nothing says the original lane is released.
+
+Take a group of `maxLanes` = pool size: every worktree is held by members, and those members can't integrate until the pieces are approved. The pieces never get worktrees, the group never integrates, and the order rule blocks every later unit. The group also exceeds `maxLanes`.
+**Fix:** In `orchestrate` → Sizing and scope, add: "A split at refresh releases the child's lane. Its pieces leave any running group and form a new group, which starts under the normal start rule." The other option is to forbid splitting at refresh once the unit has started, and plan it whole.
+
+### S1-03: major. Without a pool, nothing says when an approved plan merges
+**Location:** `skills/orchestrate/SKILL.md:39` against `:28` and `:32`; old Close step 1 was removed.
+**Problem:**
+- Per child step 1 merges the plan branch into the work branch at approval. The only exception is a group integration in progress.
+- Without a pool, the previous child's implementer or reviewer is usually running in the work-branch worktree at that moment. Where work runs then forbids git commands there, and allows merges only between children.
+- The old Close step 1 ("If the next child was planned ahead, merge the plan branch") was the no-pool merge point, and it was removed without a replacement.
+
+Start step 1 uses the work-branch HEAD as the base, and the scout range assumes that the plan is in it. The orchestrator therefore either merges into a busy worktree or starts a child whose plan isn't on its base.
+
+`plan/SKILL.md:57` also says that refresh runs "in the child's lane worktree", which doesn't exist without a pool.
+**Fix:**
+- In step 1 → Approved, say "without a pool, merge it between children, before the next child's Start".
+- In `plan` → Refresh, say "in the child's worktree (its lane, or the work-branch worktree without a pool)".
+
+### S1-04: minor. Only a worktree wait blocks later units
+**Location:** `lanes.md:7`.
+**Problem:** "While the lowest-numbered ready unit waits for worktrees, no later unit starts." If it waits instead for lane count (when `maxLanes` is below the pool size) or for memory, a stream of later groups of one can keep taking the capacity it needs. That is the starvation §2 meant to prevent.
+**Fix:** Change the rule to "waits for worktrees or lane capacity (count, memory)".
+
+### S1-05: minor. The two identical-tree rules exclude different paths
+**Location:** `skills/implement/SKILL.md:35` against `skills/orchestrate/SKILL.md:134` (and C9).
+**Problem:** `implement` ignores only "the orchestrator's files". C9 and `orchestrate` also ignore plan directories. The implementer's own ledger commits change `HEAD^{tree}`, so with the narrower rule an implementer's reruns almost never match. Most of C9's saving is lost, and the two skills disagree.
+**Fix:** In `implement`, write "ignoring the orchestrator's files and plan directories".
+
+### S1-06: minor. Pool "preconditions" are downgraded to known risks, which the plan didn't approve
+**Location:** `lanes.md:19`.
+**Problem:** C9 makes the three environment checks preconditions for lanes. The skill adds "Missing ones go under `epic.md` Decisions as known risks", so lanes run anyway. A "precondition" that doesn't block contradicts its own name.
+**Fix:** Pick one and make the plan match:
+- they block lanes (no pool until fixed);
+- or call them "checks" and keep the risk-recording sentence.
+
+### S1-07: minor. The epic review doesn't check group bounds or sibling claims
+**Location:** `skills/review/SKILL.md:14`.
+**Problem:** C2 says "The epic review checks both": a group has at most `maxLanes` members, `maxLanes` is at most the pool size, and claims don't overlap within a group. Epic mode checks only that claims exist.
+- Overlap between siblings isn't caught at run time, because the start rule only compares units.
+- An oversized group falls through to the run-time split.
+
+**Fix:** Add to the epic-mode list: "groups have at most `maxLanes` members, `maxLanes` is at most the pool size, and members' claims don't overlap".
+
+### S1-08: minor. When B is running, A's claim is never widened
+**Location:** `lanes.md:50`.
+**Problem:** In the "B is running or finished" branch, A goes on to edit B's files after B integrates, but `epic.md` still records A's old claim. A later child that claims those files and is unordered with A can then start while A runs, which defeats the claim rule. The plan text has the same omission.
+**Fix:** End the branch with "…and continues; widen A's claim under Decisions."
+
+### S1-09: minor. Nothing starts a waiting checkpoint when the earlier one merges
+**Location:** `skills/orchestrate/SKILL.md:54`, `:86`.
+**Problem:** Close step 3 starts checkpoints only when an integration happens. Now that checkpoints don't gate integration, checkpoint C+1's child often integrates while C is still running. C+1 then waits ("the run for C+1 waits until C is green and merged"), but no rule starts it when C merges. Unless another integration happens, it never runs, and its regressions surface only at epic close.
+**Fix:** In Checkpoints step 2 → Merge, add: "then start the next checkpoint if its child and that child's dependencies are integrated."
+
+### S1-10: minor. The provisional budget has no lines-to-hours rate
+**Location:** `skills/scope/SKILL.md:34`, `:56–57`.
+**Problem:**
+- The budget is "implementer hours for the plan's estimate × 1.5", and is set provisionally from the `epic.md` entry, whose estimate is in changed lines only.
+- The old Size limit recorded the implementer model's hours next to the line count. The review-load signal now only says to calibrate from the first children's actuals.
+
+So before the first child finishes, nothing converts lines into the hours that the budget and launch deadlines need.
+**Fix:** Under the review-load signal, record an initial implementer-hours-per-line rate, replaced by the calibrated rate. Or give each child entry a rough estimate in hours as well.
+
+**Verdict:** changes needed. 0 blocker, 3 major (S1-01 to S1-03), 7 minor.
