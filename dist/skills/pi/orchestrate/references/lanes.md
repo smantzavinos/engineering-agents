@@ -4,19 +4,19 @@ Read this when the repo has a worktree pool (`epic.md` Gates says which repo sup
 
 ## Starting lanes
 - **A unit** (a group, or a child in no group) **starts** when every child its members depend on is integrated, each member's plan is approved, and a pool worktree is free for each member. Its members start together, each in its own pool worktree, on its own lane branch off the same work-branch commit. Its implementer, reviewers and helpers all launch with their cwd in that worktree.
-- **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees, no later unit starts.
+- **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees or lane capacity (count, memory), no later unit starts.
 - **Claims:** a unit whose claims overlap those of a running unit waits until that unit integrates.
 - **Running:** a lane counts as running until it is integrated, and holds its worktree until then.
 - **Before each lane starts,** check:
   - free memory, about 6 GB per lane;
   - disk, against the repo's floor in `epic.md` Gates.
-- **Lane count:** at most `maxLanes` lanes run at once (at most the pool size). If no lane is running and the next ready unit still can't start (memory, a rate-limit drop), split its group into groups that fit and record it under Decisions.
+- **Lane count:** at most `maxLanes` lanes run at once (at most the pool size). If no lane is running and the next ready unit still can't start, split its group into groups that fit and record it under Decisions. If not even one member can start (memory, disk), stop for the human as an environment failure.
 - **E2E workers:** split the machine-wide budget (`epic.md`, default cores ÷ 4) across the running lanes and the checkpoint run. Pass each lane its E2E worker count in the task.
-- **Rate limits:** on model rate-limit errors, drop one lane until the next unit starts.
+- **Rate limits:** on model rate-limit errors, drop one lane until the next unit starts, or until no lane is running.
 
 ## The pool
 The pool is created once with the repo's worktree tooling, then reused.
-- **Preconditions:** test-service ports outside the OS ephemeral range (or reserved from it), `GIT_OPTIONAL_LOCKS=0` in the dev environment, and merge-friendly files for anything every child edits (`assess-repo`). Missing ones go under `epic.md` Decisions as known risks.
+- **Checks:** test-service ports outside the OS ephemeral range (or reserved from it), `GIT_OPTIONAL_LOCKS=0` in the dev environment, and merge-friendly files for anything every child edits (`assess-repo`). Missing ones go under `epic.md` Decisions as known risks.
 - **To reuse a worktree:**
   - switch it to a new branch at the base;
   - reinstall only if the lockfile changed;
@@ -47,7 +47,7 @@ Integrate on an integration branch, so the work branch only moves forward.
   - If no unintegrated child that isn't ordered with A (neither depends on the other) claims those files, widen A's claim under Decisions; A continues.
   - Otherwise, with B the child that claims them, record under Decisions:
     - **B has not started:** B gets a dependency on A and leaves its group if it has one. Widen A's claim; A continues.
-    - **B is running or finished:** A gets a dependency on B and leaves its group if it has one. A keeps its lane and worktree and waits; once B integrates, A merges the work branch into its lane (`orchestrate` → Merging into an unfinished child) and continues.
+    - **B is running or finished:** A gets a dependency on B and leaves its group if it has one. A keeps its lane and worktree and waits; once B integrates, A merges the work branch into its lane (`orchestrate` → Merging into an unfinished child) and continues. Widen A's claim under Decisions.
 
 ## Checkpoints in lane mode
 - Checkpoint fixes happen on the checkpoint branch (`checkpoint-failures.md`), never in a lane worktree.

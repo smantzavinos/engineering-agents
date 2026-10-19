@@ -15,7 +15,7 @@ Skill text stays generic and concise: rules only, no pilot statistics. Evidence 
 One model replaces "serial children in the work-branch worktree, lanes for groups":
 
 - **With a worktree pool, every child runs as a lane:** in its own pool worktree, on a lane branch cut from the work-branch tip, and integrated through `lanes.md` → Integrating. A child that is in no group is a group of one. The work-branch worktree holds only the orchestrator's files, plan merges and integration merges.
-- **A unit starts** — a group, or a child in no group (a group of one) — when every child its members depend on is integrated and a pool worktree is free for each member. Members start together and integrate together (D1). A group may have at most `maxLanes` members, and `maxLanes` is at most the pool size (`scope`). A lane counts as running until it is integrated. If no lane is running and the lowest-numbered ready unit still can't start (memory check, a rate-limit lane drop), stop for a re-scope of that group under Decisions.
+- **A unit starts** — a group, or a child in no group (a group of one) — when every child its members depend on is integrated and a pool worktree is free for each member. Members start together and integrate together (D1). A group may have at most `maxLanes` members, and `maxLanes` is at most the pool size (`scope`). A lane counts as running until it is integrated. If no lane is running and the lowest-numbered ready unit still can't start, split its group into groups that fit (a resize, recorded under Decisions); if not even one member can start, stop for the human as an environment failure. A rate-limit lane drop ends when no lane is running. *(Changed during the skill edit: the plan first said stop for a re-scope.)*
 - **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees, no later unit starts, so a group can't be starved.
 - **Claims:** two units whose claims overlap are never running at once (one waits until the other integrates). Within a group, claims don't overlap (as today).
 - **A group of one integrates by a plain merge** when the work branch has changed since the lane's base only in the orchestrator's files and plan directories: merge the lane branch into the work branch, with no integration worktree, integration branch or T1. This is the serial case today, with the lane's own T1 as the proof. Otherwise, the full `lanes.md` → Integrating procedure applies.
@@ -147,7 +147,7 @@ Test ownership stays as it is: one owning test per contract, at the boundary `te
   - test-service port ranges are outside the OS ephemeral range or reserved from it, and the harness refuses a base that isn't;
   - the dev environment sets `GIT_OPTIONAL_LOCKS=0` (background git reads otherwise leave stale index locks);
   - files every child edits (requirement tables, test maps, registries) are merge-friendly: one row or file per entry, or generated. `epic.md` names them.
-- **`lanes.md` → The pool:** the same three as preconditions for lanes.
+- **`lanes.md` → The pool:** the same three as checks for lanes; missing ones are recorded under `epic.md` Decisions as known risks.
 - **Identical-tree reruns:** `implement` → Handoff records, per gate, `HEAD^{tree}` and the exact command line including selection. `implement` → Gates and `orchestrate` → Don't: don't rerun a gate whose tree and command line both match a passing run in the ledger. Trees are compared ignoring the orchestrator's files and plan directories.
 
 ### C10. State fields (measurement, retro §6)

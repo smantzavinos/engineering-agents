@@ -54,7 +54,7 @@ Aim for under 150 lines.
 - **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply. The orchestrator widens the claim or orders the child after the one that holds it.
 
 ## Refresh
-A fresh session, started in the child's lane worktree when the scout found integrated changes the plan relies on.
+A fresh session, started in the child's worktree (its lane, or the work-branch worktree without a pool) when the scout found integrated changes the plan relies on.
 1. Read the `## refresh scout` note in the ledger, the plan and the ledger.
 2. Check the plan against what the note names: the integrated code, `epic.md` changes and any checkpoint merge.
 3. Update what changed, including the estimate, and commit it as one refresh commit. Its review covers only that commit.

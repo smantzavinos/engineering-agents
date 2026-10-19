@@ -36,7 +36,7 @@ One writer per worktree at any time.
 ## Per child
 1. **Plan** (see Planning). Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md`, and the plans and ledgers of the children it depends on. It writes `NN_slug/plan.md` and replies. Set the child's provisional budget (`epic.md` → Budget). Then loop:
    - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
-   - **Approved:** copy the plan's Follow-ups into `epic.md`, set the budget from the plan's estimate, and merge the plan branch into the work branch (unless a group integration is running; then right after it). The planning worktree is free.
+   - **Approved:** copy the plan's Follow-ups into `epic.md`, set the budget from the plan's estimate, and merge the plan branch into the work branch: with a pool, at once (or right after a running group integration); without one, between children, before this child's Start. The planning worktree is then free.
    - **Changes needed after pass 1:** resume the same plan-author with the ledger path and pass number. Skip pass 2 only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract. Then append `approved after fixes, no pass 2` to the ledger, record it, and treat the plan as approved.
    - Otherwise resume the plan-author and review again.
 2. **Start**, once the child's unit may start (`references/lanes.md` → Starting lanes; without a pool, when the previous child has closed):
@@ -75,7 +75,7 @@ One writer per worktree at any time.
    - After a disk check, a helper runs every gate with the given E2E worker count.
    - Children go on meanwhile.
 2. **Green** means the full gates passed on the checkpoint branch's tip. Targeted reruns don't count.
-   - **Merge** the green branch into the work branch at the next clean point (see Where work runs).
+   - **Merge** the green branch into the work branch at the next clean point (see Where work runs). Then start the next checkpoint if its child and every child it depends on are integrated.
    - **On a conflict,** abort the merge, then:
      - **If a stopped child is in the work-branch worktree** (no pool): resume its implementer. It merges the green tip, resolves the conflict, and carries on. The resolution is part of its own diff from the new base, so its normal T1 and code review cover it.
      - **Otherwise:**
@@ -111,14 +111,14 @@ One writer per worktree at any time.
 
 ## Sizing and scope
 - **A planner that proposes a split or a merge:** do it, as long as scope and acceptance scenarios are unchanged, and record it under Decisions with the new budgets. That is a resize, not a scope change.
-  - **Split:** only when the child's concerns are separable and the pieces can run as parallel lanes, so only with a worktree pool. The pieces become separate children (`NNa`, `NNb`), each a vertical slice ending in a scenario that can be tested, with its own claim, plan loop, review and close. Write them into `epic.md` as a group; pieces of a group member join its group.
+  - **Split:** only when the child's concerns are separable and the pieces can run as parallel lanes, so only with a worktree pool. The pieces become separate children (`NNa`, `NNb`), each a vertical slice ending in a scenario that can be tested, with its own claim, plan loop, review and close. Write them into `epic.md` as a new group of their own, with the child's dependencies; it starts under the normal start rule. A split at Start releases the child's lane, and the rest of its old group integrates without it.
   - **Merge:** a child into the one it depends on, when their content belongs together; never a group member. The merged child keeps the first child's number, and its entry and scenarios are the union of both.
 - A discovery that invalidates a completed child: fold the rework into the current or next plan when scope holds, and record it. If it drops a scenario or contradicts the epic, stop.
 
 ## Stop for the human only when
 - A discovery contradicts the agreed scope or a premise of the prototype, or the scope would change.
 - An action is destructive or irreversible, or touches shared infrastructure, production data, or pushes and merges the epic did not pre-authorize.
-- A loop hits its cap, a child exceeds its budget, or an environment failure persists.
+- A loop hits its cap, a child exceeds its budget, or an environment failure persists (including a unit that can't start, `references/lanes.md`).
 - A gate failure can't be fixed and isn't in the baseline digest.
 - The planner reports a course-setting decision where the oracle saw no clearly better option.
 

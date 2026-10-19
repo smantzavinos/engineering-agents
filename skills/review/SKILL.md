@@ -12,6 +12,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 - **epic:** `epic.md` against `PROTOTYPE.md`. Check that:
   - the scope is complete, and the gaps the prototype skipped are addressed;
   - each child is a cohesive slice with declared dependencies and, with a worktree pool, a claim; any child above the review-load signal has a reason not to be split;
+  - groups have at most `maxLanes` members, `maxLanes` is at most the pool size, and members' claims don't overlap;
   - every acceptance scenario has an owner;
   - gates, budgets and pre-authorizations are explicit enough to run unattended.
 - **plan:** `plan.md` against its epic entry. Check that it:

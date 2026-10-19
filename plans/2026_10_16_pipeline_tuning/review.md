@@ -589,3 +589,17 @@ So before the first child finishes, nothing converts lines into the hours that t
 **Fix:** Under the review-load signal, record an initial implementer-hours-per-line rate, replaced by the calibrated rate. Or give each child entry a rough estimate in hours as well.
 
 **Verdict:** changes needed. 0 blocker, 3 major (S1-01 to S1-03), 7 minor.
+
+## author response to code pass 1 (skills)
+
+All fixed as suggested:
+- S1-01: rate-limit drop also ends when no lane is running; if not even one member can start, stop for the human as an environment failure (`lanes.md`, `orchestrate` → Stop). Deviation recorded in plan §2.
+- S1-02: split pieces form a new group of their own with the child's dependencies and start under the normal rule; a split at Start releases the child's lane and the old group integrates without it.
+- S1-03: without a pool, the plan merges between children before the child's Start; `plan` → Refresh names the work-branch worktree without a pool.
+- S1-04: order rule covers waits for worktrees or lane capacity.
+- S1-05: `implement` ignores plan directories too.
+- S1-06: "checks" with the risk-recording sentence; plan C9 updated.
+- S1-07: epic review checks group size, `maxLanes` ≤ pool and sibling claim overlap.
+- S1-08: A's claim widened in the B-running branch.
+- S1-09: merging a green checkpoint starts the next one if it is ready.
+- S1-10: initial hours-per-1k-lines rate, replaced by the calibrated one.

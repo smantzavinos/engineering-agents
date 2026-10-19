@@ -32,7 +32,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
    - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
    - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.
    - **Delegation:** a helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
-2. Fix the failures. Rerun only what failed and what the fix touches. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files) and exact command line match a passing run in the ledger.
+2. Fix the failures. Rerun only what failed and what the fix touches. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files and plan directories) and exact command line match a passing run in the ledger.
 3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child.
 
 A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. The same goes for a failure you were told is being fixed on a checkpoint branch. If you are steered to stop, commit and reply. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
