@@ -256,3 +256,113 @@ All findings addressed in the plan revision; section numbers refer to the revise
 - P1-17: C7 covers missing, falsely done and unexplained not-done deliverables.
 - P1-18: C10 state fields.
 - P1-19: §8 render step; C6 specifies `plan-questions.md`.
+
+## plan pass 2
+
+Scope: revised `plan.md` (376ccb0), checked against the current text of `orchestrate` (+ `lanes.md`, `checkpoint-failures.md`), `scope`, `plan`, `implement`, `review`, `assess-repo` and `test-quality`. Pass-1 findings were verified in the plan text, not the response. New findings are limited to blockers and majors, plus minors the revision caused.
+
+### Pass-1 findings
+- P1-01: resolved. §2 picks one model: with a pool, every child is a lane and a non-member is a group of one. The start rule includes disjoint claims across running children, and the no-pool fallback is stated. The model introduces new problems (P2-01–P2-04).
+- P1-02: resolved. Each child-order rule has a replacement. The new checkpoint rule can deadlock (P2-01).
+- P1-03: resolved. The trigger, the two planning worktrees, priority, group members, the merge at approval and the `plan` → Inputs edit are all specified.
+- P1-04: **open.** The scout's judgment, inputs, timing (the base can't move) and commit point are fixed, and `implement` reads the note. The range is still wrong. C1 step 2 starts it at "the commit that merged the child's approved plan into the work branch". The plan was written against the work-branch tip at which its plan branch was cut (C2: "a new plan branch at the work-branch tip"). Everything integrated between that cut and the plan merge falls outside the range. That includes a dependency's code: the planning trigger is "every child it depends on has started implementing", so a dependency often integrates while the plan loop is still running, or while the merge waits out a group integration. That dependency's code is exactly what the refresh exists for. Reading the dependency's ledger doesn't make up for the missing code diff. **Fix:** start the range at the plan branch's fork point: `git merge-base <plan-merge>^1 <plan-merge>^2`, or the plan-branch start commit recorded in `state.json`.
+- P1-05: resolved. C1 step 4 and the following paragraph give the full replacement and say what is dropped and why. `plan` → Refresh step 4 matches.
+- P1-06: resolved. One gap follows from the fix (P2-05).
+- P1-07: resolved. There is replacement text for each location, and the calibration rule is in `scope`. A leftover reference is recorded under P2-06.
+- P1-08: resolved. Majors are tagged by kind, the reply says `pass 2 needed`, blockers force pass 2, the skip conditions include no rejections and no contract change, and the skip is recorded.
+- P1-09: resolved. The "lowest layer" wording is gone, and ownership defers to `test-quality`.
+- P1-10: resolved. Deliverables are outcomes under Done when, the Don't rule exempts them, every question has a section, and "can the guard test fail" stays in code review.
+- P1-11: resolved. The range runs from the previous pass's reviewed commit, and merges in it are reviewed via remerge-diff.
+- P1-12: resolved. There is a launch list, a reconcile procedure that replaces the State line, and a no-second-writer rule. A small classification issue is under P2-07.
+- P1-13: resolved. Each gate records its tree hash and exact command line.
+- P1-14: resolved. The checks are in the Important tier, conditional on a pool or parallel E2E. The author's rejection of the Pi-module setting is accepted (minor).
+- P1-15: resolved. §5 lists P-a…P-f. One new design choice is missing from that list (see P2-01).
+- P1-16: resolved.
+- P1-17: resolved.
+- P1-18: resolved (C10).
+- P1-19: resolved (§8 step 1, C6 reference file).
+
+### P2-01 — major — The new checkpoint gating deadlocks when checkpoint C+1's child integrates before checkpoint C's child
+**Location:** §3 C2 "Checkpoints step 2" and "Checkpoint placement"; `orchestrate` → Checkpoints step 2 ("The run for C+1 waits until C is green and merged").
+**Problem:**
+- Under §2, children integrate in readiness order, not child order. The replacement rule reads: "No child may integrate after checkpoint C+1's child is integrated until C is green and merged."
+- Checkpoint C runs only once its own child and that child's dependencies are integrated.
+- Suppose C+1's child doesn't depend on C's child, and it integrates first. Then C's child may not integrate, because C isn't green. C can't run, because its child isn't integrated. Nothing moves, and the run stalls with no stop condition.
+- This is likely in exactly the DAG-shaped epics C2 is for: checkpoints are placed "no more than about a day of children apart", not along one chain.
+- Separately, "Starting is no longer gated" is a design change: today, fan-out children can't start past an unverified foundation. The owner hasn't seen it as a choice; §5 doesn't list it.
+
+**Fix:**
+- Define the gate so that it can't block C's own prerequisites. For example: "a checkpoint's child may not integrate until every earlier checkpoint's child (and its dependencies) has integrated". Or treat checkpoints as positions in integration order: checkpoint C fires at the integration that completes its child's dependency set, and C+1's child may integrate earlier but doesn't trigger C+1 until C has run.
+- Add the ungated start to §5 as P-g, with its reason.
+
+### P2-02 — major — With every child a lane, the claim rules still assume only group members have claims, and the claim-violation fallback no longer exists
+**Location:** §2 ("Every child now needs a claim when the epic has a pool"); §3 C2 (`scope` edit only); `lanes.md` → Claims ("The child then runs serially after the group"); `plan` → plan.md Claims ("only for a child in a parallel group"); `review` plan mode ("for a parallel child, claims that stay inside its `epic.md` claim, which doesn't overlap its siblings' claims"); `scope` → Parallel groups (claims are defined only for members).
+**Problem:**
+- Every child now has a claim, and the start rule depends on it.
+- A child that used to be serial (often foundation or cross-cutting work) now stops its lane whenever its plan, refresh or build needs a file outside its claim. The only remedy written is "runs serially after the group", which doesn't exist when there is a pool.
+- `plan` still writes Claims only for group members. Plan review still checks claims only "for a parallel child". So the claims the start rule reads are never refined or reviewed for most children.
+- C2 lists none of these edits.
+
+**Fix:**
+- C2 should edit `plan` → Claims ("every child, when the epic has a pool") and `review` plan mode ("claims stay inside the `epic.md` claim; for a group member, they don't overlap its siblings'").
+- C2 should also replace `lanes.md` → Claims' fallback. For example: "a child that needs files outside its claim reports it. The orchestrator widens the claim in `epic.md` under Decisions if no running child's claim overlaps the addition; otherwise the child waits (or pauses) until those children integrate".
+- `scope` → epic.md should define claims for every child, with no-overlap required only within a group.
+
+### P2-03 — major — "Members of a group start together" can starve a group that is larger than the free pool
+**Location:** §2 bullet 2 ("a pool worktree is free for each member … members of a group start together"); §3 C2 `lanes.md` → Starting lanes ("run up to `maxLanes` lanes at once").
+**Problem:**
+- Today a group runs "up to `maxLanes` children of one group at once", so a group larger than `maxLanes` or the pool is legal and runs in waves.
+- Under the new rule, such a group can never start: the pool or `maxLanes` can never offer one worktree per member.
+- A smaller group still waits until enough lanes are free at the same moment. Meanwhile, lower-priority children keep taking worktrees as they free up, so the group can starve.
+- D1 needs members to *integrate* together, not to start together.
+
+**Fix:** let members start individually under the start rule, as worktrees free up. Keep integration once per group. To prevent starvation, a group that is ready gets the next free worktree ahead of non-members, or ahead of children numbered after it.
+
+### P2-04 — major — Every serial-chain child now pays a full group integration, including a group T1 that the identical-tree skip will almost never cover
+**Location:** §2 bullet 1 (a group of one "integrated through `lanes.md` → Integrating"); §3 C9 last bullet; `lanes.md` → Integrating steps 1, 3 and 6, and → The pool ("reset the test data"); `orchestrate` → Where work runs ("commit them as you go"); §3 C2 Planning ("merge the plan branch into the work branch" at approval).
+**Problem:**
+- Before, a serial child closed with no integration. Under §2 each serial child takes these steps before its dependent can start:
+  - find an integration worktree;
+  - prepare it (switch branch, maybe reinstall, reset test data);
+  - cut `integration/<group>`;
+  - merge;
+  - run a group T1;
+  - merge into the work branch.
+- C9 skips a rerun only when the tree and the command line match a passing run. But the work branch moves between lane cut and integration with every orchestrator state commit and every approved plan merge (C2), so the integration tree almost never equals the lane tip. The group T1 then reruns in full on the critical path for every child of a chain.
+- This works against the §1 target, where integration is one of the overheads being cut. §7 would show it as a regression.
+
+**Fix:** add a group-of-one fast path to `lanes.md` → Integrating. When the work branch has changed since the lane base only in the orchestrator's files and plan directories (`git diff --name-only <lane base> <work-branch tip>` outside those paths is empty):
+- merge the lane branch directly into the work branch (or integrate in the lane's own worktree);
+- skip the separate integration worktree, the integration branch and the group T1.
+
+Otherwise use the full procedure. State the same exclusion in C9's identical-tree rule (code tree equal, ignoring orchestrator and plan files).
+
+### P2-05 — minor — No budget or deadline exists before plan approval
+**Location:** §3 C3 `scope` → Budget ("Set at plan approval"); `orchestrate` → Bounds ("planner and implementer from the child's budget"; wall time includes the "plan loop").
+**Problem:**
+- The plan loop counts toward the child's wall-time budget, and the plan-author's deadline is derived from that budget. But the budget only exists after the plan is approved.
+- Without one, the planner falls back to the harness default of 30 minutes, which Bounds calls far too short.
+
+**Fix:** set a provisional budget from the `epic.md` rough estimate (same formula) when the plan loop starts, and replace it at approval.
+
+### P2-06 — minor — The edit list misses several lines the new model makes wrong
+**Location:** §3 C1 Start step, C2, C3.
+**Problem:**
+- C1's Start step only covers runs with a pool: "prepare the lane worktree", scout, and refresh "in the lane worktree". The no-pool fallback (§2 bullet 3) has no Start step location or base.
+- Three lines still contradict C2's "every child plans in a planning worktree":
+  - `lanes.md` → Starting lanes line 10 ("group members plan in their own lane worktrees");
+  - the lane-worktree line 6 ("Its plan-author … launch … in that worktree");
+  - `orchestrate` → Sizing ("Each slice runs its own plan loop in its lane worktree").
+- `scope` → Steps 3 ("fits within a size limit (see `epic.md` → Size limit…)") still refers to the section that C3 renames.
+
+**Fix:**
+- Add "without a pool: the work-branch worktree at its HEAD" to C1's Start step 1.
+- List the three lane-worktree planning lines in C2.
+- Point `scope` step 3 at the review-load signal.
+
+### P2-07 — minor — C8 calls reviewers and scouts read-only, but both commit to the ledger
+**Location:** §3 C8 "dead: … relaunch a read-only run (reviewer, scout, helper)"; `review` → Findings (commit the ledger); C1 step 2 (scout commits); `orchestrate` → Recovery ("A dirty tree … belongs to an interrupted session. Resume that session").
+**Problem:** a dead reviewer or scout can leave an uncommitted ledger edit. A relaunched run then starts on a dirty tree, which Recovery says belongs to the interrupted session.
+**Fix:** before relaunching a dead reviewer or scout, discard its partial ledger edit, or have the fresh run take it over. Say that only implementers and plan-authors are resumed.
+
+**Verdict:** changes needed — 0 blocker, 5 major (P1-04 open, P2-01–P2-04), 3 minor (P2-05–P2-07).
