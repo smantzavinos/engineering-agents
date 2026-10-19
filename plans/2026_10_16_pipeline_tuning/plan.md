@@ -21,10 +21,10 @@ Each change names the retro finding it answers. Skill text stays concise; detail
 - **`plan` → Refresh:** start from the scout note; reply without `self_compact` (refresh runs are short, and end-of-run compaction cost ~40–45 min on the critical path across the pilot).
 - **`review` → Plan refresh:** unchanged, but note that refresh edits are where two of four refresh majors came from: review the edit, not only the fit.
 
-### C2. Start lanes when dependencies are met; integrate in readiness order (F2)
+### C2. Start lanes when dependencies are met (F2)
 
 - **`orchestrate` → Per child / Plan ahead, and `references/lanes.md` → Starting lanes:** a child starts when every child it depends on (per `epic.md`) is integrated and a pool worktree is free, regardless of child number or group order. Group membership only says which children may run at once (claims don't overlap).
-- **Integration** (`lanes.md` → Integrating): integrate each lane as soon as its code is approved and no other integration is running, in approval order. The next lane to integrate merges the work branch first (the existing conflict path). This replaces "a group integrates once" (§16 of the fast-verification plan): in the pilot an approved member waited 102 min for its sibling. See open decision D1.
+- **Integration stays once per group** (§16 of the fast-verification plan; owner decision D1). For the ready-set rule, a group's members count as integrated when the group is. In the pilot an approved member waited 102 min for its sibling, but the next child depended on both, so it cost nothing on the critical path; the earlier integration queues came from integrating each child in child order, which §16 already replaced.
 - **Planning worktrees:** two, not one; each plans the next ready child. Plan-ahead lead stays short: start a child's plan when its last dependency starts implementing (plans approved 2–10 h early were refreshed anyway).
 - **`state.json`:** record `readyAt` per child (when its last dependency integrated) and lane start, so ready-to-start waits are measured directly.
 - **`epic.md`:** each child's dependencies are the real dependency record. The scope review checks that they are declared (one undeclared dependency in the pilot changed the plan of record).
@@ -87,16 +87,17 @@ Each change names the retro finding it answers. Skill text stays concise; detail
 - `GIT_OPTIONAL_LOCKS=0` in the repo's environment file.
 - Make the hot shared files merge-friendly (the requirements rows table and the E2E test map).
 
-These need tracker items in the pilot repo; filing them needs the owner's OK.
+Tracker items in the pilot repo (owner OK, D1–D2 date).
 
 ## 4. Not changed
 
-Plan-review pass 1 and code-review pass 1 (full, fresh, Opus); test and proof volume rules; minors non-blocking; models (open decision D2). Not adopted: an external watchdog or automatic quota retry, orchestrator bookkeeping reduction (needs its own design), direct mode, an implementer break-it check. Paused: task-graph and layer-first decomposition.
+Plan-review pass 1 and code-review pass 1 (full, fresh, Opus); test and proof volume rules; minors non-blocking; group integration (D1); models, apart from D2. Not adopted: an external watchdog or automatic quota retry, orchestrator bookkeeping reduction (needs its own design), direct mode, an implementer break-it check. Paused: task-graph and layer-first decomposition.
 
-## 5. Open decisions for the owner
+## 5. Owner decisions (2026-10-16)
 
-- **D1. Integration per member or per group.** Recommendation: per member, in approval order (C2). Cost: one T1 per member instead of one per group (~10–15 min each, partly overlapping other lanes). Gain: no approved member waits for a sibling (102 min observed, ~5–8 min of it on the critical path), and later children start sooner.
-- **D2. Implementer thinking level.** Medium showed no speed gain and more code majors per child, confounded by larger children. Options: revert to high, or keep medium and compare on matched children.
+- **D1. Integration stays once per group.** Per-member integration only helps when a later child depends on a subset of a group, and the pilot has no case where that cost critical-path time. One T1 per group is cheaper.
+- **D2. Implementer thinking back to high.** Medium showed no speed gain and more code majors per child (confounded by larger children). The pilot repo's agent settings are reverted; the skills don't name a thinking level.
+- **Pilot-repo tracker items** (§3) may be filed.
 
 ## 6. Measure (next epic vs pilot era D)
 

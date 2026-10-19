@@ -57,7 +57,7 @@ Savings below are per epic of this size, *estimates*, and **not additive**: seve
 |---|---|---|
 | 1 | **Cheap environment fixes:** reserve the E2E port range from the OS ephemeral range (and cap the pool allocator inside it; the harness fails loudly if the base is not reserved); disable optional git locks in agent sessions; make the hot shared files merge-friendly (one row or file per entry); skip gate reruns when the tree is identical to one that passed | F4, F10 |
 | 2 | **Refresh only when a dependency changed** something the plan relies on. Otherwise the implementer reads a short scout note on what changed. Any edit to the plan gets one review pass | F1 |
-| 3 | **Start a lane as soon as its dependencies are integrated;** integrate in readiness order; keep plan-ahead lead short; add a second planning worktree | F2 |
+| 3 | **Start a lane as soon as its dependencies are integrated;** integration stays once per group (a group counts as integrated when all its members are); keep plan-ahead lead short; add a second planning worktree | F2 |
 | 4 | **Group children by content, not size.** Never split serial or inherently related work. Size is only a prompt to ask whether a child mixes separable concerns, never a split trigger | F3 |
 | 5 | **Code-review pass 2 checks only the fixes,** on the same model; rerun only the gates the fixes touch | F6 |
 | 6 | **Plan-review pass 2 only when** pass 1 found a design or boundary major, or a fix changed a contract | F7 |
@@ -78,7 +78,7 @@ On 8: planned-but-not-built items caused about 5 code-review majors, all missed 
 
 **Paused:** task-graph execution and layer-first decomposition at epic level (foundation pass for the data model and reader/writer contracts, then UI children in parallel). Revisit after the adopted changes are measured; first check how many dependencies in a chain-shaped epic are backend contracts rather than UI.
 
-**Open:** medium vs high implementer thinking — revert, or run a matched comparison before keeping medium.
+**Also decided:** implementer thinking back to high (medium showed no speed gain; confounded). Integration stays once per group: per-member integration helps only when a later child depends on part of a group, and no such case cost critical-path time in the pilot.
 
 ## 5. What a plan should answer
 
