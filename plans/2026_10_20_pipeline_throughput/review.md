@@ -223,3 +223,91 @@ All accepted:
 - P2-05: Escalation drops the worker count; implementer-run T1 gets its count at launch and holds it until it replies (C5).
 
 approved after fixes, no pass 3 (P2-01 is a `wording` major; the rest minors).
+
+## code pass 1
+
+I reviewed `36de6b0..2196530` (5e1f7e5 skills + `dist/`, 2196530 docs) against `plan.md`.
+
+Checks run:
+- `node tools/render-skills.mjs --check`: `dist/` is up to date.
+- `./tests/run-tests.sh fast`: exit 0, "All fast tests passed".
+- `grep -iE "atlas|convex|globus"` on the changed text files: no hits.
+- `node tools/process-sim.mjs docs/diagrams/example-epic.epic.json -o /tmp/x.json`: end 4h16. The output is identical to the committed `example-epic.scenario.json`.
+
+The example epic is B+ at 4 lanes, without `refreshInCodeReview`, as C6 asks.
+
+Each change is made where the plan says, with nothing missing and nothing beyond it:
+- C1: `scope` Children and Do, `review` epic mode, `lanes.md` Claims.
+- C2: Epic close steps 1–5, and `checkpoint-failures.md` step 4.
+- C3: `review` kinds and Reply, the skip rule in `orchestrate` Implement, `codePass2Skipped`.
+- C4:
+  - `implement` Gates 1–3 and Handoff, with the Delegation bullet gone;
+  - `orchestrate` Implement steps 1–4, the no-pool rule and Don't;
+  - `review` code mode.
+- C5: three planning worktrees, the `maxLanes` bound, the `lanes.md` worker rule, no worker count in the Implement or Escalation tasks.
+- C6: every listed passage, History, and the regeneration commands.
+
+`implement` T0's "with one worker" is the implementer-side half of C5's "targeted checks use one worker", so it isn't extra scope.
+
+Consistency checks that hold:
+- the pass cap, with T1-only passes counted, matches `lanes.md` step 4;
+- Escalation;
+- integration and checkpoint-fix T1 are still run by implementers (`implement` Gates 1, Review findings; `review` flake check);
+- the epic-close fixes get no implementer T1;
+- one writer per worktree: the T1 helper writes nothing tracked, and the no-pool rule names it;
+- ports: the implementer stops its services, and the helper boots and stops its own;
+- no-rerun covers the ledger or `state.json`;
+- the `state.json` fields.
+
+The example table matches the sim:
+- 01 integrates at 1:34;
+- G1 starts at 94;
+- 05 starts at 105 in the fourth lane;
+- 06a/06b and 07 start at 175, after G1;
+- the epic close runs review ‖ checkpoint, then fixes, then T1.
+
+No blockers or majors. The minors are below.
+
+### C1-01 · minor · wording · `skills/orchestrate/SKILL.md:52` (Implement loop step 3)
+**Problem:** C4 step 3 heads the decision **Both done**. The skill drops this, so nothing says to wait for both replies. An orchestrator that gets "changes needed" from the reviewer while the T1 helper is still running can resume the implementer at once. The implementer then edits sources and boots its T0 services on the worktree's ports under a running T1. That causes spurious reds, a port-taken environment stop, and a T1 digest that never reaches the fix pass. Only the step order implies the wait.
+**Fix:** "3. **Once both have replied:** review approved and T1 green → step 4. Otherwise …"
+
+### C1-02 · minor · wording · `skills/implement/SKILL.md:29,33`, `skills/orchestrate/SKILL.md:50,138`
+**Problem:** Two rules don't fit together:
+- The implementer records "exact command lines", and the no-rerun rule matches on the exact command line.
+- The helper runs those lines "with an E2E worker count" that the orchestrator chooses per run.
+
+So the line that ran (in `state.json`) differs from the ledger's whenever the worker count differs, and an identical tree can be rerun. `implement` Run settings ("the E2E worker count your task gives") now applies only when the implementer runs T1 itself, but it reads as applying to the recorded lines too.
+**Fix:**
+- In Gates 1, say the recorded lines carry retries off and leave out the worker count; the helper sets it.
+- In Don't, have the no-rerun match ignore the worker count.
+- Scope Run settings' worker count to "when you run T1 yourself".
+
+### C1-03 · minor · wording · `skills/orchestrate/SKILL.md:50` → `references/lanes.md:3,14`
+**Problem:** The T1 helper's worker count points to `references/lanes.md`, which says "Read this when the repo has a worktree pool". Without a pool, and for a single plan, a T1 helper can still overlap a checkpoint run, but the share rule isn't in scope for that orchestrator.
+**Fix:** Write "(`references/lanes.md` → E2E workers, which also applies without a pool)". Or move the E2E workers bullet into `orchestrate`.
+
+### C1-04 · minor · design · `skills/orchestrate/SKILL.md:100` (Epic close step 4)
+**Problem:** "with selection from the green checkpoint's tip". If merging the final checkpoint conflicts, Checkpoints step 2 → Otherwise merges the work branch, fixes included, into the checkpoint branch. "The resolved tip counts as green." Selection from that tip leaves out the epic-close fixes' non-conflicted paths. Those paths then get no T1 and no full gates, though §5 names this T1 as the fixes' only check on the final tree.
+**Fix:** "with selection from the commit the final checkpoint's full gates passed on".
+
+### C1-05 · minor · wording · `skills/orchestrate/SKILL.md:138` (Don't)
+**Problem:** "The reviewer checks the evidence." In a child's own passes, the T1 results now go to the orchestrator, not the reviewer (`review` code mode). The sentence suggests the reviewer vets the helper's run.
+**Fix:** "The reviewer checks the implementer's evidence; you read the T1 helper's digest."
+
+### C1-06 · minor · wording · `docs/frontier-pipeline.md:122`
+**Problem:** "No checkpoint blocks a child" doesn't match the sim:
+- 05 is approved at 179.
+- Its integration T1 needs the checkpoint worktree, and every pool worktree holds an unintegrated child.
+- So it waits for the checkpoint after 04 (175–183) and runs at 184–190.
+**Fix:** "Checkpoints run beside the work. One holds the checkpoint worktree that 05's integration needs, for about 5 min. The final one overlaps the epic-diff review."
+
+### C1-07 · minor · wording · `docs/frontier-pipeline.md:124`, plan C6
+**Problem:** C6 asks for "a fixed cost per child of about 30–40 min". The doc says "about 50 min … the plan loop (about 30) usually runs ahead". The doc's figure is the one the sim supports:
+- plan loop: median about 32 min;
+- scout, review, fixes and T1 after the build: about 7–21 min.
+
+The plan's figure doesn't fit this run. The doc's wording also reads close to the "about an hour" that the variants README (finding 5) corrected.
+**Fix:**
+- State the on-path cost: "about 20 min of scout, review and integration on the critical path, plus a plan loop of about 30 that usually runs ahead".
+- Record the deviation from C6 in the ledger.
