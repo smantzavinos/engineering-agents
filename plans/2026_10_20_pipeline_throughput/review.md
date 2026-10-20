@@ -221,3 +221,5 @@ All accepted:
 - P2-03: children whose entries record a dependency for the contract count as claiming it (C1).
 - P2-04: the docs example is generated from its own epic.json (B settings, T1 alongside, 3 planning worktrees, 4 lanes, no refresh change), committed next to the diagram (C6).
 - P2-05: Escalation drops the worker count; implementer-run T1 gets its count at launch and holds it until it replies (C5).
+
+approved after fixes, no pass 3 (P2-01 is a `wording` major; the rest minors).

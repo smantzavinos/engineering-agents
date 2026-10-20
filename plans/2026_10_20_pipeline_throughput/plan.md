@@ -1,6 +1,6 @@
 # Pipeline throughput: shorter chains, T1 off the review path, more planning capacity
 
-**Status:** draft, revised after plan pass 1 · **Date:** 2026-10-20 · **Evidence:** `plans/2026_10_20_process_variants/README.md` (variants A, B, B+; single-plan time), the pilot repo's `t1_breakdown.md` · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`, `references/checkpoint-failures.md`), `implement`, `review`; `docs/frontier-pipeline.md` and its example diagram
+**Status:** approved (plan pass 2, after fixes) · **Date:** 2026-10-20 · **Evidence:** `plans/2026_10_20_process_variants/README.md` (variants A, B, B+; single-plan time), the pilot repo's `t1_breakdown.md` · **Changes:** `skills/scope`, `orchestrate` (+ `references/lanes.md`, `references/checkpoint-failures.md`), `implement`, `review`; `docs/frontier-pipeline.md` and its example diagram
 
 ## 1. Why
 
