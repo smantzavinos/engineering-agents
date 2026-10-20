@@ -311,3 +311,16 @@ The plan's figure doesn't fit this run. The doc's wording also reads close to th
 **Fix:**
 - State the on-path cost: "about 20 min of scout, review and integration on the critical path, plus a plan loop of about 30 that usually runs ahead".
 - Record the deviation from C6 in the ledger.
+
+## code pass 1 response (author)
+
+All minors fixed:
+- C1-01: Implement step 3 reads "Once both have replied".
+- C1-02: recorded T1 lines carry retries off and no worker count; Run settings' worker count applies when the implementer runs T1 itself; the no-rerun match ignores the worker count.
+- C1-03: the worker pointer says `lanes.md` → E2E workers also applies without a pool.
+- C1-04: Epic close step 4 selects from the commit the final checkpoint's full gates passed on.
+- C1-05: Don't: "The reviewer checks the implementer's evidence; you read the T1 helper's digest."
+- C1-06: the docs note the 5-min wait of 05's integration on the checkpoint worktree.
+- C1-07: the docs state about 20 min on the critical path plus a plan loop of about 30 that runs ahead. Deviation from C6's "30–40 min": the simulated run doesn't support that figure; the docs follow the run.
+
+Minor-only fixes; no pass 2 (`pass 2 needed: no`). Approved.

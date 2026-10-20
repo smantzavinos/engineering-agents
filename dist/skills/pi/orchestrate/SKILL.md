@@ -47,9 +47,9 @@ One writer per worktree at any time.
 3. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory and its base commit. It builds everything, passes the fast gates, records the rest of T1, commits, writes its ledger entry and replies. Then loop, in the child's worktree:
    1. Launch together, on the implementer's commit:
       - a fresh reviewer (`review` skill, code mode) with the child's directory and base commit, the IDs of any refresh majors fixed in its plan and, after pass 1, the range from the commit the previous pass reviewed to the implementer's tip, naming any merge in it;
-      - a T1 helper with the ledger's recorded command lines and an E2E worker count (`references/lanes.md`). It boots and stops its own services, and reruns each failure alone: one that passes alone and lies outside the child's diff is a flake; one in the baseline digest or under a running checkpoint fix is baseline; anything else is red. It writes nothing tracked, and replies with a digest and the log path.
+      - a T1 helper with the ledger's recorded command lines and an E2E worker count (`references/lanes.md` → E2E workers, which also applies without a pool). It boots and stops its own services, and reruns each failure alone: one that passes alone and lies outside the child's diff is a flake; one in the baseline digest or under a running checkpoint fix is baseline; anything else is red. It writes nothing tracked, and replies with a digest and the log path.
    2. Record the T1 run and any flakes in `state.json`.
-   3. **Review approved and T1 green:** step 4. Otherwise resume the same implementer with the ledger path, the pass number and, if T1 is red, the digest and log path.
+   3. **Once both have replied:** review approved and T1 green → step 4. Otherwise resume the same implementer with the ledger path, the pass number and, if T1 is red, the digest and log path.
    4. Every fix pass counts toward the pass cap, including one for T1 failures alone. After a fix pass, the next review runs unless the reviewer replied `pass 2 needed: no`, the implementer fixed every major and rejected none, and every T1 fix touched only tests or fixtures. Then only the T1 helper runs; green means approved. Append `approved after fixes, no pass 2` to the ledger and record `codePass2Skipped`. A red T1 after fixes means another fix pass.
 4. **Close:**
    1. Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
@@ -97,7 +97,7 @@ One writer per worktree at any time.
 
    It fixes the findings, runs the fast gates and records the rest of T1 for the fixes; another run follows. A review of the fixes checks the recorded command lines.
 3. Once the fixes are committed and no one is writing in the work-branch worktree, merge the green final checkpoint (Checkpoints step 2). A red one follows `references/checkpoint-failures.md`; the fixes go on meanwhile, and this step waits for the checkpoint fix to merge.
-4. A helper runs T1 for the fixes on the merged tip, with selection from the green checkpoint's tip, widened or escalated as `plan` → Gates says. That run is the fixes' evidence. Red goes back to the fixes' implementer, then T1 again.
+4. A helper runs T1 for the fixes on the merged tip, with selection from the commit the final checkpoint's full gates passed on, widened or escalated as `plan` → Gates says. That run is the fixes' evidence. Red goes back to the fixes' implementer, then T1 again.
 5. Hand off to the PR process. Pushing and opening the PR need the epic's pre-authorization; otherwise stop.
 
 ## Bounds
@@ -135,5 +135,5 @@ Otherwise, decide. Record tricky decisions in the `epic.md` Decisions section: t
 
 ## Don't
 - Plan, implement or review yourself.
-- Rerun gates the implementer or a T1 helper already ran. The reviewer checks the evidence. A gate whose tree (ignoring your own files and plan directories) and exact command line match a passing run in the ledger or `state.json` is never rerun.
+- Rerun gates the implementer or a T1 helper already ran. The reviewer checks the implementer's evidence; you read the T1 helper's digest. A gate whose tree (ignoring your own files and plan directories) and exact command line (ignoring the E2E worker count) match a passing run in the ledger or `state.json` is never rerun.
 - Ask the human anything the oracle can answer.

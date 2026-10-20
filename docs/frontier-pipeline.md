@@ -119,9 +119,9 @@ How to read it: each band is a work item (a child, an integration, a checkpoint 
 What to notice:
 - **Planning runs ahead.** The planning worktrees stay busy while lanes build, so a unit rarely waits for its plan.
 - **T1 runs beside the review.** Each review pass and its T1 overlap, so neither adds to the other.
-- **Checkpoints run beside the work.** No checkpoint blocks a child, and the final one overlaps the epic-diff review.
+- **Checkpoints run beside the work.** One holds the checkpoint worktree that 05's integration needs, for about 5 min; the final one overlaps the epic-diff review.
 - **Lanes are the limit.** With the chain short, G1 and 05 fill the four lanes; G2 and 07 wait until G1 integrates.
-- **Fixed cost per child.** A child spends about 50 min in plan loop, scout, reviews and integration on top of its build; the plan loop (about 30) usually runs ahead, off the critical path. That is why children are slices worth that cost, and why parallel lanes matter.
+- **Fixed cost per child.** On top of its build, a child spends about 20 min on the critical path in scout, review, fixes and integration, plus a plan loop of about 30 min that usually runs ahead. That is why children are slices worth that cost, and why parallel lanes matter.
 
 ### Regenerating the diagram
 

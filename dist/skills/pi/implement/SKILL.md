@@ -26,11 +26,11 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Gates
-1. At the end, run T1's fast gates (builds, typecheck, lint and format on changed files) with the plan's Gates commands. For the rest of T1 (unit and E2E tests), record in the ledger the exact command lines, with an explicit base and spec list, and why each spec was picked. Don't run them: a helper runs them beside the code review. When your task says to run T1 yourself (integration, checkpoint fix), run all of it.
+1. At the end, run T1's fast gates (builds, typecheck, lint and format on changed files) with the plan's Gates commands. For the rest of T1 (unit and E2E tests), record in the ledger the exact command lines, with an explicit base and spec list and retries off but no E2E worker count (the helper sets it), and why each spec was picked. Don't run them: a helper runs them beside the code review. When your task says to run T1 yourself (integration, checkpoint fix), run all of it.
    - **Selection:** compute it from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.
    - **E2E specs:** the test map gives the specs for the changed paths. The plan supplies the rest.
    - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
-   - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.
+   - **Run settings:** retries off, fast gates first; when you run T1 yourself, the E2E worker count your task gives.
 2. Fix what the fast gates find. After a review, fix the findings and any T1 failures you are given, run the fast gates for the fixes, and record the remaining command lines for them: what failed and what the fixes touch. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files and plan directories) and exact command line match a passing run in the ledger.
 3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child: record the full-gate command lines too, and the helper runs them.
 
