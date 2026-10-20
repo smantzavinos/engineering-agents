@@ -165,3 +165,50 @@ All findings accepted, in the revised `plan.md`:
 - P1-12: the implementer keeps T1's fast gates; review text scoped to a child's own passes; a doubt is a minor (C4).
 - P1-14: C6 lists every passage and the regeneration commands; the example uses the default 4 lanes.
 - P1-15: measures added; the chain target dropped from §1 (the epic review checks it, C1).
+
+## plan pass 2
+
+Reviewed `plan.md` at 54a8d83 against the pass 1 findings, the current skill text it changes and the evidence. I reran `tools/process-sim.mjs` on `variant-bplus.epic.json` with `refreshInCodeReview` off, because that change was dropped. The figures still hold: 4h16 at 4 lanes, 3h54 at 6.
+
+### Pass 1 findings
+- **P1-01: fixed.** C1 puts the contract in the earliest child the dependent already depends on, rules out contract-only children, and the epic-mode check matches.
+- **P1-02: fixed.** The Epic close order is stated: no T1 in the fixes, merge when the worktree is idle, then T1 on the merged tip. A red final checkpoint doesn't pause the fixes, and the step 4 addition is named. The new contradiction is in P2-01.
+- **P1-03: fixed.** The no-re-check set is closed ("only if its fix can't change production behaviour"), and the re-check kinds are named for code mode.
+- **P1-04: fixed.** C4 steps 3–5 cover the cap, the review after T1 fixes that touch production code, and a red T1 after fixes. The red-at-handoff rate is in §6.
+- **P1-05: fixed.** In C4 step 1 the helper classifies each failure as flake, baseline or red. Flakes go to `state.json`.
+- **P1-06: fixed.** The implementer stops its services before handoff, and the helper boots and stops its own. `lanes.md` → The pool already gives every lane task its environment and port check.
+- **P1-07, P1-13: fixed by removal.** The refresh-in-review change is dropped (§3), and §4 keeps the refresh and its review.
+- **P1-08: fixed.** There is one worker rule (C5) for helper and implementer T1. `maxLanes` is bounded by the pool size and memory, with a default of 4. §1 states 4h16, and O1 waits for data in §6. One leftover is in P2-05.
+- **P1-09: partly fixed.** §5 now lists the risk. The added rule doesn't reach the children that use the contract: see P2-03.
+- **P1-10: fixed.** The checkpoint starts after the previous one merges, and the PR handoff is kept. P2-01 and P2-02 cover what this fix caused.
+- **P1-11: fixed.** The `implement` lines are listed, exact command lines are recorded, the text says "the child's worktree", the helper runs escalated full gates, and the no-pool rule names the helper.
+- **P1-12: fixed.** The implementer keeps the fast gates. The review text is scoped to a child's own passes, and a doubt is a minor.
+- **P1-14: fixed.** C6 lists the passages and the regeneration commands. P2-04 covers the example.
+- **P1-15: fixed.** The measures are added, and the chain target is dropped.
+
+### P2-01 · major · wording · C4 "Unchanged" bullet and "Integration, checkpoint-fix and epic-close reviews keep today's evidence and flake checks" vs C2 steps 2 and 4
+**Problem:** C2 now runs the epic-close fixes "without T1", and a helper runs their T1 on the merged tip after the final checkpoint merges (the P1-02 fix). C4 still lists epic-close among the defaults that "still run their own T1". It also tells epic-close reviews to keep today's evidence check, which expects implementer-run T1 in the ledger. If that goes into `review`, the reviewer of the epic-close fixes finds no T1 evidence by design and raises a major. The implementer then runs T1 in the work-branch worktree before the merge, which is the unverified, on-the-critical-path T1 that C2 removed. `implement` → Review findings already allows "unless the task says another run follows", so only the plan's two lists are wrong.
+**Fix:**
+- Drop "epic-close" from C4's Unchanged bullet and from the sentence on review evidence.
+- Add one line to C2: the review of the epic-close fixes checks the recorded command lines, and the helper's T1 from step 4 is their evidence.
+
+### P2-02 · minor · C2 step 1
+**Problem:** "Start the final checkpoint on the same work-branch commit" doesn't fit "as soon as the previous checkpoint has merged". If the previous checkpoint is still running when epic close starts, its merge moves the work branch, so the commit can't be the same one. That merge also needs the work-branch worktree to be idle (Where work runs), but the fixes' implementer is writing there. It then lands only after the fixes, which puts the final checkpoint back on the critical path without saying so.
+**Fix:** Say "on the work-branch tip". Merge a waiting green checkpoint before the fixes start, between the review and the fixes.
+
+### P2-03 · minor · C1 `lanes.md` → Claims addition, §5 C1 risk
+**Problem:** "reports it, as for a file outside its claim. The existing claim-overlap rule then orders it against the children that use the contract." That claim rule only looks at unintegrated children that claim those files. The contract lives in an integrated earlier child, and the children that use it don't claim its files. So the rule just widens A's claim, A continues, and the drift goes unseen. That is the case P1-09 was about.
+**Fix:** Build on C1's own entry note: "…reports it. Every unintegrated child whose entry records a dependency for that contract counts as claiming it."
+
+### P2-04 · minor · C6 example
+**Problem:** "Replace the example with the B+ epic at the default 4 lanes" uses `variant-bplus.epic.json`, which sets `refreshInCodeReview: true`. That is the change §3 dropped. The example's refreshed child (02 in today's table) would be drawn with no refresh review. The elapsed time is unaffected: 4h16 either way, which I checked.
+**Fix:** Generate the example with `maxLanes: 4` and `refreshInCodeReview: false`, commit that epic.json next to the docs diagram, and use it in the regeneration commands.
+
+### P2-05 · minor · C5 E2E workers
+**Problem:**
+- `orchestrate` → Bounds → Escalation still hands the escalation implementer "the same … E2E worker count". C5 removes that count from the implementer's task, and C5 doesn't list the Escalation line.
+- For implementer-run T1 (integration, checkpoint fix, red group T1), "when a T1 run starts" can't be applied: the orchestrator only knows when it launches the task.
+
+**Fix:**
+- Drop "E2E worker count" from Escalation.
+- Say that implementer-run T1 gets its count at launch and holds it until the implementer replies.
