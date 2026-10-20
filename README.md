@@ -87,6 +87,7 @@ The sandbox uses `.pi-dev/home` as `HOME` and never modifies `~/.pi`. `--copy-au
 
 | Document | Purpose |
 |----------|---------|
+| [Frontier Pipeline](docs/frontier-pipeline.md) | The prototype-first process run by `scope` and `orchestrate` (pilot), with an example execution diagram |
 | [Process](docs/process.md) | Full lifecycle for each workflow type, stage-by-stage |
 | [Plan Levels](docs/plan-levels.md) | When to use simple, standard, or epic |
 | [Plan Directory Structure](docs/plan-directory-structure.md) | Artifacts, naming conventions, directory layout |

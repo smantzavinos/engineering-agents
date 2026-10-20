@@ -1,5 +1,7 @@
 # Agent Architecture & Workflow
 
+> **Frontier pipeline (pilot).** For prototype-first work, the `scope` and `orchestrate` skills run the process described in [frontier-pipeline.md](frontier-pipeline.md), which replaces the agent modes and sub-agent calls below for that path. This document has not been updated for it yet.
+
 This document defines the three agent modes, how they interact, when sub-agents are spawned, and the complete flow from idea to implementation.
 
 > **Harness note:** The diagrams below show the Pi roster for sequential execution. OpenCode

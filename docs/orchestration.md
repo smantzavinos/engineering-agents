@@ -1,5 +1,7 @@
 # Orchestration
 
+> **Frontier pipeline (pilot).** For prototype-first work, the `scope` and `orchestrate` skills run the process described in [frontier-pipeline.md](frontier-pipeline.md), which replaces the agent modes and prompt patterns below for that path. This document has not been updated for it yet.
+
 This document defines the three agent modes that drive the autonomous development process, how they interact with the human, and practical guidance for invoking each.
 
 ---

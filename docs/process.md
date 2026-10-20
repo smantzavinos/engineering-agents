@@ -1,5 +1,7 @@
 # Development Process
 
+> **Frontier pipeline (pilot).** For prototype-first work, the `scope` and `orchestrate` skills run the process described in [frontier-pipeline.md](frontier-pipeline.md), which replaces the Feature and Epic stages below for that path. This document has not been updated for it yet.
+
 This document defines the full lifecycle for each workflow type. The orchestrator follows these stages in order, calling sub-agents for each step.
 
 ## Commit Discipline

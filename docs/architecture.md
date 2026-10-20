@@ -8,7 +8,7 @@ This repository packages a reusable autonomous software-delivery process. It com
 - `agents/` — agent definitions and preset configuration.
 - `skills/` — canonical, harness-neutral workflow skills (the single source edited by hand).
 - `harnesses/` — per-harness render profiles (`pi.json`, `opencode.json`) consumed by the skill renderer.
-- `tools/` — repo tooling: `render-skills.mjs` (canonical skills × harness profiles → `dist/`), `critical-path.py` (plan DAG critical path and throughput thresholds), `measure-gate-cost.sh` (verification profile cost measurement).
+- `tools/` — repo tooling: `render-skills.mjs` (canonical skills × harness profiles → `dist/`), `critical-path.py` (plan DAG critical path and throughput thresholds), `measure-gate-cost.sh` (verification profile cost measurement), `pi-work-trace.mjs` and `scenario-trace.mjs` (recorded Pi sessions or a hand-written scenario → Work Trace JSON), `work-trace-render.mjs` (Work Trace → SVG).
 - `dist/` — generated per-harness skill trees (`dist/skills/<harness>/`), committed and drift-tested, never hand-edited. See `docs/skill-rendering.md`.
 - `nix/` and `flake.nix` — installation and packaging for Pi/OpenCode integration.
 - `templates/` — starter files for downstream repositories.
