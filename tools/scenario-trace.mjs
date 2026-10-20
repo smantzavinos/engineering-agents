@@ -12,15 +12,19 @@
 //   {
 //     "title": "...", "repository": "example-app", "startedAt": "ISO", "gapMin": 1,
 //     "worktrees": [{ "id": "work", "label": "work branch", "kind": "main" }, ...],
+//     "workItems": [{ "id": "01", "label": "01 data model", "parentId": "..." }, ...],
 //     "orchestrator": { "worktree": "work", "ref": "epic/example" },
 //     "steps": [{
 //       "id": "01.plan",            unique
 //       "agent": "plan-author",     agent type (colour and legend)
-//       "label": "plan",            bar label; "item" is prefixed when given
-//       "item": "01",               optional work item (child)
+//       "label": "plan",            bar label
+//       "workItem": "01",           the work item this step serves (see "workItems")
 //       "wt": "plan-1", "ref": "plan/01",   worktree and the branch it has checked out
 //       "dur": 35,
-//       "after": ["..."],           starts gapMin after the latest of these ends (default: at 0)
+//       "from": ["01.plan"],        handoff links: this step acts on these steps' output
+//       "kind": "review",           the handoff's label on the arrow
+//       "after": ["..."],           also waits for these (resources, dependencies); the step starts
+//                                   gapMin after the latest "from" or "after" step ends (default: at 0)
 //       "at": 0,                    or an absolute start, used when later than "after"
 //       "resume": "01.plan",        continues that step's session (mode resume)
 //       "holdUntil": "g1.t1",       the worktree keeps "ref" until that step ends
@@ -51,6 +55,8 @@ const gap = sc.gapMin ?? 1;
 const steps = new Map(sc.steps.map((s) => [s.id, s]));
 if (steps.size !== sc.steps.length) throw new Error('duplicate step id');
 const worktreeIds = new Set(sc.worktrees.map((w) => w.id));
+const workItemIds = new Set((sc.workItems ?? []).map((w) => w.id));
+for (const s of sc.steps) if (s.workItem && !workItemIds.has(s.workItem)) throw new Error(`${s.id}: unknown work item ${s.workItem}`);
 
 // Schedule: start = gap after the latest "after" end, or "at" if later.
 const time = new Map();
@@ -62,7 +68,7 @@ function schedule(id, seen = new Set()) {
 	seen.add(id);
 	if (!worktreeIds.has(s.wt)) throw new Error(`${id}: unknown worktree ${s.wt}`);
 	let start = s.at ?? 0;
-	for (const dep of s.after ?? []) start = Math.max(start, schedule(dep, seen).end + gap);
+	for (const dep of [...(s.from ?? []), ...(s.after ?? [])]) start = Math.max(start, schedule(dep, seen).end + gap);
 	const t = { start, end: start + s.dur };
 	time.set(id, t);
 	return t;
@@ -103,7 +109,7 @@ for (const s of ordered) {
 		if (!sessionId) throw new Error(`${s.id}: resumes ${s.resume}, which has not started yet`);
 	} else {
 		sessionId = `s-${s.id}`;
-		agentSessions.push({ id: sessionId, agentType: s.agent, label: s.agent, attributes: { item: s.item ?? null } });
+		agentSessions.push({ id: sessionId, agentType: s.agent, label: s.agent });
 	}
 	sessionOf.set(s.id, sessionId);
 	const span = {
@@ -111,13 +117,14 @@ for (const s of ordered) {
 		kind: 'agent',
 		parentId: orchSpan,
 		worktreeId: s.wt,
-		label: s.item ? `${s.item} ${s.label}` : s.label,
+		...(s.workItem ? { workItemId: s.workItem } : {}),
+		label: s.label,
 		sessionId,
 		mode: s.resume ? 'resume' : 'start',
 		startMs: t.start * MIN,
 		endMs: t.end * MIN,
 		status: 'ok',
-		attributes: { agent: s.agent, phase: s.label, item: s.item ?? null, illustrative: true },
+		attributes: { agent: s.agent, illustrative: true },
 	};
 	if (s.resume) span.resumesSpanId = lastSpanOfSession.get(sessionId);
 	lastSpanOfSession.set(sessionId, span.id);
@@ -148,6 +155,14 @@ for (const c of sc.compactions ?? []) {
 		outcome: 'ok',
 	});
 }
+
+// Handoff links.
+const links = [];
+for (const s of sc.steps)
+	for (const from of s.from ?? []) {
+		if (!steps.has(from)) throw new Error(`${s.id}: unknown "from" step ${from}`);
+		links.push({ id: `l-${from}-${s.id}`, fromSpanId: `sp-${from}`, toSpanId: `sp-${s.id}`, ...(s.kind ? { kind: s.kind } : {}) });
+	}
 
 // Checked-out branch per worktree: from the first step on a ref to the end of its last step (or its
 // holdUntil step), cut short where the worktree switches to another ref.
@@ -199,6 +214,8 @@ const trace = {
 	agentSessions,
 	spans,
 	events,
+	...(sc.workItems ? { workItems: sc.workItems } : {}),
+	...(links.length ? { links } : {}),
 };
 
 if (args.validateWith) {
@@ -211,4 +228,4 @@ if (args.validateWith) {
 }
 fs.writeFileSync(args.out, JSON.stringify(trace, null, '\t') + '\n');
 const h = (m) => `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
-console.log(`${args.out}: ${spans.length} spans, ${events.length} compactions, ${worktreeRefs.length} branch intervals, ${h(totalMin)} total`);
+console.log(`${args.out}: ${spans.length} spans, ${(sc.workItems ?? []).length} work items, ${links.length} links, ${events.length} compactions, ${worktreeRefs.length} branch intervals, ${h(totalMin)} total`);

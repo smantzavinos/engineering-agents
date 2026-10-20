@@ -317,506 +317,317 @@
 		{
 			"id": "s-base",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-01.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-01.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-01.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-01.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-02.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-03.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-02.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-03.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-02.pr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-04.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-06.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "06"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-06a.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "06a"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-01.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-04.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06a.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "06a"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06b.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-01.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "01"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06b.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-02.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-03.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-04.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-c1",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-02.refresh",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-03.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-04.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-05.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-02.rr",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-02.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-05.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-05.pr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-04.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-03.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-02.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "02"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-04.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "04"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-03.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "03"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-g1.t1",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-g1.rev",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": null
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-05.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-06a.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "06a"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-06b.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-c2",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-05.refresh",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-06a.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "06a"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-06b.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-05.rr",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-05.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-07.plan",
 			"agentType": "plan-author",
-			"label": "plan-author",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "plan-author"
 		},
 		{
 			"id": "s-07.pr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06a.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "06a"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06b.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-06b.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "06b"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-g2.t1",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-05.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-05.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-05.t1",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "05"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-07.scout",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "helper"
 		},
 		{
 			"id": "s-07.impl",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-07.cr1",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-07.cr2",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": "07"
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-close.rev",
 			"agentType": "reviewer",
-			"label": "reviewer",
-			"attributes": {
-				"item": null
-			}
+			"label": "reviewer"
 		},
 		{
 			"id": "s-close.fix",
 			"agentType": "implementer",
-			"label": "implementer",
-			"attributes": {
-				"item": null
-			}
+			"label": "implementer"
 		},
 		{
 			"id": "s-close.gates",
 			"agentType": "helper",
-			"label": "helper",
-			"attributes": {
-				"item": null
-			}
+			"label": "helper"
 		}
 	],
 	"spans": [
@@ -836,6 +647,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "baseline",
 			"label": "baseline full gates",
 			"sessionId": "s-base",
 			"mode": "start",
@@ -844,8 +656,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "baseline full gates",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -854,7 +664,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "01 plan",
+			"workItemId": "01",
+			"label": "plan",
 			"sessionId": "s-01.plan",
 			"mode": "start",
 			"startMs": 120000,
@@ -862,8 +673,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -872,7 +681,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "01 plan review 1",
+			"workItemId": "01",
+			"label": "plan review 1",
 			"sessionId": "s-01.pr1",
 			"mode": "start",
 			"startMs": 2280000,
@@ -880,8 +690,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -890,7 +698,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "01 plan fixes (no pass 2)",
+			"workItemId": "01",
+			"label": "plan fixes (no pass 2)",
 			"sessionId": "s-01.plan",
 			"mode": "resume",
 			"startMs": 3240000,
@@ -898,8 +707,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes (no pass 2)",
-				"item": "01",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-01.plan"
@@ -909,7 +716,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "01 scout",
+			"workItemId": "01",
+			"label": "scout",
 			"sessionId": "s-01.scout",
 			"mode": "start",
 			"startMs": 3900000,
@@ -917,8 +725,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -927,7 +733,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "01 implement + T1",
+			"workItemId": "01",
+			"label": "implement + T1",
 			"sessionId": "s-01.impl",
 			"mode": "start",
 			"startMs": 4200000,
@@ -935,8 +742,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -945,7 +750,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "02 plan",
+			"workItemId": "02",
+			"label": "plan",
 			"sessionId": "s-02.plan",
 			"mode": "start",
 			"startMs": 4200000,
@@ -953,8 +759,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -963,7 +767,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "03 plan",
+			"workItemId": "03",
+			"label": "plan",
 			"sessionId": "s-03.plan",
 			"mode": "start",
 			"startMs": 4200000,
@@ -971,8 +776,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -981,7 +784,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "02 plan review 1",
+			"workItemId": "02",
+			"label": "plan review 1",
 			"sessionId": "s-02.pr1",
 			"mode": "start",
 			"startMs": 6060000,
@@ -989,8 +793,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -999,7 +801,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "03 plan review 1",
+			"workItemId": "03",
+			"label": "plan review 1",
 			"sessionId": "s-03.pr1",
 			"mode": "start",
 			"startMs": 6360000,
@@ -1007,8 +810,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -1017,7 +818,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "02 plan fixes",
+			"workItemId": "02",
+			"label": "plan fixes",
 			"sessionId": "s-02.plan",
 			"mode": "resume",
 			"startMs": 7020000,
@@ -1025,8 +827,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes",
-				"item": "02",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-02.plan"
@@ -1036,7 +836,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "03 plan fixes (no pass 2)",
+			"workItemId": "03",
+			"label": "plan fixes (no pass 2)",
 			"sessionId": "s-03.plan",
 			"mode": "resume",
 			"startMs": 7320000,
@@ -1044,8 +845,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes (no pass 2)",
-				"item": "03",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-03.plan"
@@ -1055,7 +854,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "02 plan review 2",
+			"workItemId": "02",
+			"label": "plan review 2",
 			"sessionId": "s-02.pr2",
 			"mode": "start",
 			"startMs": 7680000,
@@ -1063,8 +863,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 2",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1073,7 +871,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "04 plan",
+			"workItemId": "04",
+			"label": "plan",
 			"sessionId": "s-04.plan",
 			"mode": "start",
 			"startMs": 7860000,
@@ -1081,8 +880,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1091,7 +888,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "06 sizing: proposes split",
+			"workItemId": "06",
+			"label": "sizing: proposes split",
 			"sessionId": "s-06.plan",
 			"mode": "start",
 			"startMs": 8340000,
@@ -1099,8 +897,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "sizing: proposes split",
-				"item": "06",
 				"illustrative": true
 			}
 		},
@@ -1109,7 +905,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "06a plan",
+			"workItemId": "06a",
+			"label": "plan",
 			"sessionId": "s-06a.plan",
 			"mode": "start",
 			"startMs": 9300000,
@@ -1117,8 +914,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "06a",
 				"illustrative": true
 			}
 		},
@@ -1127,7 +922,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "01 code review 1",
+			"workItemId": "01",
+			"label": "code review 1",
 			"sessionId": "s-01.cr1",
 			"mode": "start",
 			"startMs": 9660000,
@@ -1135,8 +931,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -1145,7 +939,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "04 plan review 1",
+			"workItemId": "04",
+			"label": "plan review 1",
 			"sessionId": "s-04.pr1",
 			"mode": "start",
 			"startMs": 9720000,
@@ -1153,8 +948,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1163,7 +956,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "04 plan fixes (no pass 2)",
+			"workItemId": "04",
+			"label": "plan fixes (no pass 2)",
 			"sessionId": "s-04.plan",
 			"mode": "resume",
 			"startMs": 10500000,
@@ -1171,8 +965,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes (no pass 2)",
-				"item": "04",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-04.plan"
@@ -1182,7 +974,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "06a plan review 1 (approved)",
+			"workItemId": "06a",
+			"label": "plan review 1 (approved)",
 			"sessionId": "s-06a.pr1",
 			"mode": "start",
 			"startMs": 10860000,
@@ -1190,8 +983,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1 (approved)",
-				"item": "06a",
 				"illustrative": true
 			}
 		},
@@ -1200,7 +991,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "01 fixes",
+			"workItemId": "01",
+			"label": "fixes",
 			"sessionId": "s-01.impl",
 			"mode": "resume",
 			"startMs": 10920000,
@@ -1208,8 +1000,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "01",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-01.impl"
@@ -1219,7 +1009,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "06b plan",
+			"workItemId": "06b",
+			"label": "plan",
 			"sessionId": "s-06b.plan",
 			"mode": "start",
 			"startMs": 11040000,
@@ -1227,8 +1018,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -1237,7 +1026,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "01 review 2 (fix range)",
+			"workItemId": "01",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-01.cr2",
 			"mode": "start",
 			"startMs": 12180000,
@@ -1245,8 +1035,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "01",
 				"illustrative": true
 			}
 		},
@@ -1255,7 +1043,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "06b plan review 1",
+			"workItemId": "06b",
+			"label": "plan review 1",
 			"sessionId": "s-06b.pr1",
 			"mode": "start",
 			"startMs": 12600000,
@@ -1263,8 +1052,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -1273,7 +1060,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "02 scout: relevant",
+			"workItemId": "02",
+			"label": "scout: relevant",
 			"sessionId": "s-02.scout",
 			"mode": "start",
 			"startMs": 12720000,
@@ -1281,8 +1069,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout: relevant",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1291,7 +1077,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 scout",
+			"workItemId": "03",
+			"label": "scout",
 			"sessionId": "s-03.scout",
 			"mode": "start",
 			"startMs": 12720000,
@@ -1299,8 +1086,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -1309,7 +1094,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "04 scout",
+			"workItemId": "04",
+			"label": "scout",
 			"sessionId": "s-04.scout",
 			"mode": "start",
 			"startMs": 12720000,
@@ -1317,8 +1103,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1327,6 +1111,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "cp-01",
 			"label": "checkpoint after 01: full gates",
 			"sessionId": "s-c1",
 			"mode": "start",
@@ -1335,8 +1120,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "checkpoint after 01: full gates",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -1345,7 +1128,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "02 refresh",
+			"workItemId": "02",
+			"label": "refresh",
 			"sessionId": "s-02.refresh",
 			"mode": "start",
 			"startMs": 13020000,
@@ -1353,8 +1137,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "refresh",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1363,7 +1145,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 implement + T1",
+			"workItemId": "03",
+			"label": "implement + T1",
 			"sessionId": "s-03.impl",
 			"mode": "start",
 			"startMs": 13020000,
@@ -1371,8 +1154,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -1381,7 +1162,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "04 implement + T1",
+			"workItemId": "04",
+			"label": "implement + T1",
 			"sessionId": "s-04.impl",
 			"mode": "start",
 			"startMs": 13020000,
@@ -1389,8 +1171,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1399,7 +1179,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "05 plan",
+			"workItemId": "05",
+			"label": "plan",
 			"sessionId": "s-05.plan",
 			"mode": "start",
 			"startMs": 13020000,
@@ -1407,8 +1188,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1417,7 +1196,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "06b plan fixes (no pass 2)",
+			"workItemId": "06b",
+			"label": "plan fixes (no pass 2)",
 			"sessionId": "s-06b.plan",
 			"mode": "resume",
 			"startMs": 13380000,
@@ -1425,8 +1205,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes (no pass 2)",
-				"item": "06b",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-06b.plan"
@@ -1436,7 +1214,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "02 refresh review",
+			"workItemId": "02",
+			"label": "refresh review",
 			"sessionId": "s-02.rr",
 			"mode": "start",
 			"startMs": 13800000,
@@ -1444,8 +1223,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "refresh review",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1454,7 +1231,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "02 implement + T1",
+			"workItemId": "02",
+			"label": "implement + T1",
 			"sessionId": "s-02.impl",
 			"mode": "start",
 			"startMs": 14340000,
@@ -1462,8 +1240,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1472,7 +1248,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "05 plan review 1",
+			"workItemId": "05",
+			"label": "plan review 1",
 			"sessionId": "s-05.pr1",
 			"mode": "start",
 			"startMs": 14880000,
@@ -1480,8 +1257,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1490,7 +1265,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "05 plan fixes",
+			"workItemId": "05",
+			"label": "plan fixes",
 			"sessionId": "s-05.plan",
 			"mode": "resume",
 			"startMs": 15840000,
@@ -1498,8 +1274,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes",
-				"item": "05",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-05.plan"
@@ -1509,7 +1283,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-1",
-			"label": "05 plan review 2",
+			"workItemId": "05",
+			"label": "plan review 2",
 			"sessionId": "s-05.pr2",
 			"mode": "start",
 			"startMs": 16500000,
@@ -1517,8 +1292,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 2",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1527,7 +1300,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "04 code review 1",
+			"workItemId": "04",
+			"label": "code review 1",
 			"sessionId": "s-04.cr1",
 			"mode": "start",
 			"startMs": 17280000,
@@ -1535,8 +1309,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1545,7 +1317,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "04 fixes",
+			"workItemId": "04",
+			"label": "fixes",
 			"sessionId": "s-04.impl",
 			"mode": "resume",
 			"startMs": 18420000,
@@ -1553,8 +1326,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "04",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-04.impl"
@@ -1564,7 +1335,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 code review 1",
+			"workItemId": "03",
+			"label": "code review 1",
 			"sessionId": "s-03.cr1",
 			"mode": "start",
 			"startMs": 19080000,
@@ -1572,8 +1344,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -1582,7 +1352,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "02 code review 1 (approved)",
+			"workItemId": "02",
+			"label": "code review 1 (approved)",
 			"sessionId": "s-02.cr1",
 			"mode": "start",
 			"startMs": 19200000,
@@ -1590,8 +1361,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1 (approved)",
-				"item": "02",
 				"illustrative": true
 			}
 		},
@@ -1600,7 +1369,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "04 review 2 (fix range)",
+			"workItemId": "04",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-04.cr2",
 			"mode": "start",
 			"startMs": 19380000,
@@ -1608,8 +1378,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "04",
 				"illustrative": true
 			}
 		},
@@ -1618,7 +1386,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 fixes",
+			"workItemId": "03",
+			"label": "fixes",
 			"sessionId": "s-03.impl",
 			"mode": "resume",
 			"startMs": 20460000,
@@ -1626,8 +1395,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "03",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-03.impl"
@@ -1637,7 +1404,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 review 2 (fix range)",
+			"workItemId": "03",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-03.cr2",
 			"mode": "start",
 			"startMs": 22020000,
@@ -1645,8 +1413,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "03",
 				"illustrative": true
 			}
 		},
@@ -1655,7 +1421,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "03 resolve integration conflict",
+			"workItemId": "g1",
+			"label": "resolve integration conflict",
 			"sessionId": "s-03.impl",
 			"mode": "resume",
 			"startMs": 22560000,
@@ -1663,8 +1430,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "resolve integration conflict",
-				"item": "03",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-03.fix1"
@@ -1674,6 +1439,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "g1",
 			"label": "group T1 (02, 03, 04)",
 			"sessionId": "s-g1.t1",
 			"mode": "start",
@@ -1682,8 +1448,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "group T1 (02, 03, 04)",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -1692,6 +1456,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "g1",
 			"label": "integration review (remerge-diff)",
 			"sessionId": "s-g1.rev",
 			"mode": "start",
@@ -1700,8 +1465,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "integration review (remerge-diff)",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -1710,7 +1473,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 scout: relevant",
+			"workItemId": "05",
+			"label": "scout: relevant",
 			"sessionId": "s-05.scout",
 			"mode": "start",
 			"startMs": 25260000,
@@ -1718,8 +1482,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout: relevant",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1728,7 +1490,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "06a scout",
+			"workItemId": "06a",
+			"label": "scout",
 			"sessionId": "s-06a.scout",
 			"mode": "start",
 			"startMs": 25260000,
@@ -1736,8 +1499,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "06a",
 				"illustrative": true
 			}
 		},
@@ -1746,7 +1507,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "06b scout",
+			"workItemId": "06b",
+			"label": "scout",
 			"sessionId": "s-06b.scout",
 			"mode": "start",
 			"startMs": 25260000,
@@ -1754,8 +1516,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -1764,6 +1524,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "cp-04",
 			"label": "checkpoint after 04: full gates",
 			"sessionId": "s-c2",
 			"mode": "start",
@@ -1772,8 +1533,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "checkpoint after 04: full gates",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -1782,7 +1541,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 refresh",
+			"workItemId": "05",
+			"label": "refresh",
 			"sessionId": "s-05.refresh",
 			"mode": "start",
 			"startMs": 25560000,
@@ -1790,8 +1550,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "refresh",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1800,7 +1558,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "06a implement + T1",
+			"workItemId": "06a",
+			"label": "implement + T1",
 			"sessionId": "s-06a.impl",
 			"mode": "start",
 			"startMs": 25560000,
@@ -1808,8 +1567,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "06a",
 				"illustrative": true
 			}
 		},
@@ -1818,7 +1575,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "06b implement + T1",
+			"workItemId": "06b",
+			"label": "implement + T1",
 			"sessionId": "s-06b.impl",
 			"mode": "start",
 			"startMs": 25560000,
@@ -1826,8 +1584,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -1836,7 +1592,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 refresh review",
+			"workItemId": "05",
+			"label": "refresh review",
 			"sessionId": "s-05.rr",
 			"mode": "start",
 			"startMs": 26220000,
@@ -1844,8 +1601,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "refresh review",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1854,7 +1609,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 implement + T1",
+			"workItemId": "05",
+			"label": "implement + T1",
 			"sessionId": "s-05.impl",
 			"mode": "start",
 			"startMs": 26760000,
@@ -1862,8 +1618,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -1872,7 +1626,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "07 plan",
+			"workItemId": "07",
+			"label": "plan",
 			"sessionId": "s-07.plan",
 			"mode": "start",
 			"startMs": 26760000,
@@ -1880,8 +1635,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -1890,7 +1643,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "07 plan review 1",
+			"workItemId": "07",
+			"label": "plan review 1",
 			"sessionId": "s-07.pr1",
 			"mode": "start",
 			"startMs": 28620000,
@@ -1898,8 +1652,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "plan review 1",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -1908,7 +1660,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-b",
-			"label": "06a code review 1 (approved)",
+			"workItemId": "06a",
+			"label": "code review 1 (approved)",
 			"sessionId": "s-06a.cr1",
 			"mode": "start",
 			"startMs": 29220000,
@@ -1916,8 +1669,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1 (approved)",
-				"item": "06a",
 				"illustrative": true
 			}
 		},
@@ -1926,7 +1677,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "06b code review 1",
+			"workItemId": "06b",
+			"label": "code review 1",
 			"sessionId": "s-06b.cr1",
 			"mode": "start",
 			"startMs": 29520000,
@@ -1934,8 +1686,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -1944,7 +1694,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "plan-2",
-			"label": "07 plan fixes (no pass 2)",
+			"workItemId": "07",
+			"label": "plan fixes (no pass 2)",
 			"sessionId": "s-07.plan",
 			"mode": "resume",
 			"startMs": 29580000,
@@ -1952,8 +1703,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "plan-author",
-				"phase": "plan fixes (no pass 2)",
-				"item": "07",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-07.plan"
@@ -1963,7 +1712,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "06b fixes",
+			"workItemId": "06b",
+			"label": "fixes",
 			"sessionId": "s-06b.impl",
 			"mode": "resume",
 			"startMs": 30480000,
@@ -1971,8 +1721,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "06b",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-06b.impl"
@@ -1982,7 +1730,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-c",
-			"label": "06b review 2 (fix range)",
+			"workItemId": "06b",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-06b.cr2",
 			"mode": "start",
 			"startMs": 31140000,
@@ -1990,8 +1739,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "06b",
 				"illustrative": true
 			}
 		},
@@ -2000,6 +1747,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "g2",
 			"label": "group T1 (06a, 06b)",
 			"sessionId": "s-g2.t1",
 			"mode": "start",
@@ -2008,8 +1756,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "group T1 (06a, 06b)",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -2018,7 +1764,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 code review 1",
+			"workItemId": "05",
+			"label": "code review 1",
 			"sessionId": "s-05.cr1",
 			"mode": "start",
 			"startMs": 31920000,
@@ -2026,8 +1773,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -2036,7 +1781,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 fixes",
+			"workItemId": "05",
+			"label": "fixes",
 			"sessionId": "s-05.impl",
 			"mode": "resume",
 			"startMs": 33180000,
@@ -2044,8 +1790,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "05",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-05.impl"
@@ -2055,7 +1799,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "05 review 2 (fix range)",
+			"workItemId": "05",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-05.cr2",
 			"mode": "start",
 			"startMs": 34440000,
@@ -2063,8 +1808,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -2073,7 +1816,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
-			"label": "05 integration T1",
+			"workItemId": "05",
+			"label": "integration T1",
 			"sessionId": "s-05.t1",
 			"mode": "start",
 			"startMs": 34980000,
@@ -2081,8 +1825,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "integration T1",
-				"item": "05",
 				"illustrative": true
 			}
 		},
@@ -2091,7 +1833,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "07 scout",
+			"workItemId": "07",
+			"label": "scout",
 			"sessionId": "s-07.scout",
 			"mode": "start",
 			"startMs": 35940000,
@@ -2099,8 +1842,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "scout",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -2109,7 +1850,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "07 implement + T1",
+			"workItemId": "07",
+			"label": "implement + T1",
 			"sessionId": "s-07.impl",
 			"mode": "start",
 			"startMs": 36240000,
@@ -2117,8 +1859,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "implement + T1",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -2127,7 +1867,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "07 code review 1",
+			"workItemId": "07",
+			"label": "code review 1",
 			"sessionId": "s-07.cr1",
 			"mode": "start",
 			"startMs": 40800000,
@@ -2135,8 +1876,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "code review 1",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -2145,7 +1884,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "07 fixes",
+			"workItemId": "07",
+			"label": "fixes",
 			"sessionId": "s-07.impl",
 			"mode": "resume",
 			"startMs": 41940000,
@@ -2153,8 +1893,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "fixes",
-				"item": "07",
 				"illustrative": true
 			},
 			"resumesSpanId": "sp-07.impl"
@@ -2164,7 +1902,8 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "pool-a",
-			"label": "07 review 2 (fix range)",
+			"workItemId": "07",
+			"label": "review 2 (fix range)",
 			"sessionId": "s-07.cr2",
 			"mode": "start",
 			"startMs": 42900000,
@@ -2172,8 +1911,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "review 2 (fix range)",
-				"item": "07",
 				"illustrative": true
 			}
 		},
@@ -2182,6 +1919,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "work",
+			"workItemId": "close",
 			"label": "epic-diff review",
 			"sessionId": "s-close.rev",
 			"mode": "start",
@@ -2190,8 +1928,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "reviewer",
-				"phase": "epic-diff review",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -2200,6 +1936,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "work",
+			"workItemId": "close",
 			"label": "epic-close fixes + T1",
 			"sessionId": "s-close.fix",
 			"mode": "start",
@@ -2208,8 +1945,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "implementer",
-				"phase": "epic-close fixes + T1",
-				"item": null,
 				"illustrative": true
 			}
 		},
@@ -2218,6 +1953,7 @@
 			"kind": "agent",
 			"parentId": "orchestrator-run1",
 			"worktreeId": "checkpoint",
+			"workItemId": "close",
 			"label": "final checkpoint: full gates",
 			"sessionId": "s-close.gates",
 			"mode": "start",
@@ -2226,8 +1962,6 @@
 			"status": "ok",
 			"attributes": {
 				"agent": "helper",
-				"phase": "final checkpoint: full gates",
-				"item": null,
 				"illustrative": true
 			}
 		}
@@ -2442,6 +2176,504 @@
 			"endMs": 43440000,
 			"trigger": "manual",
 			"outcome": "ok"
+		}
+	],
+	"workItems": [
+		{
+			"id": "baseline",
+			"label": "baseline"
+		},
+		{
+			"id": "01",
+			"label": "01 data model"
+		},
+		{
+			"id": "02",
+			"label": "02 list view"
+		},
+		{
+			"id": "03",
+			"label": "03 detail view"
+		},
+		{
+			"id": "04",
+			"label": "04 import"
+		},
+		{
+			"id": "05",
+			"label": "05 editor"
+		},
+		{
+			"id": "06",
+			"label": "06 permissions"
+		},
+		{
+			"id": "06a",
+			"label": "06a roles",
+			"parentId": "06"
+		},
+		{
+			"id": "06b",
+			"label": "06b sharing",
+			"parentId": "06"
+		},
+		{
+			"id": "07",
+			"label": "07 export"
+		},
+		{
+			"id": "cp-01",
+			"label": "checkpoint after 01"
+		},
+		{
+			"id": "g1",
+			"label": "G1 integration (02, 03, 04)"
+		},
+		{
+			"id": "cp-04",
+			"label": "checkpoint after 04"
+		},
+		{
+			"id": "g2",
+			"label": "G2 integration (06a, 06b)"
+		},
+		{
+			"id": "close",
+			"label": "epic close"
+		}
+	],
+	"links": [
+		{
+			"id": "l-01.plan-01.pr1",
+			"fromSpanId": "sp-01.plan",
+			"toSpanId": "sp-01.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.pr1-01.pfix",
+			"fromSpanId": "sp-01.pr1",
+			"toSpanId": "sp-01.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-01.pfix-01.scout",
+			"fromSpanId": "sp-01.pfix",
+			"toSpanId": "sp-01.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-01.scout-01.impl",
+			"fromSpanId": "sp-01.scout",
+			"toSpanId": "sp-01.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-01.impl-01.cr1",
+			"fromSpanId": "sp-01.impl",
+			"toSpanId": "sp-01.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.cr1-01.fix1",
+			"fromSpanId": "sp-01.cr1",
+			"toSpanId": "sp-01.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-01.fix1-01.cr2",
+			"fromSpanId": "sp-01.fix1",
+			"toSpanId": "sp-01.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.cr2-c1",
+			"fromSpanId": "sp-01.cr2",
+			"toSpanId": "sp-c1",
+			"kind": "checkpoint"
+		},
+		{
+			"id": "l-02.plan-02.pr1",
+			"fromSpanId": "sp-02.plan",
+			"toSpanId": "sp-02.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-02.pr1-02.pfix",
+			"fromSpanId": "sp-02.pr1",
+			"toSpanId": "sp-02.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-02.pfix-02.pr2",
+			"fromSpanId": "sp-02.pfix",
+			"toSpanId": "sp-02.pr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.plan-03.pr1",
+			"fromSpanId": "sp-03.plan",
+			"toSpanId": "sp-03.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.pr1-03.pfix",
+			"fromSpanId": "sp-03.pr1",
+			"toSpanId": "sp-03.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-04.plan-04.pr1",
+			"fromSpanId": "sp-04.plan",
+			"toSpanId": "sp-04.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-04.pr1-04.pfix",
+			"fromSpanId": "sp-04.pr1",
+			"toSpanId": "sp-04.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-06.plan-06a.plan",
+			"fromSpanId": "sp-06.plan",
+			"toSpanId": "sp-06a.plan",
+			"kind": "split"
+		},
+		{
+			"id": "l-06a.plan-06a.pr1",
+			"fromSpanId": "sp-06a.plan",
+			"toSpanId": "sp-06a.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06.plan-06b.plan",
+			"fromSpanId": "sp-06.plan",
+			"toSpanId": "sp-06b.plan",
+			"kind": "split"
+		},
+		{
+			"id": "l-06b.plan-06b.pr1",
+			"fromSpanId": "sp-06b.plan",
+			"toSpanId": "sp-06b.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.pr1-06b.pfix",
+			"fromSpanId": "sp-06b.pr1",
+			"toSpanId": "sp-06b.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-02.pr2-02.scout",
+			"fromSpanId": "sp-02.pr2",
+			"toSpanId": "sp-02.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-02.scout-02.refresh",
+			"fromSpanId": "sp-02.scout",
+			"toSpanId": "sp-02.refresh",
+			"kind": "refresh"
+		},
+		{
+			"id": "l-02.refresh-02.rr",
+			"fromSpanId": "sp-02.refresh",
+			"toSpanId": "sp-02.rr",
+			"kind": "review"
+		},
+		{
+			"id": "l-02.rr-02.impl",
+			"fromSpanId": "sp-02.rr",
+			"toSpanId": "sp-02.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-02.impl-02.cr1",
+			"fromSpanId": "sp-02.impl",
+			"toSpanId": "sp-02.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.pfix-03.scout",
+			"fromSpanId": "sp-03.pfix",
+			"toSpanId": "sp-03.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-03.scout-03.impl",
+			"fromSpanId": "sp-03.scout",
+			"toSpanId": "sp-03.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-03.impl-03.cr1",
+			"fromSpanId": "sp-03.impl",
+			"toSpanId": "sp-03.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.cr1-03.fix1",
+			"fromSpanId": "sp-03.cr1",
+			"toSpanId": "sp-03.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-03.fix1-03.cr2",
+			"fromSpanId": "sp-03.fix1",
+			"toSpanId": "sp-03.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-04.pfix-04.scout",
+			"fromSpanId": "sp-04.pfix",
+			"toSpanId": "sp-04.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-04.scout-04.impl",
+			"fromSpanId": "sp-04.scout",
+			"toSpanId": "sp-04.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-04.impl-04.cr1",
+			"fromSpanId": "sp-04.impl",
+			"toSpanId": "sp-04.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-04.cr1-04.fix1",
+			"fromSpanId": "sp-04.cr1",
+			"toSpanId": "sp-04.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-04.fix1-04.cr2",
+			"fromSpanId": "sp-04.fix1",
+			"toSpanId": "sp-04.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.cr2-g1.conflict",
+			"fromSpanId": "sp-03.cr2",
+			"toSpanId": "sp-g1.conflict",
+			"kind": "conflict"
+		},
+		{
+			"id": "l-02.cr1-g1.t1",
+			"fromSpanId": "sp-02.cr1",
+			"toSpanId": "sp-g1.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-04.cr2-g1.t1",
+			"fromSpanId": "sp-04.cr2",
+			"toSpanId": "sp-g1.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-g1.conflict-g1.t1",
+			"fromSpanId": "sp-g1.conflict",
+			"toSpanId": "sp-g1.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-g1.t1-g1.rev",
+			"fromSpanId": "sp-g1.t1",
+			"toSpanId": "sp-g1.rev",
+			"kind": "review"
+		},
+		{
+			"id": "l-g1.rev-c2",
+			"fromSpanId": "sp-g1.rev",
+			"toSpanId": "sp-c2",
+			"kind": "checkpoint"
+		},
+		{
+			"id": "l-05.plan-05.pr1",
+			"fromSpanId": "sp-05.plan",
+			"toSpanId": "sp-05.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.pr1-05.pfix",
+			"fromSpanId": "sp-05.pr1",
+			"toSpanId": "sp-05.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-05.pfix-05.pr2",
+			"fromSpanId": "sp-05.pfix",
+			"toSpanId": "sp-05.pr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.pr2-05.scout",
+			"fromSpanId": "sp-05.pr2",
+			"toSpanId": "sp-05.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-05.scout-05.refresh",
+			"fromSpanId": "sp-05.scout",
+			"toSpanId": "sp-05.refresh",
+			"kind": "refresh"
+		},
+		{
+			"id": "l-05.refresh-05.rr",
+			"fromSpanId": "sp-05.refresh",
+			"toSpanId": "sp-05.rr",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.rr-05.impl",
+			"fromSpanId": "sp-05.rr",
+			"toSpanId": "sp-05.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-05.impl-05.cr1",
+			"fromSpanId": "sp-05.impl",
+			"toSpanId": "sp-05.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.cr1-05.fix1",
+			"fromSpanId": "sp-05.cr1",
+			"toSpanId": "sp-05.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-05.fix1-05.cr2",
+			"fromSpanId": "sp-05.fix1",
+			"toSpanId": "sp-05.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-06a.pr1-06a.scout",
+			"fromSpanId": "sp-06a.pr1",
+			"toSpanId": "sp-06a.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-06a.scout-06a.impl",
+			"fromSpanId": "sp-06a.scout",
+			"toSpanId": "sp-06a.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-06a.impl-06a.cr1",
+			"fromSpanId": "sp-06a.impl",
+			"toSpanId": "sp-06a.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.pfix-06b.scout",
+			"fromSpanId": "sp-06b.pfix",
+			"toSpanId": "sp-06b.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-06b.scout-06b.impl",
+			"fromSpanId": "sp-06b.scout",
+			"toSpanId": "sp-06b.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-06b.impl-06b.cr1",
+			"fromSpanId": "sp-06b.impl",
+			"toSpanId": "sp-06b.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.cr1-06b.fix1",
+			"fromSpanId": "sp-06b.cr1",
+			"toSpanId": "sp-06b.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-06b.fix1-06b.cr2",
+			"fromSpanId": "sp-06b.fix1",
+			"toSpanId": "sp-06b.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-06a.cr1-g2.t1",
+			"fromSpanId": "sp-06a.cr1",
+			"toSpanId": "sp-g2.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-06b.cr2-g2.t1",
+			"fromSpanId": "sp-06b.cr2",
+			"toSpanId": "sp-g2.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-05.cr2-05.t1",
+			"fromSpanId": "sp-05.cr2",
+			"toSpanId": "sp-05.t1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-07.plan-07.pr1",
+			"fromSpanId": "sp-07.plan",
+			"toSpanId": "sp-07.pr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-07.pr1-07.pfix",
+			"fromSpanId": "sp-07.pr1",
+			"toSpanId": "sp-07.pfix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-07.pfix-07.scout",
+			"fromSpanId": "sp-07.pfix",
+			"toSpanId": "sp-07.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-07.scout-07.impl",
+			"fromSpanId": "sp-07.scout",
+			"toSpanId": "sp-07.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-07.impl-07.cr1",
+			"fromSpanId": "sp-07.impl",
+			"toSpanId": "sp-07.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-07.cr1-07.fix1",
+			"fromSpanId": "sp-07.cr1",
+			"toSpanId": "sp-07.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-07.fix1-07.cr2",
+			"fromSpanId": "sp-07.fix1",
+			"toSpanId": "sp-07.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-07.cr2-close.rev",
+			"fromSpanId": "sp-07.cr2",
+			"toSpanId": "sp-close.rev",
+			"kind": "epic review"
+		},
+		{
+			"id": "l-close.rev-close.fix",
+			"fromSpanId": "sp-close.rev",
+			"toSpanId": "sp-close.fix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-close.fix-close.gates",
+			"fromSpanId": "sp-close.fix",
+			"toSpanId": "sp-close.gates",
+			"kind": "checkpoint"
 		}
 	]
 }

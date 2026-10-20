@@ -98,6 +98,8 @@ An illustrative epic of seven children on a pool of three worktrees. The duratio
 
 ![Example epic execution](diagrams/example-epic.svg)
 
+How to read it: each band is a work item (a child, an integration, a checkpoint or epic close), with its steps numbered in order. Bar colour is the agent; the boxed region and tag above a bar are the worktree and branch it ran in. Arrows are handoffs, labelled by kind (`review`, `fixes`, `start`, `merge`, `split`, …). A long `start` arrow is a child with an approved plan waiting for its unit to start.
+
 | Child | Depends on | Unit | What the run shows |
 |---|---|---|---|
 | 01 | — | group of one | Plan pass 2 skipped; plain merge at about 3:30 |
@@ -113,7 +115,7 @@ What to notice:
 
 ### Regenerating the diagram
 
-The diagram is a [Work Trace](https://github.com/smantzavinos/work-trace) built from a hand-written scenario. Edit `diagrams/example-epic.scenario.json` (steps with durations, worktrees, branches and `after` dependencies), then:
+The diagram is a [Work Trace](https://github.com/smantzavinos/work-trace) built from a hand-written scenario. Edit `diagrams/example-epic.scenario.json`: work items, and steps with their agent, duration, worktree, branch, work item, the steps they hand off from (`from`, with a `kind`) and anything else they wait for (`after`). Then:
 
 ```
 node tools/scenario-trace.mjs docs/diagrams/example-epic.scenario.json \
