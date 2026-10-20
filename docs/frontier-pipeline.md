@@ -20,10 +20,10 @@ prototype ──► scope (with the human) ──► orchestrate (unattended) �
 |---|---|---|
 | orchestrator | Sequences the work, keeps `state.json`, decides; never plans, builds or reviews | One long session, self-compacts at clean points |
 | plan-author | Writes a child's `plan.md`, revises it from review | Owns the plan until approved; resumed for fixes. Refreshes after approval are fresh sessions |
-| implementer | Builds the whole plan, runs T1, fixes review findings | Owns the code until approved; resumed for fixes and integration conflicts |
+| implementer | Builds the whole plan, runs T1's fast gates and records the rest, fixes review and T1 findings | Owns the code until approved; resumed for fixes and integration conflicts |
 | reviewer | Judges a plan, a refresh, a diff, an integration or the whole epic | Always fresh; commits only the ledger |
 | oracle | Breaks ties and answers what would otherwise go to the human | Fresh |
-| helper, researcher | Scouts, gate runs, digests, sweeps | Fresh, fast models |
+| helper, researcher | Scouts, T1 and gate runs, digests, sweeps | Fresh, fast models |
 
 ## Artifacts
 
@@ -42,8 +42,8 @@ Each worktree has one writer at a time.
 | Worktree | Holds |
 |---|---|
 | Work branch | The epic branch. Only the orchestrator's files, plan merges and integration merges land here. Epic-close fixes run here |
-| Planning (up to two) | A `plan/NN` branch per child, cut from the work-branch tip. Plan-authors and plan reviewers run here |
-| Pool (lanes) | A `lane/NN` branch per child. Scout, refresh, implementer and code reviews run here. A lane holds its worktree until integrated |
+| Planning (up to three) | A `plan/NN` branch per child, cut from the work-branch tip. Plan-authors and plan reviewers run here |
+| Pool (lanes) | A `lane/NN` branch per child. Scout, refresh, implementer, code reviews and T1 helpers run here. A lane holds its worktree until integrated |
 | Checkpoint | Baseline and checkpoint full-gate runs, checkpoint fixes, and (when free) group integration |
 
 Without a worktree pool there are no lanes: children run one at a time in the work-branch worktree.
@@ -54,15 +54,19 @@ Without a worktree pool there are no lanes: children run one at a time in the wo
    - Pass 2 is skipped when the reviewer says it isn't needed, there were no blockers, every major was fixed and none rejected, and no fix changed a contract.
    - On approval the plan branch merges into the work branch, and the child's budget is set from its estimate (implementer hours × 1.5, plus a fixed per-child cost).
 2. **Start.** When its unit may start (below), the child gets a lane at the work-branch tip. A helper *scouts* what was integrated since the plan was cut. Only if something relevant changed does a fresh plan-author *refresh* the plan, reviewed once.
-3. **Implement.** The implementer builds everything, running only fast T0 checks while building, then T1 once at the end. Its ledger entry records each gate's command line and tree, and maps every deliverable to its evidence.
-4. **Code review.** Pass 1 reviews the child's whole diff against the plan. Later passes review only the fix range. Cap: 4 passes, then stop for the human.
+3. **Implement.** The implementer builds everything, running only fast T0 checks while building. At the end it runs T1's fast gates (builds, typecheck, lint), records the exact command lines for the rest of T1 (units and E2E), stops its services and hands off. Its ledger entry records each gate's command line and tree, and maps every deliverable to its evidence.
+4. **Code review and T1, side by side.** A fresh reviewer and a T1 helper start together on the implementer's commit. The helper runs the recorded units and E2E, classifying each failure as flake, baseline or red. Approved and green closes the child; otherwise the implementer fixes the findings and the red T1 failures together.
+   - Pass 1 reviews the child's whole diff against the plan. Later passes review only the fix range.
+   - The next review is skipped when the reviewer says it isn't needed, every major was fixed and none rejected, every major was of a kind whose fix can't change production behaviour (`tests`, `T1`, `wording`), and every T1 fix touched only tests or fixtures. Then only T1 runs again.
+   - Cap: 4 passes, T1-only fix passes included, then stop for the human.
 5. **Close.** The child's unit integrates (below). The orchestrator updates the epic, starts every checkpoint and unit that is now ready, and self-compacts.
 
 ## Units, groups and claims
 
+- **Dependencies:** a child depends on another only for what it needs built. A child that needs only a contract (schema, API, types, an interface) gets it from the earliest child it already depends on, usually the foundation, which keeps the chain short; the longest chain sets the epic's length.
 - **Unit:** a parallel group, or a child in no group (a group of one). Group members build at the same time and integrate together.
-- **Start rule:** a unit starts when everything its members depend on is integrated, every member's plan is approved, and a pool worktree is free for each member. Units start in child-number order; a waiting unit holds back later ones.
-- **Claims:** each child names the files, routes, tables and components it may change. Units with overlapping claims never run at once. A child that must go outside its claim reports it, and the orchestrator widens the claim or orders it after the holder.
+- **Start rule:** a unit starts when everything its members depend on is integrated, every member's plan is approved, and a pool worktree is free for each member, up to `maxLanes` lanes (default 4). Units start in child-number order; a waiting unit holds back later ones.
+- **Claims:** each child names the files, routes, tables and components it may change. Units with overlapping claims never run at once. A child that must go outside its claim, or change a contract an earlier child delivered, reports it, and the orchestrator widens the claim or orders it against the children that hold or use it.
 - **Integration:**
   - *Group of one, plain merge:* if only orchestrator and plan files moved on the work branch since the lane's base, the lane merges directly; its own T1 is the proof.
   - *Otherwise:* lanes merge into an `integration/<group>` branch in child order. A conflict goes back to that member's implementer. A helper runs the group T1. An integration review runs only if an integrator changed something. Then the integration branch merges into the work branch.
@@ -72,16 +76,20 @@ Without a worktree pool there are no lanes: children run one at a time in the wo
 | Tier | When | What |
 |---|---|---|
 | T0 | While building | Related tests, one E2E spec, incremental typecheck |
-| T1 | Once per child, and per group integration | Typecheck/build of touched packages, lint on changed files, selected units, the child's E2E specs plus test-map specs and smoke set; widened or escalated by the plan |
-| Full gates | Baseline, checkpoints, epic close | Everything, off the critical path except at epic close |
+| T1 | Per review pass of a child (fast gates by the implementer, units and E2E by a helper beside the review), and per group integration | Typecheck/build of touched packages, lint on changed files, selected units, the child's E2E specs plus test-map specs and smoke set; widened or escalated by the plan |
+| Full gates | Baseline, checkpoints, epic close | Everything, off the critical path; the final checkpoint runs beside the epic-diff review |
 
-A gate is never rerun on the same tree with the same command line.
+A gate is never rerun on the same tree with the same command line. E2E workers are shared out per run: each T1 or checkpoint run gets an even share of the machine's budget across the runs in flight when it starts.
 
 **Checkpoints** are named after a child and run in the checkpoint worktree once that child and its dependencies are integrated. They don't hold back starting or integrating children. A red checkpoint is fixed on the checkpoint branch; only children that build on the broken code are paused (`orchestrate/references/checkpoint-failures.md`).
 
 ## Sizing
 
 The review-load signal (default about 7k changed lines) is what a reviewer can judge in one pass. A child above it is split only if its concerns are separable *and* the pieces can run as parallel lanes. Every child adds a fixed cost to the critical path (plan loop, review loop, integration) that only parallel lanes hide, so serial work stays whole. Groups are chosen by content, never by size.
+
+## Epic close
+
+The epic-diff review and the final checkpoint run side by side. The review's fixes go to an implementer in the work-branch worktree, which runs the fast gates. Once the fixes are in and the final checkpoint is green, the checkpoint merges, and a helper runs T1 for the fixes on the merged tip. Then the PR process.
 
 ## Stops
 
@@ -94,7 +102,7 @@ The orchestrator decides everything else, recording tricky calls under Decisions
 
 ## Example execution
 
-An illustrative epic of seven children on a pool of three worktrees. The durations are made up but of a realistic order; nothing here is measured.
+A simulated epic of seven children, with four lanes and three planning worktrees. It is scheduled by `tools/process-sim.mjs` under the skills' rules, with each step's duration set to the median of that step in the pilot (fast-verification eras). Medians hide the long tail, and no failure paths are shown, so read it for shape, not as a forecast. It takes 4h16; `plans/2026_10_20_process_variants/` compares it with other process variants on the same epic.
 
 ![Example epic execution](diagrams/example-epic.svg)
 
@@ -102,22 +110,25 @@ How to read it: each band is a work item (a child, an integration, a checkpoint 
 
 | Child | Depends on | Unit | What the run shows |
 |---|---|---|---|
-| 01 | — | group of one | Plan pass 2 skipped; plain merge at about 3:30 |
-| 02, 03, 04 | 01 | group G1 | Planned while 01 builds; start together once 01 integrates. 02's scout finds 01's changes relevant, so it gets a refresh. 03 hits an integration conflict, which its own implementer resolves; group T1 and an integration review follow |
-| 05 | 03 | group of one | Planned once 03 starts building. Starts before G2 because it is lower-numbered. Its integration needs a T1, because G2 and a checkpoint moved the work branch meanwhile |
-| 06 → 06a, 06b | 01 | new group G2 | 06's planner finds two separable concerns and proposes a split. The pieces wait for free worktrees, then build and integrate together |
-| 07 | 02, 05 | group of one | Plain merge; then the epic-diff review, its fixes and the final checkpoint |
+| 01 | — | group of one | The foundation, including the contracts the others need. Plan pass 2 skipped; a `design` major means code pass 2; plain merge at about 1:34 |
+| 02, 03, 04 | 01 | group G1 | Planned while 01 builds; start together once 01 integrates. 02's scout finds 01's changes relevant, so it gets a refresh. 04's `tests` major skips code pass 2. 03 hits an integration conflict, which its own implementer resolves; group T1 and an integration review follow |
+| 05 | 01 | group of one | Needs only 01's contracts, so it doesn't wait for 03. Starts as soon as its plan is approved and a lane is free. Its integration needs a T1, because G1 and a checkpoint moved the work branch meanwhile |
+| 06 → 06a, 06b | 01 | new group G2 | 06's planner finds two separable concerns and proposes a split. The pieces wait for two free lanes, then build and integrate together |
+| 07 | 01 | group of one | Needs only 01's contracts. Waits for a lane while G1 and 05 hold all four, then the epic close: review and final checkpoint side by side, fixes, T1 on the merged tip |
 
 What to notice:
-- **Planning runs ahead.** Both planning worktrees stay busy while lanes build, so a unit rarely waits for its plan.
-- **Checkpoints run beside the work.** The checkpoints after 01 and after 04 never block a child; only the final checkpoint is on the critical path.
-- **Fixed cost per child.** Even a clean child spends about an hour in plan loop, scout, reviews and integration on top of its build. That is why children are slices worth that cost, and why parallel lanes matter.
+- **Planning runs ahead.** The planning worktrees stay busy while lanes build, so a unit rarely waits for its plan.
+- **T1 runs beside the review.** Each review pass and its T1 overlap, so neither adds to the other.
+- **Checkpoints run beside the work.** No checkpoint blocks a child, and the final one overlaps the epic-diff review.
+- **Lanes are the limit.** With the chain short, G1 and 05 fill the four lanes; G2 and 07 wait until G1 integrates.
+- **Fixed cost per child.** A child spends about 50 min in plan loop, scout, reviews and integration on top of its build; the plan loop (about 30) usually runs ahead, off the critical path. That is why children are slices worth that cost, and why parallel lanes matter.
 
 ### Regenerating the diagram
 
-The diagram is a [Work Trace](https://github.com/smantzavinos/work-trace) built from a hand-written scenario. Edit `diagrams/example-epic.scenario.json`: work items, and steps with their agent, duration, worktree, branch, work item, the steps they hand off from (`from`, with a `kind`) and anything else they wait for (`after`). Then:
+The diagram is a [Work Trace](https://github.com/smantzavinos/work-trace). `diagrams/example-epic.epic.json` holds the epic: children with dependencies, builds and which ones get fixes, refreshes or a conflict; groups, checkpoints, lanes, planning worktrees and the step durations. `tools/process-sim.mjs` schedules it under the skills' rules into a scenario, which `tools/scenario-trace.mjs` turns into a trace:
 
 ```
+node tools/process-sim.mjs docs/diagrams/example-epic.epic.json -o docs/diagrams/example-epic.scenario.json
 node tools/scenario-trace.mjs docs/diagrams/example-epic.scenario.json \
   -o docs/diagrams/example-epic.trace.json --validate-with <work-trace checkout>
 node tools/work-trace-render.mjs --work-trace <work-trace checkout> --width 3200 docs/diagrams/example-epic.trace.json
@@ -131,3 +142,5 @@ Open the `.trace.json` in the Work Trace viewer for details per span. `tools/pi-
 - `plans/2026_10_13_fast_verification/`: verification tiers, lanes and checkpoints, and the changes made during the pilot.
 - `plans/2026_10_15_process_retro/retro.md`: what the pilot showed.
 - `plans/2026_10_16_pipeline_tuning/`: the changes adopted from the retro (units and claims, refresh only on relevant change, conditional plan pass 2, fix-range code review, deliverables map).
+- `plans/2026_10_20_process_variants/`: simulated process variants and where a single plan's time goes.
+- `plans/2026_10_20_pipeline_throughput/`: the changes adopted from them (contract-first dependencies, T1 beside code review, conditional code pass 2, final checkpoint beside the epic review, three planning worktrees).
