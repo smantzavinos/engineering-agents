@@ -10,15 +10,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Match the reviewed dotfiles llmAgents pin (Pi 0.86.1) for standalone
-    # development and managed-package compatibility. Upstream main currently
-    # resolves a newer Pi; do not float the core runtime without its own audit.
+    # Pin the audited llm-agents snapshot for standalone development and
+    # managed-package compatibility; flake.lock also pins its dependencies.
     # Historical Copilot Enterprise compaction issue to re-test before apply:
     # https://github.com/earendil-works/pi/issues/6768
     # Review temporary overlays before future Pi bumps:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {
-      url = "github:numtide/llm-agents.nix/4e06012de602e51d03b0d482c2ddec420151cb9d";
+      url = "github:numtide/llm-agents.nix/06419f6a482c5a4d38d703f4b88b128740d3124e";
     };
 
     # Visual Explainer skill (external, non-flake source)

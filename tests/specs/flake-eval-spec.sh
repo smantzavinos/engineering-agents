@@ -123,6 +123,14 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   else
     fail "Pi module pi-lens facade/runtime package selection is wrong"
   fi
+  # The source is a global-config template, not a project policy. A lens
+  # project basename here is auto-discovered when working in this module,
+  # producing deprecation warnings (undotted) or wrong-tier warnings (dotted).
+  if [[ ! -e "$REPO_ROOT/nix/modules/pi/pi-lens.json" && ! -e "$REPO_ROOT/nix/modules/pi/.pi-lens.json" ]]; then
+    pass "Pi lens global template is not discoverable as module project policy"
+  else
+    fail "Pi lens global template must not use a project-config basename"
+  fi
   PI_LENS_CONFIG="$PI_FILES/.pi/agent/pi-lens.json"
   # Everything on except the two mutation paths (format/autofix stay a
   # per-project .pi-lens.json opt-in); no servers disabled; every tool on.
@@ -188,6 +196,17 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     pass "Pi module wires the guardrails tool registration protocol (guardrails, pi-hooks permission, pi-lens-policy)"
   else
     fail "Pi module guardrails tool registration protocol wiring is incomplete"
+  fi
+
+  # Pi >=1.2 validates themes at startup. HTML export accepts background
+  # overrides only; foreground roles belong under colors, not export.
+  if jq -e '(.export | type == "object")
+            and ((.export | keys) - ["pageBg", "cardBg", "infoBg"] == [])
+            and (.colors.text != null) and (.colors.muted != null)' \
+       "$PI_FILES/.pi/agent/themes/catppuccin-mocha.json" >/dev/null 2>&1; then
+    pass "Pi Catppuccin theme uses supported HTML export roles"
+  else
+    fail "Pi Catppuccin theme contains unsupported HTML export roles or lacks foreground colors"
   fi
 
   if [[ -f "$PI_FILES/.pi/agent/CLAUDE.md" ]]; then
