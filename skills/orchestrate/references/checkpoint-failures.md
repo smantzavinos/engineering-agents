@@ -18,4 +18,4 @@ Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failur
      - without a pool, a stopped child gets the fix through that merge.
 
      Then continue with its new base (orchestrate → Where work runs).
-   - **Others** go on untouched.
+   - **Others** go on untouched. Epic-close fixes aren't paused (`orchestrate` → Epic close).

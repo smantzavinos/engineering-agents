@@ -12,6 +12,7 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 - **epic:** `epic.md` against `PROTOTYPE.md`. Check that:
   - the scope is complete, and the gaps the prototype skipped are addressed;
   - each child is a cohesive slice with declared dependencies and, with a worktree pool, a claim; any child above the review-load signal has a reason not to be split;
+  - each dependency is needed for built behaviour. A dependency that lengthens the longest chain only for a contract, which an earlier child the dependent already depends on could deliver, is a major;
   - groups have at most `maxLanes` members, `maxLanes` is at most the pool size, and members' claims don't overlap;
   - every acceptance scenario has an owner;
   - gates, budgets and pre-authorizations are explicit enough to run unattended.
@@ -41,11 +42,13 @@ You have no history with this work. Judge it against what it was meant to do. Fi
 
   Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract: one in the plan's Tests, or one the ledger records with a reason. That includes regression tests for bugs found while building, and independent contracts the plan's list doesn't reach, such as config, defaults or migrations (`test-quality` → Keep). A test moved, split or rewritten because its contract changed isn't new. A test with no contract is a major finding. A test whose contract is missing only from the ledger is a minor: record it, don't delete the test. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
 
-  The implementer's ledger entry holds the gate evidence. Treat it as claims, and check that:
-  - the commands match the plan, and the T1 selection covers the actual diff;
-  - flakes are outside the diff.
+  Tag every major with its kind. A major is `tests`, `T1` or `wording` only if its fix can't change production behaviour. Tag every other one (wrong behaviour, a missing deliverable, docs, design, boundaries, claims, scope, a merge error) `design`, `boundary`, `claims`, `scope` or `cohesion`: its fix needs a re-check.
 
-  Run a targeted test when you doubt something. Never run full suites.
+  The implementer's ledger entry holds the gate evidence. Treat it as claims. In a child's own passes, T1's unit and E2E tests run in a helper beside you, and their results reach the orchestrator, not you. Check that:
+  - the fast gates ran, and the recorded T1 command lines cover the actual diff and match the plan;
+  - in integration and checkpoint-fix reviews, which still get implementer-run T1, flakes are outside the diff.
+
+  While a T1 helper runs in your worktree, don't run tests: record a doubt as a minor that names the check, and the next T1 run includes it. Otherwise run a targeted test when you doubt something. Never run full suites.
 - **epic-diff:** the whole epic's diff. Check the seams between children, and parity with every acceptance scenario. Name, for each finding, the child whose review should have caught it.
 
 ## Earlier passes
@@ -64,7 +67,7 @@ Append `## <mode> pass N` to the ledger (`review.md` in the child directory, or 
 Don't record nits. The work is approved when no blocker or major finding remains open. Commit the ledger, staging only that file.
 
 ## Reply
-Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path. In plan mode (not refresh), end with `pass 2 needed: yes` if any blocker or any major of a kind that needs a re-check is open, otherwise `pass 2 needed: no`.
+Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path. In plan and code mode (not refresh), end with `pass 2 needed: yes` if any blocker or any major of a kind that needs a re-check is open, otherwise `pass 2 needed: no`.
 
 ## Do
 - On a large diff, gather context with subagents (`delegate`), but make every judgment yourself.

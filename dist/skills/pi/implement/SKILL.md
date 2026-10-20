@@ -15,7 +15,7 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - Implement all of it. Write the tests the plan calls for alongside the code. Each contract the plan names gets proof at its owning layer.
 - While building, run only T0 checks:
   - tests related to the files you changed;
-  - one E2E spec by name, against a warm harness if the repo has one (otherwise cold);
+  - one E2E spec by name, with one worker, against a warm harness if the repo has one (otherwise cold);
   - an incremental typecheck.
 
   Keep built artifacts and services warm between runs; cold boots are the largest cost. Before trusting a warm server, check that it was built from the current source, and rebuild or restart it if not. Stale code passes tests.
@@ -26,14 +26,13 @@ Build the whole plan in one pass, as a senior engineer would. Settle the details
 - If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Gates
-1. At the end, run T1 once, with the plan's Gates commands.
+1. At the end, run T1's fast gates (builds, typecheck, lint and format on changed files) with the plan's Gates commands. For the rest of T1 (unit and E2E tests), record in the ledger the exact command lines, with an explicit base and spec list, and why each spec was picked. Don't run them: a helper runs them beside the code review. When your task says to run T1 yourself (integration, checkpoint fix), run all of it.
    - **Selection:** compute it from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.
    - **E2E specs:** the test map gives the specs for the changed paths. The plan supplies the rest.
    - **Whole package:** rerun a package's units in full when its config, test setup or a shared module changed.
    - **Run settings:** retries off, the E2E worker count your task gives, fast gates first.
-   - **Delegation:** a helper runs the long suites and digests them (`delegate`). Write the ledger entry while it runs; don't wait idle.
-2. Fix the failures. Rerun only what failed and what the fix touches. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files and plan directories) and exact command line match a passing run in the ledger.
-3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child.
+2. Fix what the fast gates find. After a review, fix the findings and any T1 failures you are given, run the fast gates for the fixes, and record the remaining command lines for them: what failed and what the fixes touch. Never rerun a gate whose tree (`HEAD^{tree}`, ignoring the orchestrator's files and plan directories) and exact command line match a passing run in the ledger.
+3. Don't do a final full pass. Full gates run at the epic's checkpoints, off your critical path. The exception is a plan that escalates this child: record the full-gate command lines too, and the helper runs them.
 
 A failure that passes alone *and* lies outside what you changed is a flake: record it and move on. A failure already in the baseline digest is not yours unless the plan says so. The same goes for a failure you were told is being fixed on a checkpoint branch. If you are steered to stop, commit and reply. Anything else you fix. An environment failure (service won't boot, port taken, disk full) gets one retry; if it persists, report it instead of spending more time.
 
@@ -57,9 +56,11 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 
 ## Handoff
 1. Leave the tree clean, with all your work committed. Only the orchestrator's files may stay modified.
+   Stop the services you started on the worktree's ports.
 2. Append `## implementation` (or `## fix pass N`) to `review.md` with:
-   - the commands run, with pass/fail and duration per gate, and per gate the exact command line (including selection) and `HEAD^{tree}` it ran on;
-   - the T1 selection and why each spec was picked;
+   - the gates you ran, with pass/fail and duration per gate, and per gate the exact command line (including selection) and `HEAD^{tree}` it ran on;
+   - the T1 command lines you recorded for the helper, and why each spec was picked;
+   - for a fix pass, which T1 failures you fixed, and whether each fix touched only tests or fixtures;
    - test lines vs production lines added, and the tests removed or consolidated;
    - every contract you proved that the plan didn't list, and why, including regression tests for bugs found while building or fixing;
    - flakes and baseline failures seen, and log paths;

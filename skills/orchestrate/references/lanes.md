@@ -11,7 +11,7 @@ Read this when the repo has a worktree pool (`epic.md` Gates says which repo sup
   - free memory, about 6 GB per lane;
   - disk, against the repo's floor in `epic.md` Gates.
 - **Lane count:** at most `maxLanes` lanes run at once (at most the pool size). If no lane is running and the next ready unit still can't start, split its group into groups that fit and record it under Decisions. If not even one member can start (memory, disk), stop for the human as an environment failure.
-- **E2E workers:** split the machine-wide budget (`epic.md`, default cores ÷ 4) across the running lanes and the checkpoint run. Pass each lane its E2E worker count in the task.
+- **E2E workers:** when a T1 or checkpoint run starts, give it an even share of the machine-wide budget (`epic.md`, default cores ÷ 4) across the runs then in flight, including it, but no more than the budget not already held, and at least 1. Pass that count in its task. An implementer that runs T1 itself (integration, checkpoint fix) gets its count at launch and holds it until it replies. Targeted checks while building use one worker.
 - **Rate limits:** on model rate-limit errors, drop one lane until the next unit starts, or until no lane is running.
 
 ## The pool
@@ -43,7 +43,7 @@ Integrate on an integration branch, so the work branch only moves forward.
 
 ## Claims
 - Every child has a claim in `epic.md`; within a group, claims don't overlap.
-- A child (A) that must change files outside its claim, except the merge-friendly files the epic names, reports it.
+- A child (A) that must change files outside its claim, except the merge-friendly files the epic names, reports it. So does a child that must change a contract an earlier child delivered: every unintegrated child whose entry records a dependency for that contract counts as claiming it.
   - If no unintegrated child that isn't ordered with A (neither depends on the other) claims those files, widen A's claim under Decisions; A continues.
   - Otherwise, with B the child that claims them, record under Decisions:
     - **B has not started:** B gets a dependency on A and leaves its group if it has one. Widen A's claim; A continues.

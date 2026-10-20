@@ -12,7 +12,7 @@ Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helpe
 
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; every resume returns a new run id, so record it each time.
-- **Per child:** status, lane, dependencies, estimate, budget, plan-branch cut commit, base commit, `readyAt` (when its last dependency integrated), lane start, scout outcome, the latest planner and implementer run ids, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`, the start and end of each phase and of each checkpoint stop, and reported usage.
+- **Per child:** status, lane, dependencies, estimate, budget, plan-branch cut commit, base commit, `readyAt` (when its last dependency integrated), lane start, scout outcome, the latest planner and implementer run ids, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`, `codePass2Skipped`, each T1 run (commit, tree, command lines, workers, runs in flight, result, duration, log path), the start and end of each phase and of each checkpoint stop, and reported usage.
 - **At the root:** the baseline gate digest, checkpoints (commit, status, run), groups (members, worktree, base, merged members, T1 run, integrator and review runs, start and end), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), stops (child, reason, time), and **launches**: every run when you launch it (run id, agent, child, phase, worktree, start), marked consumed when you have read its result.
 
 **On start, after compaction, or after a crash,** reconcile: read `state.json`, `git status` in every worktree in use, and `git log`. Then check the status of every launch not yet consumed:
@@ -25,7 +25,7 @@ Never start a writer in a worktree whose last writer isn't confirmed stopped. Re
 ## Where work runs
 One writer per worktree at any time.
 - **With a worktree pool, every child runs as a lane** (`references/lanes.md`): in its own pool worktree, on a lane branch cut from the work-branch tip. A child in no group is a group of one. The work-branch worktree holds only your own files, plan merges and integration merges.
-- **Without a pool,** children run one at a time in the work-branch worktree, in child order. While a child's implementer or code reviewer is running there, write your own files but run no git commands; commit them between children or before a merge into a stopped child.
+- **Without a pool,** children run one at a time in the work-branch worktree, in child order. While a child's implementer, code reviewer or T1 helper is running there, write your own files but run no git commands; commit them between children or before a merge into a stopped child.
 - **Planning:** in the planning worktrees (see Planning).
 - **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. Otherwise commit them as you go.
 - **Checkpoint work:** the base merge, gate runs, triage, bisects, fixes and rechecks all happen only in the checkpoint worktree. If the repo has none, run the checkpoint between children, on the critical path.
@@ -44,10 +44,13 @@ One writer per worktree at any time.
    2. **Scout.** A `helper` in that worktree compares the range from the plan-branch cut commit to the base, excluding the child's own directory, with every section of the plan; the child's `epic.md` entry, Decisions and Follow-ups; the ledgers of the children it depends on; and any checkpoint merge in the range. It appends `## refresh scout` to the child's ledger: per plan section, what changed, with paths; then `relevant` or `nothing relevant` (when unsure, `relevant`). It commits the ledger.
    3. **Nothing relevant:** go to Implement.
    4. **Relevant:** a fresh plan-author refreshes the plan in that worktree (`plan` → Refresh). One fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the scouted range. Its majors are fixed by the plan-author, and their IDs go to the implementer's code reviewer; other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed. Update the budget from the new estimate; above the review-load signal, see Sizing and scope.
-3. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory, its base commit and its E2E worker count. It builds everything, passes T1, commits, writes its ledger entry and replies. Then loop:
-   - Pass 1: a fresh reviewer (`review` skill, code mode) with the child's directory and base commit, and the IDs of any refresh majors fixed in its plan.
-   - Later passes: the same, plus the range from the commit the previous pass reviewed to the implementer's tip, naming any merge in it.
-   - Approved: step 4. Otherwise resume the same implementer with the ledger path and pass number.
+3. **Implement.** Spawn an `implementer` (`implement` skill) with the child's directory and its base commit. It builds everything, passes the fast gates, records the rest of T1, commits, writes its ledger entry and replies. Then loop, in the child's worktree:
+   1. Launch together, on the implementer's commit:
+      - a fresh reviewer (`review` skill, code mode) with the child's directory and base commit, the IDs of any refresh majors fixed in its plan and, after pass 1, the range from the commit the previous pass reviewed to the implementer's tip, naming any merge in it;
+      - a T1 helper with the ledger's recorded command lines and an E2E worker count (`references/lanes.md`). It boots and stops its own services, and reruns each failure alone: one that passes alone and lies outside the child's diff is a flake; one in the baseline digest or under a running checkpoint fix is baseline; anything else is red. It writes nothing tracked, and replies with a digest and the log path.
+   2. Record the T1 run and any flakes in `state.json`.
+   3. **Review approved and T1 green:** step 4. Otherwise resume the same implementer with the ledger path, the pass number and, if T1 is red, the digest and log path.
+   4. Every fix pass counts toward the pass cap, including one for T1 failures alone. After a fix pass, the next review runs unless the reviewer replied `pass 2 needed: no`, the implementer fixed every major and rejected none, and every T1 fix touched only tests or fixtures. Then only the T1 helper runs; green means approved. Append `approved after fixes, no pass 2` to the ledger and record `codePass2Skipped`. A red T1 after fixes means another fix pass.
 4. **Close:**
    1. Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.
    2. Integrate its unit (`references/lanes.md` → Integrating); without a pool it is already on the work branch. Run the remaining steps once the unit is integrated. Merge any green checkpoint branch that is waiting (Checkpoints step 2).
@@ -61,7 +64,7 @@ One writer per worktree at any time.
 3. Commit your files, then hand to the PR process.
 
 ## Planning
-- **Worktrees:** up to two planning worktrees, created once with `git worktree add`, with no install. For each child, switch a clean one to a new plan branch at the work-branch tip, and record that commit as the child's plan-branch cut commit. Plan-authors and plan reviewers launch there. Every child plans here, group members included.
+- **Worktrees:** up to three planning worktrees, created once with `git worktree add`, with no install. For each child, switch a clean one to a new plan branch at the work-branch tip, and record that commit as the child's plan-branch cut commit. Plan-authors and plan reviewers launch there. Every child plans here, group members included.
 - **When:** a child's plan loop starts when every child it depends on has started implementing (at once if it has none). When more children qualify than worktrees are free, take the lowest-numbered.
 - **Inputs:** a dependency that isn't built yet is represented by its approved plan. Tell the plan-author and its reviewers so.
 - **Plan changes after approval** (refresh, resize, fixes from code review) go to a fresh plan-author in the child's worktree (its lane, or the work-branch worktree without a pool), not a resumed one: the old one's worktree has moved on.
@@ -87,19 +90,20 @@ One writer per worktree at any time.
 3. **Failures:** follow `references/checkpoint-failures.md`.
 
 ## Epic close
-1. Spawn a fresh reviewer on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger.
+1. Spawn a fresh reviewer on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger. If a green checkpoint is waiting, merge it before the fixes start. Start the final checkpoint on the work-branch tip as soon as the previous checkpoint has merged; it runs alongside the review and the fixes.
 2. The fixes go to the implementer of the last child integrated, in the work-branch worktree:
    - without a pool, resume it;
    - with a pool, spawn a fresh implementer there, given that child's plan and ledger.
 
-   It fixes the findings and runs T1 for the fixes.
-3. Run the final checkpoint on the critical path.
-4. Hand off to the PR process. Pushing and opening the PR need the epic's pre-authorization; otherwise stop.
+   It fixes the findings, runs the fast gates and records the rest of T1 for the fixes; another run follows. A review of the fixes checks the recorded command lines.
+3. Once the fixes are committed and no one is writing in the work-branch worktree, merge the green final checkpoint (Checkpoints step 2). A red one follows `references/checkpoint-failures.md`; the fixes go on meanwhile, and this step waits for the checkpoint fix to merge.
+4. A helper runs T1 for the fixes on the merged tip, with selection from the green checkpoint's tip, widened or escalated as `plan` → Gates says. That run is the fixes' evidence. Red goes back to the fixes' implementer, then T1 again.
+5. Hand off to the PR process. Pushing and opening the PR need the epic's pre-authorization; otherwise stop.
 
 ## Bounds
 - Every review is a new session. Every planner or implementer call resumes that child's session, except where this skill names a fresh one.
 - A loop not approved after pass 4 stops.
-- **Escalation:** if `epic.md` names an escalation implementer, and a child's own code review isn't approved at pass 2, its fixes go to a fresh escalation implementer. It runs where the child's implementer ran, with the same plan, base commit, E2E worker count and ledger. From then on it is the child's implementer: record its run id, and resume it for later passes. Integration and checkpoint fixes don't escalate.
+- **Escalation:** if `epic.md` names an escalation implementer, and a child's own code review isn't approved at pass 2, its fixes go to a fresh escalation implementer. It runs where the child's implementer ran, with the same plan, base commit and ledger. From then on it is the child's implementer: record its run id, and resume it for later passes. Integration and checkpoint fixes don't escalate.
 - Every launch gets a deadline: planner and implementer from the child's budget in `state.json`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
 - A child over its wall-time or cost budget stops. Its wall time is the sum of its active phases: plan loop, start (scout and refresh) and implement loop. Time spent waiting to start, or stopped for a checkpoint (from the steer to the resume), doesn't count.
 
@@ -131,5 +135,5 @@ Otherwise, decide. Record tricky decisions in the `epic.md` Decisions section: t
 
 ## Don't
 - Plan, implement or review yourself.
-- Rerun gates the implementer already ran. The reviewer checks the evidence. A gate whose tree (ignoring your own files and plan directories) and exact command line match a passing run in the ledger is never rerun.
+- Rerun gates the implementer or a T1 helper already ran. The reviewer checks the evidence. A gate whose tree (ignoring your own files and plan directories) and exact command line match a passing run in the ledger or `state.json` is never rerun.
 - Ask the human anything the oracle can answer.

@@ -32,11 +32,12 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 - **Scope:** in and out.
 - **Acceptance scenarios:** those from `PROTOTYPE.md` plus agreed additions, each mapped to the child that delivers it.
 - **Children, numbered:** `NN_slug`, with its goal, the children it depends on (the real dependency record: execution starts a child once these are integrated), and when it's done. A few lines each, with a rough estimate in changed lines. A child is a cohesive vertical slice: a piece of behaviour with its data, logic, UI and tests, ending in a testable scenario.
+  - **Dependencies:** a child depends on another only for what it needs built. When it needs only a contract (schema, API, types, a component's interface) from a child that also builds behaviour, put that contract in the earliest child it already depends on, usually the foundation, and depend on that child instead. Record which contract a dependency is for. No contract-only children.
 - **Claims** (with a worktree pool): every child's claim, the directories, routes, tables and shared components it may change. Children whose claims overlap never run at once.
 - **Parallel groups:** children that build at the same time and integrate together.
   - Members' claims must not overlap, except for the merge-friendly files the epic names, such as indexes and changelogs.
   - Members have no dependency among them. None changes test infrastructure, and none changes schema that a sibling reads.
-  - Set `maxLanes` (default 4, at most the pool size) and the machine-wide E2E worker budget (default cores ÷ 4). A group has at most `maxLanes` members.
+  - Set `maxLanes` (default 4; at most the pool size and memory ÷ 6 GB; a pool needs a worktree per lane) and the machine-wide E2E worker budget (default cores ÷ 4). A group has at most `maxLanes` members.
   - Children in no group still run in parallel when their dependencies and claims allow.
 - **Disposal and branch.**
 - **Gates:**
@@ -74,6 +75,7 @@ Execution then runs the implement loop, then the full gates once, then hands to 
 - Push back on scope creep, and raise gaps the human hasn't considered.
 - Size children as vertical slices around reviewable diffs, not layers: a slice ends with a scenario that can be tested; a layer ends with nothing to show.
 - Order children so the course-setting decisions land early, where a stop costs least.
+- Keep the dependency chain short: the longest chain sets the epic's length, and each link adds a child's fixed cost.
 - Group by content, not by size. Group independent children for parallel lanes. Being independent and being a checkpoint are separate questions.
 
 ## Don't
