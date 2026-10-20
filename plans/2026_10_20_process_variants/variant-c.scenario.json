@@ -595,7 +595,7 @@
 		{
 			"id": "01.fix1",
 			"agent": "implementer",
-			"label": "fixes",
+			"label": "fixes + T1",
 			"workItem": "01",
 			"wt": "pool-a",
 			"ref": "lane/01",
@@ -1165,7 +1165,7 @@
 		{
 			"id": "04.fix1",
 			"agent": "implementer",
-			"label": "fixes (no pass 2)",
+			"label": "fixes + T1 (no pass 2)",
 			"workItem": "04",
 			"wt": "pool-c",
 			"ref": "lane/04",
@@ -1255,7 +1255,7 @@
 		{
 			"id": "03.fix1",
 			"agent": "implementer",
-			"label": "fixes",
+			"label": "fixes + T1",
 			"workItem": "03",
 			"wt": "pool-b",
 			"ref": "lane/03",
@@ -1406,7 +1406,7 @@
 		{
 			"id": "05.fix1",
 			"agent": "implementer",
-			"label": "fixes (no pass 2)",
+			"label": "fixes + T1 (no pass 2)",
 			"workItem": "05",
 			"wt": "pool-d",
 			"ref": "lane/05",
@@ -1775,7 +1775,7 @@
 		{
 			"id": "06b.fix1",
 			"agent": "implementer",
-			"label": "fixes (no pass 2)",
+			"label": "fixes + T1 (no pass 2)",
 			"workItem": "06b",
 			"wt": "pool-b",
 			"ref": "lane/06b",
@@ -1792,7 +1792,7 @@
 		{
 			"id": "07.fix1",
 			"agent": "implementer",
-			"label": "fixes (no pass 2)",
+			"label": "fixes + T1 (no pass 2)",
 			"workItem": "07",
 			"wt": "pool-c",
 			"ref": "lane/07",

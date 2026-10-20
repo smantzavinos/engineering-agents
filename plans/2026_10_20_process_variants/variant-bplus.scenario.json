@@ -1,0 +1,1498 @@
+{
+	"title": "Variant B+: B plus T1 alongside code review, refresh reviewed in code review, 3 planning worktrees, 6 lanes (illustrative)",
+	"repository": "example-app",
+	"startedAt": "2026-01-05T09:00:00Z",
+	"gapMin": 0,
+	"worktrees": [
+		{
+			"id": "work",
+			"label": "work branch",
+			"kind": "main"
+		},
+		{
+			"id": "plan-1",
+			"label": "plan 1"
+		},
+		{
+			"id": "plan-2",
+			"label": "plan 2"
+		},
+		{
+			"id": "plan-3",
+			"label": "plan 3"
+		},
+		{
+			"id": "pool-a",
+			"label": "pool a"
+		},
+		{
+			"id": "pool-b",
+			"label": "pool b"
+		},
+		{
+			"id": "pool-c",
+			"label": "pool c"
+		},
+		{
+			"id": "pool-d",
+			"label": "pool d"
+		},
+		{
+			"id": "pool-e",
+			"label": "pool e"
+		},
+		{
+			"id": "pool-f",
+			"label": "pool f"
+		},
+		{
+			"id": "checkpoint",
+			"label": "checkpoint"
+		}
+	],
+	"orchestrator": {
+		"worktree": "work",
+		"ref": "epic/example"
+	},
+	"workItems": [
+		{
+			"id": "baseline",
+			"label": "baseline"
+		},
+		{
+			"id": "01",
+			"label": "01 data model"
+		},
+		{
+			"id": "02",
+			"label": "02 list view"
+		},
+		{
+			"id": "03",
+			"label": "03 detail view"
+		},
+		{
+			"id": "04",
+			"label": "04 import"
+		},
+		{
+			"id": "05",
+			"label": "05 editor"
+		},
+		{
+			"id": "06",
+			"label": "06 permissions"
+		},
+		{
+			"id": "06a",
+			"label": "06a roles",
+			"parentId": "06"
+		},
+		{
+			"id": "06b",
+			"label": "06b sharing",
+			"parentId": "06"
+		},
+		{
+			"id": "07",
+			"label": "07 export"
+		},
+		{
+			"id": "cp-01",
+			"label": "checkpoint after 01"
+		},
+		{
+			"id": "cp-04",
+			"label": "checkpoint after 04"
+		},
+		{
+			"id": "g1",
+			"label": "G1 integration (02, 03, 04)"
+		},
+		{
+			"id": "g2",
+			"label": "G2 integration (06a, 06b)"
+		},
+		{
+			"id": "close",
+			"label": "epic close"
+		}
+	],
+	"refs": [
+		{
+			"wt": "checkpoint",
+			"ref": "checkpoint/baseline",
+			"from": 0,
+			"to": 8
+		},
+		{
+			"wt": "plan-1",
+			"ref": "plan/01",
+			"from": 0,
+			"to": 32
+		},
+		{
+			"wt": "plan-2",
+			"ref": "plan/03",
+			"from": 34,
+			"to": 66
+		},
+		{
+			"wt": "plan-3",
+			"ref": "plan/04",
+			"from": 34,
+			"to": 66
+		},
+		{
+			"wt": "plan-1",
+			"ref": "plan/02",
+			"from": 34,
+			"to": 72
+		},
+		{
+			"wt": "plan-3",
+			"ref": "plan/06",
+			"from": 67,
+			"to": 75
+		},
+		{
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"from": 32,
+			"to": 94
+		},
+		{
+			"wt": "plan-3",
+			"ref": "plan/06a",
+			"from": 76,
+			"to": 97
+		},
+		{
+			"wt": "checkpoint",
+			"ref": "checkpoint/01",
+			"from": 94,
+			"to": 102
+		},
+		{
+			"wt": "plan-1",
+			"ref": "plan/07",
+			"from": 73,
+			"to": 105
+		},
+		{
+			"wt": "plan-2",
+			"ref": "plan/05",
+			"from": 67,
+			"to": 105
+		},
+		{
+			"wt": "plan-3",
+			"ref": "plan/06b",
+			"from": 98,
+			"to": 130
+		},
+		{
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"from": 105,
+			"to": 157
+		},
+		{
+			"wt": "checkpoint",
+			"ref": "integration/g1",
+			"from": 156,
+			"to": 174
+		},
+		{
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"from": 94,
+			"to": 174
+		},
+		{
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"from": 94,
+			"to": 174
+		},
+		{
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"from": 94,
+			"to": 174
+		},
+		{
+			"wt": "pool-b",
+			"ref": "integration/05",
+			"from": 176,
+			"to": 182
+		},
+		{
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"from": 105,
+			"to": 182
+		},
+		{
+			"wt": "checkpoint",
+			"ref": "checkpoint/04",
+			"from": 175,
+			"to": 183
+		},
+		{
+			"wt": "checkpoint",
+			"ref": "integration/g2",
+			"from": 205,
+			"to": 211
+		},
+		{
+			"wt": "pool-e",
+			"ref": "lane/06a",
+			"from": 158,
+			"to": 211
+		},
+		{
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"from": 158,
+			"to": 211
+		},
+		{
+			"wt": "checkpoint",
+			"ref": "checkpoint/close",
+			"from": 212,
+			"to": 220
+		},
+		{
+			"wt": "work",
+			"ref": "epic/example",
+			"from": 0,
+			"to": 235
+		}
+	],
+	"steps": [
+		{
+			"id": "01.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "01",
+			"wt": "plan-1",
+			"ref": "plan/01",
+			"at": 0,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "base",
+			"agent": "helper",
+			"label": "baseline full gates",
+			"workItem": "baseline",
+			"wt": "checkpoint",
+			"ref": "checkpoint/baseline",
+			"at": 0,
+			"dur": 8
+		},
+		{
+			"id": "01.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "01",
+			"wt": "plan-1",
+			"ref": "plan/01",
+			"at": 16,
+			"dur": 5,
+			"from": [
+				"01.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "01.p2",
+			"agent": "plan-author",
+			"label": "plan fixes (no pass 2)",
+			"workItem": "01",
+			"wt": "plan-1",
+			"ref": "plan/01",
+			"at": 22,
+			"dur": 10,
+			"from": [
+				"01.p1"
+			],
+			"kind": "fixes",
+			"resume": "01.p0"
+		},
+		{
+			"id": "01.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 32,
+			"dur": 1,
+			"from": [
+				"01.p2"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "01.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 34,
+			"dur": 40,
+			"from": [
+				"01.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "02.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "02",
+			"wt": "plan-1",
+			"ref": "plan/02",
+			"at": 34,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "03.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "03",
+			"wt": "plan-2",
+			"ref": "plan/03",
+			"at": 34,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "04.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "04",
+			"wt": "plan-3",
+			"ref": "plan/04",
+			"at": 34,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "02.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "02",
+			"wt": "plan-1",
+			"ref": "plan/02",
+			"at": 50,
+			"dur": 5,
+			"from": [
+				"02.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "03.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "03",
+			"wt": "plan-2",
+			"ref": "plan/03",
+			"at": 50,
+			"dur": 5,
+			"from": [
+				"03.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "04.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "04",
+			"wt": "plan-3",
+			"ref": "plan/04",
+			"at": 50,
+			"dur": 5,
+			"from": [
+				"04.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "02.p2",
+			"agent": "plan-author",
+			"label": "plan fixes",
+			"workItem": "02",
+			"wt": "plan-1",
+			"ref": "plan/02",
+			"at": 56,
+			"dur": 10,
+			"from": [
+				"02.p1"
+			],
+			"kind": "fixes",
+			"resume": "02.p0"
+		},
+		{
+			"id": "03.p2",
+			"agent": "plan-author",
+			"label": "plan fixes (no pass 2)",
+			"workItem": "03",
+			"wt": "plan-2",
+			"ref": "plan/03",
+			"at": 56,
+			"dur": 10,
+			"from": [
+				"03.p1"
+			],
+			"kind": "fixes",
+			"resume": "03.p0"
+		},
+		{
+			"id": "04.p2",
+			"agent": "plan-author",
+			"label": "plan fixes (no pass 2)",
+			"workItem": "04",
+			"wt": "plan-3",
+			"ref": "plan/04",
+			"at": 56,
+			"dur": 10,
+			"from": [
+				"04.p1"
+			],
+			"kind": "fixes",
+			"resume": "04.p0"
+		},
+		{
+			"id": "02.p3",
+			"agent": "reviewer",
+			"label": "plan review 2",
+			"workItem": "02",
+			"wt": "plan-1",
+			"ref": "plan/02",
+			"at": 67,
+			"dur": 5,
+			"from": [
+				"02.p2"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "05.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "05",
+			"wt": "plan-2",
+			"ref": "plan/05",
+			"at": 67,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "06.p0",
+			"agent": "plan-author",
+			"label": "sizing: proposes split",
+			"workItem": "06",
+			"wt": "plan-3",
+			"ref": "plan/06",
+			"at": 67,
+			"dur": 8
+		},
+		{
+			"id": "07.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "07",
+			"wt": "plan-1",
+			"ref": "plan/07",
+			"at": 73,
+			"dur": 15,
+			"compact": true
+		},
+		{
+			"id": "01.cr1",
+			"agent": "reviewer",
+			"label": "code review 1",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 75,
+			"dur": 6,
+			"from": [
+				"01.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "01.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 75,
+			"dur": 5,
+			"from": [
+				"01.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "06a.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "06a",
+			"wt": "plan-3",
+			"ref": "plan/06a",
+			"at": 76,
+			"dur": 15,
+			"from": [
+				"06.p0"
+			],
+			"kind": "split",
+			"compact": true
+		},
+		{
+			"id": "01.fix1",
+			"agent": "implementer",
+			"label": "fixes",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 82,
+			"dur": 5,
+			"from": [
+				"01.cr1",
+				"01.t1"
+			],
+			"kind": "fixes",
+			"resume": "01.impl"
+		},
+		{
+			"id": "05.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "05",
+			"wt": "plan-2",
+			"ref": "plan/05",
+			"at": 83,
+			"dur": 5,
+			"from": [
+				"05.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "01.cr2",
+			"agent": "reviewer",
+			"label": "review 2 (fix range)",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 88,
+			"dur": 4,
+			"from": [
+				"01.fix1"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "01.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "01",
+			"wt": "pool-a",
+			"ref": "lane/01",
+			"at": 88,
+			"dur": 5,
+			"from": [
+				"01.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "05.p2",
+			"agent": "plan-author",
+			"label": "plan fixes",
+			"workItem": "05",
+			"wt": "plan-2",
+			"ref": "plan/05",
+			"at": 89,
+			"dur": 10,
+			"from": [
+				"05.p1"
+			],
+			"kind": "fixes",
+			"resume": "05.p0"
+		},
+		{
+			"id": "07.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "07",
+			"wt": "plan-1",
+			"ref": "plan/07",
+			"at": 89,
+			"dur": 5,
+			"from": [
+				"07.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "06a.p1",
+			"agent": "reviewer",
+			"label": "plan review 1 (approved)",
+			"workItem": "06a",
+			"wt": "plan-3",
+			"ref": "plan/06a",
+			"at": 92,
+			"dur": 5,
+			"from": [
+				"06a.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "02.scout",
+			"agent": "helper",
+			"label": "scout: relevant",
+			"workItem": "02",
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"at": 94,
+			"dur": 1,
+			"from": [
+				"02.p3"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "03.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 94,
+			"dur": 1,
+			"from": [
+				"03.p2"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "04.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 94,
+			"dur": 1,
+			"from": [
+				"04.p2"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "cp-01",
+			"agent": "helper",
+			"label": "checkpoint after 01: full gates",
+			"workItem": "cp-01",
+			"wt": "checkpoint",
+			"ref": "checkpoint/01",
+			"at": 94,
+			"dur": 8
+		},
+		{
+			"id": "07.p2",
+			"agent": "plan-author",
+			"label": "plan fixes (no pass 2)",
+			"workItem": "07",
+			"wt": "plan-1",
+			"ref": "plan/07",
+			"at": 95,
+			"dur": 10,
+			"from": [
+				"07.p1"
+			],
+			"kind": "fixes",
+			"resume": "07.p0"
+		},
+		{
+			"id": "02.refresh",
+			"agent": "plan-author",
+			"label": "refresh",
+			"workItem": "02",
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"at": 96,
+			"dur": 11,
+			"from": [
+				"02.scout"
+			],
+			"kind": "refresh"
+		},
+		{
+			"id": "03.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 96,
+			"dur": 40,
+			"from": [
+				"03.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "04.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 96,
+			"dur": 25,
+			"from": [
+				"04.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "06b.p0",
+			"agent": "plan-author",
+			"label": "plan",
+			"workItem": "06b",
+			"wt": "plan-3",
+			"ref": "plan/06b",
+			"at": 98,
+			"dur": 15,
+			"from": [
+				"06.p0"
+			],
+			"kind": "split",
+			"compact": true
+		},
+		{
+			"id": "05.p3",
+			"agent": "reviewer",
+			"label": "plan review 2",
+			"workItem": "05",
+			"wt": "plan-2",
+			"ref": "plan/05",
+			"at": 100,
+			"dur": 5,
+			"from": [
+				"05.p2"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "05.scout",
+			"agent": "helper",
+			"label": "scout: relevant",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 105,
+			"dur": 1,
+			"from": [
+				"05.p3"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "07.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 105,
+			"dur": 1,
+			"from": [
+				"07.p2"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "05.refresh",
+			"agent": "plan-author",
+			"label": "refresh",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 107,
+			"dur": 11,
+			"from": [
+				"05.scout"
+			],
+			"kind": "refresh"
+		},
+		{
+			"id": "07.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 107,
+			"dur": 30,
+			"from": [
+				"07.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "02.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "02",
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"at": 108,
+			"dur": 30,
+			"from": [
+				"02.refresh"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "06b.p1",
+			"agent": "reviewer",
+			"label": "plan review 1",
+			"workItem": "06b",
+			"wt": "plan-3",
+			"ref": "plan/06b",
+			"at": 114,
+			"dur": 5,
+			"from": [
+				"06b.p0"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "05.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 119,
+			"dur": 35,
+			"from": [
+				"05.refresh"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "06b.p2",
+			"agent": "plan-author",
+			"label": "plan fixes (no pass 2)",
+			"workItem": "06b",
+			"wt": "plan-3",
+			"ref": "plan/06b",
+			"at": 120,
+			"dur": 10,
+			"from": [
+				"06b.p1"
+			],
+			"kind": "fixes",
+			"resume": "06b.p0"
+		},
+		{
+			"id": "04.cr1",
+			"agent": "reviewer",
+			"label": "code review 1",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 122,
+			"dur": 6,
+			"from": [
+				"04.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "04.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 122,
+			"dur": 5,
+			"from": [
+				"04.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "04.fix1",
+			"agent": "implementer",
+			"label": "fixes (no pass 2)",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 129,
+			"dur": 5,
+			"from": [
+				"04.cr1",
+				"04.t1"
+			],
+			"kind": "fixes",
+			"resume": "04.impl"
+		},
+		{
+			"id": "04.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "04",
+			"wt": "pool-d",
+			"ref": "lane/04",
+			"at": 135,
+			"dur": 5,
+			"from": [
+				"04.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "03.cr1",
+			"agent": "reviewer",
+			"label": "code review 1",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 137,
+			"dur": 6,
+			"from": [
+				"03.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "03.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 137,
+			"dur": 5,
+			"from": [
+				"03.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "07.cr1",
+			"agent": "reviewer",
+			"label": "code review 1",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 138,
+			"dur": 6,
+			"from": [
+				"07.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "07.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 138,
+			"dur": 5,
+			"from": [
+				"07.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "02.cr1",
+			"agent": "reviewer",
+			"label": "code review 1 + refresh (approved)",
+			"workItem": "02",
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"at": 139,
+			"dur": 8,
+			"from": [
+				"02.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "02.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "02",
+			"wt": "pool-b",
+			"ref": "lane/02",
+			"at": 139,
+			"dur": 5,
+			"from": [
+				"02.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "03.fix1",
+			"agent": "implementer",
+			"label": "fixes",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 144,
+			"dur": 5,
+			"from": [
+				"03.cr1",
+				"03.t1"
+			],
+			"kind": "fixes",
+			"resume": "03.impl"
+		},
+		{
+			"id": "07.fix1",
+			"agent": "implementer",
+			"label": "fixes (no pass 2)",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 145,
+			"dur": 5,
+			"from": [
+				"07.cr1",
+				"07.t1"
+			],
+			"kind": "fixes",
+			"resume": "07.impl"
+		},
+		{
+			"id": "03.cr2",
+			"agent": "reviewer",
+			"label": "review 2 (fix range)",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 150,
+			"dur": 4,
+			"from": [
+				"03.fix1"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "03.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "03",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 150,
+			"dur": 5,
+			"from": [
+				"03.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "07.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "07",
+			"wt": "pool-e",
+			"ref": "lane/07",
+			"at": 151,
+			"dur": 5,
+			"from": [
+				"07.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "05.cr1",
+			"agent": "reviewer",
+			"label": "code review 1 + refresh",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 155,
+			"dur": 8,
+			"from": [
+				"05.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "05.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 155,
+			"dur": 5,
+			"from": [
+				"05.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "g1.conflict",
+			"agent": "implementer",
+			"label": "resolve integration conflict",
+			"workItem": "g1",
+			"wt": "pool-c",
+			"ref": "lane/03",
+			"at": 156,
+			"dur": 8,
+			"from": [
+				"03.t1b",
+				"03.cr2"
+			],
+			"kind": "conflict",
+			"resume": "03.impl"
+		},
+		{
+			"id": "06a.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "06a",
+			"wt": "pool-e",
+			"ref": "lane/06a",
+			"at": 158,
+			"dur": 1,
+			"from": [
+				"06a.p1"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "06b.scout",
+			"agent": "helper",
+			"label": "scout",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 158,
+			"dur": 1,
+			"from": [
+				"06b.p2"
+			],
+			"kind": "start"
+		},
+		{
+			"id": "06a.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "06a",
+			"wt": "pool-e",
+			"ref": "lane/06a",
+			"at": 160,
+			"dur": 20,
+			"from": [
+				"06a.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "06b.impl",
+			"agent": "implementer",
+			"label": "implement",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 160,
+			"dur": 25,
+			"from": [
+				"06b.scout"
+			],
+			"kind": "build",
+			"compact": true
+		},
+		{
+			"id": "05.fix1",
+			"agent": "implementer",
+			"label": "fixes (no pass 2)",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 164,
+			"dur": 5,
+			"from": [
+				"05.cr1",
+				"05.t1"
+			],
+			"kind": "fixes",
+			"resume": "05.impl"
+		},
+		{
+			"id": "g1.it1",
+			"agent": "helper",
+			"label": "group T1 (02, 03, 04)",
+			"workItem": "g1",
+			"wt": "checkpoint",
+			"ref": "integration/g1",
+			"at": 165,
+			"dur": 6,
+			"from": [
+				"g1.conflict",
+				"02.cr1",
+				"02.t1",
+				"04.t1b"
+			],
+			"kind": "merge"
+		},
+		{
+			"id": "05.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "05",
+			"wt": "pool-a",
+			"ref": "lane/05",
+			"at": 170,
+			"dur": 5,
+			"from": [
+				"05.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "g1.irev",
+			"agent": "reviewer",
+			"label": "integration review",
+			"workItem": "g1",
+			"wt": "checkpoint",
+			"ref": "integration/g1",
+			"at": 172,
+			"dur": 2,
+			"from": [
+				"g1.it1"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "cp-04",
+			"agent": "helper",
+			"label": "checkpoint after 04: full gates",
+			"workItem": "cp-04",
+			"wt": "checkpoint",
+			"ref": "checkpoint/04",
+			"at": 175,
+			"dur": 8
+		},
+		{
+			"id": "05.it1",
+			"agent": "helper",
+			"label": "integration T1",
+			"workItem": "05",
+			"wt": "pool-b",
+			"ref": "integration/05",
+			"at": 176,
+			"dur": 6,
+			"from": [
+				"05.t1b"
+			],
+			"kind": "merge"
+		},
+		{
+			"id": "06a.cr1",
+			"agent": "reviewer",
+			"label": "code review 1 (approved)",
+			"workItem": "06a",
+			"wt": "pool-e",
+			"ref": "lane/06a",
+			"at": 181,
+			"dur": 6,
+			"from": [
+				"06a.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "06a.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "06a",
+			"wt": "pool-e",
+			"ref": "lane/06a",
+			"at": 181,
+			"dur": 5,
+			"from": [
+				"06a.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "06b.cr1",
+			"agent": "reviewer",
+			"label": "code review 1",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 186,
+			"dur": 6,
+			"from": [
+				"06b.impl"
+			],
+			"kind": "review"
+		},
+		{
+			"id": "06b.t1",
+			"agent": "helper",
+			"label": "T1",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 186,
+			"dur": 5,
+			"from": [
+				"06b.impl"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "06b.fix1",
+			"agent": "implementer",
+			"label": "fixes (no pass 2)",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 193,
+			"dur": 5,
+			"from": [
+				"06b.cr1",
+				"06b.t1"
+			],
+			"kind": "fixes",
+			"resume": "06b.impl"
+		},
+		{
+			"id": "06b.t1b",
+			"agent": "helper",
+			"label": "T1 (fixes)",
+			"workItem": "06b",
+			"wt": "pool-f",
+			"ref": "lane/06b",
+			"at": 199,
+			"dur": 5,
+			"from": [
+				"06b.fix1"
+			],
+			"kind": "T1"
+		},
+		{
+			"id": "g2.it1",
+			"agent": "helper",
+			"label": "group T1 (06a, 06b)",
+			"workItem": "g2",
+			"wt": "checkpoint",
+			"ref": "integration/g2",
+			"at": 205,
+			"dur": 6,
+			"from": [
+				"06a.cr1",
+				"06a.t1",
+				"06b.t1b"
+			],
+			"kind": "merge"
+		},
+		{
+			"id": "close.rev",
+			"agent": "reviewer",
+			"label": "epic-diff review",
+			"workItem": "close",
+			"wt": "work",
+			"ref": "epic/example",
+			"at": 211,
+			"dur": 8,
+			"from": [
+				"06b.t1b"
+			],
+			"kind": "epic review"
+		},
+		{
+			"id": "close.gates",
+			"agent": "helper",
+			"label": "final checkpoint: full gates",
+			"workItem": "close",
+			"wt": "checkpoint",
+			"ref": "checkpoint/close",
+			"at": 212,
+			"dur": 8,
+			"from": [
+				"06b.t1b"
+			],
+			"kind": "checkpoint"
+		},
+		{
+			"id": "close.fix",
+			"agent": "implementer",
+			"label": "epic-close fixes",
+			"workItem": "close",
+			"wt": "work",
+			"ref": "epic/example",
+			"at": 220,
+			"dur": 10,
+			"from": [
+				"close.rev"
+			],
+			"kind": "fixes"
+		},
+		{
+			"id": "close.t1",
+			"agent": "helper",
+			"label": "T1 for the fixes",
+			"workItem": "close",
+			"wt": "work",
+			"ref": "epic/example",
+			"at": 231,
+			"dur": 3,
+			"from": [
+				"close.fix"
+			],
+			"kind": "T1"
+		}
+	],
+	"compactions": [
+		{
+			"after": "01.cr2"
+		},
+		{
+			"after": "07.t1b"
+		},
+		{
+			"after": "g1.irev"
+		},
+		{
+			"after": "05.it1"
+		},
+		{
+			"after": "g2.it1"
+		}
+	]
+}

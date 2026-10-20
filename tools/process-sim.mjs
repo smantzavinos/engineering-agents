@@ -17,6 +17,13 @@
 //   variant.codePass2 "conditional": pass 2 only for `design` majors.
 //   variant.reviewOnCommit: implement in two parts, an early review of part 1 while part 2 is built,
 //   then T1 by a helper alongside the final review.
+//   variant.t1AlongsideReview: the implementer hands off at commit (build minus T1); a helper runs T1
+//   alongside code review, and after fixes alongside review 2 (or alone when there is no pass 2).
+//   variant.refreshInCodeReview: no separate refresh review; code review 1 also reviews the refresh
+//   (+2 min).
+//   variant.planningOrder "critical-path": plan the waiting child with the longest remaining build
+//   chain first (ties: child number). variant.startOrder "backfill": a ready unit that doesn't fit
+//   doesn't hold back later units.
 //   variant.childOrchestrator: a child orchestrator session owns the plan loop and the lane, and is
 //   the parent of their calls (resumed at Start).
 // - Integration, once per unit when every member is approved: a group of one merges plainly if the
@@ -152,9 +159,34 @@ function queuePlan(c) {
 		prev = id;
 	});
 }
+const chainMemo = new Map();
+function chain(id) {
+	// Longest build chain from this child through the children that depend on it.
+	if (!chainMemo.has(id)) {
+		const c = byId.get(id);
+		const after = kids.filter((k) => (k.deps ?? []).includes(id) || k.splitFrom === id).map((k) => chain(k.id));
+		chainMemo.set(id, (c.build ?? 0) + Math.max(0, ...after));
+	}
+	return chainMemo.get(id);
+}
 function lowestWaitingPlan(t) {
 	const waiting = pending.filter((j) => j.parentOf === 'plan' && j.id.endsWith('.p0') && planEligible(byId.get(j.item)));
-	waiting.sort((a, b) => idx.get(a.item) - idx.get(b.item));
+	const cp = V.planningOrder === 'critical-path';
+	// Critical-path order works per unit, so a group's members plan together.
+	const unitKey = (id) => {
+		const u = unitOf.get(id) ?? unitOf.get(kids.find((k) => k.splitFrom === id)?.id);
+		const members = u ? u.members.map((m) => m.id) : [id];
+		return { weight: Math.max(...members.map(chain)), first: Math.min(...members.map((m) => idx.get(m))) };
+	};
+	waiting.sort((a, b) => {
+		if (cp) {
+			const ka = unitKey(a.item);
+			const kb = unitKey(b.item);
+			if (kb.weight !== ka.weight) return kb.weight - ka.weight;
+			if (ka.first !== kb.first) return ka.first - kb.first;
+		}
+		return idx.get(a.item) - idx.get(b.item);
+	});
 	return waiting[0]?.item;
 }
 
@@ -168,7 +200,10 @@ function tryStartUnits(t) {
 	const ready = units.filter((u) => !started.has(u.id) && unitReady(u)).sort((a, b) => idx.get(a.members[0].id) - idx.get(b.members[0].id));
 	for (const u of ready) {
 		const freeWts = pool.filter((w) => free(w, t));
-		if (freeWts.length < u.members.length || runningLanes() + u.members.length > cfg.maxLanes) return;
+		if (freeWts.length < u.members.length || runningLanes() + u.members.length > cfg.maxLanes) {
+			if (V.startOrder === 'backfill') continue;
+			return;
+		}
 		started.add(u.id);
 		u.base = t;
 		u.members.forEach((m, i) => startLane(m, freeWts[i], t));
@@ -186,7 +221,7 @@ function startLane(c, w, t) {
 	let prev = L({ id: `${c.id}.scout`, agent: 'helper', label: c.scoutRelevant ? 'scout: relevant' : 'scout', dur: D.scout, at, from: [lastPlan], kind: 'start' }).id;
 	if (c.scoutRelevant) {
 		prev = L({ id: `${c.id}.refresh`, agent: 'plan-author', label: 'refresh', dur: D.refresh, deps: [prev], from: [prev], kind: 'refresh' }).id;
-		prev = L({ id: `${c.id}.rr`, agent: 'reviewer', label: 'refresh review', dur: D.refreshReview, deps: [prev], from: [prev], kind: 'review' }).id;
+		if (!V.refreshInCodeReview) prev = L({ id: `${c.id}.rr`, agent: 'reviewer', label: 'refresh review', dur: D.refreshReview, deps: [prev], from: [prev], kind: 'review' }).id;
 	}
 	let reviewed; // ids the fix step acts on
 	let tail; // ids that must finish before approval / fixes
@@ -200,16 +235,27 @@ function startLane(c, w, t) {
 		const fin = L({ id: `${c.id}.cr1`, agent: 'reviewer', label: c.codeFix ? 'code review (rest)' : 'code review (rest, approved)', dur: Math.round(D.codeReview * 0.5), deps: [b, early], from: [b], kind: 'review' }).id;
 		reviewed = [early, fin];
 		tail = [t1, fin];
+	} else if (V.t1AlongsideReview) {
+		const rr = c.scoutRelevant && V.refreshInCodeReview ? 2 : 0;
+		const im = L({ id: implId, agent: 'implementer', label: 'implement', dur: c.build - D.t1, deps: [prev], from: [prev], kind: 'build', compact: true, onStart: () => (s.implStarted = true) }).id;
+		const t1 = L({ id: `${c.id}.t1`, agent: 'helper', label: 'T1', dur: D.t1, deps: [im], from: [im], kind: 'T1' }).id;
+		const cr = L({ id: `${c.id}.cr1`, agent: 'reviewer', label: (rr ? 'code review 1 + refresh' : 'code review 1') + (c.codeFix ? '' : ' (approved)'), dur: D.codeReview + rr, deps: [im], from: [im], kind: 'review' }).id;
+		reviewed = [cr, t1];
+		tail = [cr, t1];
 	} else {
+		const rr = c.scoutRelevant && V.refreshInCodeReview ? 2 : 0;
 		const im = L({ id: implId, agent: 'implementer', label: 'implement + T1', dur: c.build, deps: [prev], from: [prev], kind: 'build', compact: true, onStart: () => (s.implStarted = true) }).id;
-		const cr = L({ id: `${c.id}.cr1`, agent: 'reviewer', label: c.codeFix ? 'code review 1' : 'code review 1 (approved)', dur: D.codeReview, deps: [im], from: [im], kind: 'review' }).id;
+		const cr = L({ id: `${c.id}.cr1`, agent: 'reviewer', label: (rr ? 'code review 1 + refresh' : 'code review 1') + (c.codeFix ? '' : ' (approved)'), dur: D.codeReview + rr, deps: [im], from: [im], kind: 'review' }).id;
 		reviewed = [cr];
 		tail = [cr];
 	}
 	if (c.codeFix) {
-		const fx = L({ id: `${c.id}.fix1`, agent: 'implementer', label: pass2 ? 'fixes' : 'fixes (no pass 2)', dur: D.fix, deps: tail, from: reviewed, kind: 'fixes', resume: implId }).id;
+		const split = V.t1AlongsideReview;
+		const fx = L({ id: `${c.id}.fix1`, agent: 'implementer', label: (split ? 'fixes' : 'fixes + T1') + (pass2 ? '' : ' (no pass 2)'), dur: split ? D.fix - D.t1 : D.fix, deps: tail, from: reviewed, kind: 'fixes', resume: implId }).id;
 		tail = [fx];
-		if (pass2) tail = [L({ id: `${c.id}.cr2`, agent: 'reviewer', label: 'review 2 (fix range)', dur: D.codeReview2, deps: [fx], from: [fx], kind: 'review' }).id];
+		if (split) tail = [L({ id: `${c.id}.t1b`, agent: 'helper', label: 'T1 (fixes)', dur: D.t1, deps: [fx], from: [fx], kind: 'T1' }).id];
+		if (pass2) tail.push(L({ id: `${c.id}.cr2`, agent: 'reviewer', label: 'review 2 (fix range)', dur: D.codeReview2, deps: [fx], from: [fx], kind: 'review' }).id);
+		if (pass2 && !split) tail = tail.slice(1);
 	}
 	s.laneTail = tail;
 	// approval when the tail finishes
