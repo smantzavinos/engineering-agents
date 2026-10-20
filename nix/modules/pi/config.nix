@@ -714,6 +714,8 @@ let
   # ============================================================
   piStaticFiles = {
     keybindings = builtins.toJSON {
+      "app.message.copy" = [];
+      "app.models.clearAll" = [];
       "tui.select.up" = [ "up" "ctrl+p" ];
       "tui.select.down" = [ "down" "ctrl+n" ];
       "app.model.cycleForward" = [ "alt+]" ];
