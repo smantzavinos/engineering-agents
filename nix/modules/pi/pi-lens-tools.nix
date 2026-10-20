@@ -18,7 +18,7 @@
 # - nixfmt is deliberately absent: pi-lens has no lint use for it and would
 #   run it as the .nix formatter whenever it is on PATH, restyling whole
 #   files once a repo opts into format (format/autofix stay a per-project
-#   opt-in, see pi-lens.json). shfmt is included: its lint check is a
+#   opt-in, see pi-lens-global.json). shfmt is included: its lint check is a
 #   read-only `shfmt --diff`, and as a formatter it keeps the file's own
 #   indentation.
 { pkgs, pkgsUnstable, piVendor }:

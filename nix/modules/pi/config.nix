@@ -248,7 +248,7 @@ let
         installSpec = "pi-lens@4.4.3";
         version = "4.4.3";
       };
-      # Replaces pi-hooks' LSP. Runtime policy lives in pi-lens.json + the
+      # Replaces pi-hooks' LSP. Runtime policy lives in pi-lens-global.json + the
       # pi-lens-policy extension: no runtime installs (binaries come from
       # pi-lens-tools.nix on pi's PATH), every feature and tool on except
       # format/autofix, which rewrite whole files beyond the agent's edit
@@ -766,6 +766,8 @@ let
   # ============================================================
   piStaticFiles = {
     keybindings = builtins.toJSON {
+      "app.message.copy" = [];
+      "app.models.clearAll" = [];
       "tui.select.up" = [ "up" "ctrl+p" ];
       "tui.select.down" = [ "down" "ctrl+n" ];
       "app.model.cycleForward" = [ "alt+]" ];
@@ -777,7 +779,7 @@ let
 
     catppuccinMochaTheme = ''
       {
-        "$schema": "https://raw.githubusercontent.com/badlogic/pi-mono/main/packages/coding-agent/src/modes/interactive/theme/theme-schema.json",
+        "$schema": "https://pi.dev/schemas/theme.schema.json",
         "name": "catppuccin-mocha",
         "vars": {
           "rosewater": "#f5e0dc", "flamingo": "#f2cdcd", "pink": "#f5c2e7",
@@ -812,8 +814,7 @@ let
           "thinkingHigh": "mauve", "thinkingXhigh": "pink", "bashMode": "green"
         },
         "export": {
-          "pageBg": "#11111b", "cardBg": "#181825", "infoBg": "#313244",
-          "text": "#cdd6f4", "muted": "#6c7086"
+          "pageBg": "#11111b", "cardBg": "#181825", "infoBg": "#313244"
         }
       }
     '';
@@ -1130,8 +1131,10 @@ in
     # the agent dir rather than in <workspace>/.pi/tasks/.
     cp ${pkgs.writeText "pi-tasks-config.json" (builtins.toJSON { taskScope = "session-global"; })} $out/agent/tasks-config.json
     # pi-lens global config (read-only; pi-lens never writes it). Selected via
-    # PI_LENS_CONFIG_PATH by the pi-lens-policy extension below.
-    cp ${repoRoot}/nix/modules/pi/pi-lens.json $out/agent/pi-lens.json
+    # PI_LENS_CONFIG_PATH by the pi-lens-policy extension below. The source
+    # must not be named pi-lens.json or .pi-lens.json: pi-lens would discover
+    # it as project policy when working under nix/modules/pi/.
+    cp ${repoRoot}/nix/modules/pi/pi-lens-global.json $out/agent/pi-lens.json
     # Nix-supplied pi-lens binaries; pi-lens-policy appends its bin/ to pi's
     # PATH (see pi-lens-tools.nix).
     ln -s ${piLensTools} $out/agent/pi-lens-tools
