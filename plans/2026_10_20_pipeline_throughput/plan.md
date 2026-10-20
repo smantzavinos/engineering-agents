@@ -22,13 +22,13 @@ Skill text stays generic and concise: rules only. Evidence stays here and in the
 
 **`review` → epic mode:** check that each dependency is needed for built behaviour, not only for a contract that an earlier child the dependent already depends on could deliver. A dependency that lengthens the longest chain for a contract alone is a major.
 
-**`orchestrate` → lanes.md → Claims:** add "A child that must change a contract an earlier child delivered reports it, as for a file outside its claim." The existing claim-overlap rule then orders it against the children that use the contract.
+**`orchestrate` → lanes.md → Claims:** add "A child that must change a contract an earlier child delivered reports it, as for a file outside its claim. Every unintegrated child whose entry records a dependency for that contract counts as claiming it." The existing claim-overlap rule then orders it against those children.
 
 ### C2. Final checkpoint alongside the epic-diff review
 
 **`orchestrate` → Epic close**, replacing steps 1–3:
-1. Start the epic-diff review at once. Start the final checkpoint on the same work-branch commit as soon as the previous checkpoint has merged (Checkpoints step 2).
-2. The fixes go to the implementer in the work-branch worktree, as today, without T1.
+1. Start the epic-diff review at once. If a green checkpoint is waiting, merge it before the fixes start. Start the final checkpoint on the work-branch tip as soon as the previous checkpoint has merged (Checkpoints step 2).
+2. The fixes go to the implementer in the work-branch worktree, as today, without T1: it runs the fast gates and records the remaining command lines (C4). The helper's T1 in step 4 is their evidence; a review of the fixes checks the recorded command lines.
 3. Once the fixes are committed and no one is writing in the work-branch worktree, merge the green final checkpoint (Checkpoints step 2, including its conflict rule).
 4. A helper runs T1 for the fixes on the merged tip, with selection from the green checkpoint's tip, widened or escalated as `plan` → Gates says. Red goes back to the fixes' implementer, then T1 again.
 5. Hand off to the PR process (today's step 4, unchanged).
@@ -50,7 +50,7 @@ The implementer runs the fast gates and hands off. A helper runs the slow gates 
 - **Gates step 2:** "Fix what the fast gates find. After a review, fix the findings and the T1 failures you are given, run the fast gates for the fixes, and record the remaining command lines for them (what failed and what the fixes touch)."
 - **Gates step 3:** the escalation exception names the helper as the one that runs the full gates.
 - **Handoff:** the first evidence bullet covers the gates you ran plus the recorded command lines. New bullet: "Stop the services you started on the worktree's ports before you hand off."
-- Unchanged: the tree-match no-rerun rule, and the integration, checkpoint-fix and epic-close defaults (Review findings), which still run their own T1.
+- Unchanged: the tree-match no-rerun rule, and the integration and checkpoint-fix defaults (Review findings), which still run their own T1. Epic-close fixes follow C2.
 
 **`orchestrate` → Per child → Implement**, for every pass, in the child's worktree:
 1. Launch the code reviewer and a T1 helper together on the implementer's commit. The helper runs the ledger's recorded command lines with the E2E worker count it is given (C5), booting and stopping its own services. It reruns each failure alone, and classifies it: a failure that passes alone and lies outside the child's diff is a flake; one in the baseline digest or under a running checkpoint fix is baseline; anything else is red. It writes nothing tracked: it replies with a digest and the log path.
@@ -65,7 +65,7 @@ The step's first sentence ("It builds everything, passes T1, …") becomes "It b
 - While a T1 helper runs in the same worktree, don't run tests. Record a doubt as a minor that names the check; the next T1 run includes it.
 - The T1 evidence check becomes: the recorded command lines cover the actual diff and match the plan. T1 results come from the helper, through the orchestrator.
 
-Integration, checkpoint-fix and epic-close reviews keep today's evidence and flake checks.
+Integration and checkpoint-fix reviews keep today's evidence and flake checks.
 
 **`orchestrate` → Don't:** the no-rerun rule reads "a passing run in the ledger or `state.json`".
 
@@ -75,7 +75,7 @@ Integration, checkpoint-fix and epic-close reviews keep today's evidence and fla
 
 **`scope` → Parallel groups:** `maxLanes` is at most the pool size and memory ÷ 6 GB; default 4. A pool needs a worktree per lane.
 
-**`lanes.md` → E2E workers**, replacing the bullet: "When a T1 or checkpoint run starts, give it an even share of the budget across the runs then in flight, including it, but no more than the budget not already held, and at least 1. Pass that count in its task. Targeted checks while building use one worker." This applies to helper and implementer T1 alike. **`orchestrate` → Implement:** the implementer's task no longer carries an E2E worker count; the T1 helper's does.
+**`lanes.md` → E2E workers**, replacing the bullet: "When a T1 or checkpoint run starts, give it an even share of the budget across the runs then in flight, including it, but no more than the budget not already held, and at least 1. Pass that count in its task. Targeted checks while building use one worker." This applies to helper and implementer T1 alike; an implementer that runs T1 itself (integration, checkpoint fix) gets its count at launch and holds it until it replies. **`orchestrate` → Implement and Bounds → Escalation:** the implementer's task no longer carries an E2E worker count; the T1 helper's does.
 
 ### C6. Docs
 
@@ -88,7 +88,7 @@ Integration, checkpoint-fix and epic-close reviews keep today's evidence and fla
 - Epic close;
 - History (this plan).
 
-Replace the example with the B+ epic at the default 4 lanes from `plans/2026_10_20_process_variants/` (simulated, durations from the pilot's medians), with the elapsed time and a fixed cost per child of about 30–40 min. "Regenerating the diagram" names `tools/process-sim.mjs`, `tools/scenario-trace.mjs` and `tools/work-trace-render.mjs` with their commands.
+Replace the example with a simulated epic from the variants' epic and durations (pilot medians) under this plan's rules: B's settings plus T1 alongside review and 3 planning worktrees, at the default 4 lanes, without the dropped refresh change. Commit its `epic.json` next to the diagram, and state the elapsed time and a fixed cost per child of about 30–40 min. "Regenerating the diagram" names `tools/process-sim.mjs`, `tools/scenario-trace.mjs` and `tools/work-trace-render.mjs` with their commands.
 
 ## 3. Owner decisions
 

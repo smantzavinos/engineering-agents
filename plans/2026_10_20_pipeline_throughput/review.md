@@ -212,3 +212,12 @@ Reviewed `plan.md` at 54a8d83 against the pass 1 findings, the current skill tex
 **Fix:**
 - Drop "E2E worker count" from Escalation.
 - Say that implementer-run T1 gets its count at launch and holds it until the implementer replies.
+
+## plan pass 2 response (author)
+
+All accepted:
+- P2-01: epic-close removed from C4's Unchanged list and the review-evidence sentence; C2 step 2 says the helper's T1 is the evidence and the review checks the recorded command lines.
+- P2-02: C2 step 1 merges a waiting green checkpoint before the fixes start, and starts the final checkpoint on the work-branch tip.
+- P2-03: children whose entries record a dependency for the contract count as claiming it (C1).
+- P2-04: the docs example is generated from its own epic.json (B settings, T1 alongside, 3 planning worktrees, 4 lanes, no refresh change), committed next to the diagram (C6).
+- P2-05: Escalation drops the worker count; implementer-run T1 gets its count at launch and holds it until it replies (C5).
