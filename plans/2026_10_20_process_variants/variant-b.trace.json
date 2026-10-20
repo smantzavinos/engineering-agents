@@ -1,0 +1,2589 @@
+{
+	"schemaVersion": 3,
+	"trace": {
+		"id": "scenario-variant-b.scenario",
+		"title": "Variant B: contract-first dependencies, final checkpoint alongside the epic review, conditional code pass 2, 4 lanes (illustrative)",
+		"startedAt": "2026-01-05T09:00:00Z",
+		"observedUntilMs": 16680000
+	},
+	"repositories": [
+		{
+			"id": "repo-1",
+			"label": "example-app"
+		}
+	],
+	"worktrees": [
+		{
+			"id": "work",
+			"repositoryId": "repo-1",
+			"label": "work branch",
+			"kind": "main"
+		},
+		{
+			"id": "plan-1",
+			"repositoryId": "repo-1",
+			"label": "plan 1",
+			"kind": "linked"
+		},
+		{
+			"id": "plan-2",
+			"repositoryId": "repo-1",
+			"label": "plan 2",
+			"kind": "linked"
+		},
+		{
+			"id": "pool-a",
+			"repositoryId": "repo-1",
+			"label": "pool a",
+			"kind": "linked"
+		},
+		{
+			"id": "pool-b",
+			"repositoryId": "repo-1",
+			"label": "pool b",
+			"kind": "linked"
+		},
+		{
+			"id": "pool-c",
+			"repositoryId": "repo-1",
+			"label": "pool c",
+			"kind": "linked"
+		},
+		{
+			"id": "pool-d",
+			"repositoryId": "repo-1",
+			"label": "pool d",
+			"kind": "linked"
+		},
+		{
+			"id": "checkpoint",
+			"repositoryId": "repo-1",
+			"label": "checkpoint",
+			"kind": "linked"
+		}
+	],
+	"worktreeRefs": [
+		{
+			"id": "ref-1",
+			"worktreeId": "work",
+			"startMs": 0,
+			"endMs": 16680000,
+			"ref": {
+				"kind": "branch",
+				"name": "epic/example"
+			}
+		},
+		{
+			"id": "ref-2",
+			"worktreeId": "checkpoint",
+			"startMs": 0,
+			"endMs": 480000,
+			"ref": {
+				"kind": "branch",
+				"name": "checkpoint/baseline"
+			}
+		},
+		{
+			"id": "ref-3",
+			"worktreeId": "checkpoint",
+			"startMs": 6180000,
+			"endMs": 6660000,
+			"ref": {
+				"kind": "branch",
+				"name": "checkpoint/01"
+			}
+		},
+		{
+			"id": "ref-4",
+			"worktreeId": "checkpoint",
+			"startMs": 10440000,
+			"endMs": 11520000,
+			"ref": {
+				"kind": "branch",
+				"name": "integration/g1"
+			}
+		},
+		{
+			"id": "ref-5",
+			"worktreeId": "checkpoint",
+			"startMs": 11580000,
+			"endMs": 12060000,
+			"ref": {
+				"kind": "branch",
+				"name": "checkpoint/04"
+			}
+		},
+		{
+			"id": "ref-6",
+			"worktreeId": "checkpoint",
+			"startMs": 14640000,
+			"endMs": 15000000,
+			"ref": {
+				"kind": "branch",
+				"name": "integration/g2"
+			}
+		},
+		{
+			"id": "ref-7",
+			"worktreeId": "checkpoint",
+			"startMs": 15300000,
+			"endMs": 15780000,
+			"ref": {
+				"kind": "branch",
+				"name": "checkpoint/close"
+			}
+		},
+		{
+			"id": "ref-8",
+			"worktreeId": "plan-1",
+			"startMs": 0,
+			"endMs": 1920000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/01"
+			}
+		},
+		{
+			"id": "ref-9",
+			"worktreeId": "plan-1",
+			"startMs": 2040000,
+			"endMs": 4320000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/02"
+			}
+		},
+		{
+			"id": "ref-10",
+			"worktreeId": "plan-1",
+			"startMs": 4380000,
+			"endMs": 6660000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/05"
+			}
+		},
+		{
+			"id": "ref-11",
+			"worktreeId": "plan-1",
+			"startMs": 6720000,
+			"endMs": 8640000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/06b"
+			}
+		},
+		{
+			"id": "ref-12",
+			"worktreeId": "plan-2",
+			"startMs": 2040000,
+			"endMs": 3960000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/03"
+			}
+		},
+		{
+			"id": "ref-13",
+			"worktreeId": "plan-2",
+			"startMs": 4020000,
+			"endMs": 5940000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/04"
+			}
+		},
+		{
+			"id": "ref-14",
+			"worktreeId": "plan-2",
+			"startMs": 6000000,
+			"endMs": 6480000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/06"
+			}
+		},
+		{
+			"id": "ref-15",
+			"worktreeId": "plan-2",
+			"startMs": 6540000,
+			"endMs": 7800000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/06a"
+			}
+		},
+		{
+			"id": "ref-16",
+			"worktreeId": "plan-2",
+			"startMs": 7860000,
+			"endMs": 9780000,
+			"ref": {
+				"kind": "branch",
+				"name": "plan/07"
+			}
+		},
+		{
+			"id": "ref-17",
+			"worktreeId": "pool-a",
+			"startMs": 1920000,
+			"endMs": 6180000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/01"
+			}
+		},
+		{
+			"id": "ref-18",
+			"worktreeId": "pool-a",
+			"startMs": 6660000,
+			"endMs": 11400000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/05"
+			}
+		},
+		{
+			"id": "ref-19",
+			"worktreeId": "pool-a",
+			"startMs": 11580000,
+			"endMs": 15000000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/06a"
+			}
+		},
+		{
+			"id": "ref-20",
+			"worktreeId": "pool-b",
+			"startMs": 6180000,
+			"endMs": 11520000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/02"
+			}
+		},
+		{
+			"id": "ref-21",
+			"worktreeId": "pool-b",
+			"startMs": 11580000,
+			"endMs": 15000000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/06b"
+			}
+		},
+		{
+			"id": "ref-22",
+			"worktreeId": "pool-c",
+			"startMs": 6180000,
+			"endMs": 11520000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/03"
+			}
+		},
+		{
+			"id": "ref-23",
+			"worktreeId": "pool-c",
+			"startMs": 11580000,
+			"endMs": 15300000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/07"
+			}
+		},
+		{
+			"id": "ref-24",
+			"worktreeId": "pool-d",
+			"startMs": 6180000,
+			"endMs": 11520000,
+			"ref": {
+				"kind": "branch",
+				"name": "lane/04"
+			}
+		},
+		{
+			"id": "ref-25",
+			"worktreeId": "pool-d",
+			"startMs": 14940000,
+			"endMs": 15300000,
+			"ref": {
+				"kind": "branch",
+				"name": "integration/07"
+			}
+		}
+	],
+	"agentSessions": [
+		{
+			"id": "orchestrator",
+			"agentType": "orchestrator",
+			"label": "orchestrator"
+		},
+		{
+			"id": "s-01.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-base",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-01.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-01.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-01.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-02.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-03.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-02.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-03.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-02.p3",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-04.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-05.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-01.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-04.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-05.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-01.cr2",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-02.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-03.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-04.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-cp-01",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-02.refresh",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-03.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-04.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-05.p3",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06a.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-05.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-06b.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-05.refresh",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-02.rr",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-02.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-05.rr",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06a.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06b.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-05.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-07.p0",
+			"agentType": "plan-author",
+			"label": "plan-author"
+		},
+		{
+			"id": "s-04.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-07.p1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-03.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-02.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-03.cr2",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-05.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-g1.it1",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-g1.irev",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06a.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-06b.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-07.scout",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-cp-04",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-06a.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-06b.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-07.impl",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-06a.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-06b.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-07.cr1",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-g2.it1",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-07.it1",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-close.gates",
+			"agentType": "helper",
+			"label": "helper"
+		},
+		{
+			"id": "s-close.rev",
+			"agentType": "reviewer",
+			"label": "reviewer"
+		},
+		{
+			"id": "s-close.fix",
+			"agentType": "implementer",
+			"label": "implementer"
+		},
+		{
+			"id": "s-close.t1",
+			"agentType": "helper",
+			"label": "helper"
+		}
+	],
+	"spans": [
+		{
+			"id": "orchestrator-run1",
+			"kind": "agent",
+			"worktreeId": "work",
+			"label": "orchestrator",
+			"sessionId": "orchestrator",
+			"mode": "start",
+			"startMs": 0,
+			"endMs": 16680000,
+			"status": "ok"
+		},
+		{
+			"id": "sp-01.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "01",
+			"label": "plan",
+			"sessionId": "s-01.p0",
+			"mode": "start",
+			"startMs": 0,
+			"endMs": 900000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-base",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "baseline",
+			"label": "baseline full gates",
+			"sessionId": "s-base",
+			"mode": "start",
+			"startMs": 0,
+			"endMs": 480000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-01.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "01",
+			"label": "plan review 1",
+			"sessionId": "s-01.p1",
+			"mode": "start",
+			"startMs": 960000,
+			"endMs": 1260000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-01.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "01",
+			"label": "plan fixes (no pass 2)",
+			"sessionId": "s-01.p0",
+			"mode": "resume",
+			"startMs": 1320000,
+			"endMs": 1920000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-01.p0"
+		},
+		{
+			"id": "sp-01.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "01",
+			"label": "scout",
+			"sessionId": "s-01.scout",
+			"mode": "start",
+			"startMs": 1920000,
+			"endMs": 1980000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-01.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "01",
+			"label": "implement + T1",
+			"sessionId": "s-01.impl",
+			"mode": "start",
+			"startMs": 2040000,
+			"endMs": 4740000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "02",
+			"label": "plan",
+			"sessionId": "s-02.p0",
+			"mode": "start",
+			"startMs": 2040000,
+			"endMs": 2940000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "03",
+			"label": "plan",
+			"sessionId": "s-03.p0",
+			"mode": "start",
+			"startMs": 2040000,
+			"endMs": 2940000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "02",
+			"label": "plan review 1",
+			"sessionId": "s-02.p1",
+			"mode": "start",
+			"startMs": 3000000,
+			"endMs": 3300000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "03",
+			"label": "plan review 1",
+			"sessionId": "s-03.p1",
+			"mode": "start",
+			"startMs": 3000000,
+			"endMs": 3300000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "02",
+			"label": "plan fixes",
+			"sessionId": "s-02.p0",
+			"mode": "resume",
+			"startMs": 3360000,
+			"endMs": 3960000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-02.p0"
+		},
+		{
+			"id": "sp-03.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "03",
+			"label": "plan fixes (no pass 2)",
+			"sessionId": "s-03.p0",
+			"mode": "resume",
+			"startMs": 3360000,
+			"endMs": 3960000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-03.p0"
+		},
+		{
+			"id": "sp-02.p3",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "02",
+			"label": "plan review 2",
+			"sessionId": "s-02.p3",
+			"mode": "start",
+			"startMs": 4020000,
+			"endMs": 4320000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-04.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "04",
+			"label": "plan",
+			"sessionId": "s-04.p0",
+			"mode": "start",
+			"startMs": 4020000,
+			"endMs": 4920000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "05",
+			"label": "plan",
+			"sessionId": "s-05.p0",
+			"mode": "start",
+			"startMs": 4380000,
+			"endMs": 5280000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-01.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "01",
+			"label": "code review 1",
+			"sessionId": "s-01.cr1",
+			"mode": "start",
+			"startMs": 4800000,
+			"endMs": 5160000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-04.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "04",
+			"label": "plan review 1",
+			"sessionId": "s-04.p1",
+			"mode": "start",
+			"startMs": 4980000,
+			"endMs": 5280000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-01.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "01",
+			"label": "fixes",
+			"sessionId": "s-01.impl",
+			"mode": "resume",
+			"startMs": 5220000,
+			"endMs": 5820000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-01.impl"
+		},
+		{
+			"id": "sp-04.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "04",
+			"label": "plan fixes (no pass 2)",
+			"sessionId": "s-04.p0",
+			"mode": "resume",
+			"startMs": 5340000,
+			"endMs": 5940000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-04.p0"
+		},
+		{
+			"id": "sp-05.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "05",
+			"label": "plan review 1",
+			"sessionId": "s-05.p1",
+			"mode": "start",
+			"startMs": 5340000,
+			"endMs": 5640000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "05",
+			"label": "plan fixes",
+			"sessionId": "s-05.p0",
+			"mode": "resume",
+			"startMs": 5700000,
+			"endMs": 6300000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-05.p0"
+		},
+		{
+			"id": "sp-01.cr2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "01",
+			"label": "review 2 (fix range)",
+			"sessionId": "s-01.cr2",
+			"mode": "start",
+			"startMs": 5880000,
+			"endMs": 6120000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "06",
+			"label": "sizing: proposes split",
+			"sessionId": "s-06.p0",
+			"mode": "start",
+			"startMs": 6000000,
+			"endMs": 6480000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "02",
+			"label": "scout: relevant",
+			"sessionId": "s-02.scout",
+			"mode": "start",
+			"startMs": 6180000,
+			"endMs": 6240000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "03",
+			"label": "scout",
+			"sessionId": "s-03.scout",
+			"mode": "start",
+			"startMs": 6180000,
+			"endMs": 6240000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-04.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-d",
+			"workItemId": "04",
+			"label": "scout",
+			"sessionId": "s-04.scout",
+			"mode": "start",
+			"startMs": 6180000,
+			"endMs": 6240000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-cp-01",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "cp-01",
+			"label": "checkpoint after 01: full gates",
+			"sessionId": "s-cp-01",
+			"mode": "start",
+			"startMs": 6180000,
+			"endMs": 6660000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.refresh",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "02",
+			"label": "refresh",
+			"sessionId": "s-02.refresh",
+			"mode": "start",
+			"startMs": 6300000,
+			"endMs": 6960000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "03",
+			"label": "implement + T1",
+			"sessionId": "s-03.impl",
+			"mode": "start",
+			"startMs": 6300000,
+			"endMs": 9000000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-04.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-d",
+			"workItemId": "04",
+			"label": "implement + T1",
+			"sessionId": "s-04.impl",
+			"mode": "start",
+			"startMs": 6300000,
+			"endMs": 8100000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.p3",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "05",
+			"label": "plan review 2",
+			"sessionId": "s-05.p3",
+			"mode": "start",
+			"startMs": 6360000,
+			"endMs": 6660000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06a.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "06a",
+			"label": "plan",
+			"sessionId": "s-06a.p0",
+			"mode": "start",
+			"startMs": 6540000,
+			"endMs": 7440000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "scout: relevant",
+			"sessionId": "s-05.scout",
+			"mode": "start",
+			"startMs": 6660000,
+			"endMs": 6720000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "06b",
+			"label": "plan",
+			"sessionId": "s-06b.p0",
+			"mode": "start",
+			"startMs": 6720000,
+			"endMs": 7620000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.refresh",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "refresh",
+			"sessionId": "s-05.refresh",
+			"mode": "start",
+			"startMs": 6780000,
+			"endMs": 7440000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.rr",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "02",
+			"label": "refresh review",
+			"sessionId": "s-02.rr",
+			"mode": "start",
+			"startMs": 7020000,
+			"endMs": 7320000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-02.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "02",
+			"label": "implement + T1",
+			"sessionId": "s-02.impl",
+			"mode": "start",
+			"startMs": 7380000,
+			"endMs": 9480000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.rr",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "refresh review",
+			"sessionId": "s-05.rr",
+			"mode": "start",
+			"startMs": 7500000,
+			"endMs": 7800000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06a.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "06a",
+			"label": "plan review 1 (approved)",
+			"sessionId": "s-06a.p1",
+			"mode": "start",
+			"startMs": 7500000,
+			"endMs": 7800000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "06b",
+			"label": "plan review 1",
+			"sessionId": "s-06b.p1",
+			"mode": "start",
+			"startMs": 7680000,
+			"endMs": 7980000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "implement + T1",
+			"sessionId": "s-05.impl",
+			"mode": "start",
+			"startMs": 7860000,
+			"endMs": 10260000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.p0",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "07",
+			"label": "plan",
+			"sessionId": "s-07.p0",
+			"mode": "start",
+			"startMs": 7860000,
+			"endMs": 8760000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-1",
+			"workItemId": "06b",
+			"label": "plan fixes (no pass 2)",
+			"sessionId": "s-06b.p0",
+			"mode": "resume",
+			"startMs": 8040000,
+			"endMs": 8640000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-06b.p0"
+		},
+		{
+			"id": "sp-04.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-d",
+			"workItemId": "04",
+			"label": "code review 1",
+			"sessionId": "s-04.cr1",
+			"mode": "start",
+			"startMs": 8160000,
+			"endMs": 8520000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-04.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-d",
+			"workItemId": "04",
+			"label": "fixes (no pass 2)",
+			"sessionId": "s-04.impl",
+			"mode": "resume",
+			"startMs": 8580000,
+			"endMs": 9180000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-04.impl"
+		},
+		{
+			"id": "sp-07.p1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "07",
+			"label": "plan review 1",
+			"sessionId": "s-07.p1",
+			"mode": "start",
+			"startMs": 8820000,
+			"endMs": 9120000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "03",
+			"label": "code review 1",
+			"sessionId": "s-03.cr1",
+			"mode": "start",
+			"startMs": 9060000,
+			"endMs": 9420000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.p2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "plan-2",
+			"workItemId": "07",
+			"label": "plan fixes (no pass 2)",
+			"sessionId": "s-07.p0",
+			"mode": "resume",
+			"startMs": 9180000,
+			"endMs": 9780000,
+			"status": "ok",
+			"attributes": {
+				"agent": "plan-author",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-07.p0"
+		},
+		{
+			"id": "sp-03.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "03",
+			"label": "fixes",
+			"sessionId": "s-03.impl",
+			"mode": "resume",
+			"startMs": 9480000,
+			"endMs": 10080000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-03.impl"
+		},
+		{
+			"id": "sp-02.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "02",
+			"label": "code review 1 (approved)",
+			"sessionId": "s-02.cr1",
+			"mode": "start",
+			"startMs": 9540000,
+			"endMs": 9900000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-03.cr2",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "03",
+			"label": "review 2 (fix range)",
+			"sessionId": "s-03.cr2",
+			"mode": "start",
+			"startMs": 10140000,
+			"endMs": 10380000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-05.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "code review 1",
+			"sessionId": "s-05.cr1",
+			"mode": "start",
+			"startMs": 10320000,
+			"endMs": 10680000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-g1.conflict",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "g1",
+			"label": "resolve integration conflict",
+			"sessionId": "s-03.impl",
+			"mode": "resume",
+			"startMs": 10440000,
+			"endMs": 10920000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-03.fix1"
+		},
+		{
+			"id": "sp-05.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "05",
+			"label": "fixes (no pass 2)",
+			"sessionId": "s-05.impl",
+			"mode": "resume",
+			"startMs": 10740000,
+			"endMs": 11340000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-05.impl"
+		},
+		{
+			"id": "sp-g1.it1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "g1",
+			"label": "group T1 (02, 03, 04)",
+			"sessionId": "s-g1.it1",
+			"mode": "start",
+			"startMs": 10980000,
+			"endMs": 11340000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-g1.irev",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "g1",
+			"label": "integration review",
+			"sessionId": "s-g1.irev",
+			"mode": "start",
+			"startMs": 11400000,
+			"endMs": 11520000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06a.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "06a",
+			"label": "scout",
+			"sessionId": "s-06a.scout",
+			"mode": "start",
+			"startMs": 11580000,
+			"endMs": 11640000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "06b",
+			"label": "scout",
+			"sessionId": "s-06b.scout",
+			"mode": "start",
+			"startMs": 11580000,
+			"endMs": 11640000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.scout",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "07",
+			"label": "scout",
+			"sessionId": "s-07.scout",
+			"mode": "start",
+			"startMs": 11580000,
+			"endMs": 11640000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-cp-04",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "cp-04",
+			"label": "checkpoint after 04: full gates",
+			"sessionId": "s-cp-04",
+			"mode": "start",
+			"startMs": 11580000,
+			"endMs": 12060000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06a.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "06a",
+			"label": "implement + T1",
+			"sessionId": "s-06a.impl",
+			"mode": "start",
+			"startMs": 11700000,
+			"endMs": 13200000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "06b",
+			"label": "implement + T1",
+			"sessionId": "s-06b.impl",
+			"mode": "start",
+			"startMs": 11700000,
+			"endMs": 13500000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.impl",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "07",
+			"label": "implement + T1",
+			"sessionId": "s-07.impl",
+			"mode": "start",
+			"startMs": 11700000,
+			"endMs": 13800000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06a.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-a",
+			"workItemId": "06a",
+			"label": "code review 1 (approved)",
+			"sessionId": "s-06a.cr1",
+			"mode": "start",
+			"startMs": 13260000,
+			"endMs": 13620000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "06b",
+			"label": "code review 1",
+			"sessionId": "s-06b.cr1",
+			"mode": "start",
+			"startMs": 13560000,
+			"endMs": 13920000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.cr1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "07",
+			"label": "code review 1",
+			"sessionId": "s-07.cr1",
+			"mode": "start",
+			"startMs": 13860000,
+			"endMs": 14220000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-06b.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-b",
+			"workItemId": "06b",
+			"label": "fixes (no pass 2)",
+			"sessionId": "s-06b.impl",
+			"mode": "resume",
+			"startMs": 13980000,
+			"endMs": 14580000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-06b.impl"
+		},
+		{
+			"id": "sp-07.fix1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-c",
+			"workItemId": "07",
+			"label": "fixes (no pass 2)",
+			"sessionId": "s-07.impl",
+			"mode": "resume",
+			"startMs": 14280000,
+			"endMs": 14880000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			},
+			"resumesSpanId": "sp-07.impl"
+		},
+		{
+			"id": "sp-g2.it1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "g2",
+			"label": "group T1 (06a, 06b)",
+			"sessionId": "s-g2.it1",
+			"mode": "start",
+			"startMs": 14640000,
+			"endMs": 15000000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-07.it1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "pool-d",
+			"workItemId": "07",
+			"label": "integration T1",
+			"sessionId": "s-07.it1",
+			"mode": "start",
+			"startMs": 14940000,
+			"endMs": 15300000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-close.gates",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "checkpoint",
+			"workItemId": "close",
+			"label": "final checkpoint: full gates",
+			"sessionId": "s-close.gates",
+			"mode": "start",
+			"startMs": 15300000,
+			"endMs": 15780000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-close.rev",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "work",
+			"workItemId": "close",
+			"label": "epic-diff review",
+			"sessionId": "s-close.rev",
+			"mode": "start",
+			"startMs": 15300000,
+			"endMs": 15780000,
+			"status": "ok",
+			"attributes": {
+				"agent": "reviewer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-close.fix",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "work",
+			"workItemId": "close",
+			"label": "epic-close fixes",
+			"sessionId": "s-close.fix",
+			"mode": "start",
+			"startMs": 15840000,
+			"endMs": 16440000,
+			"status": "ok",
+			"attributes": {
+				"agent": "implementer",
+				"illustrative": true
+			}
+		},
+		{
+			"id": "sp-close.t1",
+			"kind": "agent",
+			"parentId": "orchestrator-run1",
+			"worktreeId": "work",
+			"workItemId": "close",
+			"label": "T1 for the fixes",
+			"sessionId": "s-close.t1",
+			"mode": "start",
+			"startMs": 16500000,
+			"endMs": 16680000,
+			"status": "ok",
+			"attributes": {
+				"agent": "helper",
+				"illustrative": true
+			}
+		}
+	],
+	"events": [
+		{
+			"id": "c-01.p0",
+			"kind": "compaction",
+			"sessionId": "s-01.p0",
+			"spanId": "sp-01.p0",
+			"atMs": 780000,
+			"endMs": 900000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-01.impl",
+			"kind": "compaction",
+			"sessionId": "s-01.impl",
+			"spanId": "sp-01.impl",
+			"atMs": 4620000,
+			"endMs": 4740000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-02.p0",
+			"kind": "compaction",
+			"sessionId": "s-02.p0",
+			"spanId": "sp-02.p0",
+			"atMs": 2820000,
+			"endMs": 2940000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-03.p0",
+			"kind": "compaction",
+			"sessionId": "s-03.p0",
+			"spanId": "sp-03.p0",
+			"atMs": 2820000,
+			"endMs": 2940000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-04.p0",
+			"kind": "compaction",
+			"sessionId": "s-04.p0",
+			"spanId": "sp-04.p0",
+			"atMs": 4800000,
+			"endMs": 4920000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-05.p0",
+			"kind": "compaction",
+			"sessionId": "s-05.p0",
+			"spanId": "sp-05.p0",
+			"atMs": 5160000,
+			"endMs": 5280000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-03.impl",
+			"kind": "compaction",
+			"sessionId": "s-03.impl",
+			"spanId": "sp-03.impl",
+			"atMs": 8880000,
+			"endMs": 9000000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-04.impl",
+			"kind": "compaction",
+			"sessionId": "s-04.impl",
+			"spanId": "sp-04.impl",
+			"atMs": 7980000,
+			"endMs": 8100000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-06a.p0",
+			"kind": "compaction",
+			"sessionId": "s-06a.p0",
+			"spanId": "sp-06a.p0",
+			"atMs": 7320000,
+			"endMs": 7440000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-06b.p0",
+			"kind": "compaction",
+			"sessionId": "s-06b.p0",
+			"spanId": "sp-06b.p0",
+			"atMs": 7500000,
+			"endMs": 7620000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-02.impl",
+			"kind": "compaction",
+			"sessionId": "s-02.impl",
+			"spanId": "sp-02.impl",
+			"atMs": 9360000,
+			"endMs": 9480000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-05.impl",
+			"kind": "compaction",
+			"sessionId": "s-05.impl",
+			"spanId": "sp-05.impl",
+			"atMs": 10140000,
+			"endMs": 10260000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-07.p0",
+			"kind": "compaction",
+			"sessionId": "s-07.p0",
+			"spanId": "sp-07.p0",
+			"atMs": 8640000,
+			"endMs": 8760000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-06a.impl",
+			"kind": "compaction",
+			"sessionId": "s-06a.impl",
+			"spanId": "sp-06a.impl",
+			"atMs": 13080000,
+			"endMs": 13200000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-06b.impl",
+			"kind": "compaction",
+			"sessionId": "s-06b.impl",
+			"spanId": "sp-06b.impl",
+			"atMs": 13380000,
+			"endMs": 13500000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-07.impl",
+			"kind": "compaction",
+			"sessionId": "s-07.impl",
+			"spanId": "sp-07.impl",
+			"atMs": 13680000,
+			"endMs": 13800000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-orch-01.cr2",
+			"kind": "compaction",
+			"sessionId": "orchestrator",
+			"spanId": "orchestrator-run1",
+			"atMs": 6120000,
+			"endMs": 6240000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-orch-05.fix1",
+			"kind": "compaction",
+			"sessionId": "orchestrator",
+			"spanId": "orchestrator-run1",
+			"atMs": 11340000,
+			"endMs": 11460000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-orch-g1.irev",
+			"kind": "compaction",
+			"sessionId": "orchestrator",
+			"spanId": "orchestrator-run1",
+			"atMs": 11520000,
+			"endMs": 11640000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-orch-g2.it1",
+			"kind": "compaction",
+			"sessionId": "orchestrator",
+			"spanId": "orchestrator-run1",
+			"atMs": 15000000,
+			"endMs": 15120000,
+			"trigger": "manual",
+			"outcome": "ok"
+		},
+		{
+			"id": "c-orch-07.it1",
+			"kind": "compaction",
+			"sessionId": "orchestrator",
+			"spanId": "orchestrator-run1",
+			"atMs": 15300000,
+			"endMs": 15420000,
+			"trigger": "manual",
+			"outcome": "ok"
+		}
+	],
+	"workItems": [
+		{
+			"id": "baseline",
+			"label": "baseline"
+		},
+		{
+			"id": "01",
+			"label": "01 data model"
+		},
+		{
+			"id": "02",
+			"label": "02 list view"
+		},
+		{
+			"id": "03",
+			"label": "03 detail view"
+		},
+		{
+			"id": "04",
+			"label": "04 import"
+		},
+		{
+			"id": "05",
+			"label": "05 editor"
+		},
+		{
+			"id": "06",
+			"label": "06 permissions"
+		},
+		{
+			"id": "06a",
+			"label": "06a roles",
+			"parentId": "06"
+		},
+		{
+			"id": "06b",
+			"label": "06b sharing",
+			"parentId": "06"
+		},
+		{
+			"id": "07",
+			"label": "07 export"
+		},
+		{
+			"id": "cp-01",
+			"label": "checkpoint after 01"
+		},
+		{
+			"id": "cp-04",
+			"label": "checkpoint after 04"
+		},
+		{
+			"id": "g1",
+			"label": "G1 integration (02, 03, 04)"
+		},
+		{
+			"id": "g2",
+			"label": "G2 integration (06a, 06b)"
+		},
+		{
+			"id": "close",
+			"label": "epic close"
+		}
+	],
+	"links": [
+		{
+			"id": "l-01.p0-01.p1",
+			"fromSpanId": "sp-01.p0",
+			"toSpanId": "sp-01.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.p1-01.p2",
+			"fromSpanId": "sp-01.p1",
+			"toSpanId": "sp-01.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-01.p2-01.scout",
+			"fromSpanId": "sp-01.p2",
+			"toSpanId": "sp-01.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-01.scout-01.impl",
+			"fromSpanId": "sp-01.scout",
+			"toSpanId": "sp-01.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-02.p0-02.p1",
+			"fromSpanId": "sp-02.p0",
+			"toSpanId": "sp-02.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.p0-03.p1",
+			"fromSpanId": "sp-03.p0",
+			"toSpanId": "sp-03.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-02.p1-02.p2",
+			"fromSpanId": "sp-02.p1",
+			"toSpanId": "sp-02.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-03.p1-03.p2",
+			"fromSpanId": "sp-03.p1",
+			"toSpanId": "sp-03.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-02.p2-02.p3",
+			"fromSpanId": "sp-02.p2",
+			"toSpanId": "sp-02.p3",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.impl-01.cr1",
+			"fromSpanId": "sp-01.impl",
+			"toSpanId": "sp-01.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-04.p0-04.p1",
+			"fromSpanId": "sp-04.p0",
+			"toSpanId": "sp-04.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-01.cr1-01.fix1",
+			"fromSpanId": "sp-01.cr1",
+			"toSpanId": "sp-01.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-04.p1-04.p2",
+			"fromSpanId": "sp-04.p1",
+			"toSpanId": "sp-04.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-05.p0-05.p1",
+			"fromSpanId": "sp-05.p0",
+			"toSpanId": "sp-05.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.p1-05.p2",
+			"fromSpanId": "sp-05.p1",
+			"toSpanId": "sp-05.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-01.fix1-01.cr2",
+			"fromSpanId": "sp-01.fix1",
+			"toSpanId": "sp-01.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-02.p3-02.scout",
+			"fromSpanId": "sp-02.p3",
+			"toSpanId": "sp-02.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-03.p2-03.scout",
+			"fromSpanId": "sp-03.p2",
+			"toSpanId": "sp-03.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-04.p2-04.scout",
+			"fromSpanId": "sp-04.p2",
+			"toSpanId": "sp-04.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-02.scout-02.refresh",
+			"fromSpanId": "sp-02.scout",
+			"toSpanId": "sp-02.refresh",
+			"kind": "refresh"
+		},
+		{
+			"id": "l-03.scout-03.impl",
+			"fromSpanId": "sp-03.scout",
+			"toSpanId": "sp-03.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-04.scout-04.impl",
+			"fromSpanId": "sp-04.scout",
+			"toSpanId": "sp-04.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-05.p2-05.p3",
+			"fromSpanId": "sp-05.p2",
+			"toSpanId": "sp-05.p3",
+			"kind": "review"
+		},
+		{
+			"id": "l-06.p0-06a.p0",
+			"fromSpanId": "sp-06.p0",
+			"toSpanId": "sp-06a.p0",
+			"kind": "split"
+		},
+		{
+			"id": "l-05.p3-05.scout",
+			"fromSpanId": "sp-05.p3",
+			"toSpanId": "sp-05.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-06.p0-06b.p0",
+			"fromSpanId": "sp-06.p0",
+			"toSpanId": "sp-06b.p0",
+			"kind": "split"
+		},
+		{
+			"id": "l-05.scout-05.refresh",
+			"fromSpanId": "sp-05.scout",
+			"toSpanId": "sp-05.refresh",
+			"kind": "refresh"
+		},
+		{
+			"id": "l-02.refresh-02.rr",
+			"fromSpanId": "sp-02.refresh",
+			"toSpanId": "sp-02.rr",
+			"kind": "review"
+		},
+		{
+			"id": "l-02.rr-02.impl",
+			"fromSpanId": "sp-02.rr",
+			"toSpanId": "sp-02.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-05.refresh-05.rr",
+			"fromSpanId": "sp-05.refresh",
+			"toSpanId": "sp-05.rr",
+			"kind": "review"
+		},
+		{
+			"id": "l-06a.p0-06a.p1",
+			"fromSpanId": "sp-06a.p0",
+			"toSpanId": "sp-06a.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.p0-06b.p1",
+			"fromSpanId": "sp-06b.p0",
+			"toSpanId": "sp-06b.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.rr-05.impl",
+			"fromSpanId": "sp-05.rr",
+			"toSpanId": "sp-05.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-06b.p1-06b.p2",
+			"fromSpanId": "sp-06b.p1",
+			"toSpanId": "sp-06b.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-04.impl-04.cr1",
+			"fromSpanId": "sp-04.impl",
+			"toSpanId": "sp-04.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-04.cr1-04.fix1",
+			"fromSpanId": "sp-04.cr1",
+			"toSpanId": "sp-04.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-07.p0-07.p1",
+			"fromSpanId": "sp-07.p0",
+			"toSpanId": "sp-07.p1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.impl-03.cr1",
+			"fromSpanId": "sp-03.impl",
+			"toSpanId": "sp-03.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-07.p1-07.p2",
+			"fromSpanId": "sp-07.p1",
+			"toSpanId": "sp-07.p2",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-03.cr1-03.fix1",
+			"fromSpanId": "sp-03.cr1",
+			"toSpanId": "sp-03.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-02.impl-02.cr1",
+			"fromSpanId": "sp-02.impl",
+			"toSpanId": "sp-02.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.fix1-03.cr2",
+			"fromSpanId": "sp-03.fix1",
+			"toSpanId": "sp-03.cr2",
+			"kind": "review"
+		},
+		{
+			"id": "l-05.impl-05.cr1",
+			"fromSpanId": "sp-05.impl",
+			"toSpanId": "sp-05.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-03.cr2-g1.conflict",
+			"fromSpanId": "sp-03.cr2",
+			"toSpanId": "sp-g1.conflict",
+			"kind": "conflict"
+		},
+		{
+			"id": "l-05.cr1-05.fix1",
+			"fromSpanId": "sp-05.cr1",
+			"toSpanId": "sp-05.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-g1.conflict-g1.it1",
+			"fromSpanId": "sp-g1.conflict",
+			"toSpanId": "sp-g1.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-02.cr1-g1.it1",
+			"fromSpanId": "sp-02.cr1",
+			"toSpanId": "sp-g1.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-04.fix1-g1.it1",
+			"fromSpanId": "sp-04.fix1",
+			"toSpanId": "sp-g1.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-g1.it1-g1.irev",
+			"fromSpanId": "sp-g1.it1",
+			"toSpanId": "sp-g1.irev",
+			"kind": "review"
+		},
+		{
+			"id": "l-06a.p1-06a.scout",
+			"fromSpanId": "sp-06a.p1",
+			"toSpanId": "sp-06a.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-06b.p2-06b.scout",
+			"fromSpanId": "sp-06b.p2",
+			"toSpanId": "sp-06b.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-07.p2-07.scout",
+			"fromSpanId": "sp-07.p2",
+			"toSpanId": "sp-07.scout",
+			"kind": "start"
+		},
+		{
+			"id": "l-06a.scout-06a.impl",
+			"fromSpanId": "sp-06a.scout",
+			"toSpanId": "sp-06a.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-06b.scout-06b.impl",
+			"fromSpanId": "sp-06b.scout",
+			"toSpanId": "sp-06b.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-07.scout-07.impl",
+			"fromSpanId": "sp-07.scout",
+			"toSpanId": "sp-07.impl",
+			"kind": "build"
+		},
+		{
+			"id": "l-06a.impl-06a.cr1",
+			"fromSpanId": "sp-06a.impl",
+			"toSpanId": "sp-06a.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.impl-06b.cr1",
+			"fromSpanId": "sp-06b.impl",
+			"toSpanId": "sp-06b.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-07.impl-07.cr1",
+			"fromSpanId": "sp-07.impl",
+			"toSpanId": "sp-07.cr1",
+			"kind": "review"
+		},
+		{
+			"id": "l-06b.cr1-06b.fix1",
+			"fromSpanId": "sp-06b.cr1",
+			"toSpanId": "sp-06b.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-07.cr1-07.fix1",
+			"fromSpanId": "sp-07.cr1",
+			"toSpanId": "sp-07.fix1",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-06a.cr1-g2.it1",
+			"fromSpanId": "sp-06a.cr1",
+			"toSpanId": "sp-g2.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-06b.fix1-g2.it1",
+			"fromSpanId": "sp-06b.fix1",
+			"toSpanId": "sp-g2.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-07.fix1-07.it1",
+			"fromSpanId": "sp-07.fix1",
+			"toSpanId": "sp-07.it1",
+			"kind": "merge"
+		},
+		{
+			"id": "l-07.fix1-close.gates",
+			"fromSpanId": "sp-07.fix1",
+			"toSpanId": "sp-close.gates",
+			"kind": "checkpoint"
+		},
+		{
+			"id": "l-07.fix1-close.rev",
+			"fromSpanId": "sp-07.fix1",
+			"toSpanId": "sp-close.rev",
+			"kind": "epic review"
+		},
+		{
+			"id": "l-close.rev-close.fix",
+			"fromSpanId": "sp-close.rev",
+			"toSpanId": "sp-close.fix",
+			"kind": "fixes"
+		},
+		{
+			"id": "l-close.fix-close.t1",
+			"fromSpanId": "sp-close.fix",
+			"toSpanId": "sp-close.t1",
+			"kind": "T1"
+		}
+	]
+}

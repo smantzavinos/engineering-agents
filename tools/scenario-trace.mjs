@@ -28,9 +28,12 @@
 //       "at": 0,                    or an absolute start, used when later than "after"
 //       "resume": "01.plan",        continues that step's session (mode resume)
 //       "holdUntil": "g1.t1",       the worktree keeps "ref" until that step ends
-//       "compact": true             the session self-compacts in its last 2 minutes
+//       "compact": true,            the session self-compacts in its last 2 minutes
+//       "parent": "01.lead"         the step that launched it (default: the orchestrator)
 //     }],
-//     "compactions": [{ "after": "01.cr2", "dur": 2 }]   orchestrator self_compact points
+//     "compactions": [{ "after": "01.cr2", "dur": 2 }],  orchestrator self_compact points
+//     "refs": [{ "wt": "pool-a", "ref": "lane/01", "from": 0, "to": 90 }]   optional: explicit
+//                                   branch intervals, replacing the ones derived from the steps
 //   }
 import fs from 'node:fs';
 import path from 'node:path';
@@ -115,7 +118,7 @@ for (const s of ordered) {
 	const span = {
 		id: `sp-${s.id}`,
 		kind: 'agent',
-		parentId: orchSpan,
+		parentId: s.parent ? `sp-${s.parent}` : orchSpan,
 		worktreeId: s.wt,
 		...(s.workItem ? { workItemId: s.workItem } : {}),
 		label: s.label,
@@ -177,6 +180,11 @@ for (const s of ordered) {
 	addUse(s.wt, s.ref, t.start, Math.max(t.end, s.holdUntil ? endOf(s.holdUntil) : 0));
 }
 const worktreeRefs = [];
+if (sc.refs) {
+	byWt.clear();
+	addUse(sc.orchestrator.worktree, sc.orchestrator.ref, 0, totalMin);
+	for (const r of sc.refs) if (!(r.wt === sc.orchestrator.worktree && r.ref === sc.orchestrator.ref)) addUse(r.wt, r.ref, r.from, r.to);
+}
 for (const [wt, uses] of byWt) {
 	uses.sort((a, b) => a.start - b.start);
 	const intervals = [];

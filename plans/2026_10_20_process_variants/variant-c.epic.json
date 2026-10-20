@@ -1,0 +1,158 @@
+{
+	"workBranch": "epic/example",
+	"gapMin": 1,
+	"planningWorktrees": 2,
+	"durations": {
+		"plan": 15,
+		"planReview": 5,
+		"planFix": 10,
+		"planReview2": 5,
+		"sizing": 8,
+		"scout": 1,
+		"refresh": 11,
+		"refreshReview": 5,
+		"codeReview": 6,
+		"fix": 10,
+		"codeReview2": 4,
+		"t1": 5,
+		"conflict": 8,
+		"groupT1": 6,
+		"singleT1": 6,
+		"intReview": 2,
+		"gates": 8,
+		"epicReview": 8,
+		"epicFix": 10,
+		"epicT1": 3
+	},
+	"groups": [
+		{
+			"id": "g1",
+			"label": "G1 integration (02, 03, 04)",
+			"members": [
+				"02",
+				"03",
+				"04"
+			]
+		},
+		{
+			"id": "g2",
+			"label": "G2 integration (06a, 06b)",
+			"members": [
+				"06a",
+				"06b"
+			]
+		}
+	],
+	"checkpoints": [
+		{
+			"after": "01"
+		},
+		{
+			"after": "04"
+		}
+	],
+	"title": "Variant C: B plus child orchestrators, early review and T1 alongside review (illustrative)",
+	"maxLanes": 4,
+	"children": [
+		{
+			"id": "01",
+			"label": "01 data model",
+			"deps": [],
+			"build": 45,
+			"planFix": true,
+			"codeFix": true,
+			"fixKind": "design"
+		},
+		{
+			"id": "02",
+			"label": "02 list view",
+			"deps": [
+				"01"
+			],
+			"build": 35,
+			"planPass2": true,
+			"scoutRelevant": true
+		},
+		{
+			"id": "03",
+			"label": "03 detail view",
+			"deps": [
+				"01"
+			],
+			"build": 45,
+			"planFix": true,
+			"codeFix": true,
+			"fixKind": "design",
+			"conflict": true
+		},
+		{
+			"id": "04",
+			"label": "04 import",
+			"deps": [
+				"01"
+			],
+			"build": 30,
+			"planFix": true,
+			"codeFix": true,
+			"fixKind": "tests"
+		},
+		{
+			"id": "05",
+			"label": "05 editor",
+			"deps": [
+				"01"
+			],
+			"build": 40,
+			"planPass2": true,
+			"scoutRelevant": true,
+			"codeFix": true,
+			"fixKind": "tests"
+		},
+		{
+			"id": "06",
+			"label": "06 permissions",
+			"deps": [
+				"01"
+			],
+			"sizing": true
+		},
+		{
+			"id": "06a",
+			"label": "06a roles",
+			"deps": [
+				"01"
+			],
+			"splitFrom": "06",
+			"build": 25
+		},
+		{
+			"id": "06b",
+			"label": "06b sharing",
+			"deps": [
+				"01"
+			],
+			"splitFrom": "06",
+			"build": 30,
+			"planFix": true,
+			"codeFix": true,
+			"fixKind": "tests"
+		},
+		{
+			"id": "07",
+			"label": "07 export",
+			"deps": [
+				"01"
+			],
+			"build": 35,
+			"planFix": true,
+			"codeFix": true,
+			"fixKind": "tests"
+		}
+	],
+	"variant": {
+		"finalParallel": true,
+		"codePass2": "conditional",
+		"childOrchestrator": true,
+		"reviewOnCommit": true
+	}
+}
