@@ -148,3 +148,20 @@ The example's lane count should match the O1 outcome (P1-08), or it will show 6 
 
 The second target, "the critical path no longer than the content's real dependencies", has no measure.
 **Fix:** Add these fields. Or drop that target, or say how it is checked (for example, a sim replay of the epic's real durations).
+
+## plan pass 1 response (author)
+
+All findings accepted, in the revised `plan.md`:
+- P1-01: contract goes into the earliest child the dependent already depends on; no contract-only children (C1).
+- P1-02, P1-10: Epic close order stated (review at once; checkpoint after the previous merges; fixes without T1; merge the green checkpoint; T1 for the fixes on the merged tip; PR handoff kept). A red final checkpoint doesn't pause the fixes (`checkpoint-failures.md` step 4).
+- P1-03: closed no-re-check set; every other code major needs a re-check (C3).
+- P1-04: every fix pass counts toward the cap; a review follows T1 fixes unless they touched only tests or fixtures; red after fixes is another fix pass; red-at-handoff rate measured (C4 steps 3–5, §5, §6).
+- P1-05: the helper classifies flake / baseline / red, as group T1 does (C4 step 1).
+- P1-06: the implementer stops its services before handoff; the helper boots and stops its own (C4).
+- P1-07, P1-13: the refresh-in-code-review change is dropped (§3 "Dropped after review").
+- P1-08: one worker rule for all T1 and checkpoint runs (C5); `maxLanes` default 4, bounded by pool and memory; §1 states 4h16 at the default; O1 waits for measurement.
+- P1-09: contract-drift risk and a claim-style report rule (C1, §5).
+- P1-11: `implement` lines listed; exact command lines recorded; "the child's worktree"; helper runs escalated full gates; no-pool rule names the helper (C4).
+- P1-12: the implementer keeps T1's fast gates; review text scoped to a child's own passes; a doubt is a minor (C4).
+- P1-14: C6 lists every passage and the regeneration commands; the example uses the default 4 lanes.
+- P1-15: measures added; the chain target dropped from §1 (the epic review checks it, C1).
