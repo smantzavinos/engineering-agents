@@ -87,6 +87,7 @@ Prefer (a). Check that resolution works before relying on it.
 ### 4.3 Catalog contract (framework side)
 - **Required fields per entry:** id (`<type>/<variation>`), what it means, when to use it, its reference implementation (file path), verification expectations, and, if checkable, its ast-grep rule.
 - **Location:** a project declares where its catalog lives in its agent guide. The framework doesn't fix a path.
+- **Catalog profile:** the project keeps one c4ish profile beside the catalog, durable and separate from any plan. It is the machine-readable index of the catalog: one entry per pattern with its id, label, family, how c4ish draws it (colour, icon) and a link to the pattern's section in the catalog docs. The Markdown docs hold the content. It lists patterns, not where they are used, so it is not a usage index. Plan models reference the profile; a plan that proposes a pattern adds its entry there.
 - **Tag convention:** the comment syntax per language, one tag per definition, and the meaning of a missing tag. One page in `docs/`.
 - `assess-repo` checks that a catalog exists and that the tag rules run.
 
@@ -94,6 +95,7 @@ Prefer (a). Check that resolution works before relying on it.
 - **`plan.md` keeps:** goal, scenarios, decisions, risks, gates and handoff. It gains a link to the model and a "New patterns" section. The Changes section shrinks, because the model carries it.
 - **The model carries:** containers, components with type, variation and change state, relationships (with kind and enforcement), libraries used inside components, product-level concepts touched, and contracts.
 - **Rendered diagrams** are committed beside the model for review.
+- **Review tour:** the model carries one guided tour across its views. Each step focuses elements, sets highlights, can trace an ordered path through the design, and has short narration. Every new, modified, removed or proposed element and every risk note appears in at least one step (c4ish lint). The tour orders the review; it does not replace the design narrative in `plan.md`.
 
 ### 4.5 Review
 - **Plan mode:** the model checks in §3. A component with no pattern, and an undeclared new pattern, are both majors.
