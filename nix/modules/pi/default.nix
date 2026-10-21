@@ -41,7 +41,8 @@ let
   # activation merges it into the user's writable settings.json).
   piConfigTree = makePiConfig {
     inherit (cfg) defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels;
-    inherit (cfg.powerline) config shortcuts;
+    powerline = cfg.powerline.config;
+    powerlineShortcuts = cfg.powerline.shortcuts;
   };
 
   # Build-time managed package materialization (vendor tree + facades +
@@ -197,7 +198,7 @@ in
         mkdir -p "$(dirname "$SETTINGS_FILE")"
 
         if [ -f "$SETTINGS_FILE" ]; then
-          ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$SETTINGS_FILE" "$NIX_SETTINGS" > "$SETTINGS_FILE.tmp" \
+          ${pkgs.jq}/bin/jq -s -f ${./merge-settings.jq} "$SETTINGS_FILE" "$NIX_SETTINGS" > "$SETTINGS_FILE.tmp" \
             && mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
           echo "Merged Nix settings into $SETTINGS_FILE"
         else

@@ -115,11 +115,9 @@ let
       source = {
         type = "git";
         packageName = "pi-powerline-footer";
-        # v0.7.0 declares Pi >=0.74.0 <0.81.0; this known-working pin
-        # predates the Pi 0.86.1 input. Review a compatible footer release
-        # before changing this source or relying on its peer range as proof.
-        spec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
-        installSpec = "github:nicobailon/pi-powerline-footer#760f828b19349f7158409bf9f84259d9221c1784";
+        # v0.20.2 delegates fixed input and scrolling to Pi's native layout.
+        spec = "github:nicobailon/pi-powerline-footer#e06267494593c9006b014f42706a8d9e9259a417";
+        installSpec = "github:nicobailon/pi-powerline-footer#e06267494593c9006b014f42706a8d9e9259a417";
       };
     };
 
@@ -309,10 +307,10 @@ let
       };
     };
     "pi-powerline-footer" = {
-      rev = "760f828b19349f7158409bf9f84259d9221c1784";
+      rev = "e06267494593c9006b014f42706a8d9e9259a417";
       tarball = pkgs.fetchzip {
-        url = "https://github.com/nicobailon/pi-powerline-footer/archive/760f828b19349f7158409bf9f84259d9221c1784.tar.gz";
-        hash = "sha256-PMvI4EbvOjahrNuW6GAJJfzTzV5HNIER7BKKOmYMr4s=";
+        url = "https://github.com/nicobailon/pi-powerline-footer/archive/e06267494593c9006b014f42706a8d9e9259a417.tar.gz";
+        hash = "sha256-2r36PKaKkh59pLd0eQP5at10KDEGpGVXfpbEuNoLX6c=";
         stripRoot = true;
       };
     };
@@ -378,8 +376,8 @@ let
 
   defaultPowerlineConfig = {
     preset = "nerd";
-    fixedEditor = true;
-    mouseScroll = true;
+    # Keep /compact <text> as compaction instructions, not a queued prompt.
+    queue.compactPromptMode = "native";
     placement = "above";
     welcome = true;
     cost.subscriptionDisplay = "reported-cost";
@@ -389,10 +387,8 @@ let
     };
   };
 
-  defaultPowerlineShortcuts = {
-    scrollChatUp = "ctrl+alt+u";
-    scrollChatDown = "ctrl+alt+d";
-  };
+  # Transcript navigation now belongs to Pi's keybindings, not Powerline.
+  defaultPowerlineShortcuts = { };
 
   defaultPowerlineTheme = {
     colors = {
@@ -668,6 +664,8 @@ let
       inherit defaultProvider defaultModel defaultThinkingLevel theme;
       quietStartup = false;
       hideThinkingBlock = false;
+      # Zentui retains its extension-owned compositor; Powerline uses Pi's.
+      tuiMode = if footer == "powerline" then "fullscreen" else "regular";
 
       compaction = {
         enabled = true;
@@ -718,6 +716,8 @@ let
       "app.models.clearAll" = [];
       "tui.select.up" = [ "up" "ctrl+p" ];
       "tui.select.down" = [ "down" "ctrl+n" ];
+      "tui.altScreen.lineUp" = [ "ctrl+alt+u" ];
+      "tui.altScreen.lineDown" = [ "ctrl+alt+d" ];
       "app.model.cycleForward" = [ "alt+]" ];
       "app.model.cycleBackward" = [ "alt+[" ];
       "app.model.select" = [ "alt+l" ];

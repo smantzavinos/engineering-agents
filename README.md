@@ -163,13 +163,15 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `defaultThinkingLevel` | `"medium"` | Default thinking level |
 | `theme` | `"catppuccin-mocha"` | Pi theme |
 | `footer` | `"powerline"` | Exclusive footer/editor profile: `"powerline"` or `"zentui"` |
-| `powerline.config` | *(see module default)* | Declarative Powerline preset, editor, welcome, placement, and cost-display settings |
-| `powerline.shortcuts` | `Ctrl+Alt+U` / `Ctrl+Alt+D` | Powerline fixed-editor chat scroll bindings |
+| `powerline.config` | *(see module default)* | Powerline preset, welcome, placement, cost display, and native compaction prompt behavior |
+| `powerline.shortcuts` | `{}` | Extension actions such as stash/copy; native transcript scroll keys live in Pi keybindings |
 | `powerline.nerdFonts` | `"force"` | Nerd Font detection: `"auto"`, `"force"`, or `"disable"` |
 | `powerline.theme` | *(see module default)* | Declarative Powerline `theme.json` color and icon override |
 | `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
 | `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
 | `enableVisualExplainer` | `true` | Install visual-explainer skill (pinned via the `visualExplainer` flake input) |
+
+The Powerline profile uses Pi's native fullscreen layout with a fixed editor and scrollable transcript. `Ctrl+Alt+U` / `Ctrl+Alt+D` scroll one line; PageUp/PageDown scroll by page. See [native fullscreen migration](docs/development-environment.md#native-fullscreen-migration) for settings cleanup, changed shortcuts, compaction behavior, and sandbox acceptance checks.
 
 ### OpenCode Module (`engineering-agents.opencode`)
 

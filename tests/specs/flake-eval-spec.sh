@@ -299,8 +299,23 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 
   PI_MANAGED_TREE="$(store_file_from_activate "$PI_OUT/activate" 'pi-managed-packages')"
   if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
-    && jq -e '.powerline | .preset == "nerd" and .fixedEditor == true and .mouseScroll == true and .welcome == true and .cost.subscriptionDisplay == "reported-cost" and .path.mode == "abbreviated" and .path.maxLength == 36' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
-    && jq -e '.powerlineShortcuts.scrollChatUp == "ctrl+alt+u" and .powerlineShortcuts.scrollChatDown == "ctrl+alt+d"' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && jq -e '.tuiMode == "fullscreen" and .powerline.queue.compactPromptMode == "native"
+              and (.powerline | has("fixedEditor") or has("mouseScroll") | not)
+              and .powerlineShortcuts == {}' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Powerline profile uses native fullscreen and compact queue prompts without retired editor settings"
+  else
+    fail "Powerline profile must use native fullscreen/queue prompts, omit fixedEditor/mouseScroll, and default to empty powerlineShortcuts"
+  fi
+
+  if jq -e '."tui.altScreen.lineUp" == ["ctrl+alt+u"]
+            and ."tui.altScreen.lineDown" == ["ctrl+alt+d"]' "$PI_FILES/.pi/agent/keybindings.json" >/dev/null 2>&1; then
+    pass "Pi native fullscreen scroll keys are Ctrl+Alt+U and Ctrl+Alt+D"
+  else
+    fail "Pi native fullscreen lineUp/lineDown keybindings are missing or incorrect"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.powerline | .preset == "nerd" and .welcome == true and .cost.subscriptionDisplay == "reported-cost" and .path.mode == "abbreviated" and .path.maxLength == 36' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
     && jq -e '.colors.model == "#cba6f7"' "$PI_MANAGED_TREE/vendor/node_modules/pi-powerline-footer/theme.json" >/dev/null 2>&1 \
     && grep -q 'export POWERLINE_NERD_FONTS="1"' "$PI_OUT/home-path/etc/profile.d/hm-session-vars.sh"; then
     pass "Powerline profile applies the declarative visual configuration"

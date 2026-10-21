@@ -180,7 +180,7 @@ in
         # settings merge over the existing file (Nix wins on conflicts) so
         # pi's persisted runtime selections survive rebuilds.
         if [ -f "$agent/settings.json" ]; then
-          ${pkgs.jq}/bin/jq -s '.[0] * .[1]' "$agent/settings.json" "$static/settings.json" > "$agent/settings.json.tmp" \
+          ${pkgs.jq}/bin/jq -s -f ${./merge-settings.jq} "$agent/settings.json" "$static/settings.json" > "$agent/settings.json.tmp" \
             && mv "$agent/settings.json.tmp" "$agent/settings.json"
         else
           cp "$static/settings.json" "$agent/settings.json"

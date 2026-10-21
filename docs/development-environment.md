@@ -26,24 +26,20 @@ engineering-agents.pi = {
 };
 ```
 
-Powerline is the default profile. Its `powerline.config`, `powerline.shortcuts`, `powerline.nerdFonts`, and `powerline.theme` module options provide declarative visual configuration. The defaults use the detailed `nerd` preset, fixed editor, startup welcome overlay, Catppuccin-aligned colors, `Ctrl+Alt+U`/`Ctrl+Alt+D` fixed-editor scrolling, forced Nerd Font glyphs for tmux sessions, and Pi's reported token-cost estimate even for subscription models. Override only the values you need:
+Powerline is the default profile. Pi's native fullscreen layout owns the fixed input, transcript scrolling, selection, and cursor rendering inside the current terminal pane. Powerline supplies the detailed `nerd` status rows, startup welcome overlay, Catppuccin-aligned colors, forced Nerd Font glyphs for tmux sessions, and Pi's reported token-cost estimate even for subscription models. Its `powerline.config`, `powerline.shortcuts`, `powerline.nerdFonts`, and `powerline.theme` options configure the extension; transcript keys belong to Pi's `keybindings.json`. Override only the values you need:
 
 ```nix
 engineering-agents.pi.powerline = {
   config = {
     preset = "full";
-    fixedEditor = true;
-    mouseScroll = true;
+    queue.compactPromptMode = "native";
     cost.subscriptionDisplay = "reported-cost";
     path = {
       mode = "abbreviated";
       maxLength = 36;
     };
   };
-  shortcuts = {
-    scrollChatUp = "ctrl+alt+u";
-    scrollChatDown = "ctrl+alt+d";
-  };
+  shortcuts = { }; # Extension actions only, e.g. stashHistory or copyEditor.
   nerdFonts = "force"; # use "auto" or "disable" when appropriate
   theme.colors = {
     model = "#cba6f7";
@@ -52,7 +48,18 @@ engineering-agents.pi.powerline = {
 };
 ```
 
-Use the sandbox before applying a profile or visual change to the active Home Manager generation.
+### Native fullscreen migration
+
+Powerline 0.20.2 replaces the old extension-owned fixed editor with Pi's native fullscreen layout. Activation selects `tuiMode = "fullscreen"` for Powerline and removes the retired `powerline.fixedEditor`, `powerline.mouseScroll`, and `powerlineShortcuts.scrollChatUp`/`scrollChatDown` keys from existing writable settings. Other runtime preferences survive the recursive merge; declarative values win. Zentui keeps its separate regular-mode compositor.
+
+- `Ctrl+Alt+U` / `Ctrl+Alt+D` now scroll the transcript one line through `tui.altScreen.lineUp` / `lineDown`. The old extension moved ten lines per press; use native PageUp/PageDown for larger jumps.
+- `PageUp` / `PageDown` scroll by a page; `Ctrl+Home` / `Ctrl+End` go to the beginning/end. `Ctrl+Shift+F` searches the transcript. Native message navigation replaces Powerline's separate user/assistant jump actions and scroll-away shortcut card; those extension features are not retained.
+- Pi owns mouse selection and enables copy-on-select by default. `app.message.copy` remains unbound so `Ctrl+X` stays available to the leader-key extension. Test clipboard and link handling in the actual terminal/tmux path.
+- Fullscreen uses the alternate screen, like Neovim, within the existing pane. Browse live output with Pi rather than tmux scrollback. On normal exit, Pi defaults to printing the transcript onto the normal screen; `fullscreenExitOutput = "resume-hint"` is the alternative Pi setting.
+- `powerline.queue.compactPromptMode = "native"` preserves `/compact <text>` as compaction instructions. It also leaves prompts submitted during compaction in Pi's native queue rather than Powerline's post-compaction queue.
+- Bash ghost completions are now opt-in (`bashMode.completions = true`). Restore stashed drafts explicitly with `Alt+S` (or `Ctrl+S` in the editor); agent completion no longer restores them automatically. Delayed send and AI-assisted follow-up routing remain off by default.
+
+Use the sandbox before applying this migration or any profile/visual change to the active Home Manager generation. Check mid-line edits, multiline drafts, scrolling during streaming, clipboard/link handling, terminal resizing, pane switching, status placement, and compaction behavior. A successful load check does not replace this hands-on acceptance pass.
 
 ## Repo-local Pi Development Sandbox
 Use the sandbox to test the current checkout's Pi module, including uncommitted changes, without pushing or switching the active Home Manager generation:

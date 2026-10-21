@@ -38,6 +38,7 @@ bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/pi-vendor-spec.sh
 bash tests/specs/pi-preset-refresh-contract-spec.sh
 bash tests/specs/pi-btw-refresh-contract-spec.sh
+bash tests/specs/pi-settings-merge-spec.sh
 bash tests/specs/compiler-contract-spec.sh
 bash tests/specs/managed-package-install-state-spec.sh
 bash tests/specs/managed-package-status-spec.sh
@@ -73,7 +74,8 @@ New tests specific to this repo:
 - **`pi-preset-refresh-contract-spec.sh`** — Paired `@richardgill/pi-preset` + `pi-config` 0.0.9 manifest, Nix declaration, and lockfile version alignment
 - **`pi-btw-refresh-contract-spec.sh`** — `pi-btw` 0.6.1 declaration/manifest/lock contract, its Pi core peer compatibility, `pi-subdir-context` as a pinned git source (outside the npm graph), no npm `overrides`, and a fully integrity-complete lock.
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
-- **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
+- **`flake-eval-spec.sh`** — All modules evaluate, Powerline native fullscreen/queue defaults and scroll keybindings, docs package builds, dev shell works
+- **`pi-settings-merge-spec.sh`** — Shared jq settings merge: recursive Nix precedence, runtime preference preservation, and retired editor/scroll-key cleanup only for declarative Powerline native fullscreen
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
 - **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
@@ -108,6 +110,7 @@ tests/
 │   ├── pi-module-content-spec.sh    # Module content integrity
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
+│   ├── pi-settings-merge-spec.sh    # Settings merge and native fullscreen migration
 │   ├── compiler-contract-spec.sh    # Compile helper contract tests
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
