@@ -26,7 +26,7 @@ engineering-agents.pi = {
 };
 ```
 
-Powerline is the default profile. Pi's native fullscreen layout owns the fixed input, transcript scrolling, selection, and cursor rendering inside the current terminal pane. Powerline supplies the detailed `nerd` status rows, startup welcome overlay, Catppuccin-aligned colors, forced Nerd Font glyphs for tmux sessions, and Pi's reported token-cost estimate even for subscription models. Its `powerline.config`, `powerline.shortcuts`, `powerline.nerdFonts`, and `powerline.theme` options configure the extension; transcript keys belong to Pi's `keybindings.json`. Override only the values you need:
+Powerline is the default profile. Pi's native fullscreen layout owns the fixed input, transcript scrolling, selection, and cursor rendering inside the current terminal pane. Powerline supplies the detailed `nerd` status rows, startup welcome overlay, Catppuccin-aligned colors, forced Nerd Font glyphs for tmux sessions, and Pi's reported token-cost estimate even for subscription models. Its `powerline.config`, `powerline.shortcuts`, `powerline.nerdFonts`, and `powerline.theme` options configure the extension; transcript keys belong to Pi's `keybindings.json`. Powerline configuration overrides merge recursively over the shared defaults, so a partial visual override retains native compaction behavior and unspecified visual settings. Explicit overrides still win. Override only the values you need:
 
 ```nix
 engineering-agents.pi.powerline = {

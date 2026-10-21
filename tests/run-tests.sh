@@ -114,6 +114,19 @@ run_flake_eval() {
   fi
 }
 
+run_powerline_overrides() {
+  local status normalized_status
+  printf 'Running Powerline override integration spec...\n\n'
+  if bash "$SCRIPT_DIR/specs/pi-powerline-overrides-spec.sh"; then
+    printf '  OK\n\n'
+  else
+    status=$?
+    normalized_status="$(normalize_status "$status")"
+    printf '  FAILED (exit %s)\n\n' "$normalized_status" >&2
+    return "$normalized_status"
+  fi
+}
+
 run_proof_set() {
   local status normalized_status
   printf 'Running Pi proof-set verification...\n\n'
@@ -177,12 +190,14 @@ case "$mode" in
   all)
     run_specs
     run_flake_eval
+    run_powerline_overrides
     run_proof_set
     printf 'All tests passed.\n'
     ;;
   full)
     run_specs
     run_flake_eval
+    run_powerline_overrides
     run_proof_set
     run_cli_smoke
     printf 'All tests passed.\n'

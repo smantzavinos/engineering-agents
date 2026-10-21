@@ -704,7 +704,10 @@ let
           agentOverrides = subagentOverrides;
         };
     } // lib.optionalAttrs (footer == "powerline") {
-      inherit powerline powerlineShortcuts;
+      # A partial module override replaces its attrsOf option default. Merge
+      # here so every consumer retains native /compact and visual defaults.
+      powerline = lib.recursiveUpdate defaultPowerlineConfig powerline;
+      inherit powerlineShortcuts;
     };
 
   # ============================================================

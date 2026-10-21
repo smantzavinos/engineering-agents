@@ -33,6 +33,7 @@ bash tests/specs/skill-content-spec.sh
 bash tests/specs/skill-render-spec.sh
 bash tests/specs/hermes-docs-spec.sh
 bash tests/specs/flake-eval-spec.sh
+bash tests/specs/pi-powerline-overrides-spec.sh
 bash tests/specs/preset-spec.sh
 bash tests/specs/pi-module-content-spec.sh
 bash tests/specs/pi-vendor-spec.sh
@@ -76,6 +77,7 @@ New tests specific to this repo:
 - **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
 - **`flake-eval-spec.sh`** — All modules evaluate, Powerline native fullscreen/queue defaults and scroll keybindings, docs package builds, dev shell works
 - **`pi-settings-merge-spec.sh`** — Shared jq settings merge: recursive Nix precedence, runtime preference preservation, and retired editor/scroll-key cleanup only for declarative Powerline native fullscreen
+- **`pi-powerline-overrides-spec.sh`** — Generated Home Manager and shared `makePiConfig` settings preserve defaults under partial Powerline overrides and honor explicit queue mode; requires Nix, builds without activation, included in `all`/`full` only
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
 - **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
@@ -111,6 +113,7 @@ tests/
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation
 │   ├── pi-settings-merge-spec.sh    # Settings merge and native fullscreen migration
+│   ├── pi-powerline-overrides-spec.sh # Nix-only partial Powerline override regression
 │   ├── compiler-contract-spec.sh    # Compile helper contract tests
 │   ├── managed-package-install-state-spec.sh # Install-state helper contract tests
 │   ├── managed-package-status-spec.sh # Shared status engine + check-updates contract tests
