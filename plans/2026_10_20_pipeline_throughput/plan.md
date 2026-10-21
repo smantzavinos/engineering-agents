@@ -94,8 +94,8 @@ Replace the example with a simulated epic from the variants' epic and durations 
 
 Agreed on 2026-10-20: C1 (at scope, no runtime mechanism), C2, C3 (pass 2 still runs after any major that needs a re-check), lanes configurable; drafting C4 and the capacity changes.
 
-**Open:**
-- **O1. Lanes.** Proposed: keep the default of 4 lanes and cores ÷ 4 E2E workers. Raise them in the repo once E2E time against worker count and concurrent runs is measured (pilot repo #142, lever 3, and §6). With 6 lanes, the example takes 3h54 instead of about 4h16, if T1 doesn't slow.
+**Decided:**
+- **O1. Lanes (owner, 2026-10-20: keep 4 for now).** As proposed: keep the default of 4 lanes and cores ÷ 4 E2E workers. Raise them in the repo once E2E time against worker count and concurrent runs is measured (pilot repo #142, lever 3, and §6). With 6 lanes, the example takes 3h54 instead of about 4h16, if T1 doesn't slow.
 
 **Dropped after review:** reviewing a refresh inside code review pass 1. It gives about 4 min per refreshed child and nothing on the example epic, and needs a review sub-mode, a branch in Start and ordering between a plan-author and the implementer in one worktree.
 
