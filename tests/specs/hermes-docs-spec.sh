@@ -38,6 +38,8 @@ assert_contains "$HERMES_AUTO" "no_agent" "PR automation doc specifies the no-LL
 assert_contains "$HERMES_AUTO" "3 minutes" "PR automation doc records the cron interrupt constraint"
 assert_contains "$HERMES_AUTO" "Never half-post" "PR automation doc defines the failure policy"
 assert_contains "$HERMES_AUTO" "Agents never merge" "PR automation doc states the merge boundary"
+
+assert_contains "$REPO_ROOT/docs/hermes/dev-process.md" "Post-merge canon check" "dev-process refinements include the post-merge canon check"
 assert_contains "$HERMES_AUTO" "docs/references/pr-review.md" "PR automation doc points at the canonical process, not a restatement"
 
 PIPELINE="$REPO_ROOT/docs/references/delivery-pipeline.md"
