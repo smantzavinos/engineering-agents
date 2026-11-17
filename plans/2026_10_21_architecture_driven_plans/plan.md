@@ -2,7 +2,7 @@
 
 **Status:** draft, revision 2 (2026-11-17), not reviewed or approved · **First draft:** 2026-10-21 · **Branch:** `pilot/arch-plans` (from `pilot/process-retro` at `d424a19`) · **Input:** [`handoff.md`](handoff.md), the original design handoff, kept as history; this plan supersedes it · **Evidence:** `plans/2026_10_15_process_retro/`, `plans/2026_10_20_process_variants/README.md`, ADR 0006 · **Builds on:** the frontier pipeline (`docs/frontier-pipeline.md`), still a pilot · **Changes (proposed):** `skills/scope`, `plan`, `review`, `implement`, `orchestrate`; new `run-plan`; skill frontmatter and agent definitions; `docs/frontier-pipeline.md`; a new ADR
 
-**Revision 2** brings the draft up to date with the diagram tool as built, and adds what the first draft left open: one home per kind of content (§4.4), three pattern states (§4.5), a check that ties the model to the code (§4.6), deviation rules (§4.7), the approval gate (§4.8), models inside an epic (§4.9) and what the process needs from the tool (§4.10). Two points are proposals for the owner to confirm; they are marked.
+**Revision 2** brings the draft up to date with the diagram tool as built, and adds what the first draft left open: one home per kind of content (§4.4), three pattern states (§4.5), a check that ties the model to the code (§4.6), deviation rules (§4.7), the approval gate (§4.8), models inside an epic (§4.9) and what the process needs from the tool (§4.10). The owner's decisions of 2026-11-17 are in: a plan is as large as the work needs (§4.9), the human approves new patterns (§4.5), and an epic has one overview model plus one detailed model per child (§4.9). One point is still a proposal and is marked: who approves each child's model.
 
 ## 1. Why
 
@@ -14,7 +14,7 @@ Two problems, in priority order:
    - Nothing holds the codebase to a fixed set of patterns. Each problem is solved on its own, so review means reading every line.
 2. **The fixed cost of each plan still dominates.** In the pilot, the overhead per child (refresh, review loops, integration) outweighed build time. Splitting a feature into children multiplied that cost.
 
-The answer to the first is a plan whose design is a **structured architecture model**, shown to the human as a diagram and a guided tour. It is built from a **project-owned catalog of patterns**, so the code converges on a known set instead of drifting. This plan addresses the first problem. The second is addressed only as far as the evidence allows (§4.9, §5).
+The answer to the first is a plan whose design is a **structured architecture model**, shown to the human as a diagram and a guided tour. It is built from a **project-owned catalog of patterns**, so the code converges on a known set instead of drifting. This plan addresses the first problem. The second is addressed by not splitting work into more plans than it needs (§4.9). Parallel work inside one plan stays experimental (§5).
 
 **Success:**
 - the human understands and approves a plan from its tour and a short `plan.md`, in minutes;
@@ -26,7 +26,7 @@ The answer to the first is a plan whose design is a **structured architecture mo
 
 | Topic | Decision |
 |---|---|
-| Default unit of work | **One plan**, up to the review-load signal in `scope`. Larger work is an epic, as today, until the pilot shows the limit can rise (§4.9). An epic is otherwise only for genuinely distinct plans or workstreams. |
+| Default unit of work | **One plan, as large as the work needs.** Work is never split to meet a size number. An epic is only for genuinely distinct plans or workstreams (§4.9). |
 | Default runner | A single plan runs with a dedicated **`run-plan`** skill, not with `orchestrate`. A new **`run-epic`** skill (today's `orchestrate`, slimmed down) coordinates plans by calling `run-plan` for each. |
 | Design artifact | Each plan has a **c4ish model** (JSON) of the elements it adds, changes, reuses or removes, plus the unchanged context one hop from them. The tool validates it and renders the diagrams and the tour. |
 | One home per kind of content | The model says what is built and how the pieces connect. `plan.md` says why, and what proves it. The tour says in what order to look. Nothing is stated twice (§4.4). |
@@ -34,6 +34,8 @@ The answer to the first is a plan whose design is a **structured architecture mo
 | Lifetime | The model and its diagrams belong to the plan and are **throwaway** after it. At close the model is brought in line with the code and becomes the review record in the PR. It is not maintained afterwards. |
 | Pattern catalog | **Project-owned**, in the project's docs. It starts with a small key set and grows as plans touch new areas. |
 | Pattern states | An element is **catalogued**, **proposed** (this plan adds the pattern to the catalog) or **bespoke** (a one-off with a stated reason). A second use of a bespoke shape becomes a proposal (§4.5). |
+| New patterns | **The human approves** every change to the catalog, at the plan's approval gate (§4.5). |
+| Models in an epic | **One overview model** for the epic, and **one detailed model per child plan** (§4.9). |
 | Finding pattern uses | **Comment tags in code** at the definition: `@pattern <id>`, or `@pattern bespoke`. Search finds every use. Untagged code is "unknown". **No central index** of where patterns are used. |
 | Conformance | A rule per pattern where the shape is checkable. A rule fails tagged code that doesn't match its pattern, and warns on untagged code of a known shape. A light read is earned only by a passing rule. |
 | Model and code agree | A mechanical check at close, in both directions, plus a comparison of the approved model with the shipped one (§4.6). |
@@ -123,7 +125,7 @@ Prefer (a). Check that resolution works before relying on it (Q7).
 
 - **A proposal** is a first-class part of the plan: the catalog entry, the profile entry, the reference implementation and its check. The tour points at each one.
 - **Second use.** Before marking an element bespoke, the plan author searches for `@pattern bespoke` code doing the same job. If there is one, the plan proposes a pattern that covers both instead.
-- **Who approves (proposed; owner to confirm).** The human approves every change to the catalog: a proposed pattern, or a change to an existing one. They are already approving the plan from the tour, so this adds no stop. Bespoke elements need no separate approval: the tour points at them, and the plan reviewer checks each reason. During a build nothing is added to the catalog; a shape that turns up there is built as bespoke and proposed in a follow-up.
+- **Who approves.** The human approves every change to the catalog: a proposed pattern, or a change to an existing one. They are already approving the plan from the tour, so this adds no stop. Bespoke elements need no separate approval: the tour points at them, and the plan reviewer checks each reason. During a build nothing is added to the catalog; a shape that turns up there is built as bespoke and proposed in a follow-up.
 - **Untagged changed code** is "unknown" and gets a full read.
 
 ### 4.6 Tying the model to the code
@@ -163,14 +165,21 @@ The human approves, approves with changes, or rejects. Changes go back to the sa
 
 ### 4.9 Size, and models inside an epic
 
-**Size.** The first draft said one plan "may be large". That conflicts with the review-load signal in `scope`, and a large plan without packages is one serial implementer and one very large code review. So the signal stays, and work above it is an epic as today. Two things can raise the limit, and both need evidence first:
-- *light reads:* lines under a passing rule count less toward the signal. The pilot measures the share of such lines and recalibrates;
-- *packages* (§5).
+**Size.** A plan is as large as the work needs. It is never split to meet a size number: each extra plan adds a fixed cost (§1), and it cuts one design into pieces the human has to hold together. `scope` chooses an epic only when the work holds genuinely distinct plans or workstreams, meaning parts with their own goal that could each be approved and shipped alone.
 
-**Models inside an epic (proposed; owner to confirm).**
-- **The epic has a map:** one small model beside `epic.md`. It shows the containers, the main elements each child adds or changes, the contracts between children, and any pattern the epic proposes. It replaces the prose record of cross-child contracts. The human approves the epic from the map's tour and `epic.md`.
+This changes three places. `scope` today chooses a single plan only when the work fits the review-load signal (about 7k changed lines), and `plan` → Sizing and `docs/frontier-pipeline.md` repeat that. The signal stops being a limit. It stays as an estimate recorded in `plan.md`.
+
+What a large plan costs, and the answer to each:
+- *Approval.* The human reads the tour, which grows with the number of changed elements, not with lines of code.
+- *Code review.* One very large diff is more than a reviewer can judge in one pass. The model divides it: above the signal, the diff is reviewed one group of elements at a time (a view or a container), by fresh reviewers working side by side, each given the model and its group. The contracts and the model-to-code check (§4.6) cover the joins between groups. Light reads (§4.5) shrink what needs a full read.
+- *Build.* One implementer builds serially, so build time grows with size. That is accepted: in the pilot the fixed cost per plan outweighed build time (§1). Packages (§5) are the answer if serial build becomes the bottleneck.
+
+The pilot records build time, review passes and findings against plan size, to show where these answers stop working.
+
+**Models inside an epic.** Decided: one overview model for the epic, and one detailed model per child. The approval rule for a child's model, in the third bullet, is a proposal for the owner to confirm.
+- **The epic has a map:** one small overview model beside `epic.md`. It shows the containers, the main elements each child adds or changes, the contracts between children, and any pattern the epic proposes. It replaces the prose record of cross-child contracts. The human approves the epic from the map's tour and `epic.md`.
 - **Each child has its own detailed model,** as a single plan does. Where it details something the map shows, it uses the map's id.
-- **A fresh reviewer approves the child's model against the map.** The human is asked again only when the child's model differs from the map in a re-approval way (§4.7), or when `epic.md` → Autonomy names that child as one the human approves personally. So the same deviation table applies at two levels: child model against the map, and code against the child model.
+- **A fresh reviewer approves the child's model against the map (proposed).** The human is asked again only when the child's model differs from the map in a re-approval way (§4.7), or when `epic.md` → Autonomy names that child as one the human approves personally. So the same deviation table applies at two levels: child model against the map, and code against the child model.
 - **At epic close** the map is brought in line with the children's final models. Its approved-versus-shipped comparison goes in the PR with each child's as-built tour.
 
 Alternatives considered:
@@ -199,7 +208,7 @@ Until they exist, the reviewer does these by hand, which is acceptable for one p
   - contracts can be implemented, and the plan questions are answered where they are drawn;
   - context is one hop from what changes;
   - nothing is stated in two homes (§4.4). A repeat is a minor; a contradiction is a major.
-- **Code mode.** Read by pattern state (§4.5). Run the rules on the changed files. Check the model-to-code result and read the unaccounted files. Judge each recorded deviation; one in the wrong class is a major.
+- **Code mode.** Read by pattern state (§4.5). A diff above the review-load signal is read one model group at a time (§4.9). Run the rules on the changed files. Check the model-to-code result and read the unaccounted files. Judge each recorded deviation; one in the wrong class is a major.
 - **Close.** Approved versus shipped matches the recorded deviations.
 
 ## 5. Experimental: work packages inside one plan
@@ -235,6 +244,7 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
    - the share of changed lines under a passing rule, and the unaccounted files;
    - patterns proposed and elements marked bespoke, and whether each held up in review;
    - review findings by kind;
+   - build time and review passes against the plan's size (§4.9);
    - end-to-end time against the pilot era-D medians.
 3. **Packages** (§5): only after 1–2.
 4. **Adoption ADR:** covers the frontier pipeline and this plan, retires the old skills, and records measured outcomes separately from intent.
@@ -242,15 +252,17 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
 ## 7. Open questions
 
 **For the owner:**
-- **Q4. Who approves a new pattern.** Proposed in §4.5: the human approves catalog changes at the plan's approval gate; the reviewer polices bespoke.
-- **Q8. Models inside an epic.** Proposed in §4.9: a map the human approves, and a detailed model per child that the reviewer approves against the map.
+- **Q8b. Who approves a child's model in an epic.** Proposed in §4.9: a fresh reviewer approves it against the map, and the human is asked only on a re-approval difference or for a child they named.
 
 **Still open:**
 - **Q1. Package definition:** fields, whether packages can be revised while running, and partial-component ownership (handoff §10.A). Only needed for §5.
 - **Q7. Role-skill loading:** whether option (a) in §4.1 works with pi-subagents local skill paths. Verify before choosing.
 - **Q9. Bespoke tags:** whether "a few words" after `@pattern bespoke` is enough for a plan author to find a second use, or a short name is needed.
+- **Q10. Reviewing a large diff:** whether groups from the model, each read by its own fresh reviewer, catch what one reviewer over the whole diff would (§4.9). The pilot answers it.
 
-**Settled in this revision:** Q2 model scope (one hop, §2). Q3 tag syntax (one generic form, §4.3). Q5 model at close (reconcile fully, mechanically, §4.6). Q6 epic promotion (the review-load signal stays, §4.9).
+**Settled in this revision:** Q2 model scope (one hop, §2). Q3 tag syntax (one generic form, §4.3). Q5 model at close (reconcile fully, mechanically, §4.6).
+
+**Decided by the owner, 2026-11-17:** Q4 the human approves new patterns (§4.5). Q6 no size limit on a plan; an epic only for distinct workstreams (§4.9). Q8 an overview model for the epic and a detailed model per child (§4.9).
 
 ## 8. Not in scope
 - Building the diagram tool. It is a separate product; §4.10 lists what this process needs from it.
