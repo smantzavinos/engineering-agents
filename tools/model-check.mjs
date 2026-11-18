@@ -18,8 +18,12 @@
 //   --plan <plan.md>       default: plan.md beside the model. Read for `Approved:` and
 //                          `Re-approved:` lines and the "Changes outside the model" section.
 //   --ledger <review.md>   default: review.md beside the plan. Read for the "Deviations" section.
-//   --project <file.json>  the project's path file (see below). Default: none.
+//   --project <file.json>  the project's path file (see below). `approved` needs it, for `kinds`.
+//                          It is read as it was at the commit compared against, so a build
+//                          cannot loosen it; a change to it stops like a catalog change.
 //   --base <commit>        `code` only. Default: the first `Approved:` commit in the plan.
+//                          `approved` compares with the latest approval line, and reads
+//                          "Changes outside the model" from plan.md as it was at that commit.
 //   --root <dir>           repository root. Default: the git repository holding the model.
 //   --json                 print the result as JSON.
 //   --code-report <file>   use this `c4ish code --json` output instead of running the tool.
@@ -42,13 +46,22 @@
 //   `kinds` says which element kinds are data, containers and product elements. `enforcement`
 //   maps the process's enforcement levels to the profile's ids (default: the same names).
 //
-// Ledger deviations: a section whose heading contains "Deviations"; one list item per differing
-// item, starting with its key in backticks — the same `kind:id` the tool uses:
+// A glob with no wildcard also matches everything under it (`docs/patterns` = `docs/patterns/**`).
+//
+// plan.md: `Approved: <date> <commit>` and `Re-approved: <date> <commit>` lines, and a section
+// headed "Changes outside the model" with one list item per path or glob, starting with it in
+// backticks:
+//   - `migrations/004_page_cursor.sql` adds the cursor column
+//
+// Ledger deviations: a section headed "Deviations"; one list item per differing item, starting
+// with its key in backticks — the same `kind:id` the tool uses:
 //   - `element:collector` dropped; nothing calls it after the page reads landed
 //   - `relationship:mergeIndexes` rerouted through the summary query
+//
+// Text inside fenced code blocks is ignored in both files.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -75,7 +88,12 @@ export function globToRegExp(glob) {
 	return new RegExp(`^${re}$`);
 }
 
-export const matchAny = (path, globs) => (globs ?? []).some((g) => globToRegExp(g).test(path));
+/** A glob with no wildcard names a file or a directory: it also matches everything under it. */
+export const matchAny = (path, globs) =>
+	(globs ?? []).some((raw) => {
+		const g = raw.replace(/\/+$/, '');
+		return /[*?]/.test(g) ? globToRegExp(g).test(path) : path === g || path.startsWith(`${g}/`);
+	});
 
 const DEFAULT_STYLES = { new: 'new', modified: 'modified', reused: 'reused', removed: 'removed' };
 
@@ -86,38 +104,64 @@ export function changeStyles(profile) {
 	return out;
 }
 
+const DEFAULT_DATA_RELATIONSHIPS = ['reads', 'writes', 'references', 'pins'];
+
+/** Relationship kinds that carry data, from a profile file. The tool's default profile has four. */
+export function dataRelationshipKinds(profile) {
+	const out = new Set(!profile || profile.extends === 'default' ? DEFAULT_DATA_RELATIONSHIPS : []);
+	for (const [id, def] of Object.entries(profile?.relationshipKinds ?? {})) {
+		if (def?.category === 'data' || def?.enforcementRequired) out.add(id);
+		else out.delete(id);
+	}
+	return out;
+}
+
 /* ------------------------------------------------------------------------- */
 /* plan.md and the ledger                                                      */
 /* ------------------------------------------------------------------------- */
 
+/** The lines of a Markdown text outside fenced code blocks. */
+function proseLines(text) {
+	const out = [];
+	let fence;
+	for (const line of text.split('\n')) {
+		const m = /^\s*(```+|~~~+)/.exec(line);
+		if (m && !fence) fence = m[1][0];
+		else if (m && m[1][0] === fence) fence = undefined;
+		else if (!fence) out.push(line);
+	}
+	return out;
+}
+
+/** List items that start with a backticked token, inside the section with exactly this heading. */
+function sectionItems(text, heading) {
+	const title = new RegExp(`^(?:[\\d.]+\\s+)?${heading}\\s*$`, 'i');
+	const out = [];
+	let depth = 0;
+	for (const line of proseLines(text)) {
+		const h = /^(#{1,6})\s+(.*)$/.exec(line);
+		if (h) depth = title.test(h[2].replace(/[*_`]/g, '').trim()) ? h[1].length : depth && h[1].length > depth ? depth : 0;
+		else if (depth) {
+			const m = /^\s*[-*]\s+`([^`\s]+)`\s*(.*)$/.exec(line);
+			if (m) out.push([m[1], m[2].trim()]);
+		}
+	}
+	return out;
+}
+
 /** `Approved: <date> <commit>` and `Re-approved: <date> <commit>` lines, and the paths under "Changes outside the model". */
 export function parsePlan(text) {
 	const approvals = [];
-	const outsideModel = [];
-	let inSection = 0; // heading depth of the open "Changes outside the model" section
-	for (const line of text.split('\n')) {
+	for (const line of proseLines(text)) {
 		const a = /^\s*(?:[-*]\s+)?\**(Approved|Re-approved):\**\s+(\S+)\s+`?([0-9a-fA-F]{7,40})`?/.exec(line);
 		if (a) approvals.push({ kind: a[1], date: a[2], commit: a[3] });
-		const h = /^(#{1,6})\s+(.*)$/.exec(line);
-		if (h) inSection = /changes outside the model/i.test(h[2]) ? h[1].length : inSection && h[1].length > inSection ? inSection : 0;
-		else if (inSection) for (const m of line.matchAll(/`([^`\s]+)`/g)) outsideModel.push(m[1]);
 	}
-	return { approvals, outsideModel };
+	return { approvals, outsideModel: sectionItems(text, 'changes outside the model').map(([path]) => path) };
 }
 
 /** Deviations recorded in the ledger: key (`kind:id`) → the line's text. */
 export function parseLedger(text) {
-	const deviations = new Map();
-	let depth = 0;
-	for (const line of text.split('\n')) {
-		const h = /^(#{1,6})\s+(.*)$/.exec(line);
-		if (h) depth = /deviations/i.test(h[2]) ? h[1].length : depth && h[1].length > depth ? depth : 0;
-		else if (depth) {
-			const m = /^\s*[-*]\s+`([a-z]+:[^`]+)`\s*(.*)$/.exec(line);
-			if (m) deviations.set(m[1], m[2].trim());
-		}
-	}
-	return deviations;
+	return new Map(sectionItems(text, 'deviations').filter(([key]) => /^[a-z]+:.+/.test(key)));
 }
 
 /* ------------------------------------------------------------------------- */
@@ -126,13 +170,16 @@ export function parseLedger(text) {
 
 const ID = '[A-Za-z0-9][A-Za-z0-9._/-]*';
 
+/** A tag starts its comment line: `@pattern` after at most a comment marker. Mentions in prose or strings are not tags. */
+export const isTagLine = (line) => /^\s*(?:(?:\/\/+|\/\*+|\*|#|<!--|--)\s*)?@pattern(?:\s|$)/.test(line);
+
 /**
  * The tag in a comment. `null`: no tag. Forms (design §4.3):
  *   @pattern <id> · @pattern <id> partial: <what differs> · @pattern bespoke: <what it is>
  *   each optionally followed by `; also <id>, <id>`
  */
 export function parseTag(comment) {
-	const lines = (comment ?? '').split('\n').filter((l) => l.includes('@pattern'));
+	const lines = (comment ?? '').split('\n').filter(isTagLine);
 	if (!lines.length) return null;
 	if (lines.length > 1) return { error: 'more than one @pattern tag in one comment' };
 	let rest = lines[0]
@@ -185,7 +232,7 @@ export function expectedTag(model, owner) {
 	const part = owner.part === undefined ? undefined : (element.parts ?? []).find((p) => p.title === owner.part || p.id === owner.part);
 	if (part && part.pattern !== undefined) return part.pattern === null ? { bespoke: true, partial: false, also: [] } : { pattern: part.pattern, bespoke: false, partial: false, also: [] };
 	if (element.pattern === undefined) return { none: true };
-	if (element.pattern === null) return { bespoke: true, partial: false, also: [] };
+	if (element.pattern === null) return { bespoke: true, partial: false, also: element.patterns ?? [] };
 	return { pattern: element.pattern, bespoke: false, partial: element.patternFit === 'partial', also: (element.patterns ?? []).filter((p) => p !== element.pattern) };
 }
 
@@ -242,46 +289,44 @@ export function checkCode(model, report, options = {}) {
 	for (const r of report.references) if (r.problem) fail('reference', r.ref, r.problem + hint(r));
 	if (report.references.some((r) => r.delta === undefined && !r.problem)) fail('usage', 'report', 'the code report has no base commit; run the tool with --base');
 
-	// 1. each element's change state against its references
+	// 1. each element's change state against its references. A part with its own change state is judged by that.
 	const elements = [];
 	for (const e of model.elements) {
 		const style = styles[e.change] ?? 'reused';
-		const refs = report.references.filter((r) => r.owners.some((o) => o.element === e.id));
 		const before = failures.length;
 		const where = `element ${e.id}`;
-		if (!refs.length) {
+		const owned = []; // one entry per (reference, owner in this element)
+		for (const r of report.references) for (const o of r.owners) if (o.element === e.id) owned.push({ r, o, style: o.part !== undefined && o.change !== undefined ? (styles[o.change] ?? 'reused') : style });
+		if (!owned.length) {
 			if (e.pattern !== undefined && (style === 'new' || style === 'modified')) fail('element', where, `is ${style} and has a pattern, but no code reference`);
 			elements.push({ id: e.id, style, references: 0, ok: failures.length === before });
 			continue;
 		}
-		const usable = refs.filter((r) => !r.problem && r.delta !== undefined);
-		if (style === 'new') {
-			for (const r of usable) if (r.delta !== 'added') fail('element', where, `is new, but \`${r.ref}\` is ${r.delta === 'missing' ? 'not in the code' : `${r.delta}: it existed at the base`}${hint(r)}`);
-		} else if (style === 'modified') {
-			for (const r of usable) if (r.head.status !== 'resolved') fail('element', where, `is modified, but \`${r.ref}\` does not resolve (${r.head.status})${hint(r)}`);
-			if (usable.length && !usable.some((r) => isChanged(r) || r.changedThrough?.length)) fail('element', where, 'is modified, but none of its references changed');
-		} else if (style === 'removed') {
-			for (const r of usable) if (r.delta !== 'removed') fail('element', where, `is removed, but \`${r.ref}\` is ${r.delta === 'missing' ? 'at neither the base nor the working tree' : `still there (${r.delta})`}${hint(r)}`);
-		} else {
-			for (const r of usable)
-				if (r.delta !== 'unchanged' || r.changedThrough?.length) fail('element', where, `is reused, but \`${r.ref}\` is ${r.delta}${through(r)}: that makes it modified, a model change`);
+		const usable = owned.filter(({ r }) => !r.problem && r.delta !== undefined);
+		for (const { r, o, style: as } of usable) {
+			const what = o.part !== undefined && as !== style ? `part "${o.part}" is ${as}` : `is ${as}`;
+			if (as === 'new') {
+				if (r.delta !== 'added') fail('element', where, `${what}, but \`${r.ref}\` is ${r.delta === 'missing' ? 'not in the code' : `${r.delta}: it existed at the base`}${hint(r)}`);
+			} else if (as === 'modified') {
+				if (r.head.status !== 'resolved') fail('element', where, `${what}, but \`${r.ref}\` does not resolve (${r.head.status})${hint(r)}`);
+			} else if (as === 'removed') {
+				if (r.delta !== 'removed') fail('element', where, `${what}, but \`${r.ref}\` is ${r.delta === 'missing' ? 'at neither the base nor the working tree' : `still there (${r.delta})`}${hint(r)}`);
+			} else if (r.delta !== 'unchanged' || r.changedThrough?.length) fail('element', where, `${what}, but \`${r.ref}\` is ${r.delta}${through(r)}: that makes it modified, a model change`);
 		}
+		if (style === 'modified' && usable.length && !usable.some(({ r }) => r.delta !== 'unchanged' || r.changedThrough?.length)) fail('element', where, 'is modified, but none of its references changed');
 
-		// tags: on code the plan created or changed the tag must be there and agree; on code it left alone a tag must agree if there is one
-		if (style === 'new' || style === 'modified') {
-			for (const r of usable) {
-				if (r.head.status !== 'resolved' || matchAny(refPath(r.ref), noTag)) continue;
-				const comments = tagComments(r, read);
-				const tags = comments.map((c) => parseTag(c.text)).filter(Boolean);
-				const tag = tags.length > 1 ? { error: 'more than one @pattern tag on one definition' } : (tags[0] ?? null);
-				for (const o of r.owners.filter((o) => o.element === e.id)) {
-					const expected = expectedTag(model, o);
-					if (!tag && !isChanged(r)) continue;
-					for (const m of tagMismatches(tag, expected)) fail('tag', where, `\`${r.ref}\`${o.part ? ` (part "${o.part}")` : ''} ${m}`);
-				}
-			}
+		// tags: on code the plan created or changed the tag must be there and agree; on code it left
+		// alone, in any element, a tag must agree if there is one — so a retag cannot switch a rule off
+		for (const { r, o, style: as } of usable) {
+			if (r.head.status !== 'resolved' || matchAny(refPath(r.ref), noTag)) continue;
+			const tags = tagComments(r, read)
+				.map((c) => parseTag(c.text))
+				.filter(Boolean);
+			const tag = tags.length > 1 ? { error: 'more than one @pattern tag on one definition' } : (tags[0] ?? null);
+			if (!tag && (!isChanged(r) || as === 'reused')) continue; // changed reused code already fails above
+			for (const m of tagMismatches(tag, expectedTag(model, o))) fail('tag', where, `\`${r.ref}\`${o.part ? ` (part "${o.part}")` : ''} ${m}`);
 		}
-		elements.push({ id: e.id, style, references: refs.length, ok: failures.length === before });
+		elements.push({ id: e.id, style, references: new Set(owned.map(({ r }) => r.ref)).size, ok: failures.length === before });
 	}
 
 	// 2. over the whole diff: tags on code nothing references, and changed lines nothing owns
@@ -305,7 +350,7 @@ export function checkCode(model, report, options = {}) {
 		for (const range of f.head ?? []) {
 			if (lines)
 				for (let n = range.start; n <= range.end; n++)
-					if (lines[n - 1]?.includes('@pattern') && !tagLines.get(f.path)?.has(n))
+					if (isTagLine(lines[n - 1] ?? '') && !tagLines.get(f.path)?.has(n))
 						fail('built-not-modelled', `${f.path}:${n}`, `a @pattern tag was added or changed here, but no element references this definition: \`${lines[n - 1].trim()}\``);
 		}
 		for (const [side, ranges] of [
@@ -351,10 +396,10 @@ function enforcementReasons(project, what, before, after, added) {
 
 /**
  * @param diff     `c4ish diff <model> --base <approval commit> --only structure --json`
- * @param options  { styles, project, profilePatterns: Set, deviations: Map, changedPaths: string[], outsideModel: string[] }
+ * @param options  { styles, project, projectPath, dataRelationships: Set, profilePatterns: Set, deviations: Map, changedPaths: string[], outsideModel: string[] }
  */
 export function checkApproved(diff, options = {}) {
-	const { styles = DEFAULT_STYLES, project = {}, profilePatterns = new Set(), deviations = new Map(), changedPaths = [], outsideModel = [] } = options;
+	const { styles = DEFAULT_STYLES, project = {}, projectPath, dataRelationships = new Set(DEFAULT_DATA_RELATIONSHIPS), profilePatterns = new Set(), deviations = new Map(), changedPaths = [], outsideModel = [] } = options;
 	const kinds = project.kinds ?? {};
 	const guarded = new Set([...(kinds.data ?? []), ...(kinds.container ?? []), ...(kinds.product ?? [])]);
 	const kindName = (k) => (kinds.data?.includes(k) ? 'data element' : kinds.container?.includes(k) ? 'container' : 'product element');
@@ -369,17 +414,29 @@ export function checkApproved(diff, options = {}) {
 			const kind = (d.after ?? d.before)?.kind;
 			if (d.change !== 'changed' && guarded.has(kind)) reasons.push(`${kindName(kind)} ${d.change}`);
 			for (const f of fields) {
-				if (f.path.length === 1 && f.path[0] === 'change' && styles[f.after] === 'removed') reasons.push('change state became removed');
+				if (f.path.length === 1 && f.path[0] === 'kind') {
+					// a kind that turns into, or out of, a guarded kind is one added or removed
+					if (guarded.has(f.after)) reasons.push(`${kindName(f.after)} added (kind was \`${f.before}\`)`);
+					if (guarded.has(f.before)) reasons.push(`${kindName(f.before)} removed (kind is now \`${f.after}\`)`);
+				}
+				if (f.path.length === 1 && f.path[0] === 'change' && styles[f.after] === 'removed' && guarded.has(kind)) reasons.push(`${kindName(kind)} removed (change state became removed)`);
 				if (f.path[0] === 'ties' && f.path.length === 3 && f.path[2] === 'enforcement') reasons.push(...enforcementReasons(project, `tie ${f.path[1]}`, f.before, f.after, false));
 				if (f.path[0] === 'ties' && f.path.length === 2 && f.change === 'added') reasons.push(...enforcementReasons(project, `tie ${f.path[1]}`, undefined, f.after?.enforcement, true));
 			}
 			// a data element that arrives with weakly enforced ties is covered by "data element added"
 		} else if (d.kind === 'relationship') {
-			if (d.change === 'added' && d.after?.enforcement !== undefined) reasons.push(...enforcementReasons(project, 'data relationship', undefined, d.after.enforcement, true));
-			for (const f of fields) if (f.path.length === 1 && f.path[0] === 'enforcement') reasons.push(...enforcementReasons(project, 'data relationship', f.before, f.after, f.change === 'added'));
+			// a data relationship that states no enforcement has none
+			const isData = (rel) => rel?.enforcement !== undefined || dataRelationships.has(rel?.kind);
+			if (d.change === 'added' && isData(d.after)) reasons.push(...enforcementReasons(project, 'data relationship', undefined, d.after.enforcement, true));
+			for (const f of fields) {
+				if (f.path.length === 1 && f.path[0] === 'enforcement') reasons.push(...enforcementReasons(project, 'data relationship', f.before, f.after, f.change === 'added' && !dataRelationships.has(d.before?.kind)));
+				// a relationship that becomes a data relationship is a new one
+				if (f.path.length === 1 && f.path[0] === 'kind' && dataRelationships.has(f.after) && !dataRelationships.has(f.before)) reasons.push(...enforcementReasons(project, 'data relationship', undefined, d.after?.enforcement, true));
+			}
 		} else if (d.kind === 'contract') {
 			if (d.change === 'removed') reasons.push('contract removed');
 			for (const f of fields) {
+				if (f.path.length === 1 && f.path[0] === 'change' && styles[f.after] === 'removed') reasons.push('contract removed (change state became removed)');
 				if (f.path[0] !== 'clauses' || f.path.length !== 2) continue;
 				if (f.path[1] === 'access') reasons.push(`access clause ${f.change}`);
 				else if (f.change === 'removed') reasons.push(`clause \`${f.path[1]}\` removed`);
@@ -391,7 +448,7 @@ export function checkApproved(diff, options = {}) {
 			change: d.change,
 			fields: fields.map((f) => ({ path: f.path.join('.'), change: f.change })),
 			class: reasons.length ? 're-approval' : 'model-change',
-			...(reasons.length && { reasons }),
+			...(reasons.length && { reasons: [...new Set(reasons)] }),
 			recorded: deviations.has(key),
 			...(deviations.has(key) && { deviation: deviations.get(key) })
 		});
@@ -400,7 +457,7 @@ export function checkApproved(diff, options = {}) {
 	// catalog, rule and profile files changed that the approved plan does not list
 	const paths = [];
 	for (const p of changedPaths) {
-		const kind = matchAny(p, project.catalog) ? 'catalog' : matchAny(p, project.rules) ? 'rule' : project.profile === p ? 'profile' : undefined;
+		const kind = matchAny(p, project.catalog) ? 'catalog' : matchAny(p, project.rules) ? 'rule' : project.profile === p ? 'profile' : projectPath === p ? 'path' : undefined;
 		if (kind && !matchAny(p, outsideModel)) paths.push({ path: p, kind });
 	}
 
@@ -436,14 +493,35 @@ function parseArgs(argv) {
 	return { command, opts };
 }
 
-const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
-const git = (root, args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 });
+function readJson(path) {
+	let text;
+	try {
+		text = readFileSync(path, 'utf8');
+	} catch (e) {
+		throw new UsageError(`cannot read ${path}: ${e.code ?? e.message}`);
+	}
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		throw new UsageError(`${path} is not JSON: ${e.message}`);
+	}
+}
+
+const GIT = { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 };
+const tryGit = (root, args) => execFileSync('git', ['-C', root, ...args], GIT);
+function git(root, args) {
+	try {
+		return tryGit(root, args);
+	} catch (e) {
+		throw new UsageError(`git ${args.join(' ')} failed: ${(e.stderr || e.message).trim()}`);
+	}
+}
 
 /** Run the diagram tool and parse its JSON. It exits non-zero when it reports problems, with the JSON still on stdout. */
 function tool(args) {
 	let out;
 	try {
-		out = execFileSync(process.env.C4ISH ?? 'c4ish', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 256 * 1024 * 1024 });
+		out = execFileSync(process.env.C4ISH ?? 'c4ish', args, GIT);
 	} catch (e) {
 		if (e.code === 'ENOENT') throw new UsageError('c4ish is not on PATH (set C4ISH to its path)');
 		out = e.stdout ?? '';
@@ -456,45 +534,77 @@ function tool(args) {
 	return JSON.parse(out);
 }
 
+/** The real path, so a path through a symlink still sits under the repository root. */
+const real = (path) => (existsSync(path) ? realpathSync(path) : path);
+
 function context(opts) {
-	const model = resolve(opts.model);
-	if (!existsSync(model)) throw new UsageError(`no such model: ${opts.model}`);
-	let root = opts.root && resolve(opts.root);
+	if (!existsSync(resolve(opts.model))) throw new UsageError(`no such model: ${opts.model}`);
+	const model = real(resolve(opts.model));
+	let root = opts.root && real(resolve(opts.root));
 	if (!root) {
 		try {
-			root = git(dirname(model), ['rev-parse', '--show-toplevel']).trim();
+			root = real(tryGit(dirname(model), ['rev-parse', '--show-toplevel']).trim());
 		} catch {
 			throw new UsageError(`${opts.model} is not inside a git repository; pass --root <dir>`);
 		}
 	}
-	const plan = resolve(opts.plan ?? join(dirname(model), 'plan.md'));
-	const ledger = resolve(opts.ledger ?? join(dirname(plan), 'review.md'));
-	const project = opts.project ? readJson(resolve(opts.project)) : {};
-	const profilePath = project.profile ? join(root, project.profile) : undefined;
-	const profile = profilePath && existsSync(profilePath) ? readJson(profilePath) : undefined;
-	const planText = existsSync(plan) ? readFileSync(plan, 'utf8') : undefined;
-	const parsed = planText === undefined ? { approvals: [], outsideModel: [] } : parsePlan(planText);
-	const toolArgs = profilePath ? ['--profile', profilePath] : [];
-	return { model, root, plan, ledger, project, profile, profilePath, ...parsed, styles: changeStyles(profile), toolArgs };
+	const plan = real(resolve(opts.plan ?? join(dirname(model), 'plan.md')));
+	const ledger = real(resolve(opts.ledger ?? join(dirname(plan), 'review.md')));
+	const projectFile = opts.project && real(resolve(opts.project));
+	if (projectFile && !existsSync(projectFile)) throw new UsageError(`no such path file: ${opts.project}`);
+	const parsed = existsSync(plan) ? parsePlan(readFileSync(plan, 'utf8')) : { approvals: [], outsideModel: [] };
+	return { model, root, plan, ledger, projectFile, ...parsed };
 }
 
-/** "Changes outside the model" as the approved plan had it; the working copy if that commit has no plan. */
-function approvedOutsideModel(ctx, commit) {
-	try {
-		return parsePlan(git(ctx.root, ['show', `${commit}:${relative(ctx.root, ctx.plan)}`])).outsideModel;
-	} catch {
-		return ctx.outsideModel;
+const inside = (ctx, path) => {
+	const rel = relative(ctx.root, path);
+	return rel.startsWith('..') ? undefined : rel;
+};
+
+/**
+ * The project's path file and profile. With a commit, the path file is read as it was there: the
+ * build must not loosen the settings it is checked by. If that commit has none, the working copy
+ * is used, and `approved` then sees the file as changed.
+ */
+function settings(ctx, commit) {
+	let project = {};
+	let projectPath;
+	if (ctx.projectFile) {
+		projectPath = inside(ctx, ctx.projectFile);
+		if (commit && projectPath === undefined) throw new UsageError(`the path file must be inside the repository: ${ctx.projectFile}`);
+		project = readJson(ctx.projectFile);
+		if (commit) {
+			try {
+				project = JSON.parse(tryGit(ctx.root, ['show', `${commit}:${projectPath}`]));
+			} catch {
+				// not in that commit
+			}
+		}
 	}
+	const profilePath = project.profile ? join(ctx.root, project.profile) : undefined;
+	const profile = profilePath && existsSync(profilePath) ? readJson(profilePath) : undefined;
+	return { project, projectPath, profile, styles: changeStyles(profile), toolArgs: profilePath ? ['--profile', profilePath] : [] };
+}
+
+/** "Changes outside the model" as the approved plan had it. */
+function approvedOutsideModel(ctx, commit) {
+	const rel = inside(ctx, ctx.plan);
+	if (rel === undefined) throw new UsageError(`the plan must be inside the repository: ${ctx.plan}`);
+	let text;
+	try {
+		text = tryGit(ctx.root, ['show', `${commit}:${rel}`]);
+	} catch (e) {
+		throw new UsageError(`cannot read ${rel} at ${commit}, the commit the plan was approved at: ${(e.stderr || e.message).trim()}`);
+	}
+	return parsePlan(text).outsideModel;
 }
 
 function runCode(ctx, opts) {
 	const base = opts.base ?? ctx.approvals.find((a) => a.kind === 'Approved')?.commit;
-	let report;
-	if (opts['code-report']) report = readJson(resolve(opts['code-report']));
-	else {
-		if (!base) throw new UsageError('no base commit: pass --base, or record `Approved: <date> <commit>` in the plan');
-		report = tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...ctx.toolArgs]);
-	}
+	const given = opts['code-report'];
+	if (!given && !base) throw new UsageError('no base commit: pass --base, or record `Approved: <date> <commit>` in the plan');
+	const { project, styles, toolArgs } = settings(ctx, given ? undefined : base);
+	const report = given ? readJson(resolve(given)) : tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...toolArgs]);
 	const read = (p) => {
 		try {
 			return readFileSync(join(ctx.root, p), 'utf8');
@@ -502,28 +612,30 @@ function runCode(ctx, opts) {
 			return undefined;
 		}
 	};
-	const outsideModel = base && !opts['code-report'] ? approvedOutsideModel(ctx, base) : ctx.outsideModel;
-	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles: ctx.styles, project: ctx.project, outsideModel, read }) };
+	// the plan's list as approved, when the base is an approval; with --base alone the plan may not be in that commit
+	let outsideModel = ctx.outsideModel;
+	if (!given && ctx.approvals.some((a) => a.commit === base)) outsideModel = approvedOutsideModel(ctx, base);
+	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles, project, outsideModel, read }) };
 }
 
 function runApproved(ctx, opts) {
 	const latest = ctx.approvals.at(-1);
-	let diff;
-	if (opts['diff-report']) diff = readJson(resolve(opts['diff-report']));
-	else {
-		if (!latest) throw new UsageError(`no \`Approved: <date> <commit>\` line in ${ctx.plan}`);
-		diff = tool(['diff', ctx.model, '--base', latest.commit, '--only', 'structure', '--json', ...ctx.toolArgs]);
-	}
+	const given = opts['diff-report'];
+	if (!given && !latest) throw new UsageError(`no \`Approved: <date> <commit>\` line in ${ctx.plan}`);
+	const { project, projectPath, profile, styles, toolArgs } = settings(ctx, given ? undefined : latest.commit);
+	if (!project.kinds) throw new UsageError('`approved` needs the project path file (--project) with `kinds`: which element kinds are data, containers and product elements');
+	const diff = given ? readJson(resolve(given)) : tool(['diff', ctx.model, '--base', latest.commit, '--only', 'structure', '--json', ...toolArgs]);
 	let changedPaths = [];
 	if (opts['changed-paths']) changedPaths = readFileSync(resolve(opts['changed-paths']), 'utf8').split('\n').filter(Boolean);
-	else if (latest) {
-		const list = (args) => git(ctx.root, args).split('\n').filter(Boolean);
-		changedPaths = [...new Set([...list(['diff', '--name-only', latest.commit]), ...list(['ls-files', '--others', '--exclude-standard'])])];
+	else if (!given) {
+		// -z: names as they are; --no-renames: a moved file is one removed and one added
+		const list = (args) => git(ctx.root, args).split('\0').filter(Boolean);
+		changedPaths = [...new Set([...list(['diff', '--name-only', '--no-renames', '-z', latest.commit]), ...list(['ls-files', '--others', '--exclude-standard', '-z'])])];
 	}
 	const deviations = existsSync(ctx.ledger) ? parseLedger(readFileSync(ctx.ledger, 'utf8')) : new Map();
-	const profilePatterns = new Set(Array.isArray(ctx.profile?.patterns) ? ctx.profile.patterns.map((p) => p.id) : Object.keys(ctx.profile?.patterns ?? {}));
-	const outsideModel = latest && !opts['diff-report'] ? approvedOutsideModel(ctx, latest.commit) : ctx.outsideModel;
-	return { against: latest, ...checkApproved(diff, { styles: ctx.styles, project: ctx.project, profilePatterns, deviations, changedPaths, outsideModel }) };
+	const profilePatterns = new Set(Array.isArray(profile?.patterns) ? profile.patterns.map((p) => p.id) : Object.keys(profile?.patterns ?? {}));
+	const outsideModel = given ? ctx.outsideModel : approvedOutsideModel(ctx, latest.commit);
+	return { against: latest, ...checkApproved(diff, { styles, project, projectPath, dataRelationships: dataRelationshipKinds(profile), profilePatterns, deviations, changedPaths, outsideModel }) };
 }
 
 function printCode(r) {
@@ -567,8 +679,8 @@ export function main(argv) {
 		}
 		return Object.values(result).every((r) => r.ok) ? 0 : 1;
 	} catch (e) {
-		if (!(e instanceof UsageError) && !(e instanceof SyntaxError)) throw e;
-		console.error(`model-check: ${e.message}`);
+		// never exit 1 for anything but a verdict: an error here is not "the check failed"
+		console.error(`model-check: ${e instanceof UsageError ? e.message : (e.stack ?? e)}`);
 		return 2;
 	}
 }

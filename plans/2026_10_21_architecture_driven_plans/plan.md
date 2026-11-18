@@ -307,18 +307,24 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
-**The check** is `tools/model-check.mjs`, with `code` (check 2), `approved` (check 3) and `all`. Its header documents the options and file formats. Building it settled these:
+**The check** is `tools/model-check.mjs`, with `code` (check 2), `approved` (check 3) and `all`. Its header documents the options and file formats. Building it, and an independent review of it, settled these:
 
-- **The project's path file** is JSON: `profile`, `catalog`, `rules`, `leftOut` and `noTag` (file types that cannot carry a comment), as paths and globs from the repository root.
+- **The project's path file** is JSON: `profile`, `catalog`, `rules`, `leftOut` and `noTag` (file types that cannot carry a comment), as paths and globs from the repository root. A path with no wildcard also covers everything under it.
+- **The check is judged by approved settings.** The path file and the plan's "Changes outside the model" list are read as they were at the commit compared against, so a build cannot loosen them. A change to the path file stops like a catalog change. `approved` refuses to run without the path file and its `kinds`.
 - **Until the tool has them,** the path file also says which element kinds are data, containers and product elements (`kinds`), and an element with `pattern: null` stands for bespoke. Both move to the profile and the model when the tool gains them.
 - **Enforcement levels are roles.** A project's profile may name them differently, so the path file maps `platform`, `platform-correlated`, `our-code`, `nothing` and `derived` to its ids. An id the check can't rank makes the change a re-approval.
 - **`derived` ranks between the platform levels and `our-code`,** so a move from `derived` to `our-code` or `nothing` is also down.
 - **An `access` clause added** counts as changed.
-- **Where a tag is required.** On a reference the build added or modified, the tag must be there and agree. On a reference the build left alone, a tag must agree if there is one. This follows "no mass retrofit" (§4.3).
-- **A part with its own pattern** is checked against the part; a part without one carries its element's tag.
+- **Where a tag is required.** On a reference the build added or modified, the tag must be there and agree. On a reference the build left alone, in any element, reused ones included, a tag must agree if there is one. This follows "no mass retrofit" (§4.3) and stops a retag from switching a rule off.
+- **A tag starts its comment line.** `@pattern` in a sentence or a string is not a tag.
+- **A part with its own pattern** is checked against the part; a part without one carries its element's tag. A part with its own change state is judged by it.
+- **A kind change counts as added or removed.** An element whose kind turns into, or out of, data, container or product stops. So does a contract whose change state becomes removed. A change state that becomes removed on any other element is a model change.
+- **A data relationship that states no enforcement** counts as enforced by nothing. Which relationship kinds carry data comes from the profile.
 - **Deviations in the ledger** are a section headed "Deviations", one list item per differing item, starting with its key in backticks: `kind:id`, as the tool names it (`element:collector`). A re-approval difference stops whether or not it is recorded. A record that matches no difference is noted.
+- **"Changes outside the model" in the plan** has the same form: a section with that heading, one list item per path or glob, starting with it in backticks. In both files the heading must match exactly and fenced code is ignored.
 - **Bases.** `code` compares from the first `Approved:` commit unless told otherwise. `approved` compares from the latest approval line, and reads "Changes outside the model" from `plan.md` at that commit.
-- **Exit codes:** 0 pass, 1 a failure or a re-approval, 2 a usage error. `--json` carries the verdict.
+- **Exit codes:** 0 pass, 1 a failure or a re-approval, 2 an error of any other kind. `--json` carries the verdict.
+- **Known gap.** A new or modified element with no pattern and no code reference passes. Closing it needs the tool's category per element kind.
 
 The pilot waits for the needs marked not built.
 

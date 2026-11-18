@@ -4,12 +4,12 @@
 
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { changeStyles, checkApproved, checkCode, expectedTag, firstComment, globToRegExp, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
+import { changeStyles, checkApproved, checkCode, dataRelationshipKinds, expectedTag, firstComment, globToRegExp, isTagLine, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'model-check.mjs');
 
@@ -22,12 +22,39 @@ describe('globs', () => {
 		assert.ok(matchAny('src/b.ts', ['src/*.ts']));
 		assert.ok(!globToRegExp('a.ts').test('aXts'));
 	});
+
+	it('a glob with no wildcard also matches everything under it', () => {
+		assert.ok(matchAny('docs/patterns/api.md', ['docs/patterns']));
+		assert.ok(matchAny('docs/patterns/a/b.md', ['docs/patterns/']));
+		assert.ok(matchAny('rules/guard.yml', ['rules/guard.yml']));
+		assert.ok(!matchAny('docs/patterns2/api.md', ['docs/patterns']));
+	});
 });
 
 describe('plan.md', () => {
-	const plan = ['# Plan', 'Approved: 2026-01-02 abc1234', '## Changes outside the model', '- `docs/patterns/api.md`: new entry', '### Config', '- `config/*.json`', '## Risks', '- `not/this.md`', '- **Re-approved:** 2026-01-05 `def5678` enforcement'].join('\n');
+	const plan = [
+		'# Plan',
+		'Approved: 2026-01-02 abc1234',
+		'```',
+		'Approved: 2026-01-03 fff0000',
+		'```',
+		'## 4. Changes outside the model',
+		'- `docs/patterns/api.md`: new entry',
+		'We do not touch `docs/patterns/web.md`.',
+		'- also not `this/one.md`',
+		'```sh',
+		'# a comment in a code block is not a heading',
+		'```',
+		'### Config',
+		'- `config/*.json`',
+		'## Risks',
+		'- `not/this.md`',
+		'- **Re-approved:** 2026-01-05 `def5678` enforcement',
+		'## No changes outside the model here',
+		'- `nor/this.md`'
+	].join('\n');
 
-	it('reads approvals in order, and the paths under Changes outside the model', () => {
+	it('reads approvals in order, and the paths that start a list item under Changes outside the model', () => {
 		const p = parsePlan(plan);
 		assert.deepEqual(p.approvals, [
 			{ kind: 'Approved', date: '2026-01-02', commit: 'abc1234' },
@@ -36,9 +63,9 @@ describe('plan.md', () => {
 		assert.deepEqual(p.outsideModel, ['docs/patterns/api.md', 'config/*.json']);
 	});
 
-	it('reads deviations from the ledger by key', () => {
-		const d = parseLedger(['## Review 1', '- `element:x` not a deviation', '### Deviations', '- `element:svc` flipped to modified; the guard moved', '* `relationship:w`  rerouted', 'text', '## Gates', '- `element:late` no'].join('\n'));
-		assert.deepEqual([...d], [
+	it('reads deviations from the section headed Deviations, by key', () => {
+		const ledger = ['## Review 1', '- `element:x` not a deviation', '### Deviations', '- `element:svc` flipped to modified; the guard moved', '* `relationship:w`  rerouted', '- `src/a.ts` not a key', 'text', '## Deviations not recorded (findings)', '- `element:late` no'];
+		assert.deepEqual([...parseLedger(ledger.join('\n'))], [
 			['element:svc', 'flipped to modified; the guard moved'],
 			['relationship:w', 'rerouted']
 		]);
@@ -60,6 +87,14 @@ describe('tags', () => {
 		assert.match(parseTag('// @pattern bespoke:').error, /must say what/);
 		assert.match(parseTag('// @pattern a/b partial:').error, /must say what differs/);
 		assert.match(parseTag('// @pattern a/b\n// @pattern c/d').error, /more than one/);
+	});
+
+	it('a tag starts its comment line; a mention is not a tag', () => {
+		assert.equal(parseTag('// TODO: remove @pattern a/b'), null);
+		assert.equal(parseTag("const s = 'see @pattern a/b';"), null);
+		assert.ok(isTagLine('  @pattern web/page'));
+		assert.ok(isTagLine('\t * @pattern a/b'));
+		assert.ok(!isTagLine('// @patterns a/b'));
 	});
 
 	it('finds the first comment of a file', () => {
@@ -86,6 +121,8 @@ describe('tags', () => {
 		// a part with no pattern of its own carries the element's tag
 		assert.equal(expectedTag(model, { element: 'part', part: 'Plain' }).pattern, 'api/mutation');
 		assert.equal(expectedTag(model, { element: 'one' }).bespoke, true);
+		// a bespoke element can still carry further patterns
+		assert.deepEqual(expectedTag({ elements: [{ id: 'b', pattern: null, patterns: ['api/guard'] }] }, { element: 'b' }).also, ['api/guard']);
 	});
 
 	it('a tag agrees only when pattern, fit, bespoke and further patterns all match', () => {
@@ -148,7 +185,7 @@ describe('model-to-code', () => {
 
 	it('a modified element fails when a reference no longer resolves, with the hint', () => {
 		const r = checkCode({ elements: [el('m', 'modified', 'a/b')] }, { references: [named('m.ts#f', { element: 'm' }, 'removed', { hints: [{ kind: 'renamed', ref: 'm.ts#g' }] })] });
-		assert.deepEqual(messages(r), ['element m: is modified, but `m.ts#f` does not resolve (missing-name); it may now be `m.ts#g` (renamed)', 'element m: is modified, but none of its references changed']);
+		assert.deepEqual(messages(r), ['element m: is modified, but `m.ts#f` does not resolve (missing-name); it may now be `m.ts#g` (renamed)']);
 	});
 
 	it('a removed element whose code is still there fails', () => {
@@ -178,6 +215,31 @@ describe('model-to-code', () => {
 		assert.deepEqual(messages(checkCode(model, report, { read: files({ 'm.ts': text }) })), ['element m: `m.ts#f` has no @pattern tag', 'element m: `m.ts#h` is tagged `c/d` but the model says `a/b`']);
 	});
 
+	it('a retag of code the build left alone must still agree with the model, in a reused element too', () => {
+		const model = { elements: [el('r', 'reused', 'api/guard')] };
+		const report = { references: [named('r.ts#f', { element: 'r' }, 'unchanged', { commentChanged: true })] };
+		const retagged = '// @pattern api/guard partial: skips the tenant check\nexport function f() {\n\treturn 1;\n}\n';
+		assert.deepEqual(messages(checkCode(model, report, { read: files({ 'r.ts': retagged }) })), ['element r: `r.ts#f` is tagged partial but the model marks a full fit']);
+		assert.equal(checkCode(model, report, { read: files({ 'r.ts': tagged('api/guard') }) }).ok, true);
+		assert.equal(checkCode(model, report, { read: files({ 'r.ts': 'export function f() {}\n' }) }).ok, true);
+	});
+
+	it('a part with its own change state is judged by it', () => {
+		const model = { elements: [el('m', 'modified', 'a/b', { parts: [{ title: 'Gone', change: 'removed' }, { title: 'Kept', change: 'reused' }, { title: 'Fresh', change: 'new' }] })] };
+		const part = (title, change) => ({ element: 'm', part: title, change });
+		const good = { references: [named('m.ts#gone', part('Gone', 'removed'), 'removed'), named('m.ts#kept', part('Kept', 'reused'), 'unchanged'), named('m.ts#f', { element: 'm' }, 'modified')] };
+		assert.deepEqual(messages(checkCode(model, good, { read: files({ 'm.ts': tagged('a/b') }) })), []);
+		const bad = { references: [named('m.ts#gone', part('Gone', 'removed'), 'unchanged'), named('m.ts#kept', part('Kept', 'reused'), 'modified'), named('m.ts#fresh', part('Fresh', 'new'), 'modified')] };
+		assert.deepEqual(messages(checkCode(model, bad)), [
+			'element m: part "Gone" is removed, but `m.ts#gone` is still there (unchanged)',
+			'element m: part "Kept" is reused, but `m.ts#kept` is modified: that makes it modified, a model change',
+			'element m: part "Fresh" is new, but `m.ts#fresh` is modified: it existed at the base',
+			'element m: `m.ts#fresh` (part "Fresh") has no @pattern tag'
+		]);
+		// a modified element whose only change is a part that went away has changed
+		assert.equal(checkCode(model, { references: [named('m.ts#gone', part('Gone', 'removed'), 'removed')] }).ok, true);
+	});
+
 	it('a part with its own pattern is checked against the part', () => {
 		const model = { elements: [el('n', 'new', 'a/b', { parts: [{ title: 'Guard', pattern: 'a/guard' }] })] };
 		const report = { references: [named('n.ts#f', { element: 'n', part: 'Guard' }, 'added')] };
@@ -200,7 +262,7 @@ describe('model-to-code', () => {
 
 	it('a tag added on code no element references fails; one on a referenced definition does not', () => {
 		const model = { elements: [el('n', 'new', 'a/b')] };
-		const text = `${tagged('a/b')}\n// @pattern a/b\nexport function stray() {}\n`;
+		const text = `${tagged('a/b')}\n// @pattern a/b\nexport function stray() { return 'not a tag: @pattern a/b'; }\n`;
 		const report = {
 			references: [named('n.ts#f', { element: 'n' }, 'added')],
 			files: [{ path: 'n.ts', status: 'added', base: [], head: [{ start: 1, end: 1, refs: [{ ref: 'n.ts#f', in: 'comment' }] }, { start: 2, end: 4, refs: [{ ref: 'n.ts#f', in: 'body' }] }, { start: 5, end: 7, refs: [] }] }]
@@ -272,11 +334,24 @@ describe('approved versus shipped', () => {
 			{ kind: 'element', id: 't', change: 'added', after: { kind: 'data' } },
 			{ kind: 'element', id: 'c', change: 'removed', before: { kind: 'container' } },
 			{ kind: 'element', id: 'p', change: 'added', after: { kind: 'feature' } },
-			{ kind: 'element', id: 'gone', change: 'changed', before: { kind: 'component' }, after: { kind: 'component' }, fields: [{ path: ['change'], change: 'changed', before: 'modified', after: 'removed' }] }
+			{ kind: 'element', id: 'gone', change: 'changed', before: { kind: 'data' }, after: { kind: 'data' }, fields: [{ path: ['change'], change: 'changed', before: 'modified', after: 'removed' }] },
+			{ kind: 'element', id: 'dropped', change: 'changed', before: { kind: 'component' }, after: { kind: 'component' }, fields: [{ path: ['change'], change: 'changed', before: 'reused', after: 'removed' }] },
+			{ kind: 'element', id: 'turned', change: 'changed', before: { kind: 'component' }, after: { kind: 'data' }, fields: [{ path: ['kind'], change: 'changed', before: 'component', after: 'data' }] },
+			{ kind: 'element', id: 'left', change: 'changed', before: { kind: 'container' }, after: { kind: 'component' }, fields: [{ path: ['kind'], change: 'changed', before: 'container', after: 'component' }] },
+			{ kind: 'element', id: 'plain', change: 'removed', before: { kind: 'component' } }
 		);
 		const r = checkApproved(diff, { project, deviations: new Map([['element:t', 'needed']]) });
 		assert.equal(r.verdict, 're-approval');
-		assert.deepEqual(classes(r), ['element:t re-approval: data element added', 'element:c re-approval: container removed', 'element:p re-approval: product element added', 'element:gone re-approval: change state became removed']);
+		assert.deepEqual(classes(r), [
+			'element:t re-approval: data element added',
+			'element:c re-approval: container removed',
+			'element:p re-approval: product element added',
+			'element:gone re-approval: data element removed (change state became removed)',
+			'element:dropped model-change',
+			'element:turned re-approval: data element added (kind was `component`)',
+			'element:left re-approval: container removed (kind is now `component`)',
+			'element:plain model-change'
+		]);
 	});
 
 	it('enforcement moved down needs re-approval; moved up is a model change', () => {
@@ -303,6 +378,9 @@ describe('approved versus shipped', () => {
 			{ kind: 'relationship', id: 'weak', change: 'added', after: { enforcement: 'nothing' } },
 			{ kind: 'relationship', id: 'strong', change: 'added', after: { enforcement: 'platform' } },
 			{ kind: 'relationship', id: 'call', change: 'added', after: { kind: 'calls' } },
+			{ kind: 'relationship', id: 'silent', change: 'added', after: { kind: 'writes' } },
+			{ kind: 'relationship', id: 'became', change: 'changed', before: { kind: 'calls' }, after: { kind: 'reads' }, fields: [{ path: ['kind'], change: 'changed', before: 'calls', after: 'reads' }] },
+			{ kind: 'relationship', id: 'stated', change: 'changed', before: { kind: 'reads' }, after: { kind: 'reads', enforcement: 'our-code' }, fields: [{ path: ['enforcement'], change: 'added', after: 'our-code' }] },
 			{
 				kind: 'element',
 				id: 'tbl',
@@ -320,6 +398,10 @@ describe('approved versus shipped', () => {
 			'relationship:weak re-approval: new data relationship enforced by `nothing`',
 			'relationship:strong model-change',
 			'relationship:call model-change',
+			'relationship:silent re-approval: new data relationship enforced by `nothing stated`',
+			'relationship:became re-approval: new data relationship enforced by `nothing stated`',
+			// it had no enforcement, which is the bottom: stating one is not a move down
+			'relationship:stated model-change',
 			'element:tbl re-approval: new tie a~c enforced by `our-code`; enforcement on tie a~b moved down: `platform` → `nothing`'
 		]);
 	});
@@ -331,9 +413,10 @@ describe('approved versus shipped', () => {
 			{ kind: 'contract', id: 'a', change: 'changed', fields: [clause('access', 'changed')] },
 			{ kind: 'contract', id: 'b', change: 'changed', fields: [clause('limits', 'removed'), clause('extra', 'added')] },
 			{ kind: 'contract', id: 'c', change: 'changed', fields: [clause('limits', 'changed'), clause('extra', 'added')] },
-			{ kind: 'contract', id: 'new', change: 'added', after: {} }
+			{ kind: 'contract', id: 'new', change: 'added', after: {} },
+			{ kind: 'contract', id: 'marked', change: 'changed', fields: [{ path: ['change'], change: 'changed', before: 'new', after: 'removed' }] }
 		);
-		assert.deepEqual(classes(checkApproved(diff, { project })), ['contract:gone re-approval: contract removed', 'contract:a re-approval: access clause changed', 'contract:b re-approval: clause `limits` removed', 'contract:c model-change', 'contract:new model-change']);
+		assert.deepEqual(classes(checkApproved(diff, { project })), ['contract:gone re-approval: contract removed', 'contract:a re-approval: access clause changed', 'contract:b re-approval: clause `limits` removed', 'contract:c model-change', 'contract:new model-change', 'contract:marked re-approval: contract removed (change state became removed)']);
 	});
 
 	it('drops a proposed pattern that the profile now holds, and keeps one it does not', () => {
@@ -355,6 +438,17 @@ describe('approved versus shipped', () => {
 			{ path: 'rules/guard.yml', kind: 'rule' }
 		]);
 		assert.equal(checkApproved(diffOf(), { project, changedPaths, outsideModel: ['docs/patterns/**', 'rules/guard.yml'] }).verdict, 'pass');
+	});
+
+	it('the path file itself is guarded the same way', () => {
+		const r = checkApproved(diffOf(), { project, projectPath: 'project.json', changedPaths: ['project.json'] });
+		assert.deepEqual(r.paths, [{ path: 'project.json', kind: 'path' }]);
+		assert.equal(checkApproved(diffOf(), { project, projectPath: 'project.json', changedPaths: ['project.json'], outsideModel: ['project.json'] }).verdict, 'pass');
+	});
+
+	it('takes data relationship kinds from the profile', () => {
+		assert.deepEqual([...dataRelationshipKinds({ extends: 'default', relationshipKinds: { stores: { category: 'data' }, reads: { category: 'runtime' } } })].sort(), ['pins', 'references', 'stores', 'writes']);
+		assert.deepEqual([...dataRelationshipKinds({ relationshipKinds: { stores: { enforcementRequired: true } } })], ['stores']);
 	});
 });
 
@@ -398,7 +492,8 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 		};
 		put(dir, 'plans/p/model.c4ish.json', JSON.stringify(model, null, '\t'));
 		put(dir, 'plans/p/plan.md', '# Plan\n\n## Changes outside the model\n- `migrations/001.sql`\n');
-		put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json'], kinds: { data: ['data'], container: ['container'] } }));
+		put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json'], rules: ['rules'], catalog: ['docs/patterns'], kinds: { data: ['data'], container: ['container'] } }));
+		put(dir, 'rules/guard.yml', 'id: guard\nseverity: error\n');
 		git(dir, 'add', '-A');
 		git(dir, 'commit', '-q', '-m', 'approved plan');
 		const approved = git(dir, 'rev-parse', 'HEAD');
@@ -482,6 +577,119 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			const approved = JSON.parse(stop.stdout).approved;
 			assert.equal(approved.verdict, 're-approval');
 			assert.deepEqual(approved.differences.find((d) => d.key === 'relationship:read').reasons, ['enforcement on data relationship moved down: `platform` → `our-code`']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	const stops = (r) => JSON.parse(r.stdout).approved.paths.map((p) => `${p.path} (${p.kind})`);
+	const planWith = (dir, ...listed) => put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${git(dir, 'rev-parse', 'HEAD')}\n\n## Changes outside the model\n${['migrations/001.sql', ...listed].map((l) => `- \`${l}\`\n`).join('')}`);
+
+	it('reads the path file as approved: loosening it in the build changes nothing, and is itself a stop', () => {
+		const { dir, model, args } = repository();
+		try {
+			// the build drops `data` from the guarded kinds, adds a table, and records it
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'], kinds: { container: ['container'] } }));
+			rewrite(dir, model, (m) => void m.elements.push({ id: 'extra', kind: 'data', title: 'extra', change: 'new', pattern: 'data/table' }));
+			put(dir, 'plans/p/review.md', '## Deviations\n- `element:extra` needed a table\n');
+			const r = run(dir, 'approved', ...args, '--json');
+			assert.equal(r.status, 1, r.stdout + r.stderr);
+			const approved = JSON.parse(r.stdout).approved;
+			assert.equal(approved.verdict, 're-approval');
+			assert.deepEqual(approved.differences.find((d) => d.key === 'element:extra').reasons, ['data element added']);
+			assert.deepEqual(stops(r), ['project.json (path)']);
+			// the code check also keeps the approved left-out list: the glue is still unaccounted
+			const code = JSON.parse(run(dir, 'code', ...args, '--json').stdout).code;
+			assert.ok(code.unaccounted.runs.some((u) => u.path === 'src/glue.ts'));
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('needs the path file and its kinds for the approved check', () => {
+		const { dir } = repository();
+		try {
+			const none = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json');
+			assert.equal(none.status, 2);
+			assert.match(none.stderr, /needs the project path file/);
+			put(dir, 'other.json', JSON.stringify({ leftOut: [] }));
+			assert.equal(run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'other.json').status, 2);
+			const missing = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'nope.json');
+			assert.equal(missing.status, 2);
+			assert.match(missing.stderr, /no such path file/);
+			put(dir, 'broken.json', '{ not json');
+			const broken = run(dir, 'code', '--model', 'plans/p/model.c4ish.json', '--project', 'broken.json');
+			assert.equal(broken.status, 2);
+			assert.match(broken.stderr, /is not JSON/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('a rule or catalog file changed stops unless the approved plan lists it; the working copy of the plan does not count', () => {
+		const { dir, args } = repository();
+		try {
+			put(dir, 'rules/guard.yml', 'id: guard\nseverity: off\n');
+			planWith(dir, 'rules/guard.yml'); // listed by the build, not by the approved plan
+			const r = run(dir, 'approved', ...args, '--json');
+			assert.equal(r.status, 1);
+			assert.deepEqual(stops(r), ['rules/guard.yml (rule)']);
+
+			// approve a plan that lists it: now a further change to it passes
+			git(dir, 'add', '-A');
+			git(dir, 'commit', '-q', '-m', 'plan lists the rule file');
+			planWith(dir, 'rules/guard.yml');
+			put(dir, 'rules/guard.yml', 'id: guard\nseverity: warn\n');
+			const ok = run(dir, 'approved', ...args, '--json');
+			assert.equal(ok.status, 0, ok.stdout + ok.stderr);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('sees a rule file moved away, and a new catalog file with a name git would quote', () => {
+		const { dir, args } = repository();
+		try {
+			git(dir, 'mv', 'rules/guard.yml', 'src/guard-old.yml');
+			put(dir, 'docs/patterns/café notes.md', '# new\n');
+			const r = run(dir, 'approved', ...args, '--json');
+			assert.equal(r.status, 1, r.stdout + r.stderr);
+			assert.deepEqual(stops(r).sort(), ['docs/patterns/café notes.md (catalog)', 'rules/guard.yml (rule)']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('gives the same verdict when the model is reached through a symlink', () => {
+		const { dir } = repository();
+		const link = `${dir}-link`;
+		try {
+			symlinkSync(dir, link);
+			put(dir, 'rules/guard.yml', 'id: guard\nseverity: off\n');
+			planWith(dir, 'rules/guard.yml');
+			const r = run(tmpdir(), 'approved', '--model', join(link, 'plans/p/model.c4ish.json'), '--project', join(link, 'project.json'), '--json');
+			assert.equal(r.status, 1, r.stdout + r.stderr);
+			assert.deepEqual(stops(r), ['rules/guard.yml (rule)']);
+		} finally {
+			rmSync(link, { force: true });
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('an approval commit that is not there, or a plan that was not in it, is an error and not a verdict', () => {
+		const { dir, args } = repository();
+		try {
+			put(dir, 'plans/p/plan.md', '# Plan\n\nApproved: 2026-01-02 0123456789abcdef0123456789abcdef01234567\n');
+			const gone = run(dir, 'approved', ...args);
+			assert.equal(gone.status, 2, gone.stdout);
+			assert.equal(run(dir, 'code', ...args).status, 2);
+			// a plan moved since approval: its approved list cannot be read
+			planWith(dir);
+			mkdirSync(join(dir, 'plans/q'));
+			renameSync(join(dir, 'plans/p/plan.md'), join(dir, 'plans/q/plan.md'));
+			const moved = run(dir, 'approved', ...args, '--plan', 'plans/q/plan.md');
+			assert.equal(moved.status, 2, moved.stdout);
+			assert.match(moved.stderr, /cannot read plans\/q\/plan\.md at/);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
