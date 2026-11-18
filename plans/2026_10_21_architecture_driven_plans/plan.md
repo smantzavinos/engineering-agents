@@ -1,8 +1,10 @@
 # Architecture-driven plans
 
-**Status:** draft, revision 3 (2026-11-17), reviewed once, not approved · **First draft:** 2026-10-21 · **Branch:** `pilot/arch-plans` (from `pilot/process-retro` at `d424a19`) · **Input:** [`handoff.md`](handoff.md), the original design handoff, kept as history; this plan supersedes it · **Evidence:** `plans/2026_10_15_process_retro/`, `plans/2026_10_20_process_variants/README.md`, ADR 0006 · **Builds on:** the frontier pipeline (`docs/frontier-pipeline.md`), still a pilot · **Changes (proposed):** `skills/scope`, `plan`, `review`, `implement`, `orchestrate`, `assess-repo`; new `run-plan` and `run-epic`; a model-to-code check under `tools/`; skill frontmatter, agent definitions and where role skills are installed (`dist/`, the Nix modules); `docs/frontier-pipeline.md`; a new ADR
+**Status:** draft, revision 4 (2026-11-17), reviewed twice, not approved · **First draft:** 2026-10-21 · **Branch:** `pilot/arch-plans` (from `pilot/process-retro` at `d424a19`) · **Input:** [`handoff.md`](handoff.md), the original design handoff, kept as history; this plan supersedes it · **Evidence:** `plans/2026_10_15_process_retro/`, `plans/2026_10_20_process_variants/README.md`, ADR 0006 · **Builds on:** the frontier pipeline (`docs/frontier-pipeline.md`), still a pilot · **Changes (proposed):** `skills/scope`, `plan`, `review`, `implement`, `orchestrate`, `assess-repo`; new `run-plan` and `run-epic`; a model-to-code check under `tools/`; skill frontmatter, agent definitions and where role skills are installed (`dist/`, the Nix modules); `docs/frontier-pipeline.md`; a new ADR
 
-**Revision 3** answers the first fresh review, which found revision 2 not ready to build from. Where each major finding is answered: M1 §4.6 · M2 §4.10 · M3 §4.6 · M4 §4.3, §4.5 · M5 §4.5 · M6 §4.7 · M7 §4.8 · M8 §4.9 · M9 §4.9 · M10 §6 · M11 §4.4. It has not been reviewed again.
+**Revision 3** answers the first fresh review, which found revision 2 not ready to build from. Where each major finding is answered: M1 §4.6 · M2 §4.10 · M3 §4.6 · M4 §4.3, §4.5 · M5 §4.5 · M6 §4.7 · M7 §4.8 · M8 §4.9 · M9 §4.9 · M10 §6 · M11 §4.4. 
+
+**Revision 4** answers the second review where the answer is a rule: the tag must agree with the model (§4.6), one tag grammar (§4.3), every model field in one deviation class (§4.6, §4.7), approvals recorded (§4.8), and what is mechanical (§4.7). The exact method of the model-to-code check is not settled on paper any more. It is settled by building the tool feature against failing cases (§4.6, Q11). Epic children, large-diff groups and the pilot's measures wait for the pilot (§7). It has not been reviewed again.
 
 **Owner's decisions, 2026-11-17:**
 - a plan is as large as the work needs (§4.9);
@@ -56,8 +58,8 @@ The answer to the first is a plan whose design is a **structured architecture mo
 ```
 prototype ─► scope ──────────────────────────────────────────────► run-plan ──────────────────────► PR
                │  agree scope ─► plan.md + model + tour             build (one implementer), code tagged
-               │  ─► review ─► human approval (tour)                code review ─► gates ─► model-to-code check
-               │                                                    approved versus shipped ─► as-built tour in the PR
+               │  ─► review ─► human approval (tour)                model-to-code check ─► code review ─► gates
+               │                                                    both checks again ─► as-built tour in the PR
                └─► epic (rare): epic.md ─► run-epic: per plan, a plan loop then run-plan (§4.9)
 ```
 
@@ -88,7 +90,7 @@ Today every installed skill is visible to every model, including retired-process
 One smoke run settles both (Q7).
 
 ### 4.2 `run-plan` and `run-epic`
-- `run-plan` builds one approved plan. It is today's `orchestrate` without lanes, groups or checkpoints: build → code review loop → gates → model-to-code check → close. It stops for re-approval (§4.7). It has no plan loop and no parallel work; packages (§5) are not part of it yet.
+- `run-plan` builds one approved plan. It is today's `orchestrate` without lanes, groups or checkpoints: build → model-to-code check → code review loop → gates → both checks again, run by a helper → close. It stops for re-approval (§4.7). It has no plan loop and no parallel work; packages (§5) are not part of it yet.
 - `run-epic`: units, integration, checkpoints and cross-plan contracts. For each plan it runs the plan loop, as `orchestrate` does today, and then `run-plan`, in-session or as a child orchestrator.
 - `orchestrate` is retired or becomes a thin alias. Existing safety rules carry over unchanged: recovery, stop conditions, ledgers, test tiers and the no-rerun rules.
 
@@ -99,17 +101,18 @@ One smoke run settles both (Q7).
   - verification expectations;
   - its **check**: `rule` with the rule's path, or `judgment`;
   - for a rule, **what it proves** and what it leaves to the reader.
-- **Location:** a project declares in its agent guide where its catalog lives, and which paths the model-to-code check leaves out (tests, docs, generated files). The framework doesn't fix a path.
-- **Catalog profile:** the project keeps one c4ish profile beside the catalog, durable and separate from any plan. It is the machine-readable index of the catalog: one entry per pattern with its id, label, family, how it is drawn and a link to the pattern's section in the catalog docs. The Markdown docs hold the content. It lists patterns, not where they are used, so it is not a usage index. Plan models reference the profile.
+- **Location:** the framework doesn't fix a path. A project's agent guide points to one machine-readable file that lists where the catalog docs, the profile and the rules live, and which paths the model-to-code check leaves out (tests, docs, generated files).
+- **Catalog profile:** the project keeps one c4ish profile beside the catalog, durable and separate from any plan. It is the machine-readable index of the catalog: one entry per pattern with its id, label, family, how it is drawn, its reference implementation and a link to the pattern's section in the catalog docs. The Markdown docs hold the content. It lists patterns, not where they are used, so it is not a usage index. Plan models reference the profile.
 - **Tag convention:** one comment directly above the definition, in the language's own comment syntax. When the definition is a whole file, the tag is the file's first comment. Forms:
 
   | Form | For |
   |---|---|
-  | `@pattern <id>` | Follows the pattern. Several ids are separated by commas |
-  | `@pattern <id> partial: <what differs>` | A partial fit. Rules skip it |
+  | `@pattern <id>` | Follows the pattern |
+  | `@pattern <id> partial: <what differs>` | A partial fit. That pattern's rule skips it |
   | `@pattern bespoke: <what it is>` | A one-off |
+  | `; also <id>, <id>` added to any form | Further patterns the definition carries. Their rules still run |
 
-  A missing tag means "unknown". Tags are added when code is created or changed for a plan, never as a mass retrofit. One page in `docs/`.
+  A proposed pattern's tag looks like a catalogued one; the check looks the id up in the profile and in the model's proposed patterns. A file type with no comment syntax carries no tag. A missing tag means "unknown". Tags are added when code is created or changed for a plan, never as a mass retrofit. One page in `docs/`.
 - `assess-repo` checks that a catalog and its profile exist with the same pattern ids, that the tool is installed, and that the rules run.
 
 ### 4.4 One home per kind of content
@@ -142,9 +145,9 @@ Every element that lives in code is in exactly one state. Containers, product co
 | Bespoke | No pattern fits and this is a one-off | Marked bespoke, with a one-line reason | `@pattern bespoke: …` | Full read |
 
 - **What a rule buys.** A rule proves a shape, not the logic inside it. The reviewer still reads the logic, the contract and the tests. So the saving is bounded by what each catalog entry says its rule proves, and the pilot measures it.
-- **A rule can't be loosened to earn a skip.** A diff that touches a catalog entry, a rule or a reference implementation, beyond what the approved plan proposes, is a re-approval deviation (§4.7).
-- **A proposal** is a first-class part of the plan: the catalog entry, the profile entry, the reference implementation and its check. The tour points at each one. They are built in the plan's diff. Tags may use an id from the profile or from the model's proposed patterns.
-- **Second use.** Before marking an element bespoke, the plan author searches for `@pattern bespoke` code doing the same job. If there is one, the plan proposes a pattern that covers both. The earlier code joins the model as a reused element and is retagged; a tag sits above the definition, so the definition itself is unchanged. Untagged older code is not found this way; that is accepted.
+- **A rule can't be loosened to earn a skip.** A diff that touches a catalog, rule or profile file that the approved `plan.md` doesn't list is a re-approval deviation (§4.7). A reference implementation is ordinary code: changing one is a model change, and the reviewer checks it still shows the pattern.
+- **A proposal** is a first-class part of the plan: the catalog entry, the profile entry, the reference implementation and its check. The tour points at each one. They are built in the plan's diff, and `plan.md` → Changes outside the model lists the catalog files. When the profile entry lands, the same commit drops the pattern from the model's proposed patterns.
+- **Second use.** Before marking an element bespoke, the plan author searches for `@pattern bespoke` code doing the same job. If there is one, the plan proposes a pattern that covers both. The earlier code joins the model as a reused element with a code reference, and is retagged. That edit is allowed outside the plan's claims. Untagged older code is not found this way; that is accepted.
 - **Who approves.** The human approves every change to the catalog: a proposed pattern, or a change to an existing one. They are already approving the plan from the tour, so this adds no stop to a single plan. Bespoke elements need no separate approval: the tour points at them, and the plan reviewer checks each reason.
 - **During a build** a shape nobody planned is built as bespoke, recorded as a model change, and proposed in a follow-up. The implementer doesn't stop to propose a pattern.
 - **Untagged changed code** is "unknown" and gets a full read.
@@ -157,7 +160,7 @@ Validation shows that a model is well formed. It cannot show that the model is r
 - `path#Name`, or `path#Outer.Inner` for a member: a named definition in the file, such as a function, a class, a type, or one table in a schema file that holds several;
 - `path` alone, when the whole file is the definition.
 
-A reference is a name, not a line number, so it survives edits around it. The tool parses the file to find the definition and its extent (§4.10). A reference must resolve to exactly one definition. An element with parts gives each part its own reference. A reused element may carry one.
+A reference is a name, not a line number, so it survives edits around it. The tool parses the file to find the definition and its extent (§4.10). A reference must resolve to exactly one definition. A reused element may carry one. At plan time the path is enough; the name is exact by handoff.
 
 **1. Scenarios are walked (plan time).** The model lists the plan's acceptance scenarios by id and title, and each tour step names the scenarios it walks. A scenario with no step fails validation.
 
@@ -165,30 +168,45 @@ A reference is a name, not a line number, so it survives edits around it. The to
 
 | Element | Passes when |
 |---|---|
-| New | Its reference resolves at the head and not at the base, and its tag is above it |
-| Modified | It resolves at both, lines inside it changed, and its tag is above it |
+| New | Its reference resolves at the head and not at the base, and its tag agrees with the model |
+| Modified | It resolves at both, lines inside it changed, and its tag agrees with the model |
 | Removed | It resolved at the base and does not resolve at the head |
 | Reused, with a reference | It resolves at the head and no line inside it changed. A change means it is modified, which is a model change (§4.7) |
 
+**A tag agrees with the model** when it names the element's pattern and its further patterns, says `partial` exactly when the model marks a partial fit, and says `bespoke` exactly when the model marks the element bespoke. Anything else fails. So a rule can't be switched off by a tag the human didn't approve.
+
 Then, over the whole diff:
 - *built, not modelled:* an added or changed `@pattern` tag that isn't above a referenced definition fails;
-- *unaccounted:* every changed hunk in production code outside the new and modified definitions is listed, whatever tags the file carries. The reviewer reads the list in full, and either accepts each hunk as glue or raises the missing element as a major.
+- *unaccounted:* every changed hunk in production code outside the new and modified definitions is listed, whatever tags the file carries. Hunks in files that `plan.md` → Changes outside the model lists are marked as such. The reviewer reads the list in full, and either accepts each hunk as glue or raises the missing element as a major.
 
-Several elements in one file are told apart by their references. A moved or renamed definition fails until its reference is updated; that is a detail, not a deviation, unless a contract names it.
+Several elements in one file are told apart by their references.
+
+**Settled by building, not here.** Two reviews found cases the table above gets wrong, and each paper revision found more. The tool feature is built against a failing case for each, taken from real code, and this section then records what works (Q11):
+- the tag line sits outside the definition: where the extent starts, and how a changed tag line is counted;
+- a definition renamed, or moved to another file: a reference to where it was;
+- deleted lines, which exist only at the base;
+- two definitions with one name;
+- a whole-file reference when other elements name the same file;
+- a definition changed only through something it is built from, such as a shared block of fields;
+- definitions with no name, and file types with no comment syntax;
+- an element that spans several definitions or files: several references, or parts with ids of their own.
+
+Until then the table is the intent, not the method.
 
 **3. Approved versus shipped.** The model at the approval commit (§4.8) is compared with the current one, by element id. Ids don't change after approval.
 
 | Compared | Not compared |
 |---|---|
-| Elements: change state, pattern and fit, parts | Code references |
-| Relationships: ends, kind, enforcement | Views, layout and tours |
-| Contracts, clause by clause | Note and narration text |
-| Data fields, indexes and ties | A proposed pattern becoming a catalogued one |
-| Scenarios and proposed patterns | |
+| Elements: kind, parent, change state, pattern, further patterns, fit, parts, libraries, divergence, and which engineering elements implement a product element | Titles, labels and descriptive text |
+| Data: fields, indexes, and ties with their enforcement | Code references |
+| Relationships: ends, kind, enforcement, and the contract each uses | Views, layout and tours |
+| Contracts, clause by clause | The text of a note, and narration |
+| Absences; risk and question notes, by what they are attached to | Provenance |
+| Scenarios and proposed patterns | A proposed pattern becoming a catalogued one |
 
-Every difference must match a deviation recorded in the ledger (§4.7).
+Every field of the tool's model belongs in one column; a field the tool adds later is compared until this table says otherwise. Every difference from the latest approval must match a deviation recorded in the ledger (§4.7).
 
-**Who runs what.** The plan author fills in the references it can foresee. The implementer makes them exact before handoff, runs checks 2 and 3, and records the commands and results in the ledger as it does for the fast gates. The code reviewer treats those as claims and owns the verdict on both: an unrecorded difference is a major, and a re-approval difference is a stop. `run-plan` reruns both on the final commit; a new difference goes back to review.
+**Who runs what.** The plan author fills in the references it can foresee. The implementer makes them exact before handoff, runs checks 2 and 3, and records the commands and results in the ledger as it does for the fast gates. The code reviewer treats those as claims and owns the verdict on both: an unrecorded difference is a major, and a re-approval difference is a stop. `run-plan` has a helper rerun both on the final commit; a new difference goes back to review.
 
 ### 4.7 Deviations during the build
 
@@ -201,17 +219,24 @@ Every difference must match a deviation recorded in the ledger (§4.7).
 | **Model change** | Every other difference | The implementer updates the model in the same commit as the code and records the deviation with its reason. The code reviewer judges each one, and may raise any of them to re-approval. The human sees them in approved versus shipped |
 
 **Re-approval** is needed for:
-- a data element, a container or a product element added or removed;
-- enforcement on a data relationship moved down this order: `platform`, `platform-correlated`, `our-code`, `nothing`. Also a new data relationship enforced by `our-code` or `nothing`. (`derived` is outside the order; a change to or from it is a model change.);
-- a contract removed, a clause removed, or an access clause changed;
-- a change to the catalog: an entry, a rule, a reference implementation or the profile, beyond what the plan proposes;
+- a data element, a container or a product element added or removed. Removed includes a change state that becomes `removed`;
+- enforcement on a data relationship or a tie moved down this order: `platform`, `platform-correlated`, `our-code`, `nothing`. A move from either of the first two to `derived` counts as down. Also a new data relationship or tie enforced by `our-code` or `nothing`;
+- a contract removed, a clause removed, or the clause named `access` changed. A contract's access rule is always written in a clause of that name;
+- a catalog, rule or profile file changed that the approved `plan.md` → Changes outside the model doesn't list;
 - a scenario that can't be delivered as approved.
 
-**Model changes** include: a component added, split, merged or dropped; a change state that flips (planned as reused, built as modified); a new bespoke or partial-fit element; one catalogued pattern swapped for another; a relationship added, removed or rerouted without lowering enforcement; data fields, indexes or ties changed; a clause added, or a clause other than access changed; an exported name in a contract.
+When a difference fits this list and the model-change list, this list wins.
 
-The re-approval list is mechanical: check 3 can sort differences into it without judgment. Loosening that it can't see, such as a limit raised in a clause's text, is caught by the reviewer raising a model change.
+**Model changes** include: a component added, split, merged or dropped; a change state that flips (planned as reused, built as modified); a new bespoke or partial-fit element; one catalogued pattern swapped for another; a relationship added, removed or rerouted without lowering enforcement; data fields, indexes or ties changed without lowering enforcement; a clause added, or a clause other than `access` changed; a library added; a reference implementation changed.
 
-**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the approved model. On approval, that commit becomes the approved model and the same implementer continues. On rejection, the implementer builds what was approved; if it can't, the plan goes back to its author. The same path applies when code review finds a re-approval difference after the build.
+**What is mechanical.** The check under `tools/` sorts differences into the re-approval list from two inputs: the comparison in check 3, and the changed paths set against the catalog, rule and profile paths. It needs the profile to say which kinds are data, containers and product elements (§4.10). Two things stay judgment: whether a scenario can still be delivered, and loosening the comparison can't see, such as a limit raised in a clause's text or more changed in a listed catalog file than the plan proposed. The reviewer catches those by raising a model change.
+
+**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The human can:
+- **approve:** `run-plan` records the re-approval (§4.8) and the same implementer continues;
+- **ask for changes:** the implementer changes the model and `run-plan` shows it again;
+- **reject:** the implementer builds what was approved. If that can't be built, the plan is wrong in substance: `run-plan` stops, and the human reopens `scope` for a new plan loop and approval.
+
+The same path applies when code review finds a re-approval difference after the build.
 
 ### 4.8 The approval gate
 
@@ -222,7 +247,11 @@ When the plan review is clean, `scope` gives the human:
 - the link to `plan.md`;
 - a short list: the scenarios, the proposed patterns, the bespoke elements with their reasons, and any open question notes.
 
-The human approves, approves with changes, or rejects. Changes go back to the same plan-author and through one more review. Approval is the commit that adds an `Approved:` line to `plan.md`; the approved model is the model at that commit.
+The human approves, approves with changes, or rejects. Changes go back to the same plan-author and through one more review.
+
+- **Where things live.** The model is `model.c4ish.json` beside `plan.md`, committed. The rendered diagrams and tour are generated when needed and not committed.
+- **Recording approval.** The session that receives the approval adds one line to `plan.md`: `Approved: <date> <commit>`, naming the commit that holds the approved model. A re-approval during the build adds `Re-approved: <date> <commit>` and what changed (§4.7). Check 3 compares against the latest of these lines. The PR shows shipped against the first, with re-approved differences marked.
+- **Handover.** The human then starts `run-plan` with the plan's path. `scope` doesn't continue into the build.
 
 In an epic the plans are written during the run, so their gate differs (§4.9).
 
@@ -247,7 +276,7 @@ None of this has been run. The pilot records build time, compactions, review pas
 - **Each plan in an epic has its own detailed model,** written and reviewed as a single plan's is.
 - **Who approves each plan** follows `epic.md` → Autonomy, as today, with one exception: a plan that changes the catalog always stops for the human.
 - **A proposed pattern is claimed in `epic.md`,** as files are, so that two plans written at the same time don't propose the same shape twice.
-- **The epic records only what crosses plans.** `epic.md` names each cross-plan contract and the plan that owns it; the clauses are in that plan's model. A small overview model of how the plans connect is added only when it helps. It shows no plan's internals.
+- **The epic records only what crosses plans.** `epic.md` names each cross-plan contract and the plan that owns it; the clauses are in that plan's model. A plan that uses the contract copies it into its own model as reused, and the owner's copy wins. A small overview model of how the plans connect is added only when it helps. It shows no plan's internals.
 - **No detailed model for the whole epic.** It would force all design up front and repeat each plan's detail (handoff §4.C).
 
 ### 4.10 What the process needs from the tool
@@ -256,20 +285,22 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 
 | Need | For |
 |---|---|
-| A code reference on an element or part (`path#Name`), and a way for a profile to say which kinds of element live in code | §4.6 |
-| A report on a model's code references between a base commit and the working tree: whether each resolves, its extent, whether lines inside it changed, and the changed hunks outside every new and modified definition. The tool parses source to do this (tree-sitter), for the languages the adopter uses | §4.6 check 2 |
+| A code reference on an element (`path#Name`), and on a pattern in a profile for its reference implementation | §4.3, §4.6 |
+| A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 |
+| A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter), for the languages the adopter uses | §4.6 check 2 |
+| Ids on parts and on ties, and a fit and a bespoke marker on parts, if parts carry references | §4.6 |
 | Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 |
 | A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 |
 | A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 |
 
-This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's left-out paths and the comparison, and applies the tables in §4.6 and §4.7. The tool's model has a `sources` field today that holds file paths; code references replace it.
+This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. The tool's model has a `sources` field today that holds file paths; code references replace it.
 
 The pilot waits for these.
 
 ### 4.11 Review
 - **Plan mode.** As well as today's checks:
   - the model validates with no errors or warnings, and the tour covers every review item;
-  - every element that lives in code has a pattern state and, unless reused, a code reference. A missing one is a major. A bespoke reason that an existing pattern or existing bespoke code answers is a major;
+  - every new, modified or reused element that lives in code has a pattern state, and every new, modified or removed one has a code reference, at least to its path. A missing one is a major. A bespoke reason that an existing pattern or existing bespoke code answers is a major;
   - every scenario is walked by a tour step that actually shows it;
   - contracts can be implemented, and the plan questions are answered where they are drawn;
   - context is one hop from what changes;
@@ -304,15 +335,15 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
 
    Not yet tested: a model written before the code, a model written by an agent, and a human approving from a tour.
 2. **Real pilot.** A project adopts a starter catalog, tags and first rules, then runs one feature through `scope` and `run-plan`, with the model written before the code, one implementer and no parallel work. Record:
-   - **approval:** the human's time to approve from the tour, against their time on a text plan of similar size taken first; and what the tour failed to show. Gaps in the diagrams are fixed by iterating on the tool and the authoring rules;
+   - **approval:** the human's time to approve from the tour, against recorded approval times of earlier text plans where there are any; and what the tour failed to show. Gaps in the diagrams are fixed by iterating on the tool and the authoring rules;
    - **whether the approval was right:** afterwards, each code-review and later finding is marked as a design issue the tour showed, one it didn't show, or not a design issue;
-   - **whether the checks can be trusted:** one audit by hand of the model against the code, counting what checks 2 and 3 passed wrongly and failed wrongly;
-   - **cost:** the time and tokens spent writing the model, keeping it in line, and tagging;
-   - **review:** deviations by class, the lines a rule let the reviewer skip, the unaccounted hunks, findings by kind, and defects found later in skipped code;
+   - **whether the checks can be trusted:** one audit by hand of the model against the code, counting what checks 2 and 3 passed wrongly and failed wrongly. One known mismatch is planted first, since a single run may have none of its own;
+   - **cost:** an estimate of the time and tokens spent writing the model, keeping it in line, and tagging;
+   - **review:** the reviewer's time on skipped code against fully read code, deviations by class, the lines a rule let the reviewer skip, the unaccounted hunks, findings by kind, and defects found later in skipped code;
    - **patterns:** those proposed and the elements marked bespoke, and whether each held up in review;
    - **time:** end to end, per 1k changed lines. The pilot era-D medians are per child of at most about 7k lines, so they are a rough guide and not a like-for-like baseline.
 
-   One run can't prove the process. The owner decides to adopt, revise or drop on three questions: was approval faster and right; did the checks catch real mismatches without false alarms; and did the model and tags cost less than they saved in review.
+   One run can't prove the process. The owner decides to adopt, revise or drop on three questions: was approval quick enough and right; did the checks catch real mismatches without false alarms; and did the model and tags cost less than they saved in review.
 3. **Packages** (§5): the next step after 1–2.
 4. **Adoption ADR:** covers the frontier pipeline and this plan, retires the old skills, and records measured outcomes separately from intent.
 
@@ -324,7 +355,9 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
 - **Q1. Package definition:** fields, whether packages can be revised while running, and partial-component ownership (handoff §10.A). Only needed for §5.
 - **Q7. Role-skill loading:** one smoke run of option (a) and of the `run-plan` wrapper (§4.1). Also whether an orchestrator started with `/skill:` keeps the skill text after it compacts; if not, its compaction note re-reads the file by path.
 - **Q10. Reviewing a large diff:** whether groups, each read by its own fresh reviewer, catch what one reviewer over the whole diff would (§4.9). The pilot answers it.
-- **Q11. Code references:** which definitions the tool can resolve in the first adopter's languages, and how much falls back to a whole-file reference (§4.6).
+- **Q11. Code references:** the exact method of check 2, settled by building the tool feature against the failing cases listed in §4.6; and which definitions the tool can resolve in the first adopter's languages.
+- **Q12. Epic children:** the approval commit when review alone approves a child, who shows the tour at a catalog stop, a refresh after approval, the child's close, and when a proposed pattern is claimed (§4.9). Settle before the first epic; the pilot is a single plan.
+- **Q13. Large-diff groups:** whether groups hold files or hunks, and how pass 2 and fix reviews run over them (§4.9). Settle before the first plan above the signal.
 
 **Settled in revision 2:** Q2 model scope (one hop, §2). Q3 tag syntax (§4.3). Q5 model at close (reconcile fully, mechanically, §4.6). Q9 bespoke tags (`@pattern bespoke: <what it is>`, §4.3).
 
