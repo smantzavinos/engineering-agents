@@ -6,7 +6,9 @@
 
 **Revision 4** answers the second review where the answer is a rule: the tag must agree with the model (§4.6), one tag grammar (§4.3), every model field in one deviation class (§4.6, §4.7), approvals recorded (§4.8), and what is mechanical (§4.7). The exact method of the model-to-code check is not settled on paper any more. It is settled by building the tool feature against failing cases (§4.6, Q11). Epic children, large-diff groups and the pilot's measures wait for the pilot (§7). It has not been reviewed again.
 
-**Since revision 4 (2026-11-17):** the tool's code references were built against a failing case for each item §4.6 listed. §4.6 check 2 now records the method that works, and §4.10 what exists. The tool change is on a branch, not released, and this text has not been reviewed.
+**Since revision 4:** two tool features were built and the sections that depend on them now record what exists. This text has not been reviewed.
+- *2026-11-17, code references,* built against a failing case for each item §4.6 listed, and released. §4.6 check 2 records the method that works.
+- *2026-11-18, comparing two versions of a model,* on a branch. §4.6 check 3 and the stop in §4.7 say how they use it.
 
 **Owner's decisions, 2026-11-17:**
 - a plan is as large as the work needs (§4.9);
@@ -209,6 +211,11 @@ Several elements in one file are told apart by their references.
 
 Every field of the tool's model belongs in one column; a field the tool adds later is compared until this table says otherwise. Every difference from the latest approval must match a deviation recorded in the ledger (§4.7).
 
+The tool does the comparison. It sorts each difference into an aspect, and its `structure` aspect is the Compared column: the check runs the comparison against the approval commit, keeps `structure`, and reads the result. Three things to know:
+- *Matching is by id.* A part or a tie whose title or fields may change needs an id, or the change reads as one removed and one added. A note needs an id for the same reason.
+- *A proposed pattern that became catalogued* shows as a proposed pattern removed. The check drops it when the profile now holds that pattern.
+- *The tool also counts as structure* an element's lifecycle and area, and a library's version. They are compared.
+
 **Who runs what.** The plan author fills in the references it can foresee. The implementer makes them exact before handoff, runs checks 2 and 3, and records the commands and results in the ledger as it does for the fast gates. The code reviewer treats those as claims and owns the verdict on both: an unrecorded difference is a major, and a re-approval difference is a stop. `run-plan` has a helper rerun both on the final commit; a new difference goes back to review.
 
 ### 4.7 Deviations during the build
@@ -234,7 +241,7 @@ When a difference fits this list and the model-change list, this list wins.
 
 **What is mechanical.** The check under `tools/` sorts differences into the re-approval list from two inputs: the comparison in check 3, and the changed paths set against the catalog, rule and profile paths. It needs the profile to say which kinds are data, containers and product elements (§4.10). Two things stay judgment: whether a scenario can still be delivered, and loosening the comparison can't see, such as a limit raised in a clause's text or more changed in a listed catalog file than the plan proposed. The reviewer catches those by raising a model change.
 
-**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The human can:
+**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The tool writes it from the same comparison: one step per differing item, shown where the current model draws it. An item that is gone is described in words, with the place it was lit. The human can:
 - **approve:** `run-plan` records the re-approval (§4.8) and the same implementer continues;
 - **ask for changes:** the implementer changes the model and `run-plan` shows it again;
 - **reject:** the implementer builds what was approved. If that can't be built, the plan is wrong in substance: `run-plan` stops, and the human reopens `scope` for a new plan loop and approval.
@@ -288,14 +295,14 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 
 | Need | For | State |
 |---|---|---|
-| A code reference on an element and on a part (`path#Name`) | §4.6 | Built, on a branch |
-| A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, what happened to it, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter) | §4.6 check 2 | Built, on a branch. The tool's authoring reference lists the languages it parses; any other file takes a whole-file reference |
+| A code reference on an element and on a part (`path#Name`) | §4.6 | Built |
+| A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, what happened to it, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter) | §4.6 check 2 | Built. The tool's authoring reference lists the languages it parses; any other file takes a whole-file reference |
 | A code reference on a pattern in a profile, for its reference implementation | §4.3 | Not built |
 | A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 | Not built |
-| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Not built. The report names a part by its title |
+| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Ids built, on a branch: optional, and a name used twice in one element fails validation. The fit and the bespoke marker are not built |
 | Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Not built |
 | A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Not built |
-| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Not built |
+| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built, on a branch. The tour can't draw an item that is gone |
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
