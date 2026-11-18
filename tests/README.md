@@ -58,6 +58,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 - **`hermes-docs-spec.sh`** — Hermes-agent operations docs and sweep-monitor contract
 - **`pr-sweep-dispatch-spec.sh`** — dry-run of the reference PR sweep dispatcher against a fake `gh` (opt-in, dispatch, push demotion, drift mode, sweep-owned babysit rounds on bot reviews, bot-review cap)
 - **`pipeline-dispatch-spec.sh`** — dry-run of the delivery-pipeline dispatcher against a fake tracker and `gh` (triage selection, reply grammar and owner allowlist, consumed replies, discuss parking, reject, WIP limit, pickup order, dead-session retry bound, hygiene)
+- **`model-check-spec.sh`** — runs `tools/model-check.test.mjs`: the model-to-code and approved-versus-shipped checks, by rule and against a small real repository (those cases skip when `c4ish` is not on PATH)
 - **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
 
@@ -105,6 +106,7 @@ tests/
 │   ├── proof-set-runtime-spec.sh    # Proof-set runtime contract regression checks
 │   ├── skill-content-spec.sh        # Skill quality checks
 │   ├── skill-render-spec.sh         # Skill render pipeline drift + delegation checks
+│   ├── model-check-spec.sh          # Model-to-code and approved-versus-shipped checks
 │   ├── pi-module-content-spec.sh    # Module content integrity
 │   ├── preset-spec.sh               # Preset configuration validation
 │   ├── flake-eval-spec.sh           # Nix flake evaluation

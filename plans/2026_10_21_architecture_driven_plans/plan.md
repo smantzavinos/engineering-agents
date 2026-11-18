@@ -6,9 +6,10 @@
 
 **Revision 4** answers the second review where the answer is a rule: the tag must agree with the model (§4.6), one tag grammar (§4.3), every model field in one deviation class (§4.6, §4.7), approvals recorded (§4.8), and what is mechanical (§4.7). The exact method of the model-to-code check is not settled on paper any more. It is settled by building the tool feature against failing cases (§4.6, Q11). Epic children, large-diff groups and the pilot's measures wait for the pilot (§7). It has not been reviewed again.
 
-**Since revision 4:** two tool features were built and the sections that depend on them now record what exists. This text has not been reviewed.
+**Since revision 4:** two tool features and the check under `tools/` were built, and the sections that depend on them now record what exists. This text has not been reviewed.
 - *2026-11-17, code references,* built against a failing case for each item §4.6 listed, and released. §4.6 check 2 records the method that works.
-- *2026-11-18, comparing two versions of a model,* on a branch. §4.6 check 3 and the stop in §4.7 say how they use it.
+- *2026-11-18, comparing two versions of a model,* released. §4.6 check 3 and the stop in §4.7 say how they use it.
+- *2026-11-18, the check,* `tools/model-check.mjs`. §4.10 records what building it settled.
 
 **Owner's decisions, 2026-11-17:**
 - a plan is as large as the work needs (§4.9);
@@ -299,14 +300,27 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 | A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, what happened to it, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter) | §4.6 check 2 | Built. The tool's authoring reference lists the languages it parses; any other file takes a whole-file reference |
 | A code reference on a pattern in a profile, for its reference implementation | §4.3 | Not built |
 | A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 | Not built |
-| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Ids built, on a branch: optional, and a name used twice in one element fails validation. The fit and the bespoke marker are not built |
+| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Ids built: optional, and a name used twice in one element fails validation. The fit and the bespoke marker are not built |
 | Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Not built |
 | A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Not built |
-| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built, on a branch. Dropped elements and connectors are drawn; dropped fields, parts, contracts and notes are words only |
+| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built. Dropped elements and connectors are drawn; dropped fields, parts, contracts and notes are words only |
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
-The pilot waits for these.
+**The check** is `tools/model-check.mjs`, with `code` (check 2), `approved` (check 3) and `all`. Its header documents the options and file formats. Building it settled these:
+
+- **The project's path file** is JSON: `profile`, `catalog`, `rules`, `leftOut` and `noTag` (file types that cannot carry a comment), as paths and globs from the repository root.
+- **Until the tool has them,** the path file also says which element kinds are data, containers and product elements (`kinds`), and an element with `pattern: null` stands for bespoke. Both move to the profile and the model when the tool gains them.
+- **Enforcement levels are roles.** A project's profile may name them differently, so the path file maps `platform`, `platform-correlated`, `our-code`, `nothing` and `derived` to its ids. An id the check can't rank makes the change a re-approval.
+- **`derived` ranks between the platform levels and `our-code`,** so a move from `derived` to `our-code` or `nothing` is also down.
+- **An `access` clause added** counts as changed.
+- **Where a tag is required.** On a reference the build added or modified, the tag must be there and agree. On a reference the build left alone, a tag must agree if there is one. This follows "no mass retrofit" (§4.3).
+- **A part with its own pattern** is checked against the part; a part without one carries its element's tag.
+- **Deviations in the ledger** are a section headed "Deviations", one list item per differing item, starting with its key in backticks: `kind:id`, as the tool names it (`element:collector`). A re-approval difference stops whether or not it is recorded. A record that matches no difference is noted.
+- **Bases.** `code` compares from the first `Approved:` commit unless told otherwise. `approved` compares from the latest approval line, and reads "Changes outside the model" from `plan.md` at that commit.
+- **Exit codes:** 0 pass, 1 a failure or a re-approval, 2 a usage error. `--json` carries the verdict.
+
+The pilot waits for the needs marked not built.
 
 ### 4.11 Review
 - **Plan mode.** As well as today's checks:
@@ -366,7 +380,7 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
 - **Q1. Package definition:** fields, whether packages can be revised while running, and partial-component ownership (handoff §10.A). Only needed for §5.
 - **Q7. Role-skill loading:** one smoke run of option (a) and of the `run-plan` wrapper (§4.1). Also whether an orchestrator started with `/skill:` keeps the skill text after it compacts; if not, its compaction note re-reads the file by path.
 - **Q10. Reviewing a large diff:** whether groups, each read by its own fresh reviewer, catch what one reviewer over the whole diff would (§4.9). The pilot answers it.
-- **Q11. Code references:** the method of check 2 is built and recorded in §4.6. Still open: definitions built from code in another file; named references in file types the tool doesn't parse yet, where the first adopter's code needs them; and the check under `tools/` that applies the table, which is not written.
+- **Q11. Code references:** the method of check 2 is built and recorded in §4.6. Still open: definitions built from code in another file; named references in file types the tool doesn't parse yet, where the first adopter's code needs them; and whether the check's tag rule for untouched references (§4.10) is right in practice.
 - **Q12. Epic children:** the approval commit when review alone approves a child, who shows the tour at a catalog stop, a refresh after approval, the child's close, and when a proposed pattern is claimed (§4.9). Settle before the first epic; the pilot is a single plan.
 - **Q13. Large-diff groups:** whether groups hold files or hunks, and how pass 2 and fix reviews run over them (§4.9). Settle before the first plan above the signal.
 
