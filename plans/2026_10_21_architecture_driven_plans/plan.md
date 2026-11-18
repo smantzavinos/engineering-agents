@@ -241,7 +241,7 @@ When a difference fits this list and the model-change list, this list wins.
 
 **What is mechanical.** The check under `tools/` sorts differences into the re-approval list from two inputs: the comparison in check 3, and the changed paths set against the catalog, rule and profile paths. It needs the profile to say which kinds are data, containers and product elements (§4.10). Two things stay judgment: whether a scenario can still be delivered, and loosening the comparison can't see, such as a limit raised in a clause's text or more changed in a listed catalog file than the plan proposed. The reviewer catches those by raising a model change.
 
-**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The tool writes it from the same comparison: one step per differing item, shown where the current model draws it. An item that is gone is described in words, with the place it was lit. The human can:
+**The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The tool writes it from the same comparison: one step per differing item, shown where the current model draws it. An element or connector that is gone is drawn in its place, struck through and marked as dropped. A smaller thing that is gone (a field, a part, a contract clause, a note) is described in words, with the place it was lit. The human can:
 - **approve:** `run-plan` records the re-approval (§4.8) and the same implementer continues;
 - **ask for changes:** the implementer changes the model and `run-plan` shows it again;
 - **reject:** the implementer builds what was approved. If that can't be built, the plan is wrong in substance: `run-plan` stops, and the human reopens `scope` for a new plan loop and approval.
@@ -302,7 +302,7 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 | Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Ids built, on a branch: optional, and a name used twice in one element fails validation. The fit and the bespoke marker are not built |
 | Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Not built |
 | A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Not built |
-| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built, on a branch. The tour can't draw an item that is gone |
+| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built, on a branch. Dropped elements and connectors are drawn; dropped fields, parts, contracts and notes are words only |
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
