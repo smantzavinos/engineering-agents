@@ -6,6 +6,8 @@
 
 **Revision 4** answers the second review where the answer is a rule: the tag must agree with the model (§4.6), one tag grammar (§4.3), every model field in one deviation class (§4.6, §4.7), approvals recorded (§4.8), and what is mechanical (§4.7). The exact method of the model-to-code check is not settled on paper any more. It is settled by building the tool feature against failing cases (§4.6, Q11). Epic children, large-diff groups and the pilot's measures wait for the pilot (§7). It has not been reviewed again.
 
+**Since revision 4 (2026-11-17):** the tool's code references were built against a failing case for each item §4.6 listed. §4.6 check 2 now records the method that works, and §4.10 what exists. The tool change is on a branch, not released, and this text has not been reviewed.
+
 **Owner's decisions, 2026-11-17:**
 - a plan is as large as the work needs (§4.9);
 - the human approves new patterns (§4.5);
@@ -160,38 +162,39 @@ Validation shows that a model is well formed. It cannot show that the model is r
 - `path#Name`, or `path#Outer.Inner` for a member: a named definition in the file, such as a function, a class, a type, or one table in a schema file that holds several;
 - `path` alone, when the whole file is the definition.
 
-A reference is a name, not a line number, so it survives edits around it. The tool parses the file to find the definition and its extent (§4.10). A reference must resolve to exactly one definition. A reused element may carry one. At plan time the path is enough; the name is exact by handoff.
+A reference is a name, not a line number, so it survives edits around it. The tool parses the file to find the definition and its extent (§4.10). A name is the full chain of names around the definition, and it must pick one definition. An element that spans several definitions or files lists several references, and a part can carry its own. A reused element may carry one. At plan time the path is enough; the name is exact by handoff.
 
 **1. Scenarios are walked (plan time).** The model lists the plan's acceptance scenarios by id and title, and each tour step names the scenarios it walks. A scenario with no step fails validation.
 
-**2. Model-to-code (before code review, and again at close).** Between the base commit and the head:
+**2. Model-to-code (before code review, and again at close).** The tool reports, for each reference, what happened to it between the base commit and the working tree: added, removed, modified or unchanged. The check under `tools/` applies this table to that report:
 
 | Element | Passes when |
 |---|---|
-| New | Its reference resolves at the head and not at the base, and its tag agrees with the model |
-| Modified | It resolves at both, lines inside it changed, and its tag agrees with the model |
-| Removed | It resolved at the base and does not resolve at the head |
-| Reused, with a reference | It resolves at the head and no line inside it changed. A change means it is modified, which is a model change (§4.7) |
+| New | Every reference is added, and its tag agrees with the model |
+| Modified | Every reference resolves, at least one is added, modified or changed through something it is built from, and each tag agrees with the model |
+| Removed | Every reference is removed |
+| Reused, with a reference | Every reference is unchanged, and not changed through something it is built from. A change means it is modified, which is a model change (§4.7) |
 
 **A tag agrees with the model** when it names the element's pattern and its further patterns, says `partial` exactly when the model marks a partial fit, and says `bespoke` exactly when the model marks the element bespoke. Anything else fails. So a rule can't be switched off by a tag the human didn't approve.
 
-Then, over the whole diff:
-- *built, not modelled:* an added or changed `@pattern` tag that isn't above a referenced definition fails;
-- *unaccounted:* every changed hunk in production code outside the new and modified definitions is listed, whatever tags the file carries. Hunks in files that `plan.md` → Changes outside the model lists are marked as such. The reviewer reads the list in full, and either accepts each hunk as glue or raises the missing element as a major.
+Then, over the whole diff, from the tool's list of changed lines and the references that contain each:
+- *built, not modelled:* an added or changed `@pattern` tag that isn't in the comment above a referenced definition fails;
+- *unaccounted:* every changed line in production code inside no reference is listed, whatever tags the file carries. Lines in files that `plan.md` → Changes outside the model lists are marked as such. The reviewer reads the list in full, and either accepts each run of lines as glue or raises the missing element as a major.
 
 Several elements in one file are told apart by their references.
 
-**Settled by building, not here.** Two reviews found cases the table above gets wrong, and each paper revision found more. The tool feature is built against a failing case for each, taken from real code, and this section then records what works (Q11):
-- the tag line sits outside the definition: where the extent starts, and how a changed tag line is counted;
-- a definition renamed, or moved to another file: a reference to where it was;
-- deleted lines, which exist only at the base;
-- two definitions with one name;
-- a whole-file reference when other elements name the same file;
-- a definition changed only through something it is built from, such as a shared block of fields;
-- definitions with no name, and file types with no comment syntax;
-- an element that spans several definitions or files: several references, or parts with ids of their own.
+**How the cases are handled.** Two reviews found cases the earlier wording got wrong. The tool feature was built against a failing case for each, and checked on real code. The tool's own decision log holds the rules; this is what they mean here:
 
-Until then the table is the intent, not the method.
+| Case | What happens |
+|---|---|
+| The tag line | The comment lines directly above a definition are outside it. The tool says where they are and whether they changed. A changed tag alone doesn't make an element modified, so earlier code can be retagged |
+| A definition renamed, or moved to another file | Its reference stops resolving, and the tool hints where it went. The implementer corrects the reference; a reference is not a compared field (check 3) |
+| Deleted lines | They are placed by where the definitions were at the base |
+| One name declared twice | In one place, such as a value and a type, it is one definition. In two different places the reference fails until it is qualified |
+| A whole-file reference beside named ones | It owns the lines of that file that the named references don't |
+| A definition built from a shared block | The tool reports it as changed through that block, within one file. Across files it is not followed: that stays with the reviewer |
+| No name, or a file the tool can't parse | A default export with no name has a fixed name. A file type the tool doesn't parse takes a whole-file reference |
+| An element across several definitions or files | Several references on the element, or on its parts |
 
 **3. Approved versus shipped.** The model at the approval commit (§4.8) is compared with the current one, by element id. Ids don't change after approval.
 
@@ -281,19 +284,20 @@ None of this has been run. The pilot records build time, compactions, review pas
 
 ### 4.10 What the process needs from the tool
 
-The tool is a separate product and knows nothing of this process: no tags, no deviation classes, no catalog rules. It exists and is installable: schema v0, `validate` (schema, references, notation lint, strict per-tour coverage), `render`, `tour`, `view`, an authoring reference (`guide`) and a version report. The process needs these additions, each proved by a check that fails on a broken fixture:
+The tool is a separate product and knows nothing of this process: no tags, no deviation classes, no catalog rules. It exists and is installable: `validate` (schema, references, notation lint, strict per-tour coverage), `render`, `tour`, `view`, an authoring reference (`guide`) and a version report. The process needs these additions, each proved by a check that fails on a broken fixture:
 
-| Need | For |
-|---|---|
-| A code reference on an element (`path#Name`), and on a pattern in a profile for its reference implementation | §4.3, §4.6 |
-| A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 |
-| A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter), for the languages the adopter uses | §4.6 check 2 |
-| Ids on parts and on ties, and a fit and a bespoke marker on parts, if parts carry references | §4.6 |
-| Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 |
-| A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 |
-| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 |
+| Need | For | State |
+|---|---|---|
+| A code reference on an element and on a part (`path#Name`) | §4.6 | Built, on a branch |
+| A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, what happened to it, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter) | §4.6 check 2 | Built, on a branch. The tool's authoring reference lists the languages it parses; any other file takes a whole-file reference |
+| A code reference on a pattern in a profile, for its reference implementation | §4.3 | Not built |
+| A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 | Not built |
+| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Not built. The report names a part by its title |
+| Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Not built |
+| A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Not built |
+| A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Not built |
 
-This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. The tool's model has a `sources` field today that holds file paths; code references replace it.
+This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
 The pilot waits for these.
 
@@ -355,7 +359,7 @@ This revisits the "no parallelism inside a plan" decision (process-variants READ
 - **Q1. Package definition:** fields, whether packages can be revised while running, and partial-component ownership (handoff §10.A). Only needed for §5.
 - **Q7. Role-skill loading:** one smoke run of option (a) and of the `run-plan` wrapper (§4.1). Also whether an orchestrator started with `/skill:` keeps the skill text after it compacts; if not, its compaction note re-reads the file by path.
 - **Q10. Reviewing a large diff:** whether groups, each read by its own fresh reviewer, catch what one reviewer over the whole diff would (§4.9). The pilot answers it.
-- **Q11. Code references:** the exact method of check 2, settled by building the tool feature against the failing cases listed in §4.6; and which definitions the tool can resolve in the first adopter's languages.
+- **Q11. Code references:** the method of check 2 is built and recorded in §4.6. Still open: definitions built from code in another file; named references in file types the tool doesn't parse yet, where the first adopter's code needs them; and the check under `tools/` that applies the table, which is not written.
 - **Q12. Epic children:** the approval commit when review alone approves a child, who shows the tour at a catalog stop, a refresh after approval, the child's close, and when a proposed pattern is claimed (§4.9). Settle before the first epic; the pilot is a single plan.
 - **Q13. Large-diff groups:** whether groups hold files or hunks, and how pass 2 and fix reviews run over them (§4.9). Settle before the first plan above the signal.
 
