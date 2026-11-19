@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { changeStyles, checkApproved, checkCode, dataRelationshipKinds, expectedTag, firstComment, globToRegExp, isTagLine, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
+import { blockCommentLines, changeStyles, checkApproved, checkCode, dataRelationshipKinds, expectedTag, firstComment, globToRegExp, isTagLine, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'model-check.mjs');
 
@@ -28,6 +28,8 @@ describe('globs', () => {
 		assert.ok(matchAny('docs/patterns/a/b.md', ['docs/patterns/']));
 		assert.ok(matchAny('rules/guard.yml', ['rules/guard.yml']));
 		assert.ok(!matchAny('docs/patterns2/api.md', ['docs/patterns']));
+		assert.ok(matchAny('conf/profile.json', ['./conf/profile.json']));
+		assert.ok(matchAny('conf/profile.json', ['./conf/']));
 	});
 });
 
@@ -72,6 +74,14 @@ describe('plan.md', () => {
 	});
 });
 
+describe('plan.md and ledger, as people write them', () => {
+	it('reads CRLF files, numbered and + lists, a heading with a colon, and a path with a space', () => {
+		const text = ['Approved: 2026-01-02 abc1234', '## Changes outside the model:', '1. `docs/a b.md` renamed', '+ `config/x.json`', '2) `rules/y.yml`', '## Deviations:', '1. `element:svc` moved'].join('\r\n');
+		assert.deepEqual(parsePlan(text), { approvals: [{ kind: 'Approved', date: '2026-01-02', commit: 'abc1234' }], outsideModel: ['docs/a b.md', 'config/x.json', 'rules/y.yml'] });
+		assert.deepEqual([...parseLedger(text)], [['element:svc', 'moved']]);
+	});
+});
+
 describe('tags', () => {
 	it('parses each form', () => {
 		assert.equal(parseTag('// nothing here'), null);
@@ -97,11 +107,32 @@ describe('tags', () => {
 		assert.ok(!isTagLine('// @patterns a/b'));
 	});
 
+	it('knows the comment markers; a line with no marker is a tag only inside a comment', () => {
+		for (const line of ['//! @pattern a/b', '/// @pattern a/b', '/** @pattern a/b */', '{/* @pattern a/b */}', '# @pattern a/b', '-- @pattern a/b', '; @pattern a/b', '% @pattern a/b', '<!-- @pattern a/b -->']) assert.ok(isTagLine(line, false), line);
+		assert.equal(parseTag('{/* @pattern web/page partial: no frame */}').pattern, 'web/page');
+		assert.equal(parseTag('//! @pattern a/b').pattern, 'a/b');
+		assert.ok(isTagLine('@pattern a/b'));
+		assert.ok(!isTagLine('@pattern a/b', false));
+		assert.ok(!isTagLine("'@pattern a/b'", true));
+	});
+
+	it('finds the lines inside a block comment that opens a line', () => {
+		const text = ['/**', ' * doc', '@pattern a/b', ' */', 'const glob = "src/*";', '@pattern a/b', '<!--', 'x', '-->', '/* one line */', 'y', '{/*', 'z', '*/}'].join('\n');
+		assert.deepEqual([...blockCommentLines(text)], [2, 3, 4, 8, 9, 13, 14]);
+	});
+
+	it('a tag wrapped onto a second line loses its further patterns, so it cannot agree by accident', () => {
+		assert.deepEqual(parseTag('// @pattern a/b\n//   ; also c/d').also, []);
+	});
+
 	it('finds the first comment of a file', () => {
 		assert.deepEqual(firstComment('#!/usr/bin/env node\n\n// @pattern a/b\n// more\nconst x = 1;\n// later'), { start: 3, end: 4, text: '// @pattern a/b\n// more' });
 		assert.equal(firstComment('<script lang="ts">\n\t// @pattern web/page\n\tlet a;\n</script>').text.trim(), '// @pattern web/page');
 		assert.equal(firstComment('<!--\n  @pattern web/page\n-->\n<div/>').end, 3);
 		assert.equal(firstComment('const x = 1;\n// @pattern a/b'), undefined);
+		assert.equal(firstComment('"use client";\n\n// @pattern web/page\nexport {};').text, '// @pattern web/page');
+		assert.equal(firstComment("#!/bin/node\n'use strict'\n/* @pattern a/b */\nx").start, 3);
+		assert.equal(firstComment('{/* @pattern web/page */}\n<div/>').end, 1);
 	});
 
 	const model = {
@@ -272,6 +303,16 @@ describe('model-to-code', () => {
 		assert.deepEqual(r.unaccounted.runs, [{ path: 'n.ts', side: 'head', start: 5, end: 7, lines: 3 }]);
 	});
 
+	it('a line that only looks like a tag inside a string is not one; a bare line in a block comment is', () => {
+		const text = ['const help = `', '@pattern a/b', '`;', '/**', '@pattern a/b', ' */', 'export function stray() {}', ''].join('\n');
+		const report = { references: [], files: [{ path: 's.ts', status: 'added', base: [], head: [{ start: 1, end: 7, refs: [] }] }] };
+		const r = checkCode({ elements: [] }, report, { read: files({ 's.ts': text }) });
+		assert.deepEqual(
+			r.failures.map((f) => f.where),
+			['s.ts:5']
+		);
+	});
+
 	it('lists changed lines no reference owns, leaves out the project paths, and marks files the plan lists', () => {
 		const report = {
 			references: [],
@@ -429,6 +470,21 @@ describe('approved versus shipped', () => {
 		assert.deepEqual(checkApproved(diff, { project }).differences, []);
 	});
 
+	it('judges "became removed" by the style of the change state, not its name', () => {
+		const styles = { ...changeStyles(), gone: 'removed', removed: 'reused' };
+		const to = (after) => [{ path: ['change'], change: 'changed', before: 'new', after }];
+		const diff = diffOf({ kind: 'contract', id: 'a', change: 'changed', fields: to('gone') }, { kind: 'contract', id: 'b', change: 'changed', fields: to('removed') }, { kind: 'element', id: 't', change: 'changed', after: { kind: 'data' }, fields: to('gone') });
+		assert.deepEqual(classes(checkApproved(diff, { project, styles })), ['contract:a re-approval: contract removed (change state became removed)', 'contract:b model-change', 'element:t re-approval: data element removed (change state became removed)']);
+	});
+
+	it('guards the profile wherever it sits and however the path file spells it', () => {
+		const own = { ...project, profile: './conf/profile.c4ish.json' };
+		const r = checkApproved(diffOf(), { project: own, changedPaths: ['conf/profile.c4ish.json', 'conf/other.json'] });
+		assert.deepEqual(r.paths, [{ path: 'conf/profile.c4ish.json', kind: 'profile' }]);
+		assert.equal(checkApproved(diffOf(), { project: own, changedPaths: ['conf/profile.c4ish.json'], outsideModel: ['conf/profile.c4ish.json'] }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { project: { ...project, profile: undefined }, changedPaths: ['conf/profile.c4ish.json'] }).verdict, 'pass');
+	});
+
 	it('a catalog, rule or profile file the approved plan does not list needs re-approval', () => {
 		const changedPaths = ['src/a.ts', 'docs/patterns/api.md', 'docs/patterns/web.md', 'rules/guard.yml', 'docs/patterns/profile.c4ish.json'];
 		const r = checkApproved(diffOf(), { project, changedPaths, outsideModel: ['docs/patterns/api.md', 'docs/patterns/profile.c4ish.json'] });
@@ -542,7 +598,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			put(dir, 'src/old.ts', 'export function shared() {\n\treturn 1;\n}\n');
 			const good = run(dir, 'code', ...args);
 			assert.equal(good.status, 0, good.stdout + good.stderr);
-			assert.match(good.stdout, /^model-to-code \(base [0-9a-f]{10}\): pass — 5 element\(s\) with references, 0 failing/);
+			assert.match(good.stdout, /^judged by the plan as approved: Approved 2026-01-02 [0-9a-f]{10}\nmodel-to-code \(base [0-9a-f]{10}\): pass — 5 element\(s\) with references, 0 failing/);
 			assert.match(good.stdout, /src\/glue\.ts: 1/);
 
 			// a tag the model does not carry is caught
@@ -612,15 +668,25 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			const none = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json');
 			assert.equal(none.status, 2);
 			assert.match(none.stderr, /needs the project path file/);
+			git(dir, 'add', '-A');
+			git(dir, 'commit', '-q', '-m', 'build');
 			put(dir, 'other.json', JSON.stringify({ leftOut: [] }));
-			assert.equal(run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'other.json').status, 2);
+			git(dir, 'add', 'other.json');
+			git(dir, 'commit', '-q', '-m', 'a path file with no kinds');
+			planWith(dir);
+			const noKinds = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'other.json');
+			assert.equal(noKinds.status, 2);
+			assert.match(noKinds.stderr, /needs the project path file/);
 			const missing = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'nope.json');
 			assert.equal(missing.status, 2);
 			assert.match(missing.stderr, /no such path file/);
 			put(dir, 'broken.json', '{ not json');
+			git(dir, 'add', 'broken.json');
+			git(dir, 'commit', '-q', '-m', 'a broken path file');
+			planWith(dir);
 			const broken = run(dir, 'code', '--model', 'plans/p/model.c4ish.json', '--project', 'broken.json');
 			assert.equal(broken.status, 2);
-			assert.match(broken.stderr, /is not JSON/);
+			assert.match(broken.stderr, /broken\.json at [0-9a-f]+ is not JSON/);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -690,6 +756,181 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			const moved = run(dir, 'approved', ...args, '--plan', 'plans/q/plan.md');
 			assert.equal(moved.status, 2, moved.stdout);
 			assert.match(moved.stderr, /cannot read plans\/q\/plan\.md at/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	const commit = (dir, message) => {
+		git(dir, 'add', '-A');
+		git(dir, 'commit', '-q', '-m', message);
+		return git(dir, 'rev-parse', 'HEAD');
+	};
+	const runs = (r) => JSON.parse(r.stdout).code.unaccounted.runs.map((u) => `${u.path}${u.outsideModel ? ' (listed)' : ''}`);
+
+	it('is judged by the approved plan and path file whatever the build writes, commits or passes as the base', () => {
+		const { dir, args } = repository();
+		try {
+			// the build lists its own glue in the plan, then commits a path file that leaves everything out
+			planWith(dir, 'src/glue.ts');
+			assert.deepEqual(runs(run(dir, 'code', ...args, '--json')), ['migrations/001.sql (listed)', 'src/glue.ts']);
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'], noTag: ['**'] }));
+			put(dir, 'src/page.ts', '// @pattern api/mutation\nexport function page() {\n\treturn [];\n}\n');
+			const loosened = commit(dir, 'build: loosen the path file');
+			const later = run(dir, 'code', ...args, '--base', loosened);
+			assert.equal(later.status, 2, later.stdout);
+			assert.match(later.stderr, /--base [0-9a-f]+ is not the first approval commit/);
+			const r = run(dir, 'code', ...args, '--json');
+			assert.equal(r.status, 1);
+			assert.ok(JSON.parse(r.stdout).code.failures.some((f) => /is tagged `api\/mutation` but the model says `api\/read-query`/.test(f.message)));
+			assert.deepEqual(runs(r), ['migrations/001.sql (listed)', 'src/glue.ts']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('after a re-approval, takes the settings from the latest approval and keeps the first as the code baseline', () => {
+		const { dir, args } = repository();
+		try {
+			const first = git(dir, 'rev-parse', 'HEAD');
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json', 'src/glue.ts'], rules: ['rules'], catalog: ['docs/patterns'], kinds: { data: ['data'], container: ['container'] } }));
+			const second = commit(dir, 're-approved: the glue is left out');
+			put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${first}\nRe-approved: 2026-01-05 ${second}\n\n## Changes outside the model\n- \`migrations/001.sql\`\n`);
+			const r = run(dir, 'code', ...args, '--json');
+			const out = JSON.parse(r.stdout);
+			assert.deepEqual(out.approvals, [
+				{ kind: 'Approved', date: '2026-01-02', commit: first },
+				{ kind: 'Re-approved', date: '2026-01-05', commit: second }
+			]);
+			assert.equal(out.code.base, first);
+			assert.deepEqual(runs(r), ['migrations/001.sql (listed)']);
+			assert.match(run(dir, 'approved', ...args).stdout, /^judged by the plan as approved: Approved 2026-01-02 [0-9a-f]{10} → Re-approved 2026-01-05 [0-9a-f]{10}\napproved versus shipped \(against Re-approved/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('a path file or profile that was not in the approval commit is an error: the working copy is never trusted', () => {
+		const { dir, model } = repository();
+		try {
+			// a path file git does not track, with `data` no longer guarded
+			put(dir, '.gitignore', 'local.json\n');
+			put(dir, 'local.json', JSON.stringify({ kinds: { container: ['container'] } }));
+			rewrite(dir, model, (m) => void m.elements.push({ id: 'extra', kind: 'data', title: 'extra', change: 'new', pattern: 'data/table' }));
+			put(dir, 'plans/p/review.md', '## Deviations\n- `element:extra` needed a table\n');
+			for (const command of ['approved', 'code']) {
+				const r = run(dir, command, '--model', 'plans/p/model.c4ish.json', '--project', 'local.json');
+				assert.equal(r.status, 2, r.stdout);
+				assert.match(r.stderr, /cannot read local\.json at [0-9a-f]+, the commit the plan was approved at; the path file must be committed before approval/);
+			}
+			// an approved path file that names a profile the approval commit does not have
+			put(dir, 'project.json', JSON.stringify({ profile: 'conf/profile.c4ish.json', kinds: { data: ['data'] } }));
+			commit(dir, 'path file names a profile');
+			planWith(dir);
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ profileVersion: 0, id: 't', title: 'T', extends: 'default' }));
+			const r = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'project.json');
+			assert.equal(r.status, 2, r.stdout);
+			assert.match(r.stderr, /cannot read conf\/profile\.c4ish\.json at .*the profile must be committed before approval/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('classifies by the profile as approved, and a changed profile stops, however the path file spells it', () => {
+		const { dir, model, args } = repository();
+		try {
+			const profile = { profileVersion: 0, id: 't', title: 'T', extends: 'default' };
+			const settings = { profile: './conf/profile.c4ish.json', kinds: { data: ['data'], container: ['container'] } };
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify(profile));
+			put(dir, 'project.json', JSON.stringify(settings));
+			commit(dir, 'approved with a profile');
+			planWith(dir);
+			assert.equal(run(dir, 'approved', ...args).status, 0);
+
+			// the build makes `writes` a runtime kind, adds a write nothing enforces, and records it
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ ...profile, relationshipKinds: { writes: { label: 'writes', category: 'runtime' } } }));
+			rewrite(dir, model, (m) => void m.relationships.push({ id: 'save', from: 'page', to: 'items', kind: 'writes', change: 'new' }));
+			put(dir, 'plans/p/review.md', '## Deviations\n- `relationship:save` the page now saves\n');
+			const r = run(dir, 'approved', ...args, '--json');
+			assert.equal(r.status, 1, r.stdout + r.stderr);
+			assert.deepEqual(stops(r), ['conf/profile.c4ish.json (profile)']);
+			assert.deepEqual(JSON.parse(r.stdout).approved.differences.find((d) => d.key === 'relationship:save').reasons, ['new data relationship enforced by `nothing stated`']);
+
+			// even when the approved plan lets the build change the profile, the approved profile classifies
+			planWith(dir, 'conf/profile.c4ish.json');
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify(profile));
+			put(dir, 'plans/p/model.c4ish.json', JSON.stringify(model, null, '\t'));
+			commit(dir, 'approved: the plan may change the profile');
+			planWith(dir, 'conf/profile.c4ish.json');
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ ...profile, relationshipKinds: { writes: { label: 'writes', category: 'runtime' } } }));
+			rewrite(dir, model, (m) => void m.relationships.push({ id: 'save', from: 'page', to: 'items', kind: 'writes', change: 'new' }));
+			const listed = run(dir, 'approved', ...args, '--json');
+			assert.equal(listed.status, 1, listed.stdout + listed.stderr);
+			assert.deepEqual(stops(listed), []);
+			assert.deepEqual(JSON.parse(listed.stdout).approved.differences.find((d) => d.key === 'relationship:save').reasons, ['new data relationship enforced by `nothing stated`']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('an approval line must name a commit in the history of HEAD, in order', () => {
+		const { dir, args } = repository();
+		try {
+			const approved = git(dir, 'rev-parse', 'HEAD');
+			git(dir, 'stash', '-q', '-u');
+			git(dir, 'checkout', '-q', '-b', 'elsewhere');
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'], kinds: {} }));
+			const elsewhere = commit(dir, 'a loose path file on another branch');
+			git(dir, 'checkout', '-q', '-');
+			git(dir, 'stash', 'pop', '-q');
+			put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${approved}\nRe-approved: 2026-01-03 ${elsewhere}\n`);
+			const other = run(dir, 'all', ...args);
+			assert.equal(other.status, 2, other.stdout);
+			assert.match(other.stderr, /`Re-approved:` line names [0-9a-f]+, which is not in the history of HEAD/);
+
+			const later = commit(dir, 'build');
+			put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${later}\nRe-approved: 2026-01-03 ${approved}\n`);
+			const order = run(dir, 'all', ...args);
+			assert.equal(order.status, 2, order.stdout);
+			assert.match(order.stderr, /approval lines are out of order/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('runs a plan with no approval line only as a trial, and only a trial may use reports made beforehand', () => {
+		const { dir, args } = repository();
+		try {
+			put(dir, 'diff.json', JSON.stringify({ differences: [] }));
+			put(dir, 'changed.txt', 'rules/guard.yml\r\nsrc/a.ts\n');
+			// an approved plan: git and the tool, nothing made beforehand, no way to call it a trial
+			for (const option of [['--diff-report', 'diff.json'], ['--changed-paths', 'changed.txt'], ['--code-report', 'diff.json']]) {
+				const r = run(dir, 'all', ...args, ...option);
+				assert.equal(r.status, 2, r.stdout);
+				assert.match(r.stderr, new RegExp(`${option[0]} is for trials`));
+			}
+			const claimed = run(dir, 'all', ...args, '--no-approval');
+			assert.equal(claimed.status, 2, claimed.stdout);
+			assert.match(claimed.stderr, /has an approval line/);
+
+			put(dir, 'plans/p/plan.md', '# Plan\n');
+			const plain = run(dir, 'code', ...args, '--base', 'HEAD');
+			assert.equal(plain.status, 2, plain.stdout);
+			assert.match(plain.stderr, /pass --no-approval to run a trial/);
+			const trial = run(dir, 'code', ...args, '--base', 'HEAD', '--no-approval');
+			assert.equal(trial.status, 1, trial.stderr);
+			assert.match(trial.stdout, /^TRIAL \(--no-approval\): judged by the working copy, not by an approved plan\nmodel-to-code/);
+			assert.equal(JSON.parse(run(dir, 'code', ...args, '--base', 'HEAD', '--no-approval', '--json').stdout).trial, true);
+
+			const stop = run(dir, 'approved', ...args, '--no-approval', '--diff-report', 'diff.json', '--changed-paths', 'changed.txt', '--json');
+			assert.equal(stop.status, 1, stop.stderr);
+			assert.deepEqual(stops(stop), ['rules/guard.yml (rule)']);
+			const nothing = run(dir, 'approved', ...args, '--no-approval');
+			assert.equal(nothing.status, 2);
+			assert.match(nothing.stderr, /pass --diff-report/);
+			const missing = run(dir, 'approved', ...args, '--no-approval', '--diff-report', 'diff.json', '--changed-paths', 'nope.txt');
+			assert.equal(missing.status, 2);
+			assert.match(missing.stderr, /^model-check: cannot read .*nope\.txt: ENOENT\n$/);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}

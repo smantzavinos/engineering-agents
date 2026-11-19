@@ -19,13 +19,21 @@
 //                          `Re-approved:` lines and the "Changes outside the model" section.
 //   --ledger <review.md>   default: review.md beside the plan. Read for the "Deviations" section.
 //   --project <file.json>  the project's path file (see below). `approved` needs it, for `kinds`.
-//                          It is read as it was at the commit compared against, so a build
-//                          cannot loosen it; a change to it stops like a catalog change.
-//   --base <commit>        `code` only. Default: the first `Approved:` commit in the plan.
-//                          `approved` compares with the latest approval line, and reads
-//                          "Changes outside the model" from plan.md as it was at that commit.
+//   --base <commit>        `code` only: the code baseline. Default: the first `Approved:` commit.
+//                          It may be that commit or an earlier one, never a later one.
 //   --root <dir>           repository root. Default: the git repository holding the model.
 //   --json                 print the result as JSON.
+//
+// What the check is judged by. A plan with an approval line is judged by what was approved: the
+// path file, the profile's change states and data relationship kinds, and the plan's "Changes
+// outside the model" list are all read from git at the latest approval commit, never from the
+// working copy. Each must be in that commit; there is no fallback. Every approval commit must be
+// an ancestor of HEAD, in the order the plan lists them. `approved` compares with the latest one.
+// A change to the path file or the profile stops like a catalog change.
+//
+// Trials. A plan with no approval line runs only with --no-approval, and is then judged by the
+// working copy. The result is marked as a trial. Only a trial may use reports made beforehand:
+//   --no-approval          run a plan that has no approval line.
 //   --code-report <file>   use this `c4ish code --json` output instead of running the tool.
 //   --diff-report <file>   use this `c4ish diff --json` output instead of running the tool.
 //   --changed-paths <file> use this list of changed paths (one per line) instead of asking git.
@@ -47,6 +55,10 @@
 //   maps the process's enforcement levels to the profile's ids (default: the same names).
 //
 // A glob with no wildcard also matches everything under it (`docs/patterns` = `docs/patterns/**`).
+// A leading `./` is dropped.
+//
+// Tags. A tag is one line: `@pattern` first on its comment line, after the comment marker. A line
+// with no marker counts only inside a block comment that opens at the start of a line.
 //
 // plan.md: `Approved: <date> <commit>` and `Re-approved: <date> <commit>` lines, and a section
 // headed "Changes outside the model" with one list item per path or glob, starting with it in
@@ -88,10 +100,10 @@ export function globToRegExp(glob) {
 	return new RegExp(`^${re}$`);
 }
 
-/** A glob with no wildcard names a file or a directory: it also matches everything under it. */
+/** A glob with no wildcard names a file or a directory: it also matches everything under it. A leading `./` is dropped. */
 export const matchAny = (path, globs) =>
 	(globs ?? []).some((raw) => {
-		const g = raw.replace(/\/+$/, '');
+		const g = raw.replace(/^(?:\.\/+)+/, '').replace(/\/+$/, '');
 		return /[*?]/.test(g) ? globToRegExp(g).test(path) : path === g || path.startsWith(`${g}/`);
 	});
 
@@ -124,7 +136,7 @@ export function dataRelationshipKinds(profile) {
 function proseLines(text) {
 	const out = [];
 	let fence;
-	for (const line of text.split('\n')) {
+	for (const line of text.split(/\r?\n/)) {
 		const m = /^\s*(```+|~~~+)/.exec(line);
 		if (m && !fence) fence = m[1][0];
 		else if (m && m[1][0] === fence) fence = undefined;
@@ -135,15 +147,15 @@ function proseLines(text) {
 
 /** List items that start with a backticked token, inside the section with exactly this heading. */
 function sectionItems(text, heading) {
-	const title = new RegExp(`^(?:[\\d.]+\\s+)?${heading}\\s*$`, 'i');
+	const title = new RegExp(`^(?:[\\d.]+\\s+)?${heading}:?\\s*$`, 'i');
 	const out = [];
 	let depth = 0;
 	for (const line of proseLines(text)) {
 		const h = /^(#{1,6})\s+(.*)$/.exec(line);
 		if (h) depth = title.test(h[2].replace(/[*_`]/g, '').trim()) ? h[1].length : depth && h[1].length > depth ? depth : 0;
 		else if (depth) {
-			const m = /^\s*[-*]\s+`([^`\s]+)`\s*(.*)$/.exec(line);
-			if (m) out.push([m[1], m[2].trim()]);
+			const m = /^\s*(?:[-*+]|\d+[.)])\s+`([^`]+)`\s*(.*)$/.exec(line);
+			if (m) out.push([m[1].trim(), m[2].trim()]);
 		}
 	}
 	return out;
@@ -170,8 +182,32 @@ export function parseLedger(text) {
 
 const ID = '[A-Za-z0-9][A-Za-z0-9._/-]*';
 
-/** A tag starts its comment line: `@pattern` after at most a comment marker. Mentions in prose or strings are not tags. */
-export const isTagLine = (line) => /^\s*(?:(?:\/\/+|\/\*+|\*|#|<!--|--)\s*)?@pattern(?:\s|$)/.test(line);
+const MARKED_TAG = /^\s*(?:\/\/+!?|\{?\/\*+!?|\*|#|<!--|--|;+|%+)\s*@pattern(?:\s|$)/;
+const BARE_TAG = /^\s*@pattern(?:\s|$)/;
+
+/**
+ * A tag starts its comment line: `@pattern` straight after a comment marker. Mentions in prose or
+ * strings are not tags. A line with no marker is a tag only inside a comment (`inComment`).
+ */
+export const isTagLine = (line, inComment = true) => MARKED_TAG.test(line) || (inComment && BARE_TAG.test(line));
+
+/** Line numbers (1-based) inside a block comment that opens at the start of a line, the opening line excluded. */
+export function blockCommentLines(text) {
+	const out = new Set();
+	let close;
+	text.split('\n').forEach((line, i) => {
+		if (close) {
+			out.add(i + 1);
+			if (line.includes(close)) close = undefined;
+			return;
+		}
+		const open = /^\s*(\{?\/\*|<!--)/.exec(line);
+		if (!open) return;
+		const end = open[1] === '<!--' ? '-->' : '*/';
+		if (!line.slice(open[0].length).includes(end)) close = end;
+	});
+	return out;
+}
 
 /**
  * The tag in a comment. `null`: no tag. Forms (design §4.3):
@@ -184,7 +220,7 @@ export function parseTag(comment) {
 	if (lines.length > 1) return { error: 'more than one @pattern tag in one comment' };
 	let rest = lines[0]
 		.slice(lines[0].indexOf('@pattern') + '@pattern'.length)
-		.replace(/\s*(\*\/|-->)\s*$/, '')
+		.replace(/\s*(\*\/\}?|-->)\s*$/, '')
 		.trim();
 	const raw = `@pattern ${rest}`;
 	let also = [];
@@ -207,18 +243,19 @@ export function firstComment(text) {
 	let i = 0;
 	if (lines[0]?.startsWith('#!')) i++;
 	while (i < lines.length && !lines[i].trim()) i++;
-	// an opening tag line may precede the comment in a component file
-	if (/^<script\b[^>]*>\s*$/.test(lines[i]?.trim() ?? '')) {
-		i++;
-		while (i < lines.length && !lines[i].trim()) i++;
-	}
+	// an opening tag line may precede the comment in a component file, and directives ("use strict") in a script
+	for (const before of [/^<script\b[^>]*>$/, /^(['"])use [a-z ]+\1;?$/])
+		while (i < lines.length && before.test(lines[i].trim())) {
+			i++;
+			while (i < lines.length && !lines[i].trim()) i++;
+		}
 	const start = i;
 	const first = lines[i]?.trim() ?? '';
-	if (first.startsWith('/*') || first.startsWith('<!--')) {
-		const close = first.startsWith('/*') ? '*/' : '-->';
+	if (first.startsWith('/*') || first.startsWith('{/*') || first.startsWith('<!--')) {
+		const close = first.startsWith('<!--') ? '-->' : '*/';
 		while (i < lines.length && !lines[i].includes(close)) i++;
 		i++;
-	} else while (i < lines.length && /^\s*(\/\/|#|--)/.test(lines[i])) i++;
+	} else while (i < lines.length && /^\s*(\/\/|#|--|;|%)/.test(lines[i])) i++;
 	return i > start ? { start: start + 1, end: Math.min(i, lines.length), text: lines.slice(start, i).join('\n') } : undefined;
 }
 
@@ -347,10 +384,11 @@ export function checkCode(model, report, options = {}) {
 		}
 		const text = f.status === 'deleted' ? undefined : read(f.path);
 		const lines = text?.split('\n');
+		const inBlock = text === undefined ? new Set() : blockCommentLines(text);
 		for (const range of f.head ?? []) {
 			if (lines)
 				for (let n = range.start; n <= range.end; n++)
-					if (isTagLine(lines[n - 1] ?? '') && !tagLines.get(f.path)?.has(n))
+					if (isTagLine(lines[n - 1] ?? '', inBlock.has(n)) && !tagLines.get(f.path)?.has(n))
 						fail('built-not-modelled', `${f.path}:${n}`, `a @pattern tag was added or changed here, but no element references this definition: \`${lines[n - 1].trim()}\``);
 		}
 		for (const [side, ranges] of [
@@ -457,7 +495,7 @@ export function checkApproved(diff, options = {}) {
 	// catalog, rule and profile files changed that the approved plan does not list
 	const paths = [];
 	for (const p of changedPaths) {
-		const kind = matchAny(p, project.catalog) ? 'catalog' : matchAny(p, project.rules) ? 'rule' : project.profile === p ? 'profile' : projectPath === p ? 'path' : undefined;
+		const kind = matchAny(p, project.catalog) ? 'catalog' : matchAny(p, project.rules) ? 'rule' : project.profile && matchAny(p, [project.profile]) ? 'profile' : projectPath === p ? 'path' : undefined;
 		if (kind && !matchAny(p, outsideModel)) paths.push({ path: p, kind });
 	}
 
@@ -482,7 +520,7 @@ function parseArgs(argv) {
 		const a = rest[i];
 		if (!a.startsWith('--')) throw new UsageError(`unexpected argument: ${a}`);
 		const key = a.slice(2);
-		if (key === 'json') opts.json = true;
+		if (key === 'json' || key === 'no-approval') opts[key] = true;
 		else if (['model', 'plan', 'ledger', 'project', 'base', 'root', 'code-report', 'diff-report', 'changed-paths'].includes(key)) {
 			if (rest[i + 1] === undefined) throw new UsageError(`--${key} needs a value`);
 			opts[key] = rest[++i];
@@ -493,13 +531,16 @@ function parseArgs(argv) {
 	return { command, opts };
 }
 
-function readJson(path) {
-	let text;
+function readText(path) {
 	try {
-		text = readFileSync(path, 'utf8');
+		return readFileSync(path, 'utf8');
 	} catch (e) {
 		throw new UsageError(`cannot read ${path}: ${e.code ?? e.message}`);
 	}
+}
+
+function readJson(path) {
+	const text = readText(path);
 	try {
 		return JSON.parse(text);
 	} catch (e) {
@@ -537,6 +578,8 @@ function tool(args) {
 /** The real path, so a path through a symlink still sits under the repository root. */
 const real = (path) => (existsSync(path) ? realpathSync(path) : path);
 
+const PREMADE = ['code-report', 'diff-report', 'changed-paths'];
+
 function context(opts) {
 	if (!existsSync(resolve(opts.model))) throw new UsageError(`no such model: ${opts.model}`);
 	const model = real(resolve(opts.model));
@@ -553,7 +596,44 @@ function context(opts) {
 	const projectFile = opts.project && real(resolve(opts.project));
 	if (projectFile && !existsSync(projectFile)) throw new UsageError(`no such path file: ${opts.project}`);
 	const parsed = existsSync(plan) ? parsePlan(readFileSync(plan, 'utf8')) : { approvals: [], outsideModel: [] };
-	return { model, root, plan, ledger, projectFile, ...parsed };
+	const ctx = { model, root, plan, ledger, projectFile, ...parsed };
+
+	// a plan with an approval line is judged by what was approved; anything else is a trial and must say so
+	if (ctx.approvals.length) {
+		if (opts['no-approval']) throw new UsageError(`--no-approval was given, but ${opts.plan ?? 'the plan'} has an approval line: an approved plan is judged by its approval`);
+		const premade = PREMADE.find((k) => opts[k]);
+		if (premade) throw new UsageError(`--${premade} is for trials (--no-approval): an approved plan is checked against git and the tool's own output`);
+		ctx.approvals = approvalChain(ctx);
+		ctx.approved = ctx.approvals.at(-1);
+	} else if (!opts['no-approval']) throw new UsageError(`no \`Approved: <date> <commit>\` line in ${ctx.plan}; pass --no-approval to run a trial judged by the working copy`);
+	return ctx;
+}
+
+const isAncestor = (root, a, b) => {
+	try {
+		tryGit(root, ['merge-base', '--is-ancestor', a, b]);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/** The plan's approval commits, resolved. Each must be in the history of HEAD, in the order listed. */
+function approvalChain(ctx) {
+	const out = [];
+	for (const a of ctx.approvals) {
+		let sha;
+		try {
+			sha = tryGit(ctx.root, ['rev-parse', '--verify', '--quiet', `${a.commit}^{commit}`]).trim();
+		} catch {
+			throw new UsageError(`the plan's \`${a.kind}:\` line names ${a.commit}, which is not a commit in this repository`);
+		}
+		if (!isAncestor(ctx.root, sha, 'HEAD')) throw new UsageError(`the plan's \`${a.kind}:\` line names ${a.commit}, which is not in the history of HEAD`);
+		const before = out.at(-1);
+		if (before && !isAncestor(ctx.root, before.sha, sha)) throw new UsageError(`the plan's approval lines are out of order: ${a.commit} does not come after ${before.commit}`);
+		out.push({ ...a, sha });
+	}
+	return out;
 }
 
 const inside = (ctx, path) => {
@@ -561,49 +641,62 @@ const inside = (ctx, path) => {
 	return rel.startsWith('..') ? undefined : rel;
 };
 
+/** A file as the approved commit has it. There is no fallback to the working copy: the build writes that. */
+function approvedText(ctx, path, what) {
+	const rel = inside(ctx, path);
+	if (rel === undefined) throw new UsageError(`${what} must be inside the repository: ${path}`);
+	try {
+		return tryGit(ctx.root, ['show', `${ctx.approved.sha}:${rel}`]);
+	} catch (e) {
+		throw new UsageError(`cannot read ${rel} at ${ctx.approved.commit}, the commit the plan was approved at; ${what} must be committed before approval: ${(e.stderr || e.message).trim()}`);
+	}
+}
+
+function approvedJson(ctx, path, what) {
+	const text = approvedText(ctx, path, what);
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		throw new UsageError(`${inside(ctx, path)} at ${ctx.approved.commit} is not JSON: ${e.message}`);
+	}
+}
+
 /**
- * The project's path file and profile. With a commit, the path file is read as it was there: the
- * build must not loosen the settings it is checked by. If that commit has none, the working copy
- * is used, and `approved` then sees the file as changed.
+ * What the check is judged by. For an approved plan: the path file, the profile's change states and
+ * data relationship kinds, and the plan's "Changes outside the model" list, all as the latest
+ * approval commit has them. For a trial: the working copy. The working copy's profile is used only
+ * to run the tool and to know which patterns are now catalogued.
  */
-function settings(ctx, commit) {
+function settings(ctx) {
 	let project = {};
 	let projectPath;
 	if (ctx.projectFile) {
 		projectPath = inside(ctx, ctx.projectFile);
-		if (commit && projectPath === undefined) throw new UsageError(`the path file must be inside the repository: ${ctx.projectFile}`);
-		project = readJson(ctx.projectFile);
-		if (commit) {
-			try {
-				project = JSON.parse(tryGit(ctx.root, ['show', `${commit}:${projectPath}`]));
-			} catch {
-				// not in that commit
-			}
-		}
+		project = ctx.approved ? approvedJson(ctx, ctx.projectFile, 'the path file') : readJson(ctx.projectFile);
 	}
 	const profilePath = project.profile ? join(ctx.root, project.profile) : undefined;
 	const profile = profilePath && existsSync(profilePath) ? readJson(profilePath) : undefined;
-	return { project, projectPath, profile, styles: changeStyles(profile), toolArgs: profilePath ? ['--profile', profilePath] : [] };
-}
-
-/** "Changes outside the model" as the approved plan had it. */
-function approvedOutsideModel(ctx, commit) {
-	const rel = inside(ctx, ctx.plan);
-	if (rel === undefined) throw new UsageError(`the plan must be inside the repository: ${ctx.plan}`);
-	let text;
-	try {
-		text = tryGit(ctx.root, ['show', `${commit}:${rel}`]);
-	} catch (e) {
-		throw new UsageError(`cannot read ${rel} at ${commit}, the commit the plan was approved at: ${(e.stderr || e.message).trim()}`);
-	}
-	return parsePlan(text).outsideModel;
+	const judged = ctx.approved && profilePath ? approvedJson(ctx, profilePath, 'the profile') : profile;
+	const outsideModel = ctx.approved ? parsePlan(approvedText(ctx, ctx.plan, 'the plan')).outsideModel : ctx.outsideModel;
+	return {
+		project,
+		projectPath,
+		outsideModel,
+		styles: changeStyles(judged),
+		dataRelationships: dataRelationshipKinds(judged),
+		profilePatterns: new Set(Array.isArray(profile?.patterns) ? profile.patterns.map((p) => p.id) : Object.keys(profile?.patterns ?? {})),
+		toolArgs: profilePath ? ['--profile', profilePath] : []
+	};
 }
 
 function runCode(ctx, opts) {
-	const base = opts.base ?? ctx.approvals.find((a) => a.kind === 'Approved')?.commit;
+	const first = ctx.approvals.find((a) => a.kind === 'Approved') ?? ctx.approvals[0];
+	const base = opts.base ?? first?.sha;
 	const given = opts['code-report'];
-	if (!given && !base) throw new UsageError('no base commit: pass --base, or record `Approved: <date> <commit>` in the plan');
-	const { project, styles, toolArgs } = settings(ctx, given ? undefined : base);
+	if (!given && !base) throw new UsageError('no base commit: pass --base');
+	// a later baseline would hide what the build did
+	if (first && opts.base && !isAncestor(ctx.root, opts.base, first.sha)) throw new UsageError(`--base ${opts.base} is not the first approval commit (${first.commit}) or an earlier one`);
+	const { project, styles, outsideModel, toolArgs } = settings(ctx);
 	const report = given ? readJson(resolve(given)) : tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...toolArgs]);
 	const read = (p) => {
 		try {
@@ -612,30 +705,25 @@ function runCode(ctx, opts) {
 			return undefined;
 		}
 	};
-	// the plan's list as approved, when the base is an approval; with --base alone the plan may not be in that commit
-	let outsideModel = ctx.outsideModel;
-	if (!given && ctx.approvals.some((a) => a.commit === base)) outsideModel = approvedOutsideModel(ctx, base);
 	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles, project, outsideModel, read }) };
 }
 
 function runApproved(ctx, opts) {
-	const latest = ctx.approvals.at(-1);
 	const given = opts['diff-report'];
-	if (!given && !latest) throw new UsageError(`no \`Approved: <date> <commit>\` line in ${ctx.plan}`);
-	const { project, projectPath, profile, styles, toolArgs } = settings(ctx, given ? undefined : latest.commit);
+	if (!ctx.approved && !given) throw new UsageError('a trial of `approved` (--no-approval) has no commit to compare with: pass --diff-report');
+	const { project, projectPath, styles, dataRelationships, profilePatterns, outsideModel, toolArgs } = settings(ctx);
 	if (!project.kinds) throw new UsageError('`approved` needs the project path file (--project) with `kinds`: which element kinds are data, containers and product elements');
-	const diff = given ? readJson(resolve(given)) : tool(['diff', ctx.model, '--base', latest.commit, '--only', 'structure', '--json', ...toolArgs]);
+	const diff = given ? readJson(resolve(given)) : tool(['diff', ctx.model, '--base', ctx.approved.sha, '--only', 'structure', '--json', ...toolArgs]);
 	let changedPaths = [];
-	if (opts['changed-paths']) changedPaths = readFileSync(resolve(opts['changed-paths']), 'utf8').split('\n').filter(Boolean);
-	else if (!given) {
+	if (opts['changed-paths']) changedPaths = readText(resolve(opts['changed-paths'])).split(/\r?\n/).filter(Boolean);
+	else if (ctx.approved) {
 		// -z: names as they are; --no-renames: a moved file is one removed and one added
 		const list = (args) => git(ctx.root, args).split('\0').filter(Boolean);
-		changedPaths = [...new Set([...list(['diff', '--name-only', '--no-renames', '-z', latest.commit]), ...list(['ls-files', '--others', '--exclude-standard', '-z'])])];
+		changedPaths = [...new Set([...list(['diff', '--name-only', '--no-renames', '-z', ctx.approved.sha]), ...list(['ls-files', '--others', '--exclude-standard', '-z'])])];
 	}
 	const deviations = existsSync(ctx.ledger) ? parseLedger(readFileSync(ctx.ledger, 'utf8')) : new Map();
-	const profilePatterns = new Set(Array.isArray(profile?.patterns) ? profile.patterns.map((p) => p.id) : Object.keys(profile?.patterns ?? {}));
-	const outsideModel = given ? ctx.outsideModel : approvedOutsideModel(ctx, latest.commit);
-	return { against: latest, ...checkApproved(diff, { styles, project, projectPath, dataRelationships: dataRelationshipKinds(profile), profilePatterns, deviations, changedPaths, outsideModel }) };
+	const { sha: _sha, ...against } = ctx.approved ?? {};
+	return { ...(ctx.approved && { against }), ...checkApproved(diff, { styles, project, projectPath, dataRelationships, profilePatterns, deviations, changedPaths, outsideModel }) };
 }
 
 function printCode(r) {
@@ -669,15 +757,19 @@ export function main(argv) {
 	try {
 		parsed = parseArgs(argv);
 		const ctx = context(parsed.opts);
-		const result = {};
-		if (parsed.command !== 'approved') result.code = runCode(ctx, parsed.opts);
-		if (parsed.command !== 'code') result.approved = runApproved(ctx, parsed.opts);
-		if (parsed.opts.json) console.log(JSON.stringify(result, null, 2));
+		const checks = {};
+		if (parsed.command !== 'approved') checks.code = runCode(ctx, parsed.opts);
+		if (parsed.command !== 'code') checks.approved = runApproved(ctx, parsed.opts);
+		// the approval lines the verdict rests on: the build must not have written any of them
+		const approvals = ctx.approvals.map(({ kind, date, commit }) => ({ kind, date, commit }));
+		if (parsed.opts.json) console.log(JSON.stringify({ ...(ctx.approved ? { approvals } : { trial: true }), ...checks }, null, 2));
 		else {
-			if (result.code) printCode(result.code);
-			if (result.approved) printApproved(result.approved);
+			if (ctx.approved) console.log(`judged by the plan as approved: ${approvals.map((a) => `${a.kind} ${a.date} ${a.commit.slice(0, 10)}`).join(' → ')}`);
+			else console.log('TRIAL (--no-approval): judged by the working copy, not by an approved plan');
+			if (checks.code) printCode(checks.code);
+			if (checks.approved) printApproved(checks.approved);
 		}
-		return Object.values(result).every((r) => r.ok) ? 0 : 1;
+		return Object.values(checks).every((r) => r.ok) ? 0 : 1;
 	} catch (e) {
 		// never exit 1 for anything but a verdict: an error here is not "the check failed"
 		console.error(`model-check: ${e instanceof UsageError ? e.message : (e.stack ?? e)}`);
