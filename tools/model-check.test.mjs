@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
-import { blockCommentLines, changeStyles, checkApproved, checkCode, dataRelationshipKinds, expectedTag, firstComment, globToRegExp, isTagLine, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
+import { blockCommentLines, changeStyles, checkApproved, checkCode, dataRelationshipKinds, expectedTag, firstComment, globToRegExp, isTagLine, kindCategories, matchAny, parseLedger, parsePlan, parseTag, tagMismatches } from './model-check.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'model-check.mjs');
 
@@ -139,8 +139,9 @@ describe('tags', () => {
 		elements: [
 			{ id: 'box', kind: 'container' },
 			{ id: 'full', pattern: 'api/mutation', patterns: ['api/mutation', 'api/guard'] },
-			{ id: 'part', pattern: 'api/mutation', patternFit: 'partial', parts: [{ title: 'Guard', pattern: 'api/guard' }, { title: 'Plain' }] },
-			{ id: 'one', pattern: null }
+			{ id: 'part', pattern: 'api/mutation', patternFit: 'partial', parts: [{ title: 'Guard', pattern: 'api/guard' }, { title: 'Plain' }, { title: 'Loose', pattern: 'api/guard', patternFit: 'partial' }, { title: 'Retry', bespoke: 'Only here.' }, { title: 'None', pattern: null }] },
+			{ id: 'one', bespoke: 'A one-off importer.' },
+			{ id: 'none', pattern: null }
 		]
 	};
 
@@ -151,9 +152,15 @@ describe('tags', () => {
 		assert.deepEqual(expectedTag(model, { element: 'part', part: 'Guard' }), { pattern: 'api/guard', bespoke: false, partial: false, also: [] });
 		// a part with no pattern of its own carries the element's tag
 		assert.equal(expectedTag(model, { element: 'part', part: 'Plain' }).pattern, 'api/mutation');
-		assert.equal(expectedTag(model, { element: 'one' }).bespoke, true);
+		// a part states its own fit, and can be bespoke where its element is not
+		assert.equal(expectedTag(model, { element: 'part', part: 'Loose' }).partial, true);
+		assert.deepEqual(expectedTag(model, { element: 'part', part: 'Retry' }), { bespoke: true, partial: false, also: [] });
+		assert.deepEqual(expectedTag(model, { element: 'one' }), { bespoke: true, partial: false, also: [] });
 		// a bespoke element can still carry further patterns
-		assert.deepEqual(expectedTag({ elements: [{ id: 'b', pattern: null, patterns: ['api/guard'] }] }, { element: 'b' }).also, ['api/guard']);
+		assert.deepEqual(expectedTag({ elements: [{ id: 'b', bespoke: 'x', patterns: ['api/guard'] }] }, { element: 'b' }).also, ['api/guard']);
+		// `pattern: null` says no pattern applies: it is not bespoke, on an element or on a part
+		assert.deepEqual(expectedTag(model, { element: 'none' }), { none: true });
+		assert.deepEqual(expectedTag(model, { element: 'part', part: 'None' }), { none: true });
 	});
 
 	it('a tag agrees only when pattern, fit, bespoke and further patterns all match', () => {
@@ -167,6 +174,7 @@ describe('tags', () => {
 		assert.match(tagMismatches(parseTag('// @pattern bespoke: x; also api/guard'), full)[0], /tagged bespoke/);
 		assert.match(tagMismatches(parseTag('// @pattern api/mutation'), expectedTag(model, { element: 'one' }))[0], /marks it bespoke/);
 		assert.deepEqual(tagMismatches(parseTag('// @pattern bespoke: importer'), expectedTag(model, { element: 'one' })), []);
+		assert.match(tagMismatches(parseTag('// @pattern bespoke: importer'), expectedTag(model, { element: 'none' }))[0], /gives its element no pattern/);
 		assert.match(tagMismatches(parseTag('// @pattern a/b'), { none: true })[0], /gives its element no pattern/);
 		assert.deepEqual(tagMismatches(null, { none: true }), []);
 	});
@@ -233,8 +241,45 @@ describe('model-to-code', () => {
 	});
 
 	it('a new or modified element with a pattern and no reference fails; a container does not', () => {
-		const r = checkCode({ elements: [el('n', 'new', 'a/b'), el('one', 'modified', null), el('box', 'new'), el('r', 'reused', 'a/b')] }, { references: [] });
-		assert.deepEqual(messages(r), ['element n: is new and has a pattern, but no code reference', 'element one: is modified and has a pattern, but no code reference']);
+		const r = checkCode({ elements: [el('n', 'new', 'a/b'), el('one', 'modified', undefined, { bespoke: 'A one-off.' }), el('box', 'new'), el('r', 'reused', 'a/b')] }, { references: [] });
+		assert.deepEqual(messages(r), ['element n: is new and has a pattern, but no code reference', 'element one: is modified and is bespoke, but no code reference']);
+	});
+
+	it('an element the build creates or changes in code must say what it is and name its code', () => {
+		const categories = { component: 'code', data: 'data', container: 'container' };
+		const bare = (id, kind, change, extra = {}) => ({ id, kind, title: id, change, ...extra });
+		const model = {
+			elements: [
+				bare('box', 'container', 'new'),
+				bare('ext', 'external', 'new'),
+				bare('quiet', 'component', 'new'),
+				bare('table', 'data', 'modified'),
+				bare('nulled', 'component', 'modified', { pattern: null }),
+				bare('context', 'component', 'reused', { pattern: null }),
+				bare('gone', 'component', 'removed'),
+				bare('split', 'component', 'new', { parts: [{ title: 'a', pattern: 'a/b' }, { title: 'b', bespoke: 'Only here.' }] }),
+				bare('half', 'component', 'new', { parts: [{ title: 'a', pattern: 'a/b' }, { title: 'b' }] }),
+				bare('nullPart', 'component', 'new', { parts: [{ title: 'a', pattern: null }] })
+			]
+		};
+		assert.deepEqual(messages(checkCode(model, { references: [] }, { categories })), [
+			'element quiet: is new code, but states neither a pattern nor `bespoke` with a reason',
+			'element quiet: is new and is code, but no code reference',
+			'element table: is modified data, but states neither a pattern nor `bespoke` with a reason',
+			'element table: is modified and is data, but no code reference',
+			'element nulled: is modified code, but says `pattern: null`: name a pattern, or say `bespoke` with a reason',
+			'element nulled: is modified and is code, but no code reference',
+			'element split: is new and has parts with patterns, but no code reference',
+			'element half: is new code, but states neither a pattern nor `bespoke` with a reason (on itself or on each of its parts)',
+			'element half: is new and is code, but no code reference',
+			'element nullPart: is new code, but says `pattern: null`: name a pattern, or say `bespoke` with a reason (on itself or on each of its parts)',
+			'element nullPart: is new and is code, but no code reference'
+		]);
+		// with a reference the state is still required
+		const one = { elements: [bare('quiet', 'component', 'new', { code: ['q.ts#f'] })] };
+		assert.deepEqual(messages(checkCode(one, { references: [named('q.ts#f', { element: 'quiet' }, 'added')] }, { categories })), ['element quiet: is new code, but states neither a pattern nor `bespoke` with a reason']);
+		// a profile that gives its kinds no category asks for nothing
+		assert.equal(checkCode({ elements: [bare('quiet', 'component', 'new')] }, { references: [] }).ok, true);
 	});
 
 	it('changed code must carry a tag that agrees; untouched code may be untagged', () => {
@@ -350,21 +395,22 @@ describe('model-to-code', () => {
 
 const S = 'structure';
 const diffOf = (...differences) => ({ differences: differences.map((d) => ({ aspects: [S], ...d, fields: d.fields?.map((f) => ({ aspect: S, ...f })) })) });
-const project = { kinds: { data: ['data'], container: ['container'], product: ['feature'] }, catalog: ['docs/patterns/**'], rules: ['rules/**'], profile: 'docs/patterns/profile.c4ish.json' };
+const categories = { data: 'data', container: 'container', feature: 'product', component: 'code' };
+const project = { catalog: ['docs/patterns/**'], rules: ['rules/**'], profile: 'docs/patterns/profile.c4ish.json' };
 const classes = (r) => r.differences.map((d) => `${d.key} ${d.class}${d.reasons ? `: ${d.reasons.join('; ')}` : ''}`);
 
 describe('approved versus shipped', () => {
 	it('passes with no difference, and with model changes the ledger records', () => {
-		assert.equal(checkApproved(diffOf(), { project }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { categories, project }).verdict, 'pass');
 		const diff = diffOf({ kind: 'element', id: 'svc', change: 'changed', before: { kind: 'component' }, after: { kind: 'component' }, fields: [{ path: ['change'], change: 'changed', before: 'reused', after: 'modified' }] });
-		const r = checkApproved(diff, { project, deviations: new Map([['element:svc', 'the guard moved in']]) });
+		const r = checkApproved(diff, { categories, project, deviations: new Map([['element:svc', 'the guard moved in']]) });
 		assert.equal(r.verdict, 'pass');
 		assert.deepEqual(r.differences, [{ key: 'element:svc', change: 'changed', fields: [{ path: 'change', change: 'changed' }], class: 'model-change', recorded: true, deviation: 'the guard moved in' }]);
 	});
 
 	it('fails on a model change the ledger does not record, and notes a record with no difference', () => {
 		const diff = diffOf({ kind: 'element', id: 'job', change: 'added', after: { kind: 'component' } });
-		const r = checkApproved(diff, { project, deviations: new Map([['element:other', 'x']]) });
+		const r = checkApproved(diff, { categories, project, deviations: new Map([['element:other', 'x']]) });
 		assert.equal(r.verdict, 'fail');
 		assert.deepEqual(classes(r), ['element:job model-change']);
 		assert.deepEqual(r.stale, ['element:other']);
@@ -381,7 +427,7 @@ describe('approved versus shipped', () => {
 			{ kind: 'element', id: 'left', change: 'changed', before: { kind: 'container' }, after: { kind: 'component' }, fields: [{ path: ['kind'], change: 'changed', before: 'container', after: 'component' }] },
 			{ kind: 'element', id: 'plain', change: 'removed', before: { kind: 'component' } }
 		);
-		const r = checkApproved(diff, { project, deviations: new Map([['element:t', 'needed']]) });
+		const r = checkApproved(diff, { categories, project, deviations: new Map([['element:t', 'needed']]) });
 		assert.equal(r.verdict, 're-approval');
 		assert.deepEqual(classes(r), [
 			'element:t re-approval: data element added',
@@ -397,7 +443,7 @@ describe('approved versus shipped', () => {
 
 	it('enforcement moved down needs re-approval; moved up is a model change', () => {
 		const rel = (id, before, after) => ({ kind: 'relationship', id, change: 'changed', fields: [{ path: ['enforcement'], change: 'changed', before, after }] });
-		const r = checkApproved(diffOf(rel('down', 'platform', 'our-code'), rel('up', 'nothing', 'platform'), rel('derived', 'platform-correlated', 'derived'), rel('fromDerived', 'derived', 'our-code'), rel('odd', 'platform', 'custom')), { project });
+		const r = checkApproved(diffOf(rel('down', 'platform', 'our-code'), rel('up', 'nothing', 'platform'), rel('derived', 'platform-correlated', 'derived'), rel('fromDerived', 'derived', 'our-code'), rel('odd', 'platform', 'custom')), { categories, project });
 		assert.deepEqual(classes(r), [
 			'relationship:down re-approval: enforcement on data relationship moved down: `platform` → `our-code`',
 			'relationship:up model-change',
@@ -410,8 +456,8 @@ describe('approved versus shipped', () => {
 	it("maps the process's enforcement levels to the project's ids", () => {
 		const mapped = { ...project, enforcement: { platform: 'db', 'platform-correlated': 'db-correlated' } };
 		const diff = diffOf({ kind: 'relationship', id: 'w', change: 'changed', fields: [{ path: ['enforcement'], change: 'changed', before: 'db', after: 'db-correlated' }] });
-		assert.deepEqual(classes(checkApproved(diff, { project: mapped })), ['relationship:w re-approval: enforcement on data relationship moved down: `db` → `db-correlated`']);
-		assert.match(classes(checkApproved(diff, { project }))[0], /cannot rank/);
+		assert.deepEqual(classes(checkApproved(diff, { categories, project: mapped })), ['relationship:w re-approval: enforcement on data relationship moved down: `db` → `db-correlated`']);
+		assert.match(classes(checkApproved(diff, { categories, project }))[0], /cannot rank/);
 	});
 
 	it('a new data relationship or tie enforced by our-code or nothing needs re-approval', () => {
@@ -435,7 +481,7 @@ describe('approved versus shipped', () => {
 				]
 			}
 		);
-		assert.deepEqual(classes(checkApproved(diff, { project })), [
+		assert.deepEqual(classes(checkApproved(diff, { categories, project })), [
 			'relationship:weak re-approval: new data relationship enforced by `nothing`',
 			'relationship:strong model-change',
 			'relationship:call model-change',
@@ -457,49 +503,62 @@ describe('approved versus shipped', () => {
 			{ kind: 'contract', id: 'new', change: 'added', after: {} },
 			{ kind: 'contract', id: 'marked', change: 'changed', fields: [{ path: ['change'], change: 'changed', before: 'new', after: 'removed' }] }
 		);
-		assert.deepEqual(classes(checkApproved(diff, { project })), ['contract:gone re-approval: contract removed', 'contract:a re-approval: access clause changed', 'contract:b re-approval: clause `limits` removed', 'contract:c model-change', 'contract:new model-change', 'contract:marked re-approval: contract removed (change state became removed)']);
+		assert.deepEqual(classes(checkApproved(diff, { categories, project })), ['contract:gone re-approval: contract removed', 'contract:a re-approval: access clause changed', 'contract:b re-approval: clause `limits` removed', 'contract:c model-change', 'contract:new model-change', 'contract:marked re-approval: contract removed (change state became removed)']);
 	});
 
 	it('drops a proposed pattern that the profile now holds, and keeps one it does not', () => {
 		const diff = diffOf({ kind: 'pattern', id: 'api/batch', change: 'removed' }, { kind: 'pattern', id: 'api/other', change: 'removed' });
-		assert.deepEqual(classes(checkApproved(diff, { project, profilePatterns: new Set(['api/batch']) })), ['pattern:api/other model-change']);
+		assert.deepEqual(classes(checkApproved(diff, { categories, project, profilePatterns: new Set(['api/batch']) })), ['pattern:api/other model-change']);
 	});
 
 	it('ignores differences that are not structure', () => {
 		const diff = { differences: [{ kind: 'element', id: 'e', change: 'changed', aspects: ['text'], fields: [{ path: ['title'], aspect: 'text', change: 'changed' }] }] };
-		assert.deepEqual(checkApproved(diff, { project }).differences, []);
+		assert.deepEqual(checkApproved(diff, { categories, project }).differences, []);
+	});
+
+	it('a scenario dropped needs re-approval; one added is a model change', () => {
+		const diff = diffOf({ kind: 'scenario', id: 'S1', change: 'removed', before: { id: 'S1', title: 'Save an item' } }, { kind: 'scenario', id: 'S3', change: 'added', after: { id: 'S3', title: 'Undo' } });
+		const r = checkApproved(diff, { categories, project, deviations: new Map([['scenario:S1', 'not needed'], ['scenario:S3', 'asked for in review']]) });
+		assert.equal(r.verdict, 're-approval');
+		assert.deepEqual(classes(r), ['scenario:S1 re-approval: scenario removed', 'scenario:S3 model-change']);
+	});
+
+	it('guards a kind by the category its profile gives it; with no categories nothing is guarded', () => {
+		const diff = diffOf({ kind: 'element', id: 't', change: 'added', after: { kind: 'data' } }, { kind: 'element', id: 'x', change: 'added', after: { kind: 'external' } });
+		assert.deepEqual(classes(checkApproved(diff, { categories: kindCategories({ elementKinds: { data: { category: 'product' }, external: { label: 'External' }, component: { category: 'code' } } }), project })), ['element:t re-approval: product element added', 'element:x model-change']);
+		assert.deepEqual(classes(checkApproved(diff, { project })), ['element:t model-change', 'element:x model-change']);
 	});
 
 	it('judges "became removed" by the style of the change state, not its name', () => {
 		const styles = { ...changeStyles(), gone: 'removed', removed: 'reused' };
 		const to = (after) => [{ path: ['change'], change: 'changed', before: 'new', after }];
 		const diff = diffOf({ kind: 'contract', id: 'a', change: 'changed', fields: to('gone') }, { kind: 'contract', id: 'b', change: 'changed', fields: to('removed') }, { kind: 'element', id: 't', change: 'changed', after: { kind: 'data' }, fields: to('gone') });
-		assert.deepEqual(classes(checkApproved(diff, { project, styles })), ['contract:a re-approval: contract removed (change state became removed)', 'contract:b model-change', 'element:t re-approval: data element removed (change state became removed)']);
+		assert.deepEqual(classes(checkApproved(diff, { categories, project, styles })), ['contract:a re-approval: contract removed (change state became removed)', 'contract:b model-change', 'element:t re-approval: data element removed (change state became removed)']);
 	});
 
 	it('guards the profile wherever it sits and however the path file spells it', () => {
 		const own = { ...project, profile: './conf/profile.c4ish.json' };
-		const r = checkApproved(diffOf(), { project: own, changedPaths: ['conf/profile.c4ish.json', 'conf/other.json'] });
+		const r = checkApproved(diffOf(), { categories, project: own, changedPaths: ['conf/profile.c4ish.json', 'conf/other.json'] });
 		assert.deepEqual(r.paths, [{ path: 'conf/profile.c4ish.json', kind: 'profile' }]);
-		assert.equal(checkApproved(diffOf(), { project: own, changedPaths: ['conf/profile.c4ish.json'], outsideModel: ['conf/profile.c4ish.json'] }).verdict, 'pass');
-		assert.equal(checkApproved(diffOf(), { project: { ...project, profile: undefined }, changedPaths: ['conf/profile.c4ish.json'] }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { categories, project: own, changedPaths: ['conf/profile.c4ish.json'], outsideModel: ['conf/profile.c4ish.json'] }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { categories, project: { ...project, profile: undefined }, changedPaths: ['conf/profile.c4ish.json'] }).verdict, 'pass');
 	});
 
 	it('a catalog, rule or profile file the approved plan does not list needs re-approval', () => {
 		const changedPaths = ['src/a.ts', 'docs/patterns/api.md', 'docs/patterns/web.md', 'rules/guard.yml', 'docs/patterns/profile.c4ish.json'];
-		const r = checkApproved(diffOf(), { project, changedPaths, outsideModel: ['docs/patterns/api.md', 'docs/patterns/profile.c4ish.json'] });
+		const r = checkApproved(diffOf(), { categories, project, changedPaths, outsideModel: ['docs/patterns/api.md', 'docs/patterns/profile.c4ish.json'] });
 		assert.equal(r.verdict, 're-approval');
 		assert.deepEqual(r.paths, [
 			{ path: 'docs/patterns/web.md', kind: 'catalog' },
 			{ path: 'rules/guard.yml', kind: 'rule' }
 		]);
-		assert.equal(checkApproved(diffOf(), { project, changedPaths, outsideModel: ['docs/patterns/**', 'rules/guard.yml'] }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { categories, project, changedPaths, outsideModel: ['docs/patterns/**', 'rules/guard.yml'] }).verdict, 'pass');
 	});
 
 	it('the path file itself is guarded the same way', () => {
-		const r = checkApproved(diffOf(), { project, projectPath: 'project.json', changedPaths: ['project.json'] });
+		const r = checkApproved(diffOf(), { categories, project, projectPath: 'project.json', changedPaths: ['project.json'] });
 		assert.deepEqual(r.paths, [{ path: 'project.json', kind: 'path' }]);
-		assert.equal(checkApproved(diffOf(), { project, projectPath: 'project.json', changedPaths: ['project.json'], outsideModel: ['project.json'] }).verdict, 'pass');
+		assert.equal(checkApproved(diffOf(), { categories, project, projectPath: 'project.json', changedPaths: ['project.json'], outsideModel: ['project.json'] }).verdict, 'pass');
 	});
 
 	it('takes data relationship kinds from the profile', () => {
@@ -510,9 +569,11 @@ describe('approved versus shipped', () => {
 
 /* ------------------------------------------------------------------------- */
 
-const hasTool = spawnSync(process.env.C4ISH ?? 'c4ish', ['--version'], { encoding: 'utf8' }).status === 0;
+// the tool must be there, and new enough to print the profile it reads
+const probe = spawnSync(process.env.C4ISH ?? 'c4ish', ['profile'], { encoding: 'utf8' });
+const hasTool = probe.status === 0 && probe.stdout.trimStart().startsWith('{');
 
-describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on PATH' }, () => {
+describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on PATH, or has no `profile` command' }, () => {
 	const run = (dir, ...args) => spawnSync(process.execPath, [SCRIPT, ...args], { cwd: dir, encoding: 'utf8' });
 	const git = (dir, ...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8' }).trim();
 	const put = (dir, path, text) => {
@@ -548,7 +609,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 		};
 		put(dir, 'plans/p/model.c4ish.json', JSON.stringify(model, null, '\t'));
 		put(dir, 'plans/p/plan.md', '# Plan\n\n## Changes outside the model\n- `migrations/001.sql`\n');
-		put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json'], rules: ['rules'], catalog: ['docs/patterns'], kinds: { data: ['data'], container: ['container'] } }));
+		put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json'], rules: ['rules'], catalog: ['docs/patterns'] }));
 		put(dir, 'rules/guard.yml', 'id: guard\nseverity: error\n');
 		git(dir, 'add', '-A');
 		git(dir, 'commit', '-q', '-m', 'approved plan');
@@ -644,8 +705,8 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 	it('reads the path file as approved: loosening it in the build changes nothing, and is itself a stop', () => {
 		const { dir, model, args } = repository();
 		try {
-			// the build drops `data` from the guarded kinds, adds a table, and records it
-			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'], kinds: { container: ['container'] } }));
+			// the build leaves everything out and names no rule or catalog path, adds a table, and records it
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'] }));
 			rewrite(dir, model, (m) => void m.elements.push({ id: 'extra', kind: 'data', title: 'extra', change: 'new', pattern: 'data/table' }));
 			put(dir, 'plans/p/review.md', '## Deviations\n- `element:extra` needed a table\n');
 			const r = run(dir, 'approved', ...args, '--json');
@@ -662,7 +723,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 		}
 	});
 
-	it('needs the path file and its kinds for the approved check', () => {
+	it('needs the path file for the approved check, and refuses one that still lists kinds', () => {
 		const { dir } = repository();
 		try {
 			const none = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json');
@@ -670,13 +731,16 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			assert.match(none.stderr, /needs the project path file/);
 			git(dir, 'add', '-A');
 			git(dir, 'commit', '-q', '-m', 'build');
-			put(dir, 'other.json', JSON.stringify({ leftOut: [] }));
+			// which kinds are data, containers and product elements is the profile's to say
+			put(dir, 'other.json', JSON.stringify({ leftOut: [], kinds: { container: ['container'] } }));
 			git(dir, 'add', 'other.json');
-			git(dir, 'commit', '-q', '-m', 'a path file with no kinds');
+			git(dir, 'commit', '-q', '-m', 'a path file that lists kinds');
 			planWith(dir);
-			const noKinds = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'other.json');
-			assert.equal(noKinds.status, 2);
-			assert.match(noKinds.stderr, /needs the project path file/);
+			for (const command of ['approved', 'code']) {
+				const kinds = run(dir, command, '--model', 'plans/p/model.c4ish.json', '--project', 'other.json');
+				assert.equal(kinds.status, 2, kinds.stdout);
+				assert.match(kinds.stderr, /the path file has `kinds`, which this check no longer reads: give each element kind a `category` in the profile/);
+			}
 			const missing = run(dir, 'approved', '--model', 'plans/p/model.c4ish.json', '--project', 'nope.json');
 			assert.equal(missing.status, 2);
 			assert.match(missing.stderr, /no such path file/);
@@ -793,7 +857,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 		const { dir, args } = repository();
 		try {
 			const first = git(dir, 'rev-parse', 'HEAD');
-			put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json', 'src/glue.ts'], rules: ['rules'], catalog: ['docs/patterns'], kinds: { data: ['data'], container: ['container'] } }));
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', '**/*.test.ts', 'project.json', 'src/glue.ts'], rules: ['rules'], catalog: ['docs/patterns'] }));
 			const second = commit(dir, 're-approved: the glue is left out');
 			put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${first}\nRe-approved: 2026-01-05 ${second}\n\n## Changes outside the model\n- \`migrations/001.sql\`\n`);
 			const r = run(dir, 'code', ...args, '--json');
@@ -813,9 +877,9 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 	it('a path file or profile that was not in the approval commit is an error: the working copy is never trusted', () => {
 		const { dir, model } = repository();
 		try {
-			// a path file git does not track, with `data` no longer guarded
+			// a path file git does not track, which leaves everything out
 			put(dir, '.gitignore', 'local.json\n');
-			put(dir, 'local.json', JSON.stringify({ kinds: { container: ['container'] } }));
+			put(dir, 'local.json', JSON.stringify({ leftOut: ['**'] }));
 			rewrite(dir, model, (m) => void m.elements.push({ id: 'extra', kind: 'data', title: 'extra', change: 'new', pattern: 'data/table' }));
 			put(dir, 'plans/p/review.md', '## Deviations\n- `element:extra` needed a table\n');
 			for (const command of ['approved', 'code']) {
@@ -824,7 +888,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 				assert.match(r.stderr, /cannot read local\.json at [0-9a-f]+, the commit the plan was approved at; the path file must be committed before approval/);
 			}
 			// an approved path file that names a profile the approval commit does not have
-			put(dir, 'project.json', JSON.stringify({ profile: 'conf/profile.c4ish.json', kinds: { data: ['data'] } }));
+			put(dir, 'project.json', JSON.stringify({ profile: 'conf/profile.c4ish.json' }));
 			commit(dir, 'path file names a profile');
 			planWith(dir);
 			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ profileVersion: 0, id: 't', title: 'T', extends: 'default' }));
@@ -839,22 +903,30 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 	it('classifies by the profile as approved, and a changed profile stops, however the path file spells it', () => {
 		const { dir, model, args } = repository();
 		try {
-			const profile = { profileVersion: 0, id: 't', title: 'T', extends: 'default' };
-			const settings = { profile: './conf/profile.c4ish.json', kinds: { data: ['data'], container: ['container'] } };
+			const profile = { profileVersion: 0, id: 't', title: 'T', extends: 'default', elementKinds: { ledger: { label: 'Ledger', category: 'data' } } };
+			const loosened = { ...profile, elementKinds: { ledger: { label: 'Ledger' } }, relationshipKinds: { writes: { label: 'writes', category: 'runtime' } } };
+			const settings = { profile: './conf/profile.c4ish.json' };
 			put(dir, 'conf/profile.c4ish.json', JSON.stringify(profile));
 			put(dir, 'project.json', JSON.stringify(settings));
 			commit(dir, 'approved with a profile');
 			planWith(dir);
 			assert.equal(run(dir, 'approved', ...args).status, 0);
 
-			// the build makes `writes` a runtime kind, adds a write nothing enforces, and records it
-			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ ...profile, relationshipKinds: { writes: { label: 'writes', category: 'runtime' } } }));
-			rewrite(dir, model, (m) => void m.relationships.push({ id: 'save', from: 'page', to: 'items', kind: 'writes', change: 'new' }));
-			put(dir, 'plans/p/review.md', '## Deviations\n- `relationship:save` the page now saves\n');
+			// the build makes `writes` a runtime kind and `ledger` a kind of no category, adds a write
+			// nothing enforces and a ledger, and records both
+			const build = (m) => {
+				m.relationships.push({ id: 'save', from: 'page', to: 'items', kind: 'writes', change: 'new' });
+				m.elements.push({ id: 'book', kind: 'ledger', title: 'book', change: 'reused' });
+			};
+			const reasons = (r, key) => JSON.parse(r.stdout).approved.differences.find((d) => d.key === key).reasons;
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify(loosened));
+			rewrite(dir, model, build);
+			put(dir, 'plans/p/review.md', '## Deviations\n- `relationship:save` the page now saves\n- `element:book` kept for the audit\n');
 			const r = run(dir, 'approved', ...args, '--json');
 			assert.equal(r.status, 1, r.stdout + r.stderr);
 			assert.deepEqual(stops(r), ['conf/profile.c4ish.json (profile)']);
-			assert.deepEqual(JSON.parse(r.stdout).approved.differences.find((d) => d.key === 'relationship:save').reasons, ['new data relationship enforced by `nothing stated`']);
+			assert.deepEqual(reasons(r, 'relationship:save'), ['new data relationship enforced by `nothing stated`']);
+			assert.deepEqual(reasons(r, 'element:book'), ['data element added']);
 
 			// even when the approved plan lets the build change the profile, the approved profile classifies
 			planWith(dir, 'conf/profile.c4ish.json');
@@ -862,12 +934,77 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			put(dir, 'plans/p/model.c4ish.json', JSON.stringify(model, null, '\t'));
 			commit(dir, 'approved: the plan may change the profile');
 			planWith(dir, 'conf/profile.c4ish.json');
-			put(dir, 'conf/profile.c4ish.json', JSON.stringify({ ...profile, relationshipKinds: { writes: { label: 'writes', category: 'runtime' } } }));
-			rewrite(dir, model, (m) => void m.relationships.push({ id: 'save', from: 'page', to: 'items', kind: 'writes', change: 'new' }));
+			put(dir, 'conf/profile.c4ish.json', JSON.stringify(loosened));
+			rewrite(dir, model, build);
 			const listed = run(dir, 'approved', ...args, '--json');
 			assert.equal(listed.status, 1, listed.stdout + listed.stderr);
 			assert.deepEqual(stops(listed), []);
-			assert.deepEqual(JSON.parse(listed.stdout).approved.differences.find((d) => d.key === 'relationship:save').reasons, ['new data relationship enforced by `nothing stated`']);
+			assert.deepEqual(reasons(listed, 'relationship:save'), ['new data relationship enforced by `nothing stated`']);
+			assert.deepEqual(reasons(listed, 'element:book'), ['data element added']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('asks the tool what each kind is: code that states no pattern fails, and `pattern: null` is not bespoke', () => {
+		const { dir, model, args } = repository();
+		try {
+			put(dir, 'src/quiet.ts', 'export function quiet() {\n\treturn 1;\n}\n');
+			put(dir, 'src/loose.ts', '// @pattern bespoke: a one-off\nexport function loose() {\n\treturn 1;\n}\n');
+			const next = rewrite(dir, model, (m) => {
+				m.elements.push({ id: 'quiet', kind: 'component', parent: 'api', title: 'Quiet', change: 'new', code: ['src/quiet.ts#quiet'] });
+				m.elements.push({ id: 'loose', kind: 'component', parent: 'api', title: 'Loose', change: 'new', pattern: null, code: ['src/loose.ts#loose'] });
+				m.elements.push({ id: 'ghost', kind: 'component', parent: 'api', title: 'Ghost', change: 'new' });
+				m.elements.push({ id: 'ext', kind: 'external', title: 'Mail', change: 'new' });
+			});
+			const failures = (r) =>
+				JSON.parse(r.stdout)
+					.code.failures.map((f) => `${f.where}: ${f.message}`)
+					.filter((f) => /quiet|loose|ghost|ext/.test(f));
+			assert.deepEqual(failures(run(dir, 'code', ...args, '--json')), [
+				'element quiet: is new code, but states neither a pattern nor `bespoke` with a reason',
+				'element loose: is new code, but says `pattern: null`: name a pattern, or say `bespoke` with a reason',
+				'element loose: `src/loose.ts#loose` has the tag `@pattern bespoke: a one-off` but the model gives its element no pattern',
+				'element ghost: is new code, but states neither a pattern nor `bespoke` with a reason',
+				'element ghost: is new and is code, but no code reference'
+			]);
+			// said properly: bespoke with a reason, tagged as such
+			put(dir, 'src/quiet.ts', '// @pattern bespoke: the only caller\nexport function quiet() {\n\treturn 1;\n}\n');
+			rewrite(dir, next, (m) => {
+				const by = (id) => m.elements.find((e) => e.id === id);
+				by('quiet').bespoke = 'The only caller.';
+				delete by('loose').pattern;
+				by('loose').bespoke = 'A one-off.';
+				m.elements = m.elements.filter((e) => e.id !== 'ghost');
+			});
+			assert.deepEqual(failures(run(dir, 'code', ...args, '--json')), []);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it('a scenario the build drops stops; one it adds is a model change to record', () => {
+		const { dir, model, args } = repository();
+		try {
+			const scenarios = [
+				{ id: 'S1', title: 'Read a page' },
+				{ id: 'S2', title: 'Read the next page' }
+			];
+			rewrite(dir, model, (m) => void (m.scenarios = scenarios));
+			commit(dir, 'approved with scenarios');
+			planWith(dir);
+			assert.equal(run(dir, 'approved', ...args).status, 0);
+			rewrite(dir, model, (m) => void (m.scenarios = [{ id: 'S2', title: 'Read the page after' }, { id: 'S3', title: 'Read backwards' }]));
+			put(dir, 'plans/p/review.md', '## Deviations\n- `scenario:S1` not needed after all\n- `scenario:S3` asked for in review\n');
+			const r = run(dir, 'approved', ...args, '--json');
+			assert.equal(r.status, 1, r.stdout + r.stderr);
+			const approved = JSON.parse(r.stdout).approved;
+			assert.equal(approved.verdict, 're-approval');
+			// a reworded title is text, not structure
+			assert.deepEqual(
+				approved.differences.map((d) => `${d.key} ${d.class}${d.reasons ? `: ${d.reasons}` : ''}`).sort(),
+				['scenario:S1 re-approval: scenario removed', 'scenario:S3 model-change']
+			);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
@@ -879,7 +1016,7 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			const approved = git(dir, 'rev-parse', 'HEAD');
 			git(dir, 'stash', '-q', '-u');
 			git(dir, 'checkout', '-q', '-b', 'elsewhere');
-			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'], kinds: {} }));
+			put(dir, 'project.json', JSON.stringify({ leftOut: ['**'] }));
 			const elsewhere = commit(dir, 'a loose path file on another branch');
 			git(dir, 'checkout', '-q', '-');
 			git(dir, 'stash', 'pop', '-q');

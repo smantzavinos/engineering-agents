@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Verify tools/model-check.mjs: the model-to-code and approved-versus-shipped checks.
-# The cases that run the diagram tool are skipped when `c4ish` is not on PATH.
+# The cases that run the diagram tool are skipped when `c4ish` is not on PATH, or is a version
+# without the `profile` command.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,8 +14,8 @@ REPO_ROOT="$(repo_root)"
 
 if output="$(node --test "$REPO_ROOT/tools/model-check.test.mjs" 2>&1)"; then
   printf '  PASS: model-check tests (%s)\n' "$(printf '%s\n' "$output" | grep -E '^# pass ' | tr -d '#' | xargs)"
-  if printf '%s\n' "$output" | grep -Eq '^# skipped [1-9]'; then
-    printf '  NOTE: cases against a real repository were skipped (c4ish is not on PATH)\n'
+  if printf '%s\n' "$output" | grep -Eq '^# skipped [1-9]|# SKIP '; then
+    printf '  NOTE: cases against a real repository were skipped (c4ish is not on PATH, or has no `profile` command)\n'
   fi
 else
   printf '%s\n' "$output" | grep -E '^\s*not ok|^# (pass|fail)' >&2 || true

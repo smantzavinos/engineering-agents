@@ -8,8 +8,9 @@
 //   node tools/model-check.mjs all      --model <model.c4ish.json> [options]
 //
 //   code      Model-to-code. Each element's change state against what happened to its code
-//             references since the base commit; pattern tags against the model; tags on code no
-//             element references; changed lines no element owns.
+//             references since the base commit; that each element the build creates or changes
+//             in code states a pattern or is bespoke, and names its code; pattern tags against
+//             the model; tags on code no element references; changed lines no element owns.
 //   approved  Approved versus shipped. Every structural difference from the model at the latest
 //             approval commit is a re-approval difference (stop) or a model change (must be
 //             recorded as a deviation in the ledger).
@@ -18,16 +19,15 @@
 //   --plan <plan.md>       default: plan.md beside the model. Read for `Approved:` and
 //                          `Re-approved:` lines and the "Changes outside the model" section.
 //   --ledger <review.md>   default: review.md beside the plan. Read for the "Deviations" section.
-//   --project <file.json>  the project's path file (see below). `approved` needs it, for `kinds`.
+//   --project <file.json>  the project's path file (see below). `approved` needs it.
 //   --base <commit>        `code` only: the code baseline. Default: the first `Approved:` commit.
 //                          It may be that commit or an earlier one, never a later one.
 //   --root <dir>           repository root. Default: the git repository holding the model.
 //   --json                 print the result as JSON.
 //
 // What the check is judged by. A plan with an approval line is judged by what was approved: the
-// path file, the profile's change states and data relationship kinds, and the plan's "Changes
-// outside the model" list are all read from git at the latest approval commit, never from the
-// working copy. Each must be in that commit; there is no fallback. Every approval commit must be
+// path file, the profile and the plan's "Changes outside the model" list are all read from git at
+// the latest approval commit, never from the working copy. Each must be in that commit; there is no fallback. Every approval commit must be
 // an ancestor of HEAD, in the order the plan lists them. `approved` compares with the latest one.
 // A change to the path file or the profile stops like a catalog change.
 //
@@ -47,12 +47,20 @@
 //     "rules":   ["rules/patterns/**"],         conformance rules
 //     "leftOut": ["**/*.test.ts", "docs/**"],   paths the model-to-code check leaves out
 //     "noTag":   ["**/*.json"],                 file types that cannot carry a comment
-//     "kinds":   { "data": ["data"], "container": ["container"], "product": ["product"] },
 //     "enforcement": { "platform": "db", "platform-correlated": "db-correlated",
 //                      "our-code": "our-code", "nothing": "nothing", "derived": "derived" }
 //   }
-//   `kinds` says which element kinds are data, containers and product elements. `enforcement`
-//   maps the process's enforcement levels to the profile's ids (default: the same names).
+//   `enforcement` maps the process's enforcement levels to the profile's ids (default: the same
+//   names).
+//
+// The profile. The tool prints the profile as it reads it (`c4ish profile`), and the check takes
+// three things from that: the style of each change state, which relationship kinds carry data, and
+// the category of each element kind (container, code, data or product; none for a kind that is
+// neither, such as an external system). With no profile named, the tool's default profile applies.
+//
+// Pattern states. An element of a code or data kind that the build creates or changes must name a
+// pattern or say `bespoke` with a reason, on itself or on each of its parts, and must have a code
+// reference. `pattern: null` says no pattern applies; it is not a state for such an element.
 //
 // A glob with no wildcard also matches everything under it (`docs/patterns` = `docs/patterns/**`).
 // A leading `./` is dropped.
@@ -73,7 +81,8 @@
 // Text inside fenced code blocks is ignored in both files.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -127,6 +136,19 @@ export function dataRelationshipKinds(profile) {
 	}
 	return out;
 }
+
+/** Element kind → category (`container`, `code`, `data`, `product`), from a profile as the tool resolves it. */
+export function kindCategories(profile) {
+	const out = {};
+	for (const [id, def] of Object.entries(profile?.elementKinds ?? {})) if (def?.category) out[id] = def.category;
+	return out;
+}
+
+/** What re-approval calls an element of a guarded category. */
+const GUARDED = { data: 'data element', container: 'container', product: 'product element' };
+
+/** Whether an element or a part says what it is: a pattern, or bespoke. `pattern: null` says neither. */
+const statesPattern = (x) => typeof x.pattern === 'string' || x.bespoke !== undefined;
 
 /* ------------------------------------------------------------------------- */
 /* plan.md and the ledger                                                      */
@@ -261,15 +283,18 @@ export function firstComment(text) {
 
 /**
  * What the model says the tag on an owner's code must be. `none`: the owner has no pattern state
- * (a container, a product concept). `pattern: null` in the model stands for bespoke.
+ * (a container, a product concept, or `pattern: null`: no pattern applies). A part that states its
+ * own pattern, or is bespoke, or says `pattern: null`, is judged by that; any other part carries
+ * its element's tag.
  */
 export function expectedTag(model, owner) {
 	const element = model.elements.find((e) => e.id === owner.element);
 	if (!element) return { none: true };
 	const part = owner.part === undefined ? undefined : (element.parts ?? []).find((p) => p.title === owner.part || p.id === owner.part);
-	if (part && part.pattern !== undefined) return part.pattern === null ? { bespoke: true, partial: false, also: [] } : { pattern: part.pattern, bespoke: false, partial: false, also: [] };
-	if (element.pattern === undefined) return { none: true };
-	if (element.pattern === null) return { bespoke: true, partial: false, also: element.patterns ?? [] };
+	if (part?.bespoke !== undefined) return { bespoke: true, partial: false, also: [] };
+	if (part && part.pattern !== undefined) return part.pattern === null ? { none: true } : { pattern: part.pattern, bespoke: false, partial: part.patternFit === 'partial', also: [] };
+	if (element.bespoke !== undefined) return { bespoke: true, partial: false, also: element.patterns ?? [] };
+	if (typeof element.pattern !== 'string') return { none: true };
 	return { pattern: element.pattern, bespoke: false, partial: element.patternFit === 'partial', also: (element.patterns ?? []).filter((p) => p !== element.pattern) };
 }
 
@@ -315,10 +340,11 @@ function tagComments(report, read) {
 /**
  * @param model   the model (parsed JSON)
  * @param report  `c4ish code <model> --base <commit> --json`
- * @param options { styles, project, outsideModel, read(path) → text | undefined }
+ * @param options { styles, categories, project, outsideModel, read(path) → text | undefined }
+ *                `categories` is `kindCategories(profile)`; without it no element is known to live in code.
  */
 export function checkCode(model, report, options = {}) {
-	const { styles = DEFAULT_STYLES, project = {}, outsideModel = [], read = () => undefined } = options;
+	const { styles = DEFAULT_STYLES, categories = {}, project = {}, outsideModel = [], read = () => undefined } = options;
 	const failures = [];
 	const fail = (kind, where, message) => failures.push({ kind, where, message });
 	const noTag = project.noTag ?? ['**/*.json'];
@@ -334,8 +360,17 @@ export function checkCode(model, report, options = {}) {
 		const where = `element ${e.id}`;
 		const owned = []; // one entry per (reference, owner in this element)
 		for (const r of report.references) for (const o of r.owners) if (o.element === e.id) owned.push({ r, o, style: o.part !== undefined && o.change !== undefined ? (styles[o.change] ?? 'reused') : style });
+		// an element the build creates or changes in code is in one pattern state, and names its code
+		const category = categories[e.kind];
+		const inCode = category === 'code' || category === 'data';
+		const stated = statesPattern(e) || ((e.parts ?? []).length > 0 && e.parts.every(statesPattern));
+		const built = style === 'new' || style === 'modified';
+		if (built && inCode && !stated) {
+			const none = e.pattern === null || (e.parts ?? []).some((p) => p.pattern === null);
+			fail('element', where, `is ${style} ${category}, but ${none ? 'says `pattern: null`: name a pattern, or say `bespoke` with a reason' : 'states neither a pattern nor `bespoke` with a reason'}${(e.parts ?? []).length ? ' (on itself or on each of its parts)' : ''}`);
+		}
 		if (!owned.length) {
-			if (e.pattern !== undefined && (style === 'new' || style === 'modified')) fail('element', where, `is ${style} and has a pattern, but no code reference`);
+			if (built && (stated || inCode)) fail('element', where, `is ${style} and ${typeof e.pattern === 'string' ? 'has a pattern' : e.bespoke !== undefined ? 'is bespoke' : stated ? 'has parts with patterns' : `is ${category}`}, but no code reference`);
 			elements.push({ id: e.id, style, references: 0, ok: failures.length === before });
 			continue;
 		}
@@ -434,13 +469,13 @@ function enforcementReasons(project, what, before, after, added) {
 
 /**
  * @param diff     `c4ish diff <model> --base <approval commit> --only structure --json`
- * @param options  { styles, project, projectPath, dataRelationships: Set, profilePatterns: Set, deviations: Map, changedPaths: string[], outsideModel: string[] }
+ * @param options  { styles, categories, project, projectPath, dataRelationships: Set, profilePatterns: Set, deviations: Map, changedPaths: string[], outsideModel: string[] }
+ *                 `categories` is `kindCategories(profile)`; without it no element kind is guarded.
  */
 export function checkApproved(diff, options = {}) {
-	const { styles = DEFAULT_STYLES, project = {}, projectPath, dataRelationships = new Set(DEFAULT_DATA_RELATIONSHIPS), profilePatterns = new Set(), deviations = new Map(), changedPaths = [], outsideModel = [] } = options;
-	const kinds = project.kinds ?? {};
-	const guarded = new Set([...(kinds.data ?? []), ...(kinds.container ?? []), ...(kinds.product ?? [])]);
-	const kindName = (k) => (kinds.data?.includes(k) ? 'data element' : kinds.container?.includes(k) ? 'container' : 'product element');
+	const { styles = DEFAULT_STYLES, categories = {}, project = {}, projectPath, dataRelationships = new Set(DEFAULT_DATA_RELATIONSHIPS), profilePatterns = new Set(), deviations = new Map(), changedPaths = [], outsideModel = [] } = options;
+	const kindName = (k) => GUARDED[categories[k]];
+	const guarded = (k) => kindName(k) !== undefined;
 	const differences = [];
 	for (const d of diff.differences ?? []) {
 		if (!d.aspects?.includes('structure')) continue;
@@ -450,14 +485,14 @@ export function checkApproved(diff, options = {}) {
 		const fields = (d.fields ?? []).filter((f) => f.aspect === 'structure');
 		if (d.kind === 'element') {
 			const kind = (d.after ?? d.before)?.kind;
-			if (d.change !== 'changed' && guarded.has(kind)) reasons.push(`${kindName(kind)} ${d.change}`);
+			if (d.change !== 'changed' && guarded(kind)) reasons.push(`${kindName(kind)} ${d.change}`);
 			for (const f of fields) {
 				if (f.path.length === 1 && f.path[0] === 'kind') {
 					// a kind that turns into, or out of, a guarded kind is one added or removed
-					if (guarded.has(f.after)) reasons.push(`${kindName(f.after)} added (kind was \`${f.before}\`)`);
-					if (guarded.has(f.before)) reasons.push(`${kindName(f.before)} removed (kind is now \`${f.after}\`)`);
+					if (guarded(f.after)) reasons.push(`${kindName(f.after)} added (kind was \`${f.before}\`)`);
+					if (guarded(f.before)) reasons.push(`${kindName(f.before)} removed (kind is now \`${f.after}\`)`);
 				}
-				if (f.path.length === 1 && f.path[0] === 'change' && styles[f.after] === 'removed' && guarded.has(kind)) reasons.push(`${kindName(kind)} removed (change state became removed)`);
+				if (f.path.length === 1 && f.path[0] === 'change' && styles[f.after] === 'removed' && guarded(kind)) reasons.push(`${kindName(kind)} removed (change state became removed)`);
 				if (f.path[0] === 'ties' && f.path.length === 3 && f.path[2] === 'enforcement') reasons.push(...enforcementReasons(project, `tie ${f.path[1]}`, f.before, f.after, false));
 				if (f.path[0] === 'ties' && f.path.length === 2 && f.change === 'added') reasons.push(...enforcementReasons(project, `tie ${f.path[1]}`, undefined, f.after?.enforcement, true));
 			}
@@ -479,6 +514,9 @@ export function checkApproved(diff, options = {}) {
 				if (f.path[1] === 'access') reasons.push(`access clause ${f.change}`);
 				else if (f.change === 'removed') reasons.push(`clause \`${f.path[1]}\` removed`);
 			}
+		} else if (d.kind === 'scenario') {
+			// one that is gone cannot be delivered as approved; whether a kept one still can is judgment
+			if (d.change === 'removed') reasons.push('scenario removed');
 		}
 		const key = `${d.kind}:${d.id}`;
 		differences.push({
@@ -661,13 +699,38 @@ function approvedJson(ctx, path, what) {
 	}
 }
 
+/** The profile as the tool reads it, default merged in. No path: the tool's default profile. */
+function resolvedProfile(path) {
+	let profile;
+	try {
+		profile = tool(path ? ['profile', path] : ['profile']);
+	} catch (e) {
+		if (e instanceof UsageError) throw new UsageError(`${e.message}\n(this check needs a c4ish that has the \`profile\` command)`);
+		throw e;
+	}
+	if (!profile || typeof profile.elementKinds !== 'object') throw new UsageError('`c4ish profile` did not print a profile: this c4ish is too old for this check');
+	return profile;
+}
+
+/** `resolvedProfile` of a profile's text, which is not a file in the working copy. */
+function resolvedProfileText(text) {
+	const dir = mkdtempSync(join(tmpdir(), 'model-check-profile-'));
+	try {
+		writeFileSync(join(dir, 'profile.c4ish.json'), text);
+		return resolvedProfile(join(dir, 'profile.c4ish.json'));
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
 /**
- * What the check is judged by. For an approved plan: the path file, the profile's change states and
- * data relationship kinds, and the plan's "Changes outside the model" list, all as the latest
- * approval commit has them. For a trial: the working copy. The working copy's profile is used only
- * to run the tool and to know which patterns are now catalogued.
+ * What the check is judged by. For an approved plan: the path file, the profile (change states,
+ * data relationship kinds, the category of each element kind) and the plan's "Changes outside the
+ * model" list, all as the latest approval commit has them. For a trial: the working copy. The
+ * working copy's profile is used only to run the tool and to know which patterns are now catalogued.
  */
 function settings(ctx) {
+	if (ctx.settings) return ctx.settings;
 	let project = {};
 	let projectPath;
 	if (ctx.projectFile) {
@@ -675,18 +738,20 @@ function settings(ctx) {
 		project = ctx.approved ? approvedJson(ctx, ctx.projectFile, 'the path file') : readJson(ctx.projectFile);
 	}
 	const profilePath = project.profile ? join(ctx.root, project.profile) : undefined;
+	if (project.kinds) throw new UsageError('the path file has `kinds`, which this check no longer reads: give each element kind a `category` in the profile instead');
 	const profile = profilePath && existsSync(profilePath) ? readJson(profilePath) : undefined;
-	const judged = ctx.approved && profilePath ? approvedJson(ctx, profilePath, 'the profile') : profile;
+	const judged = ctx.approved && profilePath ? resolvedProfileText(approvedText(ctx, profilePath, 'the profile')) : resolvedProfile(profile && profilePath);
 	const outsideModel = ctx.approved ? parsePlan(approvedText(ctx, ctx.plan, 'the plan')).outsideModel : ctx.outsideModel;
-	return {
+	return (ctx.settings = {
 		project,
 		projectPath,
 		outsideModel,
 		styles: changeStyles(judged),
 		dataRelationships: dataRelationshipKinds(judged),
+		categories: kindCategories(judged),
 		profilePatterns: new Set(Array.isArray(profile?.patterns) ? profile.patterns.map((p) => p.id) : Object.keys(profile?.patterns ?? {})),
 		toolArgs: profilePath ? ['--profile', profilePath] : []
-	};
+	});
 }
 
 function runCode(ctx, opts) {
@@ -696,7 +761,7 @@ function runCode(ctx, opts) {
 	if (!given && !base) throw new UsageError('no base commit: pass --base');
 	// a later baseline would hide what the build did
 	if (first && opts.base && !isAncestor(ctx.root, opts.base, first.sha)) throw new UsageError(`--base ${opts.base} is not the first approval commit (${first.commit}) or an earlier one`);
-	const { project, styles, outsideModel, toolArgs } = settings(ctx);
+	const { project, styles, categories, outsideModel, toolArgs } = settings(ctx);
 	const report = given ? readJson(resolve(given)) : tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...toolArgs]);
 	const read = (p) => {
 		try {
@@ -705,14 +770,15 @@ function runCode(ctx, opts) {
 			return undefined;
 		}
 	};
-	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles, project, outsideModel, read }) };
+	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles, categories, project, outsideModel, read }) };
 }
 
 function runApproved(ctx, opts) {
 	const given = opts['diff-report'];
 	if (!ctx.approved && !given) throw new UsageError('a trial of `approved` (--no-approval) has no commit to compare with: pass --diff-report');
-	const { project, projectPath, styles, dataRelationships, profilePatterns, outsideModel, toolArgs } = settings(ctx);
-	if (!project.kinds) throw new UsageError('`approved` needs the project path file (--project) with `kinds`: which element kinds are data, containers and product elements');
+	// without it nothing says where the catalog, the rules and the profile are, so nothing guards them
+	if (!ctx.projectFile) throw new UsageError('`approved` needs the project path file (--project): it names the profile, the catalog and the rules');
+	const { project, projectPath, styles, categories, dataRelationships, profilePatterns, outsideModel, toolArgs } = settings(ctx);
 	const diff = given ? readJson(resolve(given)) : tool(['diff', ctx.model, '--base', ctx.approved.sha, '--only', 'structure', '--json', ...toolArgs]);
 	let changedPaths = [];
 	if (opts['changed-paths']) changedPaths = readText(resolve(opts['changed-paths'])).split(/\r?\n/).filter(Boolean);
@@ -723,7 +789,7 @@ function runApproved(ctx, opts) {
 	}
 	const deviations = existsSync(ctx.ledger) ? parseLedger(readFileSync(ctx.ledger, 'utf8')) : new Map();
 	const { sha: _sha, ...against } = ctx.approved ?? {};
-	return { ...(ctx.approved && { against }), ...checkApproved(diff, { styles, project, projectPath, dataRelationships, profilePatterns, deviations, changedPaths, outsideModel }) };
+	return { ...(ctx.approved && { against }), ...checkApproved(diff, { styles, categories, project, projectPath, dataRelationships, profilePatterns, deviations, changedPaths, outsideModel }) };
 }
 
 function printCode(r) {

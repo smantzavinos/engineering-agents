@@ -240,7 +240,7 @@ When a difference fits this list and the model-change list, this list wins.
 
 **Model changes** include: a component added, split, merged or dropped; a change state that flips (planned as reused, built as modified); a new bespoke or partial-fit element; one catalogued pattern swapped for another; a relationship added, removed or rerouted without lowering enforcement; data fields, indexes or ties changed without lowering enforcement; a clause added, or a clause other than `access` changed; a library added; a reference implementation changed.
 
-**What is mechanical.** The check under `tools/` sorts differences into the re-approval list from two inputs: the comparison in check 3, and the changed paths set against the catalog, rule and profile paths. It needs the profile to say which kinds are data, containers and product elements (§4.10). Two things stay judgment: whether a scenario can still be delivered, and loosening the comparison can't see, such as a limit raised in a clause's text or more changed in a listed catalog file than the plan proposed. The reviewer catches those by raising a model change.
+**What is mechanical.** The check under `tools/` sorts differences into the re-approval list from two inputs: the comparison in check 3, and the changed paths set against the catalog, rule and profile paths. It needs the profile to say which kinds are data, containers and product elements (§4.10). Two things stay judgment: whether a scenario the model keeps can still be delivered, and loosening the comparison can't see, such as a limit raised in a clause's text or more changed in a listed catalog file than the plan proposed. The reviewer catches those by raising a model change.
 
 **The stop.** The implementer commits its work and the changed model, and stops. `run-plan` gives the human a tour of only what differs from the latest approval. The tool writes it from the same comparison: one step per differing item, shown where the current model draws it. An element or connector that is gone is drawn in its place, struck through and marked as dropped. A smaller thing that is gone (a field, a part, a contract clause, a note) is described in words, with the place it was lit. The human can:
 - **approve:** `run-plan` records the re-approval (§4.8) and the same implementer continues;
@@ -298,11 +298,11 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 |---|---|---|
 | A code reference on an element and on a part (`path#Name`) | §4.6 | Built |
 | A report on a model's code references between a base commit and the working tree: whether each resolves at each end and its extent, what happened to it, and for every changed line, at the base and at the head, which references contain it. The tool parses source to do this (tree-sitter) | §4.6 check 2 | Built. The tool's authoring reference lists the languages it parses; any other file takes a whole-file reference |
-| A code reference on a pattern in a profile, for its reference implementation | §4.3 | Not built |
-| A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 | Not built |
-| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Ids built: optional, and a name used twice in one element fails validation. The fit and the bespoke marker are not built |
-| Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Not built |
-| A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Not built |
+| A code reference on a pattern in a profile, for its reference implementation | §4.3 | Built. The same report, run on a profile, says whether each one resolves and what changed in it |
+| A category for each kind of element in a profile: container, code, data or product | §4.6, §4.7 | Built. The tool prints the profile as it reads it, and warns when a new or modified element of a code or data kind states no pattern |
+| Ids on parts and on ties, and a fit and a bespoke marker on parts | §4.6 check 3 | Built. Ids are optional, and a name used twice in one element fails validation |
+| Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Built. A scenario counts as walked when a step of any tour names it |
+| A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Built. It stands in place of a pattern. Coverage counts it when its element or part is new or modified |
 | A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built. Dropped elements and connectors are drawn; dropped fields, parts, contracts and notes are words only |
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
@@ -310,26 +310,27 @@ This repo adds a small check under `tools/` on top of that report. It reads the 
 **The check** is `tools/model-check.mjs`, with `code` (check 2), `approved` (check 3) and `all`. Its header documents the options and file formats. Building it, and two independent reviews of it, settled these:
 
 - **The project's path file** is JSON: `profile`, `catalog`, `rules`, `leftOut` and `noTag` (file types that cannot carry a comment), as paths and globs from the repository root. A path with no wildcard also covers everything under it.
-- **The check is judged by what was approved.** The path file, the profile's change states and data relationship kinds, and the plan's "Changes outside the model" list are read from git at the latest approval commit. The working copy is never used for them and there is no fallback, so the path file and profile must be committed before a plan is approved. A change to the path file or the profile stops like a catalog change. `approved` refuses to run without the path file and its `kinds`.
+- **The check is judged by what was approved.** The path file, the profile and the plan's "Changes outside the model" list are read from git at the latest approval commit. The working copy is never used for them and there is no fallback, so the path file and profile must be committed before a plan is approved. A change to the path file or the profile stops like a catalog change. `approved` refuses to run without the path file.
 - **Approval commits** must be in the history of HEAD, in the order the plan lists them.
 - **A plan with no approval line** runs only as a trial (`--no-approval`), judged by the working copy and marked as a trial in the output. Only a trial may take reports made beforehand. An approved plan always runs git and the tool.
 - **The command is fixed by the process.** The check can't know that `--plan` and `--project` name the right files. `run-plan` and the reviewer run it with the paths the project's agent guide names.
-- **Until the tool has them,** the path file also says which element kinds are data, containers and product elements (`kinds`), and an element with `pattern: null` stands for bespoke. Both move to the profile and the model when the tool gains them.
+- **The profile says what each element kind is.** The check asks the tool for the profile as it reads it, and takes from that each kind's category, the style of each change state and which relationship kinds carry data. It keeps no list of its own, so it can't drift from the tool. A path file that lists `kinds` is refused.
+- **Pattern states are checked.** An element of a code or data kind that the build creates or changes must name a pattern or be bespoke with a reason, on itself or on each of its parts, and must have a code reference. `pattern: null` means no pattern applies; on such an element it fails. Code under a bespoke element or part carries `@pattern bespoke:`.
+- **A scenario dropped from the model** stops. One added is a model change. Whether a scenario the model keeps can still be delivered stays judgment.
 - **Enforcement levels are roles.** A project's profile may name them differently, so the path file maps `platform`, `platform-correlated`, `our-code`, `nothing` and `derived` to its ids. An id the check can't rank makes the change a re-approval.
 - **`derived` ranks between the platform levels and `our-code`,** so a move from `derived` to `our-code` or `nothing` is also down.
 - **An `access` clause added** counts as changed.
 - **Where a tag is required.** On a reference the build added or modified, the tag must be there and agree. On a reference the build left alone, in any element, reused ones included, a tag must agree if there is one. This follows "no mass retrofit" (§4.3) and stops a retag from switching a rule off.
 - **A tag starts its comment line and is one line.** `@pattern` in a sentence or a string is not a tag. A tag wrapped onto a second line loses what is on that line, and then fails to agree. A line with no comment marker counts only inside a block comment that opens at the start of a line.
-- **A part with its own pattern** is checked against the part; a part without one carries its element's tag. A part with its own change state is judged by it.
+- **A part with its own pattern, fit or bespoke marker** is checked against the part; a part without one carries its element's tag. A part with its own change state is judged by it.
 - **A kind change counts as added or removed.** An element whose kind turns into, or out of, data, container or product stops. So does a contract whose change state becomes removed. A change state that becomes removed on any other element is a model change.
 - **A data relationship that states no enforcement** counts as enforced by nothing. Which relationship kinds carry data comes from the profile.
 - **Deviations in the ledger** are a section headed "Deviations", one list item per differing item, starting with its key in backticks: `kind:id`, as the tool names it (`element:collector`). A re-approval difference stops whether or not it is recorded. A record that matches no difference is noted.
 - **"Changes outside the model" in the plan** has the same form: a section with that heading, one list item per path or glob, starting with it in backticks. In both files the heading must match exactly (a number before it or a colon after it is fine) and fenced code is ignored.
 - **Bases.** `code` compares code from the first `Approved:` commit. `--base` may move that to an earlier commit, never a later one. `approved` compares from the latest approval line.
 - **Exit codes:** 0 pass, 1 a failure or a re-approval, 2 an error of any other kind. `--json` carries the verdict.
-- **Known gap.** A new or modified element with no pattern and no code reference passes. Closing it needs the tool's category per element kind.
 
-The pilot waits for the needs marked not built.
+Every need in the table is built. The check needs a version of the tool that has them.
 
 ### 4.11 Review
 - **Plan mode.** As well as today's checks:
