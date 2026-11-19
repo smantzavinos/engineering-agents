@@ -163,6 +163,7 @@ Validation shows that a model is well formed. It cannot show that the model is r
 
 **Code references.** Each new, modified or removed element that lives in code names its definition:
 - `path#Name`, or `path#Outer.Inner` for a member: a named definition in the file, such as a function, a class, a type, or one table in a schema file that holds several;
+- a label, where the code declares no name: an entry of a list by one of its properties, a call statement such as a route or a command by the text it is given, a case of a switch by its value. The tool's authoring reference gives the forms;
 - `path` alone, when the whole file is the definition.
 
 A reference is a name, not a line number, so it survives edits around it. The tool parses the file to find the definition and its extent (§4.10). A name is the full chain of names around the definition, and it must pick one definition. An element that spans several definitions or files lists several references, and a part can carry its own. A reused element may carry one. At plan time the path is enough; the name is exact by handoff.
@@ -196,7 +197,9 @@ Several elements in one file are told apart by their references.
 | One name declared twice | In one place, such as a value and a type, it is one definition. In two different places the reference fails until it is qualified |
 | A whole-file reference beside named ones | It owns the lines of that file that the named references don't |
 | A definition built from a shared block | The tool reports it as changed through that block, within one file. Across files it is not followed: that stays with the reviewer |
-| No name, or a file the tool can't parse | A default export with no name has a fixed name. A file type the tool doesn't parse takes a whole-file reference |
+| No name, or a file the tool can't parse | A default export with no name has a fixed name. Code that declares nothing is named by its label. A file type the tool doesn't parse takes a whole-file reference. In a file that mixes script and markup, names reach the script; the markup takes the whole-file reference |
+| Code that was only laid out again | The tool compares syntax, not text, so a definition the formatter re-wrapped is unchanged. A file it doesn't parse is compared as text |
+| A change that was merged long ago | The tool can compare two commits instead of a commit and the working tree, so later work is not counted. The check itself reads the working tree: a trial on old work checks out the last commit of that work |
 | An element across several definitions or files | Several references on the element, or on its parts |
 
 **3. Approved versus shipped.** The model at the approval commit (§4.8) is compared with the current one, by element id. Ids don't change after approval.
