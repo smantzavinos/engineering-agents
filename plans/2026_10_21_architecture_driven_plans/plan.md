@@ -103,7 +103,7 @@ One smoke run settles both (Q7).
 - **Required fields per entry:**
   - id (`<family>/<name>`), what it is, the shared code it goes through, what it protects against;
   - its shape: a diagram, a short code block with the line for each requirement marked, and a wrong example;
-  - its reference implementation: one golden example (a code reference, §4.6);
+  - its reference implementation: one golden example (a code reference, §4.6). It is a full fit (owner): it meets every requirement and has every test the entry asks for. Code that falls short is fixed, or another example is chosen;
   - numbered requirements (`R1`, `R2`, …), each with what checks it: a test, the reviewer, or a rule with the rule's path. Conventions are listed apart: missing one is a review comment, not a partial fit;
   - the tests a new definition needs;
   - how it appears in a plan model: element kind, relationships, contract clause.
