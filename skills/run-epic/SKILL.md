@@ -14,7 +14,11 @@ An epic is the rare case: distinct workstreams, each with its own plan and its o
 
 **Untested with models.** No epic has run since plans gained a model. The steps marked *(open)* are settled only as far as written here; when one doesn't fit, stop for the human rather than improvise.
 
-**Known gap.** `model-check code` counts code changes from the child's approval commit. Work that other children integrate between that commit and the child's base shows up as unaccounted lines and as changes to reused elements. Until the check takes a later base, the code reviewer sets aside what lies outside the child's own range (base to tip), and says so in the ledger.
+**Known gap.** The check counts changes from the child's approval commit, and can't take a later base. So what other children integrate between that commit and the child's base shows up in the child's results:
+- in check 2, as unaccounted lines and as changes to reused elements;
+- in check 3, as a re-approval stop for every catalog, rule or profile file another child changed. Every child that follows one proposing a pattern gets this.
+
+Until the check takes a later base: tell the implementer, the code reviewer and the close helper that a result tracing to commits outside the child's own range (base to tip) is not theirs to fix. They list each in the ledger and change nothing to explain it. *(open)* If such a result is all that keeps the check from passing, stop for the human with the list.
 
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; every resume returns a new run id, so record it each time.
@@ -49,11 +53,11 @@ One writer per worktree at any time.
    1. Prepare the lane worktree at the work-branch tip (without a pool: the work-branch worktree at its HEAD). That commit is the child's base; record it.
    2. **Scout.** A `helper` in that worktree compares the range from the plan-branch cut commit to the base, excluding the child's own directory, with every section of the plan; the child's `epic.md` entry, Decisions and Follow-ups; the ledgers of the children it depends on; and any checkpoint merge in the range. It appends `## refresh scout` to the child's ledger: per plan section, what changed, with paths; then `relevant` or `nothing relevant` (when unsure, `relevant`). It commits the ledger.
    3. **Nothing relevant:** go to Implement.
-   4. **Relevant:** a fresh plan-author refreshes the plan and the model in that worktree (`plan` → Refresh). One fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the scouted range. Its majors are fixed by the plan-author, and their IDs go to the implementer's code reviewer; other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed. Update the budget from the new estimate. *(open)* A refresh that changes anything on the re-approval list is a re-approval: follow `run-plan` → Re-approval before the build starts.
-3. **Build.** Run `run-plan` → Build loop for this child, in its worktree, with the child's directory as the plan directory and the base recorded at Start. In an epic, also:
+   4. **Relevant:** a fresh plan-author refreshes the plan and the model in that worktree (`plan` → Refresh). One fresh reviewer reviews the refresh (`review` → Plan refresh), given the refresh commit and the scouted range. Its majors are fixed by the plan-author, and their IDs go to the implementer's code reviewer; other findings are notes for the implementer. A second refresh pass, on the fix commits only, runs only if claims or scenarios changed. Update the budget from the new estimate. A refresh records its model changes under Deviations (`plan` → Refresh). *(open)* A refresh that changes anything on the re-approval list is a re-approval: stop for the human with the tour of what differs (`c4ish diff`), send changes to the plan-author, and record `Re-approved:` before the build starts.
+3. **Build.** Run `run-plan` → Build loop for this child, in its worktree, with the child's directory as the plan directory and the base recorded at Start. `run-plan`'s Start and Close don't apply: where the loop says Close, continue at step 4 here. In an epic, also:
    - the code reviewer gets the IDs of any refresh majors fixed in the plan, and any merge in its range is named;
    - the T1 helper's E2E worker count comes from `references/lanes.md` → E2E workers (which also applies without a pool), and a failure under a running checkpoint fix counts as baseline;
-   - a re-approval stops only this child (`run-plan` → Re-approval). Other lanes go on.
+   - a re-approval stops only this child (`run-plan` → Re-approval). The `Re-approved:` line is committed in the child's worktree while its implementer is stopped. Other lanes go on.
    - when the loop approves the child, a `helper` reruns `c4ish validate --strict` and `model-check all` on its final commit; anything new goes back through the loop. *(open)* The child's approved-versus-shipped comparison and as-built tour are made at Epic close, for the PR.
 4. **Close:**
    1. Mark the child done. Move follow-ups into `epic.md` Follow-ups; file tracker items only if the epic pre-authorized it.

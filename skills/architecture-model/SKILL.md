@@ -111,9 +111,9 @@ Details go in words under their own heading, `Details`, beside it. Each fix pass
 
 ## Approval lines
 
-- `Approved: <date> <commit>` in `plan.md` names the commit that holds the approved model. `Re-approved: <date> <commit>` follows a re-approval, with what changed.
+- `Approved: <date> <commit>` in `plan.md` names the commit that holds the approved model: the date as `YYYY-MM-DD`, the commit id in full. `Re-approved: <date> <commit>` follows a re-approval, with what changed.
 - Checks 2 and 3 are judged by the latest of them: the path file, the profile and Changes outside the model are read at that commit, never from the working copy.
-- **Only the session that receives the approval writes one:** `scope` at the gate, `run-plan` at a re-approval stop, and `run-epic` for a child's plan (`run-epic` → Approving a child's plan). A plan-author, implementer, reviewer or helper never writes or edits one.
+- **Only the session that receives the approval writes one:** `scope` at the gate or when reopened, `run-plan` at a re-approval stop, and `run-epic` for a child's plan (`run-epic` → Approving a child's plan). A plan-author, implementer, reviewer or helper never writes or edits one.
 - The check can't tell who wrote a line, so it prints the lines it relied on. The code reviewer confirms each against what the human approved.
 
 ## Commands

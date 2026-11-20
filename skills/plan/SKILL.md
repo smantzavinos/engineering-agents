@@ -41,7 +41,7 @@ Scout widely with subagents (`delegate`), and read the critical paths yourself.
 - **Goal:** what this delivers, the acceptance scenarios it owns, and an estimate in changed lines with the implementer's hours for it. For a single plan there is no epic, so this section also carries what was agreed with the human:
   - scope in and out, and disposal;
   - the full-gate commands, the test map and the smoke set;
-  - budget and autonomy limits.
+  - budget and autonomy limits, and an escalation implementer if one was named.
 - **Context:** links to the code, docs and earlier decisions that matter.
 - **Design:** the key decisions and why, rejected alternatives when the choice isn't obvious, and each departure from the prototype with its reason. Then a link to the model: it is the Changes section.
 - **Changes outside the model** (this exact heading): one list item per path or glob, starting with it in backticks. Migrations, configuration, dependency bumps, build and CI, docs, test infrastructure, and every catalog, rule or profile file a proposal adds or changes. A catalog, rule or profile file changed without being listed here stops the build for re-approval.

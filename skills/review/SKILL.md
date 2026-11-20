@@ -53,7 +53,7 @@ A plan's design is a model built from the project's pattern catalog. `architectu
 
   **The model checks.** The implementer's ledger entry records its `model-check` runs. Treat them as claims, and own the verdict:
   - run `model-check all` yourself with the fixed command (`architecture-model` → Commands), on the commit you review. A different result from the recorded one is a major;
-  - **approval lines:** the check prints the lines it relied on. Confirm each against the human's approval your task gives (date and commit). A line you can't confirm is a blocker;
+  - **approval lines:** the check prints the lines it relied on. Confirm each against the approvals your task gives, as the session that received them recorded them: date, commit, and in an epic who approved. A line you can't confirm is a blocker;
   - check 2: any failure is a major;
   - **unaccounted lines:** read every run of them. Accept it as glue, or raise the missing element as a major. A run in a file the plan didn't list under Changes outside the model must be noted under Details in the ledger; judge whether it belongs in this plan;
   - check 3: a difference with no recorded deviation is a major. A re-approval difference is a stop: record it as a blocker headed `re-approval`, and say so first in your reply;

@@ -26,8 +26,9 @@ A plan uses approved catalog entries. If it needs an entry that is still a draft
    - **one plan** (the default), as large as the work needs. Never divide work to meet a size number: each extra plan adds a fixed cost, and cuts one design into pieces the human has to hold together;
    - an **epic**, only when the work holds genuinely distinct workstreams: parts with their own goal that could each be approved and shipped alone.
 4. Choose disposal: wipe-and-rebuild (default), or clean up the prototype in place when its structure is sound.
-5. Create the work branch (off the default branch, or off the prototype for clean-up in place) and copy `PROTOTYPE.md` into the plan directory. Plans and approvals are committed there.
-6. Run the plan loop, then the approval gate.
+5. Create the work branch (off the default branch, or off the prototype for clean-up in place) and copy `PROTOTYPE.md` into the plan directory. Plans and approvals are committed there. The branch must hold the path file, the catalog and the profile: if it was cut from an older commit, merge the default branch now. Record the branch and its worktree path in `state.json`.
+6. Start a `helper` running the full gates on that branch as the baseline, in the background. It writes nothing tracked. When it replies, write its digest and the commit it ran on into `state.json`.
+7. Run the plan loop, then the approval gate.
 
 ## Plan loop
 There is no `epic.md` for one plan, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
@@ -35,7 +36,8 @@ There is no `epic.md` for one plan, so the agreed scope, scenarios, gates, budge
    - the full-gate and T1 commands with measured durations, the test map and the smoke set;
    - the budget: wall time and cost, from the implementer hours for the estimate × 1.5 plus a fixed cost;
    - the review-load estimate: the changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). It is recorded, not a limit. Above it the code is reviewed in groups (`run-plan`);
-   - autonomy: what the human wants to decide personally, and what the build may do without asking (push the branch, open the PR, file tracker items).
+   - autonomy: what the human wants to decide personally, and what the build may do without asking (push the branch, open the PR, file tracker items);
+   - an escalation implementer, if the human names one.
 2. Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
 3. Changes needed: resume the same plan-author with the ledger path and pass number, then review again with a fresh reviewer. Skip the re-review only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract.
 4. Repeat until the review is clean, or the human explicitly accepts what remains, noted in the ledger. The human owns this gate, so the pass cap does not apply.
@@ -43,7 +45,7 @@ There is no `epic.md` for one plan, so the agreed scope, scenarios, gates, budge
 Relay the human's feedback at any point by resuming the same plan-author.
 
 ## Approval gate
-When the review is clean, generate the tour pages (`c4ish tour`) and give the human:
+When the review is clean, generate the tour pages in a directory outside the repo (`c4ish tour <model> --out <dir>`) and give the human:
 - the command that opens the tour in the viewer, and the path of the static pages;
 - the link to `plan.md`;
 - a short list, read from the model: the scenarios, each proposed pattern, each bespoke element with its reason, and any open question notes.
@@ -53,16 +55,24 @@ Approving the plan approves every proposed pattern and catalog change in it. Say
 The human:
 - **approves:** record it (below);
 - **approves with changes, or asks for changes:** resume the same plan-author, run one more review, and show the tour again;
-- **rejects:** go back to step 2 with what they said.
+- **rejects:** go back to step 2 with what they said. The branch and the baseline stay: don't repeat steps 5 and 6.
 
 **Recording the approval.** You received it, so you write it; no subagent does.
-1. Check that the plan, the model, the path file and the profile are committed, and the tree is clean. That commit holds the approved model.
-2. Add `Approved: <date> <commit>` to `plan.md`, naming that commit. Record the same date and commit in `state.json` under approvals; `run-plan` and the code reviewer check the line against it. Commit both.
-3. Start a helper running the full gates as the baseline, in the background. Record its run id in `state.json`; `run-plan` reads the digest.
-4. Tell the human how to start the build: `run-plan` with the plan directory. Then stop. `scope` doesn't continue into the build.
+1. Check that the tree is clean, and that `plan.md`, the model, the path file and the profile are each in the tree of HEAD (`git cat-file -e HEAD:<path>`). HEAD is then the commit that holds the approved model.
+2. Add the line `Approved: YYYY-MM-DD <full commit id>` to `plan.md`, naming that commit. Record the same date and commit in `state.json` under approvals; `run-plan` and the code reviewer check the line against it. Commit both.
+3. Run the check on the approval alone: `model-check approved` with the fixed `--model` and `--project` (`architecture-model` → Commands). It must exit 0 and print the line you wrote. If it doesn't, fix what it names before you tell the human anything.
+4. The baseline digest is in `state.json`. If the baseline helper is still running, wait for it.
+5. Tell the human how to start the build: `run-plan` with the plan directory. Then stop. `scope` doesn't continue into the build.
+
+## Reopened after a build stop
+`run-plan` sends the human back here when the approved plan can't be built as approved. The branch, the built code, the ledger and `state.json` stay.
+1. Skip steps 1, 4, 5 and 6. Agree with the human what changes (step 2).
+2. Run the plan loop on the existing plan: a fresh plan-author, given the build's ledger and the reason for the stop, changes `plan.md` and the model. Then a fresh plan review.
+3. Show the human what differs from the last approval (`c4ish diff <model> --base <latest approval commit> --out <file outside the repo>`), and the whole tour if they ask.
+4. On approval, record it as above, with the line `Re-approved: YYYY-MM-DD <full commit id>` and one line on what changed. Then tell the human to start `run-plan` again.
 
 ## Epic
-Rare. An epic is distinct plans, not one design in slices. Write `epic.md` with the human, get a fresh review (`review` skill, epic mode), resolve the findings with them, and on approval commit it with `state.json`, start the baseline helper, and tell them to start `run-epic`. Each child's plan and model are written during the run.
+Rare. An epic is distinct plans, not one design in slices. Write `epic.md` with the human, get a fresh review (`review` skill, epic mode), resolve the findings with them, and on approval commit it with `state.json` (the baseline digest in it, as in step 6), and tell them to start `run-epic`. Each child's plan and model are written during the run.
 
 `epic.md` holds:
 - **Goal:** one paragraph. **Scope:** in and out.
