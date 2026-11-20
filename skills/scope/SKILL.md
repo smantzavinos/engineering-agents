@@ -17,6 +17,8 @@ The prototype defines the behavior. Every accepted demo behavior becomes an acce
 ## Before you start
 The project's agent guide must name a path file, and the catalog docs and the profile it lists must exist and be committed. If not, stop: `assess-repo` says what is missing, and `map-patterns` writes the catalog. A plan can't be approved without them.
 
+A plan uses approved catalog entries. If it needs an entry that is still a draft (`proposed` in the profile), get the human's approval of that entry and commit it before the plan's approval.
+
 ## Steps
 1. Read `PROTOTYPE.md` and the prototype diff. Scout the codebase and research external dependencies through subagents (`delegate`).
 2. Propose the scope: what's in, what's out, and the gaps the prototype skipped. Ask only questions whose answers change the plan, and batch them.

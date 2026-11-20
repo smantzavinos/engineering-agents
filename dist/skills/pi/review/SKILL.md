@@ -27,6 +27,7 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   - each pattern fits: the element is what the catalog entry describes and is drawn as the entry's "In a plan model" says. A partial fit names the requirement it misses;
   - each bespoke reason holds. One that an existing pattern, or existing `@pattern bespoke` code doing the same job, answers is a major;
   - each proposed pattern is worth one (the shape will be reused), and its entry, profile entry, golden example and check meet the catalog contract and are listed under Changes outside the model;
+  - no pattern the model uses is a draft entry: one the profile marks `proposed` and this plan doesn't propose. A draft in use is a major until the human approves the entry;
   - every scenario is walked by a tour step that actually shows it;
   - contracts can be implemented as written, every access rule is a clause named `access`, and every data relationship says who enforces it;
   - context is one hop from what changes: no inventory of the system, and nothing the change touches left out;
