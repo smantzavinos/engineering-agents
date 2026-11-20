@@ -1,5 +1,6 @@
 ---
 name: prototype-first
+harnesses: [opencode, hermes]
 description: Build-to-learn entry path — when requirements are discovery-shaped, run a human-paired throwaway prototype session BEFORE the brief, then hand off (pushed branch + PROTOTYPE.md + linked issue) so the pipeline can take the prototype to a clean PR. Use instead of starting at discovery when the fastest way to specify the work is to see it working.
 ---
 

@@ -71,8 +71,9 @@ A skill may restrict itself to specific harnesses:
 harnesses: [opencode]
 ```
 
-Absent ⇒ the skill renders for every harness. OpenCode-only skills include
-`configure-opencode` and the team planning/execution skills.
+Absent ⇒ the skill renders for every harness. The frontier-pipeline skills are
+`[pi]`; the sequential-pipeline skills are `[opencode, hermes]` (ADR 0007);
+`configure-opencode` is `[opencode]`.
 
 ## Harness profiles
 
@@ -103,7 +104,7 @@ Each `harnesses/<id>.json` declares:
 | `codeReview` | `code-reviewer` subagent | `category="ultrabrain"` |
 | `oracle` | `oracle` subagent | `category="ultrabrain"` |
 
-**Pi** keeps the full named-subagent roster (`planner`, `worker`, `ui-worker`, `researcher`, `plan-reviewer`, `code-reviewer`, `oracle`).
+**Pi** keeps the full named-subagent roster (`planner`, `worker`, `ui-worker`, `researcher`, `plan-reviewer`, `code-reviewer`, `oracle`). No skill rendered for Pi uses a delegation macro today: the frontier-pipeline skills name their agents in prose, and the sequential pipeline that used these roles is retired for Pi (ADR 0007). The Pi column is kept for skills that will use macros.
 
 **OpenCode** ships only the three primary mode agents (`discovery`, `design`, `execute`) and delegates every engineering sub-role through the `task` tool:
 - Reasoning-heavy roles (planning, all reviews, oracle) → `category="ultrabrain"`.

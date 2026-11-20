@@ -1,6 +1,6 @@
 # Frontier Pipeline
 
-> **Status: pilot.** This is the process the `scope`, `run-plan` and `run-epic` skills run for prototype-first work. It has not been formally adopted yet (ADR 0007 is pending), so the older process docs ([process.md](process.md), [orchestration.md](orchestration.md), [plan-levels.md](plan-levels.md)) still describe the previous path. **The skills are the source of truth**; this page is an overview with an example. Where they differ, the skills win. The design and its reasons are in `plans/2026_10_21_architecture_driven_plans/plan.md`.
+> **Status: the process on Pi** ([ADR 0007](adr/0007-frontier-pipeline-on-pi.md)), run by the `scope`, `run-plan` and `run-epic` skills. It has not yet built a real feature with a model: the first run is a supervised pilot. OpenCode and Hermes run the sequential pipeline ([process.md](process.md), [orchestration.md](orchestration.md), [plan-levels.md](plan-levels.md)). **The skills are the source of truth**; this page is an overview with an example. Where they differ, the skills win. The design and its reasons are in `plans/2026_10_21_architecture_driven_plans/plan.md`.
 
 ## The shape
 

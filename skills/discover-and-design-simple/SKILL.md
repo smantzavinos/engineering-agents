@@ -1,7 +1,7 @@
 ---
 name: discover-and-design-simple
 description: Fast path from a clear request to brief.md plus approach.md for simple, well-posed tasks. Use when the change is small, the outcome is known, and there is at most one obvious design. For work already talked through in detail that now needs documenting use Discover and Design. For vague, high-blast-radius, or multi-option problems use Discovery then Design instead.
-harnesses: [pi, hermes]
+harnesses: [hermes]
 ---
 
 # Discover and Design Simple (speed run)

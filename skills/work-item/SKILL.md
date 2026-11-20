@@ -1,5 +1,6 @@
 ---
 name: work-item
+harnesses: [opencode, hermes]
 description: "Use when a dispatcher hands you a backlog item. Run one step to its gate, block, or PR."
 ---
 

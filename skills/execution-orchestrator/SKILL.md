@@ -1,5 +1,6 @@
 ---
 name: execution-orchestrator
+harnesses: [opencode, hermes]
 description: Autonomous orchestrator that drives plan creation, review, worklog, implementation, and code review to completion using sub-agent calls. Takes a brief+approach and produces verified implementation. Stops only for plan approval or critical decisions.
 ---
 

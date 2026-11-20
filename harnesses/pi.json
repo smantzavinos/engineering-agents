@@ -4,15 +4,7 @@
   "skillPathPrefix": "~/.pi/agent/skills/",
   "delegationStyle": "pi-subagent",
   "hiddenSkills": [
-    "discovery",
-    "design",
-    "discover-and-design",
-    "discover-and-design-simple",
-    "research",
-    "review-approach",
-    "review-epic",
     "configure-pi",
-    "configure-opencode",
     "create-skills"
   ],
   "roles": {

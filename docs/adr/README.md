@@ -30,3 +30,4 @@ When a decision becomes stale, add a superseding ADR instead of deleting the old
 - `0004-replace-team-mode-with-code-mode.md` — *(superseded by 0006)* retire team mode; machine-readable task graph and parent-run verification.
 - `0005-parallel-dag-fences.md` — *(superseded by 0006)* Pi Parallel: one DAG scheduler, planned fence groups, default one fence at the end.
 - `0006-retire-parallel-execution.md` — retire all parallel execution machinery (dynamic workflow, team mode); sequential-first pipeline with opportunistic dispatch; verification classes and execution tiers promoted to canon.
+- `0007-frontier-pipeline-on-pi.md` — Pi runs the frontier pipeline (`scope`, `run-plan`, plans with a model); the sequential pipeline is retired for Pi and kept for OpenCode and Hermes.

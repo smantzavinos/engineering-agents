@@ -8,10 +8,9 @@ Three components work together to produce effective autonomous AI development:
 
 1. **Repository setup** — The right information in the right places, discoverable at the right time
 2. **Skills** — Reusable process definitions that tell agents what to do at each stage
-3. **Agent modes** — Three distinct agents drive the process at different phases:
-   - **Discovery** — Socratic dialogue to clarify intent and determine direction (high human interaction)
-   - **Design** — Collaborative research and approach development with delegated sub-agents (medium interaction)
-   - **Execution** — Autonomous implementation from approach to completion (minimal interaction)
+3. **Agent modes** — which process an agent runs depends on the harness ([ADR 0007](docs/adr/0007-frontier-pipeline-on-pi.md)):
+   - **Pi** runs the [frontier pipeline](docs/frontier-pipeline.md): a throwaway prototype, a scope agreed with the human, one plan whose design is a model built from the project's pattern catalog, approval from a tour of that model, and an unattended build checked against it.
+   - **OpenCode and Hermes** run the sequential pipeline: Discovery (clarify intent), Design (research and approach), Execution (plan, worklog, task-by-task build, review). [Process](docs/process.md) describes it.
 
 The key insight: you don't need a complex extension or state machine to orchestrate multi-step development workflows. Capable LLMs in the right mode can drive each phase of the process.
 
@@ -87,13 +86,13 @@ The sandbox uses `.pi-dev/home` as `HOME` and never modifies `~/.pi`. `--copy-au
 
 | Document | Purpose |
 |----------|---------|
-| [Frontier Pipeline](docs/frontier-pipeline.md) | The prototype-first process run by `scope`, `run-plan` and `run-epic` (pilot), with an example execution diagram |
-| [Process](docs/process.md) | Full lifecycle for each workflow type, stage-by-stage |
-| [Plan Levels](docs/plan-levels.md) | When to use simple, standard, or epic |
+| [Frontier Pipeline](docs/frontier-pipeline.md) | The process on Pi, run by `scope`, `run-plan` and `run-epic`, with an example execution diagram |
+| [Process](docs/process.md) | The sequential pipeline (OpenCode and Hermes): full lifecycle for each workflow type, stage-by-stage |
+| [Plan Levels](docs/plan-levels.md) | Sequential pipeline: when to use simple, standard, or epic |
 | [Plan Directory Structure](docs/plan-directory-structure.md) | Artifacts, naming conventions, directory layout |
 | [Repository Setup](docs/repo-setup.md) | What repos need to work with this process |
-| [Agent Architecture](docs/agent_architecture_and_workflow.md) | Visual diagrams: agent modes, sub-agent calls |
-| [Orchestration](docs/orchestration.md) | Detailed reference: three agent modes, prompt patterns |
+| [Agent Architecture](docs/agent_architecture_and_workflow.md) | Sequential pipeline: diagrams of agent modes and sub-agent calls |
+| [Orchestration](docs/orchestration.md) | Sequential pipeline: three agent modes, prompt patterns |
 | [Extension Spec](docs/extension-spec.md) | Minimal state validation and continuation enforcement |
 
 ### Repo Operational Contracts
@@ -112,7 +111,22 @@ This repository also documents its own operating contract so contributors can us
 
 ### Skills (`skills/`)
 
-14 skills covering the full development lifecycle:
+Which skills a harness gets is set by each skill's `harnesses:` line ([skill rendering](docs/skill-rendering.md)).
+
+**Pi: the frontier pipeline**
+
+| Skill | Used by | Purpose |
+|-------|---------|---------|
+| `prototype` | The human starts it | Build a throwaway prototype that shows the behaviour wanted |
+| `scope` | The human starts it | Agree the scope, get the plan and its model written and reviewed, approve from the tour |
+| `run-plan` | The human starts it | Build one approved plan unattended; stop only for re-approval |
+| `run-epic` | The human starts it | The rare multi-plan case: lanes, checkpoints, integration |
+| `map-patterns` | The human starts it | Write the project's pattern catalog from the code that exists |
+| `plan`, `implement`, `review` | plan-author, implementer, reviewer | Each role's job |
+| `architecture-model` | Every role | Shared rules for the model, tags, checks, deviations and approvals; ships the check |
+| `delegate`, `test-quality` | Every role | Offloading read-heavy work; which tests to write and keep |
+
+**OpenCode and Hermes: the sequential pipeline**
 
 | Skill | Stage | Purpose |
 |-------|-------|---------|
@@ -127,30 +141,38 @@ This repository also documents its own operating contract so contributors can us
 | `execution-orchestrator` | Execution | Autonomous orchestrator driving plan to completion |
 | `review-code` | Review | Post-implementation code review |
 | `review-epic` | Review | Epic-level review across child plans |
-| `pull-request` | Review | Prepare or review a PR per the PR review process: body, evidence, rules, verdict |
-| `assess-repo` | Setup | Assess and set up a repo for the workflow |
-| `create-skills` | Utility | Create valid SKILL.md skills |
+| `work-item` | Backlog | Run one backlog item to its gate, block or PR |
 | `configure-opencode` | Utility | Create/update repo-local OpenCode config overrides (OpenCode-only) |
+
+**Every harness**
+
+| Skill | Purpose |
+|-------|---------|
+| `assess-repo` | Assess and set up a repo for the workflow |
+| `pull-request` | Prepare or review a PR per the PR review process: body, evidence, rules, verdict |
+| `backlog`, `triage-backlog` | Tracker operations; triaging Inbox items |
+| `create-skills` | Create valid SKILL.md skills |
 
 Retired skills (parallel execution, team mode) are archived under
 `docs/investigations/2026-09-23-retired-parallel-execution/` — see ADR 0006.
 
 ### Agent Definitions (`agents/`)
 
-8 specialized agents for different tasks and model tiers:
+Pi subagents. The frontier pipeline uses the first six; the rest are older and still installed (ADR 0007, "Not done").
 
 | Agent | Model Tier | Role |
 |-------|-----------|------|
-| `planner` | Frontier (reasoning) | Create detailed plans from brief + approach |
-| `plan-reviewer` | Frontier (reasoning) | Review approaches and plans |
-| `code-reviewer` | Frontier (code) | Review code diffs against plan requirements |
-| `worker` | Execution | Backend/logic implementation |
-| `ui-worker` | Execution (UI) | Frontend/UI implementation |
+| `plan-author` | Frontier | Write and revise one plan and its model |
+| `implementer` | Frontier | Build a whole plan, tag the code, pass the gates and model checks |
+| `reviewer` | Frontier | Fresh-context review of an epic, a plan or a diff |
+| `helper` | Fast | Scouting, gate runs, digests, sweeps |
 | `researcher` | Execution | Web/external documentation research |
-| `vision` | Visual | Screenshot/mockup/visual analysis |
 | `oracle` | Frontier (highest) | Read-only second opinion |
+| `planner`, `plan-reviewer`, `code-reviewer` | Frontier | Sequential-pipeline roles; no installed Pi skill starts them |
+| `worker`, `worker-high`, `worker-low`, `ui-worker` | Execution | General implementation |
+| `vision` | Visual | Screenshot/mockup/visual analysis |
 
-Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, and **execute**.
+Plus `preset.jsonc` defining three presets: **scope**, **run-plan** and **run-epic**.
 
 ## Nix Configuration Options
 
@@ -183,7 +205,7 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 | `enableServer` | `false` | Enable OpenCode server systemd service |
 | `serverPort` | `3124` | Server port |
 
-## Workflows
+## Workflows (sequential pipeline: OpenCode and Hermes)
 
 | Workflow | When to use | Process |
 |----------|-------------|---------|
@@ -195,17 +217,21 @@ Plus `preset.jsonc` defining three workflow presets: **discovery**, **design**, 
 ## Usage with Pi
 
 ```bash
-# Start a Discovery session
 pi
-/preset discovery
+# Once per repository: write its pattern catalog and check the set-up.
+#   "Use map-patterns to start a pattern catalog for this repo."
+#   "Use assess-repo to check this repo."
 
-# Start a Design session
-/preset design
+# Agree the scope and approve the plan from its tour.
+/preset scope
+# Then: "Scope the work in PROTOTYPE.md on branch prototype/my-feature."
 
-# Start Execution
-/preset execute
-# Then: "Execute the plan at plans/my_feature/. Auto-continue."
+# Build the approved plan unattended.
+/preset run-plan
+# Then: "Run the plan at plans/2026_05_01_my_feature/."
 ```
+
+See [Frontier Pipeline](docs/frontier-pipeline.md).
 
 ## Usage with Hermes
 

@@ -1,7 +1,7 @@
 ---
 name: discover-and-design
 description: Document an already-discussed piece of work into an accepted brief.md plus approach.md. Use when the problem, scope, and design direction were already talked through in detail and what remains is writing it down, checking for genuinely overlooked gaps, and asking only targeted clarifying questions. For simple obvious tasks use Discover and Design Simple. To start from a vague idea use Discovery then Design.
-harnesses: [pi, hermes]
+harnesses: [hermes]
 ---
 
 # Discover and Design

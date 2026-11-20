@@ -51,7 +51,7 @@ fi
 for packaged in discover-and-design discover-and-design-simple; do
   for resource in references/brief-template.md references/approach-template.md; do
     if grep -q "skills/discovery/references/brief-template.md\|skills/design/references/approach-template.md" skill-resources.json \
-       && [[ -f "$REPO_ROOT/dist/skills/pi/${packaged}/${resource}" ]]; then
+       && [[ -f "$REPO_ROOT/dist/skills/hermes/${packaged}/${resource}" ]]; then
       pass "${packaged} packages ${resource}"
     else
       fail "${packaged} is missing packaged ${resource} — check skill-resources.json entries for discover-and-design*"
@@ -103,11 +103,28 @@ if grep -rn 'task(category=\|task({' "$REPO_ROOT/dist/skills/pi/" >/dev/null 2>&
 else
   pass "Pi tree uses only Pi-style delegation"
 fi
-if grep -rln 'subagent({' "$REPO_ROOT/dist/skills/pi/design/SKILL.md" >/dev/null 2>&1; then
-  pass "Pi design renders subagent({...}) delegation"
-else
-  fail "Pi design is missing subagent({...}) delegation"
-fi
+
+# The Pi tree is the frontier pipeline (ADR 0007): its entry points, its role
+# skills and the shared rules must all render, with the check script and the
+# catalog contract packaged where the skills say they are.
+for frontier in prototype scope run-plan run-epic map-patterns plan implement review \
+                architecture-model delegate test-quality; do
+  if [[ -f "$REPO_ROOT/dist/skills/pi/${frontier}/SKILL.md" ]]; then
+    pass "Pi tree renders ${frontier}"
+  else
+    fail "Pi tree is missing ${frontier}"
+  fi
+done
+for packaged in architecture-model/tools/model-check.mjs \
+                architecture-model/references/pattern-catalog.md \
+                map-patterns/references/pattern-catalog.md \
+                assess-repo/references/pattern-catalog.md; do
+  if [[ -f "$REPO_ROOT/dist/skills/pi/${packaged}" ]]; then
+    pass "Pi tree packages ${packaged}"
+  else
+    fail "Pi tree is missing ${packaged} — check skill-resources.json"
+  fi
+done
 
 # OpenCode tree must not contain Pi-style subagent() calls
 if grep -rn 'subagent(' "$REPO_ROOT/dist/skills/opencode/" >/dev/null 2>&1; then
@@ -160,13 +177,6 @@ else
   fail "OpenCode design does not delegate external research to librarian"
 fi
 
-# Pi keeps named subagents for those same roles
-if grep -q 'agent: "worker"' "$REPO_ROOT/dist/skills/pi/design/SKILL.md"; then
-  pass "Pi design keeps the worker subagent for research"
-else
-  fail "Pi design lost the worker subagent for research"
-fi
-
 # configure-opencode is OpenCode-only and must not leak into the Pi tree
 if [[ -e "$REPO_ROOT/dist/skills/pi/configure-opencode" ]]; then
   fail "configure-opencode (opencode-only) leaked into the Pi tree"
@@ -209,18 +219,30 @@ for gone in pi-team-plan pi-team-lead pi-team-worker; do
     fail "${gone} must be absent from the Pi tree"
   fi
 done
-# The sequential pipeline is universal (Spiros ruling on PR#25: the wave
-# approach is no longer used by any harness) — pipeline skills render for
-# every harness. Still harness-scoped: configure-* and the Hermes-process
-# skills (skill-sync, software-development).
-for oc_only in execution-orchestrator execute-task create-worklog \
-                create-plan review-plan review-code; do
-  if [[ -f "$REPO_ROOT/dist/skills/pi/${oc_only}/SKILL.md" ]] \
-     && [[ -f "$REPO_ROOT/dist/skills/opencode/${oc_only}/SKILL.md" ]] \
-     && [[ -f "$REPO_ROOT/dist/skills/hermes/${oc_only}/SKILL.md" ]]; then
-    pass "${oc_only} renders for every harness (universal pipeline)"
+# The sequential pipeline is retired for Pi (ADR 0007), which runs the
+# frontier pipeline instead. OpenCode and Hermes still run it, so its skills
+# render for those two and must not reach the Pi tree. Still harness-scoped:
+# configure-* and the Hermes-process skills (skill-sync, software-development).
+for sequential in discovery design research review-approach review-epic \
+                  create-plan review-plan create-worklog execute-task \
+                  execution-orchestrator review-code prototype-first work-item; do
+  if [[ -f "$REPO_ROOT/dist/skills/opencode/${sequential}/SKILL.md" ]] \
+     && [[ -f "$REPO_ROOT/dist/skills/hermes/${sequential}/SKILL.md" ]]; then
+    pass "${sequential} renders for OpenCode and Hermes"
   else
-    fail "${oc_only} must render in all three trees (universal pipeline)"
+    fail "${sequential} must render for OpenCode and Hermes (they still run the sequential pipeline)"
+  fi
+  if [[ -e "$REPO_ROOT/dist/skills/pi/${sequential}" ]]; then
+    fail "${sequential} is retired for Pi (ADR 0007) but still rendered there"
+  else
+    pass "${sequential} is not rendered for Pi (retired with ADR 0007)"
+  fi
+done
+for hermes_seq in discover-and-design discover-and-design-simple; do
+  if [[ -e "$REPO_ROOT/dist/skills/pi/${hermes_seq}" ]]; then
+    fail "${hermes_seq} is retired for Pi (ADR 0007) but still rendered there"
+  else
+    pass "${hermes_seq} is not rendered for Pi (retired with ADR 0007)"
   fi
 done
 for hermes_only in skill-sync software-development; do
@@ -238,7 +260,7 @@ done
 
 # Per-harness discoverability: hiddenSkills in harnesses/pi.json must render
 # disable-model-invocation for Pi only, never for OpenCode.
-for hidden in discovery design discover-and-design discover-and-design-simple research; do
+for hidden in configure-pi create-skills; do
   if grep -Fq 'disable-model-invocation: true' "$REPO_ROOT/dist/skills/pi/${hidden}/SKILL.md"; then
     pass "${hidden} is hidden from the Pi system prompt"
   else
@@ -298,7 +320,8 @@ for (const d of fs.readdirSync(root)) {
     catch (e) { bad += 1; console.error(`invalid subagent block in ${d}: ${e.message}`); }
   }
 }
-if (n === 0) { console.error("no subagent blocks found to check"); process.exit(1); }
+// No Pi skill renders a delegation block today: the frontier skills describe
+// delegation in prose. Any block a later skill adds is still checked here.
 process.exit(bad === 0 ? 0 : 1);
 ' "$REPO_ROOT"; then
   pass "every rendered Pi subagent block is valid JavaScript"

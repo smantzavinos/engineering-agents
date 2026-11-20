@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verify preset.jsonc structure: has discovery, design, execute modes
+# Verify preset.jsonc structure: has the scope, run-plan and run-epic modes
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,7 +26,7 @@ printf 'Preset configuration verification\n'
 printf '=================================\n\n'
 
 # Verify all three modes exist
-for mode in discovery design execute; do
+for mode in scope run-plan run-epic; do
   if echo "$PRESET_JSON" | jq -e --arg mode "$mode" '.presets[$mode]' >/dev/null 2>&1; then
     pass "Preset mode '${mode}' exists"
   else
@@ -35,7 +35,7 @@ for mode in discovery design execute; do
 done
 
 # Verify each mode has essential fields
-for mode in discovery design execute; do
+for mode in scope run-plan run-epic; do
   if echo "$PRESET_JSON" | jq -e --arg mode "$mode" '.presets[$mode].model // .presets[$mode].systemPrompt' >/dev/null 2>&1; then
     pass "Mode '${mode}' has model or systemPrompt"
   else
@@ -43,8 +43,18 @@ for mode in discovery design execute; do
   fi
 done
 
+# The modes of the process retired for Pi (ADR 0007) must not come back by accident.
+for mode in discovery design execute; do
+  if echo "$PRESET_JSON" | jq -e --arg mode "$mode" '.presets[$mode]' >/dev/null 2>&1; then
+    fail "Preset mode '${mode}' is retired for Pi but still defined"
+  else
+    pass "Preset mode '${mode}' is retired"
+  fi
+done
+
 # Verify agent definition files exist (agents are separate .md files)
-for agent in planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker researcher vision oracle; do
+for agent in plan-author implementer reviewer helper researcher oracle \
+             planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker vision; do
   if [[ -f "$REPO_ROOT/agents/${agent}.md" ]]; then
     pass "Agent '${agent}' definition file exists"
   else
@@ -53,8 +63,8 @@ for agent in planner plan-reviewer code-reviewer worker worker-high worker-low u
 done
 
 # Every skill a preset tells the model to read must actually be installed for Pi.
-# The execute preset previously pointed at execution-orchestrator, which had been
-# removed from the Pi tree; nothing caught it because no spec checked the link.
+# A preset once pointed at a skill that had been removed from the Pi tree, and
+# nothing caught it because no spec checked the link.
 REFERENCED_SKILLS="$(printf '%s' "$PRESET_JSON" \
   | jq -r '.presets[].instructions // ""' \
   | grep -o '~/\.pi/agent/skills/[A-Za-z0-9._-]*' \

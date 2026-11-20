@@ -1,5 +1,6 @@
 ---
 name: review-code
+harnesses: [opencode, hermes]
 description: Post-implementation code review against a plan. Reviews diffs for coverage compliance, test adequacy, implementation correctness, and documentation alignment. Produces code_review.md with structured findings. Designed to be called iteratively until clean.
 ---
 

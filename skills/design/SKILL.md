@@ -1,5 +1,6 @@
 ---
 name: design
+harnesses: [opencode, hermes]
 description: Collaborative design agent that moves from a brief through research and into a documented approach. Suggests research topics, delegates to research sub-agents, presents design options with tradeoffs, and documents architectural decisions. Use after Discovery has produced a brief and plan level.
 ---
 

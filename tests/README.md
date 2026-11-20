@@ -73,7 +73,7 @@ New tests specific to this repo:
 - **`pi-vendor-spec.sh`** — Build-time vendor contracts: git pins match declarations, spec/installSpec normalized, injected core not vendored, nested lock shape
 - **`pi-preset-refresh-contract-spec.sh`** — Paired `@richardgill/pi-preset` + `pi-config` 0.0.9 manifest, Nix declaration, and lockfile version alignment
 - **`pi-btw-refresh-contract-spec.sh`** — `pi-btw` 0.6.1 declaration/manifest/lock contract, its Pi core peer compatibility, `pi-subdir-context` as a pinned git source (outside the npm graph), no npm `overrides`, and a fully integrity-complete lock.
-- **`preset-spec.sh`** — All three modes (discovery/design/execute) defined, all 8 agents present
+- **`preset-spec.sh`** — The three modes (scope/run-plan/run-epic) defined, the retired modes absent, agent files present, every skill a preset names installed for Pi
 - **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests

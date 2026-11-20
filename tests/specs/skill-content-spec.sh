@@ -121,15 +121,14 @@ if [[ ! -e "$REPO_ROOT/agents/pi-team-reviewer.md" ]]; then
 else
   fail "pi-team-reviewer agent is removed with team mode"
 fi
-# Team mode and the wave pipeline were retired (ADR-0006): the six
-# sequential-pipeline skills are harness-neutral — they carry no
-# `harnesses:` restriction and render to every harness.
-for neutral in execution-orchestrator execute-task create-worklog \
-                create-plan review-plan review-code; do
-  if ! grep -q '^harnesses:' "$REPO_ROOT/skills/$neutral/SKILL.md"; then
-    pass "${neutral} is harness-neutral (renders to every harness)"
+# The sequential pipeline is retired for Pi (ADR 0007) and kept for OpenCode
+# and Hermes: its skills are restricted to those two harnesses.
+for sequential in execution-orchestrator execute-task create-worklog \
+                  create-plan review-plan review-code; do
+  if grep -qx 'harnesses: \[opencode, hermes\]' "$REPO_ROOT/skills/$sequential/SKILL.md"; then
+    pass "${sequential} is restricted to OpenCode and Hermes"
   else
-    fail "${neutral} must not restrict harnesses (harness-neutral since the wave retirement)"
+    fail "${sequential} must be restricted to OpenCode and Hermes (retired for Pi, ADR 0007)"
   fi
 done
 

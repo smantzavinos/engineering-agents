@@ -1,40 +1,27 @@
 # Agent & Preset Configuration
 
-This directory contains the Pi agent definitions and preset configurations that implement the three-mode development process.
+This directory contains the Pi agent definitions and presets. Pi runs the frontier pipeline (`docs/frontier-pipeline.md`, ADR 0007).
 
 ## Setup
 
 ### Presets (Pi preset extension)
 
-The three workflow modes are configured as **presets**. Placed at `~/.pi/agent/preset.jsonc` (handled by Nix).
-
-Presets control your current session's model, tools, and behavior:
-- **discovery** — Socratic challenge mode for clarifying intent
-- **design** — Collaborative research and approach development
-- **execute** — Autonomous orchestration that delegates to sub-agents
+Placed at `~/.pi/agent/preset.jsonc` (handled by Nix). A preset sets the session's model and tells it which skills to read first:
+- **scope** — agree the scope with the human, get the plan and its model written and reviewed, record the approval
+- **run-plan** — build one approved plan unattended
+- **run-epic** — run an approved epic of several plans
 
 ### Agents (Pi subagents extension)
 
-Sub-agents are called by the presets to do the actual work. Placed at `~/.pi/agent/agents/` (handled by Nix).
+Sub-agents do the work the orchestrating session hands out. Placed at `~/.pi/agent/agents/` (handled by Nix).
 
 ## Agent Set
 
-| Agent | Model Tier | Role |
-|-------|-----------|------|
-| `planner` | Frontier (reasoning) | Create detailed plans from brief + approach |
-| `plan-reviewer` | Frontier (reasoning) | Review approaches, epic decompositions, and plans for logic, completeness, consistency |
-| `code-reviewer` | Frontier (code) | Review code diffs against plan requirements |
-| `worker-high` | Execution (high tier) | Plan tasks with `Execution tier: high` (non-UI) |
-| `worker-low` | Execution (low tier) | Plan tasks with `Execution tier: low` (mechanical, non-UI) |
-| `worker` | Execution | Worklog creation, codebase research, general fixes |
-| `ui-worker` | Execution (UI) | Frontend/UI implementation |
-| `researcher` | Execution | Web/external documentation research |
-| `vision` | Visual | Screenshot/mockup/visual analysis |
-| `oracle` | Frontier (highest) | Read-only second opinion |
+### Frontier pipeline
 
-### Frontier pipeline (pilot)
+Used by the `scope`, `run-plan` and `run-epic` presets and skills.
 
-Used by the `scope`, `run-plan` and `run-epic` presets and skills; see `plans/2026_10_10_frontier_pipeline/`. `oracle` and `researcher` are shared with the legacy set.
+
 
 | Agent | Model Tier | Role |
 |-------|-----------|------|
@@ -42,45 +29,43 @@ Used by the `scope`, `run-plan` and `run-epic` presets and skills; see `plans/20
 | `implementer` | Frontier | Build a whole plan, tag the code, keep the model in line, pass gates and model checks, fix findings; resumed across review rounds |
 | `reviewer` | Frontier | Fresh-context review (epic, plan, code, epic-diff); new session every pass |
 | `helper` | Fast | Errands for frontier agents: scout, run and digest, verify, sweep |
+| `researcher` | Execution | Web/external documentation research |
+| `oracle` | Frontier (highest) | Read-only second opinion |
+
+### Older agents, still installed
+
+From the sequential pipeline, which Pi no longer runs. No installed Pi skill starts `planner`, `plan-reviewer` or `code-reviewer`; they stay until consumers stop naming them in `agentOverrides` (ADR 0007, "Not done").
+
+| Agent | Model Tier | Role |
+|-------|-----------|------|
+| `planner` | Frontier (reasoning) | Create detailed plans from brief + approach |
+| `plan-reviewer` | Frontier (reasoning) | Review approaches, epic decompositions, and plans |
+| `code-reviewer` | Frontier (code) | Review code diffs against plan requirements |
+| `worker-high`, `worker-low`, `worker` | Execution | Task implementation, general fixes |
+| `ui-worker` | Execution (UI) | Frontend/UI implementation |
+| `vision` | Visual | Screenshot/mockup/visual analysis |
 
 ## Files
 
-### Presets
-- `preset.jsonc` — Legacy modes (discovery, design, execute) and frontier-pipeline modes (scope, run-plan, run-epic)
-
-### Agents
-- `planner.md` — Plan creation (Frontier reasoning)
-- `plan-reviewer.md` — Plan quality review (Frontier reasoning)
-- `code-reviewer.md` — Code quality review (Frontier code)
-- `worker-high.md` — High-tier task implementation
-- `worker-low.md` — Low-tier task implementation
-- `worker.md` — Worklog, research, general fixes (Execution)
-- `ui-worker.md` — Frontend/UI implementation (Execution UI)
-- `researcher.md` — Web/external research (Execution)
-- `vision.md` — Visual analysis (Visual/multimodal)
-- `oracle.md` — Read-only second opinion (Frontier highest)
+- `preset.jsonc` — the `scope`, `run-plan` and `run-epic` modes
+- `<name>.md` — one file per agent above
 
 ## Usage
 
-### Start a Discovery session
 ```
-/preset discovery
+/preset scope
 ```
-Then talk through your idea. Challenges assumptions, surfaces tradeoffs.
+Then: "Scope the work in PROTOTYPE.md on branch prototype/my-feature." Ends with the plan approved and recorded.
 
-### Start a Design session
 ```
-/preset design
+/preset run-plan
 ```
-Reads the brief, delegates research, presents options, writes approach.md, and for epics also writes `epic.md` (workstreams + child plans).
+Then: "Run the plan at plans/2026_05_01_my_feature/."
 
-### Start Execution
 ```
-/preset execute
+/preset run-epic
 ```
-Then:
-- standard: "Execute the plan at plans/2026_05_01_my_feature/. Auto-continue."
-- epic: "Execute the epic at plans/2026_05_01_my_epic/." (the orchestrator should select or propose the next child plan from `epic.md`)
+Then: "Run the epic at plans/2026_05_01_my_epic/."
 
 ## Per-Repo Model Overrides
 

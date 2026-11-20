@@ -1,5 +1,6 @@
 ---
 name: discovery
+harnesses: [opencode, hermes]
 description: Socratic dialogue agent that helps clarify intent, challenge assumptions, identify blind spots, and guide toward a clear engineering brief. Use when starting from a vague idea, exploring a problem space, or needing to determine scope and direction before committing to a plan level.
 ---
 

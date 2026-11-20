@@ -1,5 +1,6 @@
 ---
 name: review-plan
+harnesses: [opencode, hermes]
 description: Review an engineering plan for completeness, consistency, logic bugs, and execution readiness. Produces plan_review.md findings. Designed to be called iteratively until zero significant issues remain.
 ---
 

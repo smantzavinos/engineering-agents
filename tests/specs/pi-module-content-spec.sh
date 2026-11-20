@@ -109,9 +109,9 @@ fi
 
 # Verify the module references skills that actually exist
 SKILL_REFS=(
-  "skills/discovery" "skills/design" "skills/research"
-  "skills/create-plan" "skills/review-plan"
-  "skills/review-code" "skills/review-approach" "skills/assess-repo"
+  "skills/scope" "skills/run-plan" "skills/run-epic"
+  "skills/plan" "skills/implement" "skills/review"
+  "skills/architecture-model" "skills/map-patterns" "skills/assess-repo"
   "skills/create-skills" "skills/configure-pi" "skills/pull-request"
 )
 for ref in "${SKILL_REFS[@]}"; do

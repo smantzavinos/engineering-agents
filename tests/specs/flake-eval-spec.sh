@@ -222,8 +222,8 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify skills are linked
-  for skill in discovery design discover-and-design discover-and-design-simple \
-               research review-approach review-epic \
+  for skill in prototype scope run-plan run-epic map-patterns \
+               plan implement review architecture-model delegate test-quality \
                assess-repo create-skills; do
     if [[ -f "$PI_FILES/.pi/agent/skills/$skill/SKILL.md" ]]; then
       pass "Pi module links skill: $skill"
@@ -232,13 +232,22 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fi
   done
 
-  # Retired: pi-team-* went away with team mode. The six sequential-pipeline
-  # skills (create-worklog, execute-task, execution-orchestrator, create-plan,
-  # review-plan, review-code) are NOT retired for Pi: owner PR#25 ruling,
-  # executed in a597054, dropped their harness restriction — Pi installs every
-  # rendered skill in dist/skills/pi, so they must be present (covered by the
-  # link loop above).
-  for skill in pi-team-plan pi-team-lead pi-team-worker; do
+  # The check script must be installed with the skill that ships it.
+  if [[ -f "$PI_FILES/.pi/agent/skills/architecture-model/tools/model-check.mjs" ]]; then
+    pass "Pi module installs the model check with architecture-model"
+  else
+    fail "Pi module does not install architecture-model/tools/model-check.mjs"
+  fi
+
+  # Retired: pi-team-* went away with team mode, and the sequential pipeline
+  # with ADR 0007 (Pi runs the frontier pipeline; OpenCode and Hermes keep the
+  # sequential one). Pi installs every skill in dist/skills/pi, so none of
+  # these may be rendered there.
+  for skill in pi-team-plan pi-team-lead pi-team-worker \
+               discovery design discover-and-design discover-and-design-simple \
+               research review-approach review-epic create-plan review-plan \
+               create-worklog execute-task execution-orchestrator review-code \
+               prototype-first work-item; do
     if [[ -e "$PI_FILES/.pi/agent/skills/$skill" ]]; then
       fail "Pi module must not link retired skill: $skill"
     else

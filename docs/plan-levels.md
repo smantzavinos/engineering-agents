@@ -1,6 +1,6 @@
 # Plan Levels
 
-> **Frontier pipeline (pilot).** For prototype-first work, the `scope`, `run-plan` and `run-epic` skills run the process described in [frontier-pipeline.md](frontier-pipeline.md), which replaces the levels and stages below (a single plan or an epic of child plans, chosen in `scope`) for that path. This document has not been updated for it yet.
+> **This describes the sequential pipeline, which OpenCode and Hermes run.** Pi runs the frontier pipeline instead ([frontier-pipeline.md](frontier-pipeline.md), [ADR 0007](adr/0007-frontier-pipeline-on-pi.md)): the sequential skills and the `discovery`, `design` and `execute` presets are no longer installed for Pi, so the Pi presets and Pi subagent calls shown here are history.
 
 This document defines the three levels of engineering plans, when to use each, what artifacts they produce, and what stages they require.
 
