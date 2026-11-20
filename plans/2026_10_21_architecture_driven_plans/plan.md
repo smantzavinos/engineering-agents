@@ -101,11 +101,14 @@ One smoke run settles both (Q7).
 
 ### 4.3 Catalog contract (framework side)
 - **Required fields per entry:**
-  - id (`<family>/<name>`), what it means, when to use it;
-  - its reference implementation (a code reference, §4.6);
-  - verification expectations;
-  - its **check**: `rule` with the rule's path, or `judgment`;
-  - for a rule, **what it proves** and what it leaves to the reader.
+  - id (`<family>/<name>`), what it is, the shared code it goes through, what it protects against;
+  - its shape: a diagram, a short code block with the line for each requirement marked, and a wrong example;
+  - its reference implementation: one golden example (a code reference, §4.6);
+  - numbered requirements (`R1`, `R2`, …), each with what checks it: a test, the reviewer, or a rule with the rule's path. Conventions are listed apart: missing one is a review comment, not a partial fit;
+  - the tests a new definition needs;
+  - how it appears in a plan model: element kind, relationships, contract clause.
+- **Choosing:** each catalog area opens with one table from what the code is to the pattern that fits. Entries do not repeat it.
+- **An entry states the rule, not the state of the code (owner):** the golden example is its only pointer to code that uses the pattern. It names the shared code the pattern goes through and the test files a new definition adds to. It lists no partial fits, no divergences and no usage counts; those are findings for the backlog or a plan.
 - **Location:** the framework doesn't fix a path. A project's agent guide points to one machine-readable file that lists where the catalog docs, the profile and the rules live, and which paths the model-to-code check leaves out (tests, docs, generated files).
 - **Catalog profile:** the project keeps one c4ish profile beside the catalog, durable and separate from any plan. It is the machine-readable index of the catalog: one entry per pattern with its id, label, family, how it is drawn, its reference implementation and a link to the pattern's section in the catalog docs. The Markdown docs hold the content. It lists patterns, not where they are used, so it is not a usage index. Plan models reference the profile.
 - **Tag convention:** one comment directly above the definition, in the language's own comment syntax. When the definition is a whole file, the tag is the file's first comment. Forms:
@@ -113,7 +116,7 @@ One smoke run settles both (Q7).
   | Form | For |
   |---|---|
   | `@pattern <id>` | Follows the pattern |
-  | `@pattern <id> partial: <what differs>` | A partial fit. That pattern's rule skips it |
+  | `@pattern <id> partial: <what differs>` | A partial fit, naming the requirements it misses (`partial: R4`). That pattern's rule skips it |
   | `@pattern bespoke: <what it is>` | A one-off |
   | `; also <id>, <id>` added to any form | Further patterns the definition carries. Their rules still run |
 
