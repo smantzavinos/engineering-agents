@@ -82,10 +82,11 @@ Check for presence AND quality of:
 - [ ] The agent guide names one path file, and it is committed
 - [ ] The path file has `profile`, `catalog`, `rules`, `leftOut` and `noTag`, and no `kinds`. `leftOut` covers tests, docs, generated files and the plans directory
 - [ ] The catalog docs and the profile exist, are committed, and hold the same pattern ids
-- [ ] Every element kind the profile adds has a `category` (`c4ish profile <profile>`)
-- [ ] Every pattern's golden example resolves (`c4ish code <profile> --root .` exits 0)
+- [ ] In the resolved profile (`c4ish profile <profile>`): every pattern has `code` (its golden example) and `catalog` (its doc section), and every element kind that is a container, code, data or a product concept has a `category`
+- [ ] Every pattern's golden example resolves (`c4ish code <profile> --root .` exits 0). This passes a pattern that names none, so the line above matters
+- [ ] No pattern a plan is about to use is still a draft (`"status": "proposed"` in the profile)
 - [ ] Each entry has the fields the contract asks for, and none lists where the pattern is used beyond its one golden example
-- [ ] The pattern rules run on changed files, with a documented command, and are part of the fast gates
+- [ ] The path file's `rules` says where pattern rules live. Any rules that exist run on changed files, with a documented command, as part of the fast gates
 - [ ] The agent guide gives the plan directory layout: `plan.md`, `model.c4ish.json` and `review.md` together
 
 ### 3. Assess Quality (not just existence)
