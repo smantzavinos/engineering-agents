@@ -19,9 +19,9 @@ Write what a strong engineer needs to build this in one session without guessing
 Scout widely with subagents (`delegate`), and read the critical paths yourself.
 
 ## The model
-`model.c4ish.json` beside `plan.md`, written as `c4ish guide` says, against the project's profile.
+`model.c4ish.json` beside `plan.md`, written as `c4ish guide` says, against the project's profile: set the model's `profile` to the profile's path relative to the model, so that `validate` and the checks judge it by the same one.
 - **What it shows:** every element the work adds, changes or removes, and the unchanged context one hop from them. Product concepts when the user sees a difference, and the engineering elements that implement each.
-- **Each element** has a change state. Each new, modified or reused one that lives in code has a pattern state. Each new, modified or removed one has a code reference, at least to its path.
+- **Each element** has a change state. Each new or modified one that lives in code has a pattern state; reused context names its pattern when the catalog has one, and otherwise says `pattern: null`. Each new, modified or removed one has a code reference, at least to its path.
 - **Choosing a pattern:** start from the chooser table of the catalog area. Read the entry and its golden example before you draw the element, and draw it as the entry's "In a plan model" says.
 - **Relationships:** each data relationship says who enforces it.
 - **Contracts:** every interface two elements build against, as named clauses. The access rule is the clause named `access`.
@@ -31,7 +31,7 @@ Scout widely with subagents (`delegate`), and read the critical paths yourself.
 
 **No pattern fits:**
 - *A one-off:* mark it bespoke with a one-line reason. First search the code for `@pattern bespoke` doing the same job. If there is one, this is the second use: propose a pattern that covers both, add the earlier code to the model as a reused element with a code reference, and plan its retag. That edit is allowed outside the claim.
-- *A shape that will be reused:* propose a pattern. A proposal is part of the plan: the catalog entry, the profile entry, the golden example and its check, in the form the catalog contract gives. List the catalog, rule and profile files under Changes outside the model. The human approves the proposal with the plan.
+- *A shape that will be reused:* propose a pattern. At plan time you write its `proposedPatterns` entry in the model, and in `plan.md` → Design what it goes through, what it protects against and its numbered requirements, with the element that will be its golden example. The implementer writes the catalog entry, the profile entry and any rule, in the form the catalog contract gives; list those files under Changes outside the model. The human approves the proposal with the plan.
 
 **The tour:** one tour, id `review`, in the order a reviewer should look: what changes for the user, the main flows, the patterns in use, each proposed pattern and bespoke element, what is removed, then the risks. Every scenario is walked by a step that actually shows it. One to three sentences a step, stating nothing that isn't in the model or `plan.md`.
 
@@ -43,7 +43,7 @@ Scout widely with subagents (`delegate`), and read the critical paths yourself.
   - the full-gate commands, the test map and the smoke set;
   - budget and autonomy limits.
 - **Context:** links to the code, docs and earlier decisions that matter.
-- **Design:** the key decisions and why, rejected alternatives when the choice isn't obvious, and each deviation from the prototype with its reason. Then a link to the model: it is the Changes section.
+- **Design:** the key decisions and why, rejected alternatives when the choice isn't obvious, and each departure from the prototype with its reason. Then a link to the model: it is the Changes section.
 - **Changes outside the model** (this exact heading): one list item per path or glob, starting with it in backticks. Migrations, configuration, dependency bumps, build and CI, docs, test infrastructure, and every catalog, rule or profile file a proposal adds or changes. A catalog, rule or profile file changed without being listed here stops the build for re-approval.
 - **Scenarios:** each with its id, as in the model, and what must be observed.
 - **Tests:** the contracts each scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`), including the tests each pattern's entry asks for. This is the test budget: code review rejects new tests that don't trace to it, so keep it complete and lean.
@@ -63,7 +63,7 @@ The plan questions (`references/plan-questions.md`) are answered where they are 
 - **Access and visibility:** the `access` clauses, the enforcement on each data relationship, and each guard's owning test.
 - **Failure and concurrency:** contract clauses and notes.
 - **Limits and load,** for read-heavy features: a `limits` clause or a note.
-- **Assumptions checked against the code** (Context, Gates), **Deviations** (Design) and **Deliverables** (Done when) stay in `plan.md`.
+- **Assumptions checked against the code** (Context, Gates), **Departures from the prototype** (Design) and **Deliverables** (Done when) stay in `plan.md`.
 
 Aim for under 120 lines. If `plan.md` describes an element, a connection or an interface, move it to the model.
 
@@ -77,7 +77,7 @@ Aim for under 120 lines. If `plan.md` describes an element, a connection or an i
 A fresh session, started in the child's worktree when the scout found integrated changes the plan relies on.
 1. Read the `## refresh scout` note in the ledger, the plan, the model and the ledger.
 2. Check the plan and the model against what the note names: the integrated code, `epic.md` changes and any checkpoint merge.
-3. Update what changed, including the estimate and any code reference that moved, and commit it as one refresh commit. Its review covers only that commit.
+3. Update what changed, including the estimate and any code reference that moved. The plan is already approved, so a change to the model is a deviation: append `## plan refresh` to the ledger with a `### Deviations` list of what you changed and why (`architecture-model` → Deviations). Commit it all as one refresh commit. Its review covers only that commit.
 4. Reply with the refresh commit, the old and new estimate in lines and hours, and whether claims, scenarios or anything on the re-approval list (`architecture-model` → Deviations) changed. Don't `self_compact`; refreshes are short.
 
 ## Revising

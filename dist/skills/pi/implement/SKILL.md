@@ -16,7 +16,8 @@ The plan's design is a model the human approved. `architecture-model` holds the 
 ## Build
 - Implement all of it: every new, modified and removed element of the model, and everything under the plan's Changes outside the model. Write the tests the plan calls for alongside the code. Each contract the plan names gets proof at its owning layer.
 - **Build from the catalog.** Before you build an element, read its pattern's entry and golden example. Meet every numbered requirement, go through the shared code the entry names, and add the tests the entry asks for. Never copy shared code into the element.
-- **Tag every definition you create or change** with its element's pattern state, in a comment directly above it (`architecture-model` → Pattern states). Tag nothing else.
+- **Tag every definition you create or change** with its element's pattern state (`architecture-model` → Pattern states), as the catalog contract → Tags says: one line, `@pattern` first on its comment line, directly above the definition, or as the first comment of a file that is one definition. Tag nothing else.
+- **A proposed pattern:** write its catalog entry, its profile entry and any rule the plan lists, with the element the plan names as its golden example. In the commit that adds the profile entry, remove the pattern from the model's `proposedPatterns`.
 - While building, run only T0 checks:
   - tests related to the files you changed;
   - one E2E spec by name, with one worker, against a warm harness if the repo has one (otherwise cold);
@@ -33,14 +34,18 @@ The plan's design is a model the human approved. `architecture-model` holds the 
 - If a context warning asks you to compact, commit first, then `self_compact` with a note that names the next step.
 
 ## Model checks
-Before the gates, on a clean tree with everything committed:
-1. Make every code reference exact: the name of the definition, not only its path. Bring the model in line with what you built, and run `c4ish validate --strict` on it.
-2. Run `model-check all` with the fixed command (`architecture-model` → Commands). Fix what it reports in the code, the tags or the model:
+After the build and before the gates:
+1. Make every code reference exact: the name of the definition, not only its path. Bring the model in line with what you built, run `c4ish validate --strict` on it, and commit.
+2. Start your ledger entry (Handoff, step 2) with its heading and its `### Deviations` list, and commit it. The check reads the list from the ledger, so it comes first.
+3. Run `model-check all` with the fixed command (`architecture-model` → Commands), on a clean tree. Fix what it reports in the code, the tags or the model:
    - a failure of check 2 is yours to fix: a wrong reference, a missing or disagreeing tag, a change state the code doesn't bear out;
    - a difference check 3 calls unrecorded is a model change to record, after you have decided it is right;
    - a re-approval difference is a stop, as above. Never edit the model or the plan to hide one.
-3. Read the unaccounted lines it lists. Each run of lines is glue, or an element the model is missing: add the element, as a model change.
-4. Run it again after any fix pass that changed code, tags or the model.
+4. Read the unaccounted lines it lists. Each run of lines is one of three things:
+   - glue: leave it;
+   - an element the model is missing: add the element, as a model change;
+   - a change outside the model that the approved plan didn't list (a migration, configuration, a CI file): note it under `### Details` with its path. Don't invent an element for it, and don't edit the plan's list: the check reads the approved one.
+5. Run it again after any later commit that changes code, tags, the model or a Deviations list. The run you record is the last one, on the commit you hand over; only the ledger changes after it.
 
 Never write or edit an `Approved:` or `Re-approved:` line.
 
@@ -79,7 +84,7 @@ Your context is the expensive part. Delegate scouting, log reading, claim checks
 2. Append `## implementation` (or `## fix pass N`) to `review.md` with:
    - the gates you ran, with pass/fail and duration per gate, and per gate the exact command line (including selection) and `HEAD^{tree}` it ran on;
    - the model checks: the exact `validate` and `model-check` command lines, the commit each ran on and the result, with the count of unaccounted lines and what you judged them to be;
-   - `### Deviations`: one list item per model change, starting with its key in backticks, then the reason. Details are listed after it, in words;
+   - `### Deviations`: one list item per model change, starting with its key in backticks, then the reason. Then `### Details`, in words: details, unlisted changes outside the model, and any change to a golden example's code;
    - the T1 command lines you recorded for the helper, and why each spec was picked;
    - for a fix pass, which T1 failures you fixed, and whether each fix touched only tests or fixtures;
    - test lines vs production lines added, and the tests removed or consolidated;

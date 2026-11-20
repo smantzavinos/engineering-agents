@@ -20,7 +20,7 @@ Each question is answered where it applies, or with "n/a". Where the answer can 
 - **Good:** for read-heavy features, the platform limits that apply (query size, fan-out, payload, rate) and how the design stays within them at the expected data size.
 - **n/a:** no new reads that grow with data.
 
-## Deviations (Design)
+## Departures from the prototype (Design)
 - **Good:** each departure from the prototype or from an earlier decision, with the reason.
 - **n/a:** none.
 

@@ -20,13 +20,13 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   - groups have at most `maxLanes` members, `maxLanes` is at most the pool size, and members' claims don't overlap;
   - every acceptance scenario has an owner;
   - gates, budgets and pre-authorizations are explicit enough to run unattended.
-- **plan:** `plan.md` and `model.c4ish.json` against the agreed scope (the task, or the epic entry). Read the model as the human will: run `c4ish validate --strict`, generate the tour pages and walk them, then read the JSON for what the pictures don't show. Check the model:
+- **plan:** `plan.md` and `model.c4ish.json` against the agreed scope (the task, or the epic entry). Read the model as the human will: run `c4ish validate --strict`, generate the tour pages outside the repo (`architecture-model` → Commands) and walk them, then read the JSON for what the pictures don't show. Check the model:
   - it validates with no errors and no warnings, and the tour points at every review item;
   - it is right and complete against the code: an element or connection the work needs and the model lacks is a major. Validation can't see this; scout the code;
-  - every new, modified or reused element that lives in code has a pattern state, and every new, modified or removed one has a code reference, at least to its path. A missing one is a major;
+  - every new or modified element that lives in code has a pattern state, and every new, modified or removed one has a code reference, at least to its path. A missing one is a major. Reused context that follows a catalog pattern and doesn't name it is a minor;
   - each pattern fits: the element is what the catalog entry describes and is drawn as the entry's "In a plan model" says. A partial fit names the requirement it misses;
   - each bespoke reason holds. One that an existing pattern, or existing `@pattern bespoke` code doing the same job, answers is a major;
-  - each proposed pattern is worth one (the shape will be reused), and its entry, profile entry, golden example and check meet the catalog contract and are listed under Changes outside the model;
+  - each proposed pattern is worth one (the shape will be reused). Its requirements in `plan.md` → Design can be checked on one definition, the element named as its golden example can meet them all, and its catalog, rule and profile files are listed under Changes outside the model. The files themselves are written in the build;
   - no pattern the model uses is a draft entry: one the profile marks `proposed` and this plan doesn't propose. A draft in use is a major until the human approves the entry;
   - every scenario is walked by a tour step that actually shows it;
   - contracts can be implemented as written, every access rule is a clause named `access`, and every data relationship says who enforces it;
@@ -55,7 +55,7 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   - run `model-check all` yourself with the fixed command (`architecture-model` → Commands), on the commit you review. A different result from the recorded one is a major;
   - **approval lines:** the check prints the lines it relied on. Confirm each against the human's approval your task gives (date and commit). A line you can't confirm is a blocker;
   - check 2: any failure is a major;
-  - **unaccounted lines:** read every run of them. Accept it as glue, or raise the missing element as a major;
+  - **unaccounted lines:** read every run of them. Accept it as glue, or raise the missing element as a major. A run in a file the plan didn't list under Changes outside the model must be noted under Details in the ledger; judge whether it belongs in this plan;
   - check 3: a difference with no recorded deviation is a major. A re-approval difference is a stop: record it as a blocker headed `re-approval`, and say so first in your reply;
   - **each recorded deviation:** is it right, and is its class right? One recorded in too low a class is a major. Raise a model change to re-approval when it loosens what the human approved in a way the comparison can't see: a limit raised in a clause's text, or more changed in a listed catalog file than the plan proposed;
   - the model still validates, and still tells the truth about the code it points at.
@@ -63,7 +63,8 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   **Read by pattern state.** For each changed definition, find its element and its tag:
   - *catalogued, with a rule that passes:* skip only what the entry says the rule proves. Read the logic, the contract and the tests;
   - *catalogued, no rule:* read against the entry's requirements and its golden example. A requirement missed under a full-fit tag is a major; a missed convention is a minor;
-  - *partial fit, proposed, bespoke or untagged:* read in full. For a proposal, also judge the entry, the rule and the golden example in the diff;
+  - *partial fit, proposed, bespoke or untagged:* read in full. For a proposal, also judge the entry, the rule and the golden example in the diff against the catalog contract and the requirements the human approved, and check that the pattern left the model's `proposedPatterns` when its profile entry landed;
+  - *a golden example whose code changed:* it still meets every requirement of its entry, and has every test the entry asks for. If not, a major;
   - a definition that copies shared code instead of going through it is a major, whatever its tag.
 
   Run the project's pattern rules on the changed files when the ledger doesn't show them passing on this tree.
