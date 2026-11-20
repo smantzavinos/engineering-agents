@@ -13,6 +13,21 @@ import { blockCommentLines, changeStyles, checkApproved, checkCode, dataRelation
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'model-check.mjs');
 
+describe('started through a symlink, as an installed copy is', () => {
+	it('still runs: no command is a usage error, not a silent pass', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'model-check-link-'));
+		try {
+			const link = join(dir, 'model-check.mjs');
+			symlinkSync(SCRIPT, link);
+			const r = spawnSync(process.execPath, [link], { encoding: 'utf8' });
+			assert.equal(r.status, 2);
+			assert.match(r.stderr, /give a command/);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
 describe('globs', () => {
 	it('** crosses directories, * stays in one segment', () => {
 		assert.ok(matchAny('docs/a/b.md', ['docs/**']));

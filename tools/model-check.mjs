@@ -843,4 +843,13 @@ export function main(argv) {
 	}
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) process.exitCode = main(process.argv.slice(2));
+// Installed copies are reached through symlinks, so compare real paths: a run that silently did
+// nothing would read as a pass.
+const invoked = () => {
+	try {
+		return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+	} catch {
+		return false;
+	}
+};
+if (process.argv[1] && invoked()) process.exitCode = main(process.argv.slice(2));
