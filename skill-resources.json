@@ -95,6 +95,26 @@
     {
       "source": "docs/references/agent-roles.md",
       "target": "references/agent-roles.md"
+    },
+    {
+      "source": "docs/references/pattern-catalog.md",
+      "target": "references/pattern-catalog.md"
+    }
+  ],
+  "architecture-model": [
+    {
+      "source": "tools/model-check.mjs",
+      "target": "tools/model-check.mjs"
+    },
+    {
+      "source": "docs/references/pattern-catalog.md",
+      "target": "references/pattern-catalog.md"
+    }
+  ],
+  "map-patterns": [
+    {
+      "source": "docs/references/pattern-catalog.md",
+      "target": "references/pattern-catalog.md"
     }
   ]
 }

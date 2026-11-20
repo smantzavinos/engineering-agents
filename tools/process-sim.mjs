@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Simulate an epic under the frontier pipeline's execution rules (skills/orchestrate) and write a
+// Simulate an epic under the frontier pipeline's execution rules (skills/run-epic) and write a
 // scenario for tools/scenario-trace.mjs. Illustrative: durations come from the config, the
 // scheduling from the rules below. Used to compare process variants on the same epic.
 //

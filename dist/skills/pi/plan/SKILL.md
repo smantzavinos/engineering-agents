@@ -1,80 +1,101 @@
 ---
 name: plan
-description: Write a short, decisive implementation plan for one child of an epic (or for a single plan), revise it from review findings, and hand back. Used by the plan-author subagent.
+description: Write the plan for one piece of work — a short plan.md and a diagram model built from the project's pattern catalog — revise it from review findings, and hand back. Used by the plan-author subagent.
 compatibility: pi
 ---
 
 # Plan
 
-Write the plan a strong engineer needs to build this child in one session without guessing, and nothing more. You will be resumed with review findings, so this session owns the plan until it is approved.
+Write what a strong engineer needs to build this in one session without guessing, and what a human needs to approve it in minutes: a model they can read as a tour, and a short `plan.md`. You will be resumed with review findings, so this session owns the plan until it is approved.
+
+`architecture-model` holds the rules this skill relies on: what goes in the model and what in `plan.md`, pattern states, code references and the commands. Read it first.
 
 ## Inputs
-- `epic.md` and this child's entry; the plans and ledgers of the children it depends on, for what they leave behind. A dependency that isn't built yet is represented by its approved plan: plan against that, and expect a scout to check the plan once the code is integrated;
+- the agreed scope in your task, or `epic.md` and this child's entry, with the plans, models and ledgers of the children it depends on. A dependency that isn't built yet is represented by its approved plan: plan against that, and expect a scout to check the plan once the code is integrated;
 - `PROTOTYPE.md` and the prototype diff;
-- the repo's docs and rules;
-- the code that will change.
+- the project's path file, its catalog docs and profile (`architecture-model` → The files);
+- the repo's docs and rules, and the code that will change.
 
 Scout widely with subagents (`delegate`), and read the critical paths yourself.
 
+## The model
+`model.c4ish.json` beside `plan.md`, written as `c4ish guide` says, against the project's profile.
+- **What it shows:** every element the work adds, changes or removes, and the unchanged context one hop from them. Product concepts when the user sees a difference, and the engineering elements that implement each.
+- **Each element** has a change state. Each new, modified or reused one that lives in code has a pattern state. Each new, modified or removed one has a code reference, at least to its path.
+- **Choosing a pattern:** start from the chooser table of the catalog area. Read the entry and its golden example before you draw the element, and draw it as the entry's "In a plan model" says.
+- **Relationships:** each data relationship says who enforces it.
+- **Contracts:** every interface two elements build against, as named clauses. The access rule is the clause named `access`.
+- **Notes:** a risk or open question about one element or connector, attached to it.
+- **Scenarios:** each acceptance scenario by id and title. The detail stays in `plan.md`.
+- **Ids are stable.** Give an id to every part, tie and note whose text may change. Ids never change after approval.
+
+**No pattern fits:**
+- *A one-off:* mark it bespoke with a one-line reason. First search the code for `@pattern bespoke` doing the same job. If there is one, this is the second use: propose a pattern that covers both, add the earlier code to the model as a reused element with a code reference, and plan its retag. That edit is allowed outside the claim.
+- *A shape that will be reused:* propose a pattern. A proposal is part of the plan: the catalog entry, the profile entry, the golden example and its check, in the form the catalog contract gives. List the catalog, rule and profile files under Changes outside the model. The human approves the proposal with the plan.
+
+**The tour:** one tour, id `review`, in the order a reviewer should look: what changes for the user, the main flows, the patterns in use, each proposed pattern and bespoke element, what is removed, then the risks. Every scenario is walked by a step that actually shows it. One to three sentences a step, stating nothing that isn't in the model or `plan.md`.
+
+**Before handoff:** `c4ish validate --strict` prints `0 error(s), 0 warning(s)`. Then open the tour pages and read them as the human will.
+
 ## plan.md
-- **Goal:** what this child delivers, the acceptance scenarios it owns, and an estimate in changed lines, with the implementer's hours for it. For a single plan there is no epic, so this section also carries what was agreed with the human:
+- **Goal:** what this delivers, the acceptance scenarios it owns, and an estimate in changed lines with the implementer's hours for it. For a single plan there is no epic, so this section also carries what was agreed with the human:
   - scope in and out, and disposal;
   - the full-gate commands, the test map and the smoke set;
   - budget and autonomy limits.
 - **Context:** links to the code, docs and earlier decisions that matter.
-- **Design:** the key decisions and why. Name rejected alternatives when the choice isn't obvious.
-- **Changes:** by area or module, what changes and where. Enough to start, not a script.
-- **Tests:** the contracts each acceptance scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`). This is not a test checklist. It is the test budget: code review rejects new tests that don't trace to it, so keep it complete and lean.
+- **Design:** the key decisions and why, rejected alternatives when the choice isn't obvious, and each deviation from the prototype with its reason. Then a link to the model: it is the Changes section.
+- **Changes outside the model** (this exact heading): one list item per path or glob, starting with it in backticks. Migrations, configuration, dependency bumps, build and CI, docs, test infrastructure, and every catalog, rule or profile file a proposal adds or changes. A catalog, rule or profile file changed without being listed here stops the build for re-approval.
+- **Scenarios:** each with its id, as in the model, and what must be observed.
+- **Tests:** the contracts each scenario and each risky piece of logic needs proven, and the owning layer for each (`test-quality`), including the tests each pattern's entry asks for. This is the test budget: code review rejects new tests that don't trace to it, so keep it complete and lean.
 - **Gates (T1):** the commands, run once at the end of implementation:
   - typecheck and build for the touched packages;
-  - lint and format on the changed files;
+  - lint and format on the changed files, and the project's pattern rules on them;
   - units selected against the base commit, plus a whole-package rerun when its config, test setup or a shared module changes;
-  - E2E: this child's scenario specs, the test-map specs for the changed paths, and the smoke set. Without a test map, name the specs for the paths you expect to change.
+  - E2E: this plan's scenario specs, the test-map specs for the changed paths, and the smoke set. Without a test map, name the specs for the paths you expect to change.
 
-  **Widen** T1 to the whole affected packages and all mapped specs when the child touches schema, migrations, seed data, authorization or visibility, the shared shell, dependencies or build config. **Escalate** to full gates when it touches test infrastructure. Say which applies, and why.
-- **Claims** (every child, when the epic has a worktree pool): restate the child's claim from `epic.md`, refined to the files, routes, tables and shared components it will change. Stay inside it.
+  **Widen** T1 to the whole affected packages and all mapped specs when the work touches schema, migrations, seed data, authorization or visibility, the shared shell, dependencies or build config. **Escalate** to full gates when it touches test infrastructure. Say which applies, and why.
+- **Claims** (in an epic with a worktree pool): the child's claim from `epic.md`, refined to directories, routes and tables. The files come from the model's code references. Stay inside it.
 - **Done when:** observable criteria, and the **Deliverables**: the outcomes the build must contain (scenarios, specs, UI behaviours), not tasks. The implementer maps each to its evidence.
-- **Risks:** what could go wrong, and how to handle it.
+- **Risks:** only those with no place in the picture: rollout, schedule, environment.
 - **Handoff:** a few lines for the implementer, written last: what review settled, where you were unsure, what to watch.
 
-Answer each of these where it applies, in a line or "n/a" (`references/plan-questions.md`):
-- **Access and visibility** (Design, Tests): who can see and do what, including hidden or locked items; each guard's owning test.
-- **Failure and concurrency** (Design, Tests): errors, retry, two users at once, live updates.
-- **Assumptions checked against the code** (Context, Gates): what the plan relies on exists; specs and files outside the edit list that the change affects.
-- **Limits and load** (Design, Risks), for read-heavy features: platform limits and fan-out.
-- **Deviations** (Design): from the prototype or earlier decisions, with a reason.
-- **Deliverables** (Done when).
+The plan questions (`references/plan-questions.md`) are answered where they are drawn. `plan.md` gives each one line pointing at the ids, or "n/a":
+- **Access and visibility:** the `access` clauses, the enforcement on each data relationship, and each guard's owning test.
+- **Failure and concurrency:** contract clauses and notes.
+- **Limits and load,** for read-heavy features: a `limits` clause or a note.
+- **Assumptions checked against the code** (Context, Gates), **Deviations** (Design) and **Deliverables** (Done when) stay in `plan.md`.
 
-Aim for under 150 lines.
+Aim for under 120 lines. If `plan.md` describes an element, a connection or an interface, move it to the model.
 
 ## Judgment calls
-- **Course-setting decisions**, the ones that shape most of the remaining children: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the orchestrator stops for the human.
-- **Sizing:** estimate first. If the estimate is above the epic's review-load signal, say whether the child mixes separable concerns. If it does and the pieces could run in parallel (every `scope` → Parallel groups rule), stop before writing the full plan and propose the split, each piece with its scenarios, estimate and claim (inside the child's own claim). Otherwise plan it whole. Propose merging this child with one it depends on only when their content belongs together. Don't silently plan half of it.
-- **Scope:** plan only this child's entry. A fix or improvement outside it goes on a short Follow-ups line in `plan.md`, not into Changes.
-- **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply. The orchestrator widens the claim or orders the child after the one that holds it.
+- **Course-setting decisions**, the ones that shape most of the remaining work: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the session that started you stops for the human.
+- **Sizing:** record the estimate. A plan is as large as the work needs: never propose a split to meet a size number. Say so in your reply if the work holds parts with their own goal that could each be approved and shipped alone; that is the only reason to divide it.
+- **Scope:** plan only what you were given. A fix or improvement outside it goes on a short Follow-ups line in `plan.md`.
+- **Claims:** if the design needs to go outside the `epic.md` claim, say so in your reply.
 
 ## Refresh
-A fresh session, started in the child's worktree (its lane, or the work-branch worktree without a pool) when the scout found integrated changes the plan relies on.
-1. Read the `## refresh scout` note in the ledger, the plan and the ledger.
-2. Check the plan against what the note names: the integrated code, `epic.md` changes and any checkpoint merge.
-3. Update what changed, including the estimate, and commit it as one refresh commit. Its review covers only that commit.
-4. Reply with the refresh commit, the old and new estimate in lines and hours, and whether claims or scenarios changed. Don't `self_compact`; refreshes are short.
+A fresh session, started in the child's worktree when the scout found integrated changes the plan relies on.
+1. Read the `## refresh scout` note in the ledger, the plan, the model and the ledger.
+2. Check the plan and the model against what the note names: the integrated code, `epic.md` changes and any checkpoint merge.
+3. Update what changed, including the estimate and any code reference that moved, and commit it as one refresh commit. Its review covers only that commit.
+4. Reply with the refresh commit, the old and new estimate in lines and hours, and whether claims, scenarios or anything on the re-approval list (`architecture-model` → Deviations) changed. Don't `self_compact`; refreshes are short.
 
 ## Revising
-For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding. Your reply lists the findings you rejected, and says whether any fix changed a contract (an interface, data shape, access rule or scenario).
+For each finding in `review.md`, either fix it, or reject it with a one-line reason under the finding. If the reviewer has already disputed a rejection, or you're unsure, ask the oracle; its ruling settles the finding. Validate the model again after every change. Your reply lists the findings you rejected, and says whether any fix changed a contract (an interface, data shape, access rule or scenario).
 
 ## Handoff
-1. Commit `plan.md` and your `review.md` responses.
+1. Commit `plan.md`, the model and your `review.md` responses. No rendered diagrams or tour pages.
 2. `self_compact` with a note: what you decided and why, what's open, and how to continue.
-3. After compaction, reply in a few lines: a summary, sizing or course-setting flags, and the open risks.
+3. After compaction, reply in a few lines: a summary, the validate result, each proposed pattern and bespoke element, sizing or course-setting flags, and the open risks.
 
 Everything the next session needs is on disk, so you can be resumed or replaced.
 
 ## Do
 - Make the decisions. A plan that defers design to the implementer is not done.
-- Follow the repo's patterns. Say where you deliberately depart from them, and why.
+- Build from the catalog. A bespoke element or a proposed pattern needs a reason a reviewer can check.
 
 ## Don't
-- Restate repo rules or docs. Link them.
+- State anything in two homes, or restate repo rules, docs or catalog entries. Link them.
 - Write task tables, execution tiers or step-by-step checklists. The Deliverables list of outcomes is not one.
-- Plan beyond this child. Flag cross-child issues to the orchestrator.
+- Write an `Approved:` line, or change a catalog entry without proposing it.
+- Plan beyond what you were given. Flag issues outside it in your reply.

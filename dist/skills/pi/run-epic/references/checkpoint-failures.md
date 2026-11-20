@@ -1,6 +1,6 @@
 # Checkpoint failures
 
-Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failure. Everything here happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green. The one exception is the merge into a stopped child (orchestrate → Where work runs).
+Read this when a checkpoint run (`run-epic` → Checkpoints) reports a failure. Everything here happens on the checkpoint branch, in the checkpoint worktree. The work branch and running children stay untouched until the checkpoint is green. The one exception is the merge into a stopped child (`run-epic` → Where work runs).
 
 1. **Triage.** A failure already in the baseline is not a regression. For any other failure, a helper reruns it alone:
    - **It passes alone:** record a flake. A second sighting of the same flake puts it on the epic's Quarantine list, with an expiry. It also gets a tracker item if the epic pre-authorizes filing; otherwise it goes under Follow-ups.
@@ -17,5 +17,5 @@ Read this when a checkpoint run (`orchestrate` → Checkpoints) reports a failur
      - a lane child then merges the work branch into its lane branch;
      - without a pool, a stopped child gets the fix through that merge.
 
-     Then continue with its new base (orchestrate → Where work runs).
-   - **Others** go on untouched. Epic-close fixes aren't paused (`orchestrate` → Epic close).
+     Then continue with its new base (`run-epic` → Where work runs).
+   - **Others** go on untouched. Epic-close fixes aren't paused (`run-epic` → Epic close).

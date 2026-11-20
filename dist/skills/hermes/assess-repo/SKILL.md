@@ -32,6 +32,7 @@ Read these references to understand what a well-configured repo looks like:
 - [references/task-tracking.md](references/task-tracking.md) — backlog/task-tracking hooks repos must map to
 - [references/requirements.md](references/requirements.md) — requirements-handling hooks repos may map to
 - [references/agent-configuration.md](references/agent-configuration.md) — model/agent setup per repo
+- [references/pattern-catalog.md](references/pattern-catalog.md) — the pattern catalog contract, for repos whose plans carry an architecture model
 
 ### 2. Scan the Repository
 
@@ -77,6 +78,17 @@ Check for presence AND quality of:
 - [ ] Agent model overrides match the repo's tech stack (e.g., UI-strong model for frontend repos)
 - [ ] No full agent `.md` copies in `.pi/agents/` (use `.pi/settings.json` → `subagents.agentOverrides` for automatic prompt updates)
 
+**Architecture model (required before a plan with a model can be approved):**
+- [ ] The diagram tool runs (`c4ish --version`) and has `validate`, `code`, `diff` and `profile`
+- [ ] The agent guide names one path file, and it is committed
+- [ ] The path file has `profile`, `catalog`, `rules`, `leftOut` and `noTag`, and no `kinds`. `leftOut` covers tests, docs, generated files and the plans directory
+- [ ] The catalog docs and the profile exist, are committed, and hold the same pattern ids
+- [ ] Every element kind the profile adds has a `category` (`c4ish profile <profile>`)
+- [ ] Every pattern's golden example resolves (`c4ish code <profile> --root .` exits 0)
+- [ ] Each entry has the fields the contract asks for, and none lists where the pattern is used beyond its one golden example
+- [ ] The pattern rules run on changed files, with a documented command, and are part of the fast gates
+- [ ] The agent guide gives the plan directory layout: `plan.md`, `model.c4ish.json` and `review.md` together
+
 ### 3. Assess Quality (not just existence)
 
 For documents that exist, evaluate:
@@ -113,6 +125,7 @@ For documents that exist, evaluate:
   3. No requirements system yet; document that requirements are not maintained separately
 - `pr-review-hooks.md` manifest at the repo root, drafted from the PR-review hooks in `references/pr-review.md`. Point at the rule files that already exist rather than restating them; every verification row must be a runnable command; name the evidence method and the merge gate explicitly.
 - AGENTS.md skeleton with proper references
+- For the architecture model: the path file, named in the agent guide. A missing or thin catalog is not created here: say so, and point to the `map-patterns` skill, which writes it with the human
 - Per-directory AGENTS.md files where patterns are needed
 
 **If updating:** Modify existing configuration:
@@ -123,6 +136,7 @@ For documents that exist, evaluate:
 - Update `pr-review-hooks.md` when rule files, verification commands, evidence methods, or merge policy change
 - Update the role→model assignment when `references/agent-roles.md` roles change or model availability changes
 - Update AGENTS.md references when structure changes
+- Update the path file when the catalog, profile, rules or left-out paths move. Changing a catalog entry is `map-patterns`' job and needs the human's approval
 - Update per-directory AGENTS.md when patterns evolve
 
 ## Task Tracking Setup Guide

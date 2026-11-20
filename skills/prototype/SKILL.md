@@ -6,7 +6,7 @@ harnesses: [pi]
 
 # Prototype
 
-Build a working demo with the human, as fast as possible. It answers "is this what we want?". It is the spec for behavior, not the implementation. The real build comes later, through `scope` and `orchestrate`.
+Build a working demo with the human, as fast as possible. It answers "is this what we want?". It is the spec for behavior, not the implementation. The real build comes later, through `scope` and `run-plan`.
 
 ## Session
 - Restate the target as 2–3 bullets of visible behavior. Confirm them before building.

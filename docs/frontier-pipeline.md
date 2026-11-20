@@ -1,108 +1,121 @@
 # Frontier Pipeline
 
-> **Status: pilot.** This is the process the `scope` and `orchestrate` skills run for prototype-first work. It has not been formally adopted yet (ADR 0007 is pending), so the older process docs ([process.md](process.md), [orchestration.md](orchestration.md), [plan-levels.md](plan-levels.md)) still describe the previous path. **The skills are the source of truth**; this page is an overview with an example. Where they differ, the skills win.
+> **Status: pilot.** This is the process the `scope`, `run-plan` and `run-epic` skills run for prototype-first work. It has not been formally adopted yet (ADR 0007 is pending), so the older process docs ([process.md](process.md), [orchestration.md](orchestration.md), [plan-levels.md](plan-levels.md)) still describe the previous path. **The skills are the source of truth**; this page is an overview with an example. Where they differ, the skills win. The design and its reasons are in `plans/2026_10_21_architecture_driven_plans/plan.md`.
 
 ## The shape
 
 ```
-prototype ──► scope (with the human) ──► orchestrate (unattended) ──► PR process
-  PROTOTYPE.md      epic.md or plan.md         child by child             pull-request
+prototype ─► scope (with the human) ───────────────► run-plan (unattended) ─────────────────► PR process
+PROTOTYPE.md   plan.md + model + tour                 build, code tagged ─► model checks        pull-request
+               ─► review ─► the human approves        ─► code review + T1 ─► full gates
+                  from the tour                        ─► checks again ─► as-built tour
+               └─► epic.md (rare) ─► run-epic: per child, a plan loop and the same build loop
 ```
 
 1. **Prototype** (`prototype`): a throwaway build, paired with the human, that shows the behaviour wanted. Its accepted demo becomes the acceptance scenarios.
-2. **Scope** (`scope`): the orchestrator and the human agree what the real build covers, including what the prototype skipped. Small work becomes a single `plan.md`; anything bigger becomes an `epic.md` of numbered child plans. A fresh reviewer checks it; the human approves.
-3. **Orchestrate** (`orchestrate`): runs every child through plan → build → review → integrate, without asking, until done or a stop condition fires.
-4. **PR** (`pull-request`): the epic branch goes through the normal PR review.
+2. **Scope** (`scope`): the orchestrator and the human agree what the real build covers, including what the prototype skipped. The default is **one plan, as large as the work needs**. A plan-author writes a short `plan.md` and a model; a fresh reviewer checks both; the human approves from the model's tour, and `scope` records the approval.
+3. **Run plan** (`run-plan`): one implementer builds the whole plan and tags the code. The model is checked against the code, a fresh reviewer and T1 run side by side, then the full gates and the checks again. It stops only if the build needs the human to re-approve a change to what they approved.
+4. **PR** (`pull-request`): the branch goes through the normal PR review, with what shipped against what was approved, and the as-built tour.
+
+An **epic** (`run-epic`) is the rare case: genuinely distinct workstreams, each with its own plan and model. Work is never divided to meet a size number.
+
+## The model
+
+A plan's design is a model: a JSON file the diagram tool (`c4ish`) validates and draws. The rules are in the `architecture-model` skill; in short:
+
+- **Built from a catalog.** The project keeps a catalog of its patterns (the contract: [references/pattern-catalog.md](references/pattern-catalog.md); written from existing code with `map-patterns`). Every element that lives in code follows a catalogued pattern, is a partial fit, proposes a new pattern, or is bespoke with a reason.
+- **One home per kind of content.** The model says what is built and how the pieces connect. `plan.md` says why, and what proves it. The tour says in what order to look.
+- **Tags.** The build tags each definition it creates or changes with its pattern (`@pattern <id>`). Review reads by pattern state: it skips only what a passing rule proves, and reads one-offs and deviations in full.
+- **Three checks.** The model validates and its tour walks every scenario (plan time). The model agrees with the code (before code review, and at close). Every difference between the approved model and the shipped one is a recorded deviation (the same).
+- **Deviations** are a detail, a model change the reviewer judges, or a re-approval that stops for the human.
+- **Approvals are recorded** as lines in `plan.md` naming a commit. Only the session that receives the human's approval writes one.
 
 ## Roles
 
 | Agent | Does | Session |
 |---|---|---|
-| orchestrator | Sequences the work, keeps `state.json`, decides; never plans, builds or reviews | One long session, self-compacts at clean points |
-| plan-author | Writes a child's `plan.md`, revises it from review | Owns the plan until approved; resumed for fixes. Refreshes after approval are fresh sessions |
-| implementer | Builds the whole plan, runs T1's fast gates and records the rest, fixes review and T1 findings | Owns the code until approved; resumed for fixes and integration conflicts |
-| reviewer | Judges a plan, a refresh, a diff, an integration or the whole epic | Always fresh; commits only the ledger |
+| orchestrator | Sequences the work, keeps `state.json`, shows the tour, records approvals, decides; never plans, builds or reviews | `scope`, then `run-plan` (or `run-epic`); self-compacts at clean points |
+| plan-author | Writes `plan.md` and the model, revises them from review | Owns the plan until approved; resumed for fixes. Refreshes after approval are fresh sessions |
+| implementer | Builds the whole plan, tags the code, keeps the model in line, runs the model checks and T1's fast gates, fixes review and T1 findings | Owns the code until approved; resumed for fixes |
+| reviewer | Judges a plan and its model, a diff against the approved model, an integration or a whole epic; owns the verdict on the model checks | Always fresh; commits only the ledger |
 | oracle | Breaks ties and answers what would otherwise go to the human | Fresh |
-| helper, researcher | Scouts, T1 and gate runs, digests, sweeps | Fresh, fast models |
+| helper, researcher | Scouts, T1 and gate runs, the checks at close, digests, sweeps | Fresh, fast models |
+
+## Skills
+
+| Skill | Who uses it | For |
+|---|---|---|
+| `prototype`, `scope`, `run-plan`, `run-epic` | The human starts them | The steps above |
+| `plan`, `implement`, `review` | plan-author, implementer, reviewer | Each role's job |
+| `architecture-model` | Every role | The shared rules for the model, tags, checks, deviations and approvals; ships the check (`tools/model-check.mjs`) |
+| `map-patterns` | The human starts it | Writing the project's pattern catalog from the code that exists |
+| `assess-repo` | The human starts it | Checking that a repo has what the process needs, including the catalog set-up |
+| `delegate`, `test-quality` | Every role | Offloading read-heavy work; which tests to write and keep |
 
 ## Artifacts
 
 | File | What |
 |---|---|
 | `PROTOTYPE.md` | The prototype's handoff note: the behaviour it shows |
-| `epic.md` | Goal, scope, acceptance scenarios, children (dependencies, estimate, claim), parallel groups, gates, checkpoints, review-load signal, budgets, autonomy, Decisions, Follow-ups, Quarantine |
-| `state.json` | The orchestrator's memory: per-child status, runs, review passes, budgets; groups, checkpoints, launches, stops |
-| `NN_slug/plan.md` | One child's plan: goal and estimate, design, changes, the contracts to test, T1 gates, claim, deliverables, risks, handoff. Under about 150 lines |
-| `NN_slug/review.md` | The child's ledger: every review pass, the author's responses, the scout note, the implementer's evidence (gates with command line and tree, deliverables map) |
+| `plan.md` | Goal and estimate, design decisions, changes outside the model, scenarios, the contracts to test, T1 gates, deliverables, risks, handoff, and the approval lines. Under about 120 lines |
+| `model.c4ish.json` | The design: elements with change state, pattern state and code references; relationships; contracts; notes; scenarios; one review tour. Diagrams and tour pages are generated from it, never committed |
+| `review.md` | The ledger: every review pass, the author's responses, the implementer's evidence (gates and model checks with command line and tree, deliverables map) and the recorded deviations |
+| `state.json` | The orchestrator's memory: approvals, runs, review passes, budgets, launches, stops |
+| The path file, catalog docs and profile | Project-owned, outside any plan: where the catalog lives and what the checks leave out |
+| `epic.md` (epics only) | Goal, scope, scenarios, children, cross-plan contracts, proposed patterns, claims, groups, gates, checkpoints, budgets, autonomy, Decisions, Follow-ups, Quarantine |
 
-## Where work runs
+## A plan, start to finish
 
-Each worktree has one writer at a time.
-
-| Worktree | Holds |
-|---|---|
-| Work branch | The epic branch. Only the orchestrator's files, plan merges and integration merges land here. Epic-close fixes run here |
-| Planning (up to three) | A `plan/NN` branch per child, cut from the work-branch tip. Plan-authors and plan reviewers run here |
-| Pool (lanes) | A `lane/NN` branch per child. Scout, refresh, implementer, code reviews and T1 helpers run here. A lane holds its worktree until integrated |
-| Checkpoint | Baseline and checkpoint full-gate runs, checkpoint fixes, and (when free) group integration |
-
-Without a worktree pool there are no lanes: children run one at a time in the work-branch worktree.
-
-## A child, start to finish
-
-1. **Plan.** A plan-author writes the plan once every child it depends on has *started implementing*, so planning runs ahead of the build. A dependency not built yet is represented by its approved plan. A fresh reviewer reviews it.
-   - Pass 2 is skipped when the reviewer says it isn't needed, there were no blockers, every major was fixed and none rejected, and no fix changed a contract.
-   - On approval the plan branch merges into the work branch, and the child's budget is set from its estimate (implementer hours × 1.5, plus a fixed per-child cost).
-2. **Start.** When its unit may start (below), the child gets a lane at the work-branch tip. A helper *scouts* what was integrated since the plan was cut. Only if something relevant changed does a fresh plan-author *refresh* the plan, reviewed once.
-3. **Implement.** The implementer builds everything, running only fast T0 checks while building. At the end it runs T1's fast gates (builds, typecheck, lint), records the exact command lines for the rest of T1 (units and E2E), stops its services and hands off. Its ledger entry records each gate's command line and tree, and maps every deliverable to its evidence.
-4. **Code review and T1, side by side.** A fresh reviewer and a T1 helper start together on the implementer's commit. The helper runs the recorded units and E2E, classifying each failure as flake, baseline or red. Approved and green closes the child; otherwise the implementer fixes the findings and the red T1 failures together.
-   - Pass 1 reviews the child's whole diff against the plan. Later passes review only the fix range.
-   - The next review is skipped when the reviewer says it isn't needed, every major was fixed and none rejected, every major was of a kind whose fix can't change production behaviour (`tests`, `T1`, `wording`), and every T1 fix touched only tests or fixtures. Then only T1 runs again.
+1. **Plan.** A plan-author writes `plan.md` and the model against the catalog, and validates the model. A fresh reviewer reviews both. Pass 2 is skipped when the reviewer says it isn't needed, every major was fixed and none rejected, and no fix changed a contract.
+2. **Approve.** `scope` gives the human the tour, the link to `plan.md` and a short list: scenarios, proposed patterns, bespoke elements and open questions. Approving the plan approves its catalog changes. `scope` records `Approved: <date> <commit>` and stops; the human starts `run-plan`.
+3. **Implement.** The implementer builds everything, running only fast T0 checks while building. It reads each pattern's entry and golden example, tags what it creates or changes, and handles a departure from the model by its class. At the end it makes the code references exact, runs the model checks and T1's fast gates, and records the exact command lines for the rest of T1.
+4. **Code review and T1, side by side.** A fresh reviewer and a T1 helper start together on the implementer's commit. The reviewer reruns the model checks, confirms the approval lines, reads the unaccounted lines, judges each deviation, then reads the code by pattern state. Approved and green goes to close; otherwise the implementer fixes the findings and the red T1 failures together.
+   - Later passes review only the fix range. A diff above the review-load estimate is read in groups by container (untested).
    - Cap: 4 passes, T1-only fix passes included, then stop for the human.
-5. **Close.** The child's unit integrates (below). The orchestrator updates the epic, starts every checkpoint and unit that is now ready, and self-compacts.
+5. **Re-approval,** when the build must change what the human approved: the implementer commits and stops; `run-plan` shows the human a tour of only what differs. They approve (recorded as `Re-approved:`), ask for changes, or reject.
+6. **Close.** A helper runs the full gates once, and reruns the model checks on the final commit. The PR gets approved versus shipped, the as-built tour and the recorded deviations.
 
-## Units, groups and claims
+## Epics
 
-- **Dependencies:** a child depends on another only for what it needs built. A child that needs only a contract (schema, API, types, an interface) gets it from the earliest child it already depends on, usually the foundation, which keeps the chain short; the longest chain sets the epic's length.
-- **Unit:** a parallel group, or a child in no group (a group of one). Group members build at the same time and integrate together.
-- **Start rule:** a unit starts when everything its members depend on is integrated, every member's plan is approved, and a pool worktree is free for each member, up to `maxLanes` lanes (default 4). Units start in child-number order; a waiting unit holds back later ones.
-- **Claims:** each child names the files, routes, tables and components it may change. Units with overlapping claims never run at once. A child that must go outside its claim, or change a contract an earlier child delivered, reports it, and the orchestrator widens the claim or orders it against the children that hold or use it.
-- **Integration:**
-  - *Group of one, plain merge:* if only orchestrator and plan files moved on the work branch since the lane's base, the lane merges directly; its own T1 is the proof.
-  - *Otherwise:* lanes merge into an `integration/<group>` branch in child order. A conflict goes back to that member's implementer. A helper runs the group T1. An integration review runs only if an integrator changed something. Then the integration branch merges into the work branch.
+Rare, and untested since plans gained a model. `run-epic` adds what crosses plans; each child is planned and built as above, in its own worktree.
+
+- **Models:** each child has its own detailed model. `epic.md` names each cross-plan contract and the child that owns it, and claims each pattern a child will propose. There is no detailed model of the whole epic.
+- **Approval:** who approves each child's plan follows the epic's Autonomy. A child that changes the catalog always stops for the human.
+- **Worktrees** (one writer each): the work branch (the orchestrator's files, plan and integration merges); up to three planning worktrees; a pool of lanes, one per child being built; a checkpoint worktree for full-gate runs and fixes. Without a pool, children run one at a time.
+- **Planning runs ahead:** a child is planned once every child it depends on has started implementing. At its start a helper scouts what was integrated since; only a relevant change triggers a plan refresh.
+- **Units, groups and claims:** a unit is a parallel group, or a child in no group. It starts when everything its members depend on is integrated, every member's plan is approved and a lane is free for each. Each child claims the directories, routes, tables and components it may change; units with overlapping claims never run at once.
+- **Integration:** a group of one merges directly when only orchestrator and plan files moved meanwhile. Otherwise lanes merge into an integration branch in child order, a helper runs the group T1, and an integration review runs only if an integrator changed something.
+- **Checkpoints** are named after a child and run the full gates in the checkpoint worktree once that child and its dependencies are integrated. They don't hold back other children. A red one is fixed on the checkpoint branch (`run-epic/references/checkpoint-failures.md`).
+- **Epic close:** the epic-diff review and the final checkpoint run side by side; then the fixes, T1 on the merged tip, and the PR process.
 
 ## Verification tiers
 
 | Tier | When | What |
 |---|---|---|
 | T0 | While building | Related tests, one E2E spec, incremental typecheck |
-| T1 | Per review pass of a child (fast gates by the implementer, units and E2E by a helper beside the review), and per group integration | Typecheck/build of touched packages, lint on changed files, selected units, the child's E2E specs plus test-map specs and smoke set; widened or escalated by the plan |
-| Full gates | Baseline, checkpoints, epic close | Everything, off the critical path; the final checkpoint runs beside the epic-diff review |
+| T1 | Per review pass (fast gates by the implementer, units and E2E by a helper beside the review), and per group integration | Typecheck/build of touched packages, lint and the pattern rules on changed files, selected units, the plan's E2E specs plus test-map specs and smoke set; widened or escalated by the plan |
+| Model checks | Before each code review, in it, and at close | `c4ish validate --strict` and `model-check all` |
+| Full gates | Baseline, a plan's close, an epic's checkpoints | Everything, off the critical path |
 
-A gate is never rerun on the same tree with the same command line. E2E workers are shared out per run: each T1 or checkpoint run gets an even share of the machine's budget across the runs in flight when it starts.
-
-**Checkpoints** are named after a child and run in the checkpoint worktree once that child and its dependencies are integrated. They don't hold back starting or integrating children. A red checkpoint is fixed on the checkpoint branch; only children that build on the broken code are paused (`orchestrate/references/checkpoint-failures.md`).
+A gate is never rerun on the same tree with the same command line.
 
 ## Sizing
 
-The review-load signal (default about 7k changed lines) is what a reviewer can judge in one pass. A child above it is split only if its concerns are separable *and* the pieces can run as parallel lanes. Every child adds a fixed cost to the critical path (plan loop, review loop, integration) that only parallel lanes hide, so serial work stays whole. Groups are chosen by content, never by size.
-
-## Epic close
-
-The epic-diff review and the final checkpoint run side by side. The review's fixes go to an implementer in the work-branch worktree, which runs the fast gates. Once the fixes are in and the final checkpoint is green, the checkpoint merges, and a helper runs T1 for the fixes on the merged tip. Then the PR process.
+A plan is as large as the work needs. Each extra plan adds a fixed cost (plan loop, review loop, integration) and cuts one design into pieces the human has to hold together. The review-load estimate (default about 7k changed lines) is recorded, not a limit: above it, the code is reviewed in groups.
 
 ## Stops
 
-The orchestrator decides everything else, recording tricky calls under Decisions. It stops for the human when:
+The orchestrator decides everything else, recording tricky calls. It stops for the human when:
+- the build needs re-approval, or (in an epic) a child's plan needs their approval;
 - the scope or a premise of the prototype would change;
-- an action is destructive, irreversible, or needs a push or merge the epic didn't pre-authorize;
-- a review loop hits its cap, a child exceeds its budget, or an environment failure persists;
+- an action is destructive, irreversible, or needs a push or merge that wasn't pre-authorized;
+- a review loop hits its cap, the build exceeds its budget, or an environment failure persists;
 - a gate failure can't be fixed and isn't in the baseline;
 - a course-setting decision has no clearly better option, even for the oracle.
 
-## Example execution
+## Example epic execution
 
-A simulated epic of seven children, with four lanes and three planning worktrees. It is scheduled by `tools/process-sim.mjs` under the skills' rules, with each step's duration set to the median of that step in the pilot (fast-verification eras). Medians hide the long tail, and no failure paths are shown, so read it for shape, not as a forecast. It takes 4h16; `plans/2026_10_20_process_variants/` compares it with other process variants on the same epic.
+A simulated epic of seven children, with four lanes and three planning worktrees, as `run-epic` schedules it. It predates plan models and the size rule: child 06 is split for size here, which would not happen now, and no approval or model-check step is shown. It is scheduled by `tools/process-sim.mjs` under the skills' rules, with each step's duration set to the median of that step in the pilot (fast-verification eras). Medians hide the long tail, and no failure paths are shown, so read it for shape, not as a forecast. It takes 4h16; `plans/2026_10_20_process_variants/` compares it with other process variants on the same epic.
 
 ![Example epic execution](diagrams/example-epic.svg)
 
@@ -144,3 +157,4 @@ Open the `.trace.json` in the Work Trace viewer for details per span. `tools/pi-
 - `plans/2026_10_16_pipeline_tuning/`: the changes adopted from the retro (units and claims, refresh only on relevant change, conditional plan pass 2, fix-range code review, deliverables map).
 - `plans/2026_10_20_process_variants/`: simulated process variants and where a single plan's time goes.
 - `plans/2026_10_20_pipeline_throughput/`: the changes adopted from them (contract-first dependencies, T1 beside code review, conditional code pass 2, final checkpoint beside the epic review, three planning worktrees).
+- `plans/2026_10_21_architecture_driven_plans/`: plans whose design is a model built from a pattern catalog, approval from a tour, the model checks, and `run-plan` / `run-epic` in place of `orchestrate`.

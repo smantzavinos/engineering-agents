@@ -1,6 +1,6 @@
 # Plan questions
 
-Each question is answered where it applies, in a line or two in the named section, or with "n/a". A good answer is specific enough for a reviewer to check against the code.
+Each question is answered where it applies, or with "n/a". Where the answer can be drawn it is drawn in the model: a contract clause, the enforcement on a relationship, or a note. `plan.md` then gives one line pointing at the ids, in the named section. The rest are answered in a line or two in that section. A good answer is specific enough for a reviewer to check against the code.
 
 ## Access and visibility (Design, Tests)
 - **Good:** names each actor and what they may see and do, including hidden, archived, locked or other-tenant items, and where each rule is enforced. Tests name the owning test for each guard, at the boundary `test-quality` prescribes.

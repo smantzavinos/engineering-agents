@@ -34,19 +34,19 @@ Sub-agents are called by the presets to do the actual work. Placed at `~/.pi/age
 
 ### Frontier pipeline (pilot)
 
-Used by the `scope` and `orchestrate` presets and skills; see `plans/2026_10_10_frontier_pipeline/`. `oracle` and `researcher` are shared with the legacy set.
+Used by the `scope`, `run-plan` and `run-epic` presets and skills; see `plans/2026_10_10_frontier_pipeline/`. `oracle` and `researcher` are shared with the legacy set.
 
 | Agent | Model Tier | Role |
 |-------|-----------|------|
-| `plan-author` | Frontier | Write and revise one child's plan; resumed across review rounds |
-| `implementer` | Frontier | Build a whole plan, pass gates, fix findings; resumed across review rounds |
+| `plan-author` | Frontier | Write and revise one plan and its model; resumed across review rounds |
+| `implementer` | Frontier | Build a whole plan, tag the code, keep the model in line, pass gates and model checks, fix findings; resumed across review rounds |
 | `reviewer` | Frontier | Fresh-context review (epic, plan, code, epic-diff); new session every pass |
 | `helper` | Fast | Errands for frontier agents: scout, run and digest, verify, sweep |
 
 ## Files
 
 ### Presets
-- `preset.jsonc` — Legacy modes (discovery, design, execute) and frontier-pipeline modes (scope, orchestrate)
+- `preset.jsonc` — Legacy modes (discovery, design, execute) and frontier-pipeline modes (scope, run-plan, run-epic)
 
 ### Agents
 - `planner.md` — Plan creation (Frontier reasoning)
