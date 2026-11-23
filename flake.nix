@@ -295,7 +295,7 @@
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: powerline not in runtime packages"; exit 1; }
           ${pkgs.jq}/bin/jq -e '(.packages | index("./packages/pi-zentui")) == null' \
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: zentui must not be a runtime package by default"; exit 1; }
-          for id in glm-5.3 glm-5.2 glm-5 glm-5-turbo; do
+          for id in glm-5.4 glm-5.3 glm-5.2 glm-5 glm-5-turbo; do
             ${pkgs.jq}/bin/jq -e --arg id "$id" '.providers["zai-coding-plan"].models[] | select(.id == $id)' \
               "$cfgd/agent/models.json" >/dev/null || { echo "FAIL: zai catalog missing $id"; exit 1; }
           done

@@ -46,6 +46,7 @@ in
     "zai-coding-plan/glm-5.2"
     "zai-coding-plan/glm-5.3"
     "zai-coding-plan/glm-5.3-flash"
+    "zai-coding-plan/glm-5.4"
   ];
   agentOverrides = (removeAttrs selected [ "default" ]) // {
     planner = plan-author;

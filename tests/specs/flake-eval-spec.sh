@@ -458,6 +458,19 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi enabledModels is missing GLM 5.3 or GLM 5.3 Flash"
   fi
 
+  if jq -e '.providers["zai-coding-plan"].models | any(.id == "glm-5.4" and .name == "GLM 5.4" and .contextWindow == 1000000 and .maxTokens == 131072 and .reasoning == true and .input == ["text", "image"])' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+    pass "models.json includes GLM 5.4"
+  else
+    fail "models.json is missing GLM 5.4 metadata"
+  fi
+
+  if [[ -n "$PI_SETTINGS_STORE_JSON" && -f "$PI_SETTINGS_STORE_JSON" ]] \
+    && jq -e '.enabledModels | index("zai-coding-plan/glm-5.4") != null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "Pi enabledModels includes GLM 5.4"
+  else
+    fail "Pi enabledModels is missing GLM 5.4"
+  fi
+
   if jq -e '.providers | has("github-copilot") | not' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     pass "models.json leaves Copilot definitions to Pi's own catalog by default"
   else

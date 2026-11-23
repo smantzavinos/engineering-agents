@@ -820,6 +820,7 @@ let
           baseUrl = "https://api.z.ai/api/coding/paas/v4";
           api = "openai-completions";
           models = [
+            { id = "glm-5.4"; name = "GLM 5.4"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; input = [ "text" "image" ]; }
             { id = "glm-5.3"; name = "GLM 5.3"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; }
             { id = "glm-5.3-flash"; name = "GLM 5.3 Flash"; contextWindow = 1000000; maxTokens = 131072; reasoning = true; input = [ "text" "image" ]; }
             { id = "glm-5.2"; name = "GLM 5.2"; contextWindow = 1048576; maxTokens = 131072; reasoning = true; }
