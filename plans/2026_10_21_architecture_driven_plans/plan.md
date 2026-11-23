@@ -311,6 +311,7 @@ The tool is a separate product and knows nothing of this process: no tags, no de
 | Scenarios in the model, a tour step naming the scenarios it walks, and a failure when none walks one | §4.6 check 1 | Built. A scenario counts as walked when a step of any tour names it |
 | A bespoke marker with a required reason, drawn distinctly and counted by tour coverage | §4.5 | Built. It stands in place of a pattern. Coverage counts it when its element or part is new or modified |
 | A comparison of two versions of a model, by id, reported by kind of difference, and a tour of only what differs | §4.6 check 3, §4.7 | Built. Dropped elements and connectors are drawn; dropped fields, parts, contracts and notes are words only |
+| The same code report where code sits in git submodules of the repository that holds the plan | §4.6 checks 2 and 3 | Built. A submodule is read through the commits the root points to; its changes are listed under its path; the report names the submodules it used; one it needed and could not read is a problem |
 
 This repo adds a small check under `tools/` on top of that report. It reads the tags, the project's path file (§4.3), `plan.md` and the comparison, and applies the tables in §4.6 and §4.7. Which lines count as unaccounted is its decision, not the tool's. Code references replaced the model's earlier `sources` field, which moved the tool's model schema to version 1.
 
@@ -336,6 +337,7 @@ This repo adds a small check under `tools/` on top of that report. It reads the 
 - **"Changes outside the model" in the plan** has the same form: a section with that heading, one list item per path or glob, starting with it in backticks. In both files the heading must match exactly (a number before it or a colon after it is fine) and fenced code is ignored.
 - **Bases.** `code` compares code from the first `Approved:` commit. `--base` may move that to an earlier commit, never a later one. `approved` compares from the latest approval line.
 - **Exit codes:** 0 pass, 1 a failure or a re-approval, 2 an error of any other kind. `--json` carries the verdict.
+- **Code in git submodules.** A plan can sit in a root repository whose code is in submodules. The check runs from the root. A reference, a changed path and a path-file glob are written from the root, the submodule's path first. The tool reads a submodule through the commits the root points to; what changed inside it counts, and the pointer moving does not. Both checks take their changed paths from the tool's report, so the submodule rules exist once. The path file, the profile and the plan sit in the root. A submodule that is needed (a reference points into it, or its pointer moved) and is not checked out, or lacks a commit the root points to, is exit 2: nothing can be judged. So is a tool too old to look inside submodules, in a repository that has one.
 
 Every need in the table is built. The check needs a version of the tool that has them.
 

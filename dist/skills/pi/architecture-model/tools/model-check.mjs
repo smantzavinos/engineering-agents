@@ -36,7 +36,14 @@
 //   --no-approval          run a plan that has no approval line.
 //   --code-report <file>   use this `c4ish code --json` output instead of running the tool.
 //   --diff-report <file>   use this `c4ish diff --json` output instead of running the tool.
-//   --changed-paths <file> use this list of changed paths (one per line) instead of asking git.
+//   --changed-paths <file> use this list of changed paths (one per line) instead of asking the diagram tool.
+//
+// Code in git submodules. Run from the repository that holds the plan (the root). A reference, a
+// changed path and a path-file glob are all written from the root, the submodule's path first.
+// The diagram tool reads a submodule through the commits the root points to, and what changed
+// inside it counts; the pointer moving does not. The path file, the profile and the plan sit in
+// the root. A submodule that is needed (a reference points into it, or its pointer moved) and is
+// not checked out, or lacks a commit the root points to, is exit 2: nothing can be judged.
 //
 // Exit: 0 pass · 1 a check failed or a re-approval is needed · 2 usage or environment error.
 //
@@ -613,6 +620,28 @@ function tool(args) {
 	return JSON.parse(out);
 }
 
+/** Whether the repository holds a git submodule, in its index or at one of the commits. */
+function hasSubmodules(root, commits) {
+	const pointer = /^160000 /m;
+	return pointer.test(git(root, ['ls-files', '-s'])) || commits.some((c) => pointer.test(git(root, ['ls-tree', '-r', c])));
+}
+
+/**
+ * The diagram tool's code report since `base`. Code may sit in git submodules of the repository:
+ * the tool reads each through the commits the repository points to and lists the ones it used.
+ * A submodule it needed and could not read means nothing can be judged, so that is an error and
+ * never a report of no changes.
+ */
+function codeReportSince(ctx, base, toolArgs) {
+	const report = tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...toolArgs]);
+	if (!Array.isArray(report.references)) throw new UsageError(`c4ish code gave no report for ${ctx.model}`);
+	if (report.repositories === undefined && hasSubmodules(ctx.root, [report.base ?? base]))
+		throw new UsageError('this repository has git submodules, and the c4ish in use does not look inside them: update c4ish');
+	const unread = (report.repositories ?? []).filter((r) => r.problem);
+	if (unread.length) throw new UsageError(`cannot judge: ${unread.map((r) => r.problem).join('; ')}`);
+	return report;
+}
+
 /** The real path, so a path through a symlink still sits under the repository root. */
 const real = (path) => (existsSync(path) ? realpathSync(path) : path);
 
@@ -762,7 +791,7 @@ function runCode(ctx, opts) {
 	// a later baseline would hide what the build did
 	if (first && opts.base && !isAncestor(ctx.root, opts.base, first.sha)) throw new UsageError(`--base ${opts.base} is not the first approval commit (${first.commit}) or an earlier one`);
 	const { project, styles, categories, outsideModel, toolArgs } = settings(ctx);
-	const report = given ? readJson(resolve(given)) : tool(['code', ctx.model, '--base', base, '--root', ctx.root, '--json', ...toolArgs]);
+	const report = given ? readJson(resolve(given)) : codeReportSince(ctx, base, toolArgs);
 	const read = (p) => {
 		try {
 			return readFileSync(join(ctx.root, p), 'utf8');
@@ -782,11 +811,8 @@ function runApproved(ctx, opts) {
 	const diff = given ? readJson(resolve(given)) : tool(['diff', ctx.model, '--base', ctx.approved.sha, '--only', 'structure', '--json', ...toolArgs]);
 	let changedPaths = [];
 	if (opts['changed-paths']) changedPaths = readText(resolve(opts['changed-paths'])).split(/\r?\n/).filter(Boolean);
-	else if (ctx.approved) {
-		// -z: names as they are; --no-renames: a moved file is one removed and one added
-		const list = (args) => git(ctx.root, args).split('\0').filter(Boolean);
-		changedPaths = [...new Set([...list(['diff', '--name-only', '--no-renames', '-z', ctx.approved.sha]), ...list(['ls-files', '--others', '--exclude-standard', '-z'])])];
-	}
+	// from the diagram tool, not from git here: it also lists what changed inside a submodule, under the submodule's path
+	else if (ctx.approved) changedPaths = (codeReportSince(ctx, ctx.approved.sha, toolArgs).files ?? []).map((f) => f.path);
 	const deviations = existsSync(ctx.ledger) ? parseLedger(readFileSync(ctx.ledger, 'utf8')) : new Map();
 	const { sha: _sha, ...against } = ctx.approved ?? {};
 	return { ...(ctx.approved && { against }), ...checkApproved(diff, { styles, categories, project, projectPath, dataRelationships, profilePatterns, deviations, changedPaths, outsideModel }) };

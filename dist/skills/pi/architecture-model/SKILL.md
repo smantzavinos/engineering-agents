@@ -132,6 +132,7 @@ node <skill>/tools/model-check.mjs all --model <plan>/model.c4ish.json --project
 - `model-check` takes `code`, `approved` or `all`. It reads `plan.md` and `review.md` beside the model. Exit 0 is a pass, 1 a failure or a re-approval difference, 2 an error. `--json` prints the full result.
 - The command is fixed: `--model` is the plan's own model and `--project` is the path file the agent guide names. Anything else is not the check.
 - It runs only on an approved plan. `--no-approval` is a trial on an unapproved plan, judged by the working copy and marked as one. A trial is never evidence.
+- Where code sits in git submodules, run it from the repository that holds the plan. References and path-file globs start with the submodule's path. Each submodule the plan touches is checked out; exit 2 names one that isn't.
 - It needs `c4ish` on the path. When `c4ish`, the check script or the path file the agent guide names is missing, stop and report; don't work around it.
 
 ## Don't

@@ -1,6 +1,7 @@
 // Tests for tools/model-check.mjs. Run: node --test tools/model-check.test.mjs
 // The last group builds a small git repository and runs the real diagram tool; it is skipped
-// when `c4ish` is not on PATH.
+// when `c4ish` is not on PATH. Its git submodule cases are skipped when the tool does not look
+// inside submodules.
 
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -1099,6 +1100,144 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			assert.match(run(dir, 'approved', '--model', 'plans/p/model.c4ish.json').stderr, /no `Approved: <date> <commit>` line/);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+	/** A root repository with an approved plan, whose code sits in one submodule, `lib`. */
+	function rootWithSubmodule() {
+		const top = mkdtempSync(join(tmpdir(), 'model-check-sub-'));
+		const [origin, dir] = [join(top, 'origin'), join(top, 'root')];
+		mkdirSync(origin);
+		mkdirSync(dir);
+		git(origin, 'init', '-q');
+		put(origin, 'src/budget.ts', 'export function meter(n: number) {\n\treturn n;\n}\n');
+		put(origin, 'docs/patterns/api.md', '# api\n');
+		git(origin, 'add', '-A');
+		git(origin, 'commit', '-q', '-m', 'lib');
+		git(dir, 'init', '-q');
+		git(dir, '-c', 'protocol.file.allow=always', 'submodule', '--quiet', 'add', origin, 'lib');
+		const model = {
+			schemaVersion: 1,
+			title: 'Paged reads',
+			views: [{ id: 'eng', kind: 'engineering', title: 'Paged reads' }],
+			elements: [
+				{ id: 'api', kind: 'container', title: 'API', change: 'modified' },
+				{ id: 'page', kind: 'component', parent: 'api', title: 'Page', change: 'new', pattern: 'api/read-query', code: ['lib/src/page.ts#page'] },
+				{ id: 'budget', kind: 'component', parent: 'api', title: 'Budget', change: 'reused', pattern: 'api/guard', code: ['lib/src/budget.ts#meter'] }
+			]
+		};
+		put(dir, 'plans/p/model.c4ish.json', JSON.stringify(model, null, '\t'));
+		put(dir, 'plans/p/plan.md', '# Plan\n');
+		put(dir, 'project.json', JSON.stringify({ leftOut: ['plans/**', 'project.json', '.gitmodules'], catalog: ['lib/docs/patterns'] }));
+		git(dir, 'add', '-A');
+		git(dir, 'commit', '-q', '-m', 'approved plan');
+		const approved = git(dir, 'rev-parse', 'HEAD');
+		put(dir, 'plans/p/plan.md', `# Plan\n\nApproved: 2026-01-02 ${approved}\n`);
+		const lib = join(dir, 'lib');
+		/** Commits in the submodule, then in the root, which moves its pointer. */
+		const commitBoth = () => {
+			git(lib, 'add', '-A');
+			git(lib, 'commit', '-q', '--allow-empty', '-m', 'next');
+			git(dir, 'add', '-A');
+			git(dir, 'commit', '-q', '-m', 'next');
+		};
+		return { top, dir, lib, model, commitBoth, args: ['--model', 'plans/p/model.c4ish.json', '--project', 'project.json'] };
+	}
+	const probeSub = (() => {
+		if (!hasTool) return false;
+		const { top, dir, args } = rootWithSubmodule();
+		try {
+			return !/does not look inside them/.test(run(dir, 'code', ...args).stderr);
+		} finally {
+			rmSync(top, { recursive: true, force: true });
+		}
+	})();
+
+	describe('code in a git submodule', { skip: probeSub ? false : 'the c4ish in use does not look inside git submodules' }, () => {
+		it('judges tags and changed lines inside the submodule, by paths from the root', () => {
+			const { top, dir, lib, commitBoth, args } = rootWithSubmodule();
+			try {
+				// the build, inside the submodule: a new query without its tag, and glue
+				put(lib, 'src/page.ts', 'export function page() {\n\treturn [];\n}\n');
+				put(lib, 'src/glue.ts', 'export const glue = 1;\n');
+				const untagged = run(dir, 'code', ...args, '--json');
+				assert.equal(untagged.status, 1, untagged.stderr);
+				const result = JSON.parse(untagged.stdout).code;
+				assert.deepEqual(result.failures.map((f) => `${f.where}: ${f.message}`), ['element page: `lib/src/page.ts#page` has no @pattern tag']);
+				assert.deepEqual(result.unaccounted.runs.map((r) => r.path), ['lib/src/glue.ts']);
+
+				put(lib, 'src/page.ts', '// @pattern api/read-query\nexport function page() {\n\treturn [];\n}\n');
+				assert.equal(run(dir, 'code', ...args).status, 0);
+
+				// committed in the submodule and pinned by the root: the same result, and the pointer is no changed line
+				commitBoth();
+				const pinned = run(dir, 'all', ...args, '--json');
+				assert.equal(pinned.status, 0, pinned.stdout + pinned.stderr);
+				const all = JSON.parse(pinned.stdout);
+				assert.deepEqual(all.code.unaccounted.runs.map((r) => r.path), ['lib/src/glue.ts']);
+				assert.deepEqual(all.approved.paths, []);
+			} finally {
+				rmSync(top, { recursive: true, force: true });
+			}
+		});
+
+		it('a catalog file changed inside the submodule stops for re-approval', () => {
+			const { top, dir, lib, commitBoth, args } = rootWithSubmodule();
+			try {
+				put(lib, 'docs/patterns/api.md', '# api\n\nA new rule.\n');
+				const uncommitted = run(dir, 'approved', ...args, '--json');
+				assert.equal(uncommitted.status, 1, uncommitted.stderr);
+				assert.deepEqual(JSON.parse(uncommitted.stdout).approved.paths, [{ path: 'lib/docs/patterns/api.md', kind: 'catalog' }]);
+				commitBoth();
+				const committed = run(dir, 'approved', ...args, '--json');
+				assert.equal(committed.status, 1, committed.stderr);
+				assert.deepEqual(JSON.parse(committed.stdout).approved.paths, [{ path: 'lib/docs/patterns/api.md', kind: 'catalog' }]);
+			} finally {
+				rmSync(top, { recursive: true, force: true });
+			}
+		});
+
+		it('a submodule that is needed and not checked out cannot be judged', () => {
+			const { top, dir, lib, commitBoth, args } = rootWithSubmodule();
+			try {
+				put(lib, 'src/page.ts', '// @pattern api/read-query\nexport function page() {\n\treturn [];\n}\n');
+				commitBoth();
+				const clone = join(top, 'clone');
+				git(top, 'clone', '-q', dir, clone);
+				for (const command of ['code', 'approved', 'all']) {
+					const r = run(clone, command, ...args);
+					assert.equal(r.status, 2, `${command}: ${r.stdout}`);
+					assert.match(r.stderr, /cannot judge: submodule lib is not checked out, so its files cannot be read or compared/);
+				}
+			} finally {
+				rmSync(top, { recursive: true, force: true });
+			}
+		});
+	});
+
+	it('refuses a diagram tool that does not look inside submodules, where the repository has one', { skip: probeSub ? false : 'needs a c4ish that does' }, () => {
+		const { top, dir, args } = rootWithSubmodule();
+		try {
+			// a stand-in for an older tool: the same report without the list of submodules it used
+			const old = join(top, 'old-c4ish.mjs');
+			const real = process.env.C4ISH ?? 'c4ish';
+			writeFileSync(
+				old,
+				`#!/usr/bin/env node
+import { spawnSync } from 'node:child_process';
+const r = spawnSync(${JSON.stringify(real)}, process.argv.slice(2), { encoding: 'utf8' });
+let out = r.stdout;
+if (process.argv[2] === 'code') { const j = JSON.parse(out); delete j.repositories; out = JSON.stringify(j); }
+process.stdout.write(out); process.stderr.write(r.stderr); process.exit(r.status);
+`,
+				{ mode: 0o755 }
+			);
+			for (const command of ['code', 'approved']) {
+				const r = spawnSync(process.execPath, [SCRIPT, command, ...args], { cwd: dir, encoding: 'utf8', env: { ...process.env, C4ISH: old } });
+				assert.equal(r.status, 2, r.stdout);
+				assert.match(r.stderr, /has git submodules, and the c4ish in use does not look inside them: update c4ish/);
+			}
+		} finally {
+			rmSync(top, { recursive: true, force: true });
 		}
 	});
 });
