@@ -211,13 +211,63 @@ else
   PASS=$((PASS+1)); echo "  PASS: corrupt reported.json: tick survives (rebuilt from results)"
 fi
 
+# --- shared author limit, new-item limit, quiet hours (scripts/pipeline_runtime.py)
+# A live "hermes" process stands in for a running session (alive() reads /proc/<pid>/cmdline).
+"$PY" -c 'import time; time.sleep(60)' hermes-stand-in & LIVE=$!
+mkdir -p "$TMP/pr"; echo "{\"kind\":\"babysit\",\"repo\":\"o/r\",\"pr\":9,\"ts\":0,\"pid\":$LIVE}" > "$TMP/pr/dispatches.jsonl"
+echo '{"kind":"work","item":30,"ts":0,"tag":"work-item30-0","pid":0,"stage":"Execute","reason":"start"}' > "$TMP/state/dispatches.jsonl"
+OUT="$(run work ITEMS="$TMP/items5.json" PIPELINE_WIP=2 PR_SWEEP_STATE="$TMP/pr")"
+refute "$OUT" "would spawn work for #32" "shared WIP: a live fix-bot round takes the last free slot"
+OUT="$(run work ITEMS="$TMP/items5.json" PIPELINE_WIP=3 PR_SWEEP_STATE="$TMP/pr")"
+check  "$OUT" "would spawn work for #32 (start)" "shared WIP: a larger limit leaves a slot"
+echo "[$(item 31 'Up next' '' fast-path P2),$(item 32 'Up next' '' fast-path P1)]" > "$TMP/items-coding.json"
+echo "{\"kind\":\"work\",\"item\":99,\"ts\":0,\"tag\":\"w99\",\"pid\":$LIVE,\"stage\":\"Execute\",\"reason\":\"start\"}" > "$TMP/state/dispatches.jsonl"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_WIP=3 PIPELINE_WIP_CODING=1 PR_SWEEP_STATE="$TMP/none")"
+refute "$OUT" "would spawn work" "PIPELINE_WIP_CODING: one live new-item session blocks further pickups"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_WIP=3 PIPELINE_WIP_CODING=2 PR_SWEEP_STATE="$TMP/none")"
+check  "$OUT" "would spawn work for #32 (start)" "PIPELINE_WIP_CODING: a free new-item slot picks up"
+refute "$OUT" "would spawn work for #31" "PIPELINE_WIP_CODING: never more than the new-item limit"
+kill "$LIVE" 2>/dev/null || true
+: > "$TMP/state/dispatches.jsonl"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_QUIET_HOURS=00:00-00:00)"
+refute "$OUT" "would spawn work" "quiet hours: no session starts"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_QUIET_HOURS=00:00-00:00 PIPELINE_QUIET_MODES=triage)"
+check  "$OUT" "would spawn work for #32" "quiet hours: only the listed jobs are quiet"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_QUIET_HOURS=00:00-00:00 PIPELINE_FORCE=1)"
+check  "$OUT" "would spawn work for #32" "quiet hours: PIPELINE_FORCE=1 overrides"
+OUT="$(run work ITEMS="$TMP/items-coding.json" PIPELINE_QUIET_HOURS=late || true)"
+check  "$OUT" "PIPELINE_QUIET_HOURS must look like" "quiet hours: a malformed setting is reported"
+
+# --- a triage question always notifies, even when the session asked for silence
+rm -f "$TMP/state/reported.json"; rm -f "$TMP"/state/results/*.json
+echo '{"kind":"triage","items":[7],"notify":false,"outcomes":{"7":"clarify"},"summary":"which db?"}' > "$TMP/state/results/t7.json"
+echo '{"kind":"triage","items":[8],"notify":false,"outcomes":{"8":"ready"},"summary":"quiet"}' > "$TMP/state/results/t8.json"
+OUT="$(run hygiene ITEMS="$TMP/items-empty.json")"
+check  "$OUT" "Needs your answer: #7" "triage notify: a question for the owner is always delivered"
+refute "$OUT" "#8" "triage notify: a quiet ready result stays quiet"
+rm -f "$TMP"/state/results/*.json
+
+# --- a job whose every tick fails: one alert, silence, then one recovery line (not a dry run)
+real() { run "$@" PIPELINE_DRY= PIPELINE_STATE="$TMP/real"; }
+OUT="$(real work ITEMS="$TMP/missing.json" || true)"
+check  "$OUT" "work dispatch stopped since" "stopped: the first failing tick alerts"
+OUT="$(real work ITEMS="$TMP/missing.json" || true)"
+refute "$OUT" "stopped" "stopped: the next failing tick within the hour is silent"
+echo '[]' > "$TMP/items-none.json"
+OUT="$(real work ITEMS="$TMP/items-none.json" PIPELINE_QUIET_HOURS=00:00-00:00)"
+refute "$OUT" "runs again" "stopped: a quiet tick ran nothing, so it reports no recovery"
+OUT="$(real work ITEMS="$TMP/items-none.json")"
+check  "$OUT" "work dispatch runs again" "stopped: the first good tick says it runs again"
+OUT="$(real work ITEMS="$TMP/items-none.json")"
+refute "$OUT" "runs again" "stopped: the recovery line is sent once"
+
 # --- configuration errors are loud
 OUT="$(env -u PIPELINE_OWNERS PIPELINE_DRY=1 PIPELINE_REPO=o/r PIPELINE_LIST_CMD=x PIPELINE_MOVE_CMD=y PR_AGENT_HANDLE=a HERMES_HOME="$TMP" "$PY" "$ROOT/scripts/pipeline-dispatch.py" work || true)"
 check  "$OUT" "PIPELINE_OWNERS" "config: a missing owner allowlist is an error, not open access"
 check  "$OUT" "PIPELINE_CHECKOUT" "config: a missing checkout is an error, not the current directory"
 
 # Unit tests for the decisions behind this flow (tests/scripts/test_pipeline_*.py).
-for t in test_pipeline_triage_markers; do
+for t in test_pipeline_triage_markers test_pipeline_runtime; do
   if UOUT="$(cd "$ROOT/tests/scripts" && "$PY" -m unittest -q "$t" 2>&1)"; then
     PASS=$((PASS+1)); echo "  PASS: unit tests: $t ($(grep -Eo 'Ran [0-9]+ tests' <<<"$UOUT"))"
   else

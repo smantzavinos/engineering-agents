@@ -44,7 +44,12 @@ Environment:
                           Sessions must never start a comment with `<handle> <verb>`.
   PIPELINE_BASE           base branch for new item branches (default main)
   PIPELINE_WORKTREE_ROOT  where item worktrees live (default <checkout>-worktrees)
-  PIPELINE_WIP            In progress limit (default 2)
+  PIPELINE_WIP            author sessions at once: work sessions plus the PR sweep's fix-bot rounds (default 2)
+  PIPELINE_WIP_CODING     of those, new items started from Up next (default = PIPELINE_WIP); the rest is kept
+                          for resumes after a reply and fix rounds
+  PIPELINE_QUIET_HOURS    e.g. 22:00-07:00 (local time): no new sessions then; PIPELINE_QUIET_WEEKENDS=1 adds
+                          weekends; PIPELINE_QUIET_MODES the jobs it applies to (default "work pr");
+                          PIPELINE_FORCE=1 runs anyway
   PIPELINE_TRACKS         tracks eligible for pickup (default: all four)
   PIPELINE_PARK_LABEL     label that parks a `discuss` reply (default needs-human:discussion;
                           the pre-rename `pipeline:discuss` is still honoured)
@@ -52,7 +57,7 @@ Environment:
   PIPELINE_TRIAGE_MODEL, PIPELINE_TRIAGE_SKILLS (backlog,triage-backlog)
   PIPELINE_WORK_MODEL, PIPELINE_WORK_SKILLS (backlog,work-item), PIPELINE_REASONING (medium)
   PIPELINE_SESSION_PROVIDER, PIPELINE_STALE_DAYS (hygiene, default 3)
-  PIPELINE_STATE          state dir (default $HERMES_HOME/state/pipeline)
+  PIPELINE_STATE          state dir (default $HERMES_HOME/state/pipeline); PR_SWEEP_STATE (the PR sweep's, for WIP)
   HERMES_BIN, GH_BIN, GH_TOKEN_FILE (token file used when GH_TOKEN is unset)
   PIPELINE_DRY=1          print intended actions; mutate nothing, record nothing
 """
@@ -69,6 +74,7 @@ from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import commands  # noqa: E402  (shared command parser, scripts/commands.py)
+import pipeline_runtime  # noqa: E402  (quiet hours, shared WIP, stopped alerts: scripts/pipeline_runtime.py)
 
 ENV = os.environ
 
@@ -131,6 +137,8 @@ def bot_body(body):
 BASE = ENV.get("PIPELINE_BASE", "main")
 WT_ROOT = pathlib.Path(ENV.get("PIPELINE_WORKTREE_ROOT", str(CHECKOUT) + "-worktrees"))
 WIP = int(ENV.get("PIPELINE_WIP", "2"))
+# New Up next pickups stop at this many live new-item sessions; the rest of WIP stays free for resumes and fix rounds.
+WIP_CODING = min(WIP, int(ENV.get("PIPELINE_WIP_CODING") or WIP))
 BRANCH_TEMPLATE = ENV.get("PIPELINE_BRANCH_TEMPLATE", "item/{n}")
 TRACKS = tuple(ENV.get("PIPELINE_TRACKS", "fast-path standard-implementation analysis-spike docs-process").split())
 PARK = ENV.get("PIPELINE_PARK_LABEL", "needs-human:discussion")
@@ -149,6 +157,8 @@ GH = ENV.get("GH_BIN", "gh")
 TOKEN_FILE = pathlib.Path(ENV.get("GH_TOKEN_FILE", "/nonexistent"))
 HOME = pathlib.Path(ENV.get("HERMES_HOME", str(pathlib.Path.home())))
 STATE = pathlib.Path(ENV.get("PIPELINE_STATE", str(HOME / "state" / "pipeline")))
+# The PR sweep's state: its live fix-bot rounds share the PIPELINE_WIP limit with work sessions.
+PR_STATE = pathlib.Path(ENV.get("PR_SWEEP_STATE", str(HOME / "state" / "pr-automation")))
 DISPATCH, RESULTS, REPORTED, LOGS = STATE / "dispatches.jsonl", STATE / "results", STATE / "reported.json", STATE / "logs"
 PROMPTS = pathlib.Path(__file__).resolve().parent / "pipeline-prompts"
 
@@ -181,6 +191,7 @@ LAST_STATUS = STATE / "last-status.json"
 MOVED = {}  # item -> status this tick moved it to (the next tick's baseline)
 
 out = []  # lines delivered to the human
+err_out = []  # failure lines: delivered once per pipeline_runtime.DEDUPE_TTL while they repeat
 
 
 # ---------------------------------------------------------------- pure decisions
@@ -519,8 +530,8 @@ def react(comment_id):
         return
     try:
         gh("api", "-X", "POST", f"repos/{REPO}/issues/comments/{comment_id}/reactions", "-f", "content=eyes", parse=False)
-    except Exception:  # noqa: BLE001 — a missing reaction must never stop the reply from being handled
-        pass
+    except Exception as e:  # noqa: BLE001 — a missing reaction must never stop the reply from being handled
+        err_out.append(f"could not mark reply {comment_id} as read: {e}")
 
 
 def react_issue(n):
@@ -530,8 +541,8 @@ def react_issue(n):
         return
     try:
         gh("api", "-X", "POST", f"repos/{REPO}/issues/{n}/reactions", "-f", "content=eyes", parse=False)
-    except Exception:  # noqa: BLE001 — a missing reaction must never stop triage from proceeding
-        pass
+    except Exception as e:  # noqa: BLE001 — a missing reaction must never stop triage from proceeding
+        err_out.append(f"could not mark #{n} as picked up: {e}")
 
 
 def load_last_status():
@@ -819,6 +830,9 @@ def job_work(items, recs, reported):
             acks[r["item"]] = r
     last = load_last_status()
     slots = free_slots(items)
+    # Fix-bot rounds of the PR sweep share PIPELINE_WIP with work sessions (the In progress cards).
+    slots = max(0, slots - len(pipeline_runtime.live_authors([PR_STATE], alive)))
+    coding = sum(1 for kind in pipeline_runtime.live_authors([STATE], alive).values() if kind == "coding")
     errors = []
     h = HANDLES[0]
 
@@ -939,7 +953,7 @@ def job_work(items, recs, reported):
             # A session that never started (launch error) has no tag and no log; name its error instead.
             where = (f"log on the bot's computer: `{LOGS / (last_rec['tag'] + '.log')}`" if last_rec.get("tag")
                      else f"the bot could not start: `{(last_rec.get('error') or 'unknown error')[:200]}`")
-            guarded(n, lambda i=i, k=len(fails), last_rec=last_rec, where=where: block(
+            guarded(n, lambda i=i, n=n, k=len(fails), last_rec=last_rec, where=where: block(
                 i, f"fails:{n}:{last_rec.get('stage')}", f"the bot failed {k} times at the "
                 f"{last_rec.get('stage') or 'first'} step and stopped retrying ({where})."))
             continue
@@ -1009,7 +1023,7 @@ def job_work(items, recs, reported):
             if guarded(n, lambda i=i, prev=last[n]: handoff(i, prev)) is False:
                 special.discard(n)
     for i in pickup_order(items):
-        if slots <= 0:
+        if slots <= 0 or coding >= WIP_CODING:
             break
         n = i["number"]
         if n in running or n in special:
@@ -1022,6 +1036,7 @@ def job_work(items, recs, reported):
             continue
         if guarded(n, lambda i=i: dispatch_work(recs, i, "start")):
             slots -= 1
+            coding += 1
 
     # 4. T17: a merged PR closed the issue (Closes #N) but the tracker still shows the PR stage.
     for i in items:
@@ -1080,7 +1095,7 @@ def job_work(items, recs, reported):
         if r["kind"] == "work" and r.get("error"):
             report_once(reported, f"err:{r['item']}:{r['ts']}", f"#{r['item']}: the bot could not start: {r['error']}")
     for e in errors:
-        out.append(f"Board bot error: {e}")
+        err_out.append(f"Board bot error: {e}")
 
 
 def job_hygiene(items, reported):
@@ -1118,12 +1133,16 @@ def deliver(reported):
         except ValueError:
             continue
         reported.add(f.name)
-        if r.get("notify", True):
+        outcomes = r.get("outcomes") or {}
+        # A triage that asked a question or left an item for the owner always notifies: someone must answer.
+        asks = r.get("kind") == "triage" and any(v in ("clarify", "left") for v in outcomes.values())
+        if r.get("notify", True) or asks:
             who = " ".join(f"#{n}" for n in r.get("items", [])) or f.stem
-            what = r.get("outcome") or json.dumps(r.get("outcomes", {}))
+            what = r.get("outcome") or json.dumps(outcomes)
             what = {"gated": "waiting for your approval", "escalated": "needs your decision", "blocked": "blocked",
                     "pr-opened": "PR opened", "done": "done", "failed": "bot failed"}.get(what, what)
-            out.append(f"{who} [{what}] {r.get('summary', '').strip()} {r.get('url', '')}".strip())
+            line = f"{who} [{what}] {r.get('summary', '').strip()} {r.get('url', '')}".strip()
+            out.append(("Needs your answer: " if asks else "") + line)
 
 
 def main(argv):
@@ -1156,26 +1175,39 @@ def main(argv):
     except ValueError:
         # A truncated file (e.g. disk full mid-write) must not stop the tick or re-send old results.
         reported = {f.name for f in RESULTS.glob("*.json")}
+    health = STATE / "health" / job  # stopped record and repeat filter of this job
+    stop = ""
+    ran = False
     try:
         deliver(reported)
-        items = list_items()
-        try:
-            {"triage": lambda: job_triage(items, recs, reported),
-             "work": lambda: job_work(items, recs, reported),
-             "hygiene": lambda: job_hygiene(items, reported)}[job]()
-        finally:
-            if job == "work":
-                save_last_status(items)  # also after a failure: the bot's own moves must not look like a person's
+        if not pipeline_runtime.quiet_now(ENV, job):  # quiet hours: results still arrive, no session starts
+            ran = True
+            items = list_items()
+            try:
+                {"triage": lambda: job_triage(items, recs, reported),
+                 "work": lambda: job_work(items, recs, reported),
+                 "hygiene": lambda: job_hygiene(items, reported)}[job]()
+            finally:
+                if job == "work":
+                    save_last_status(items)  # also after a failure: the bot's own moves must not look like a person's
         code = 0
     except Exception as e:  # noqa: BLE001 — surface the failure; never crash silently
-        out.append(f"Pipeline dispatch error ({job}): {e}")
         code = 1
+        stop = f"Pipeline dispatch error ({job}): {e}"
     if not DRY:
         tmp = REPORTED.with_suffix(".tmp")
         tmp.write_text(json.dumps(sorted(reported)))
         os.replace(tmp, REPORTED)  # atomic: a failed write never truncates the record
-    if out:
-        print("\n".join(out))
+    if DRY:
+        lines = out + err_out + ([stop] if code else [])
+    else:
+        # Every tick failing: one plain alert, repeated hourly, then one line when it runs again.
+        # A quiet tick ran nothing, so it proves no recovery.
+        status = (pipeline_runtime.job_down(health, f"{job} dispatch", stop) if code
+                  else pipeline_runtime.job_up(health, f"{job} dispatch") if ran else [])
+        lines = status + out + pipeline_runtime.fresh_lines(health, "errors", err_out)
+    if lines:
+        print("\n".join(lines))
     return code
 
 
