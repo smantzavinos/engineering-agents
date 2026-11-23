@@ -88,7 +88,7 @@ Check for presence AND quality of:
 - [ ] Each entry has the fields the contract asks for, and none lists where the pattern is used beyond its one golden example
 - [ ] The path file's `rules` says where pattern rules live. Any rules that exist run on changed files, with a documented command, as part of the fast gates
 - [ ] The agent guide gives the plan directory layout: `plan.md`, `model.c4ish.json` and `review.md` together
-- [ ] If the code sits in git submodules of this repository: the path file's globs start with the submodule's path; the agent guide names, for each submodule a plan may change, how to add it to a worktree, its default branch and its gates; each such submodule has its own `pr-review-hooks.md`; and its pull requests merge with merge commits
+- [ ] If the code sits in git submodules of this repository: the path file's globs start with the submodule's path; the agent guide names, for each submodule a plan may change, how to add it to a worktree, its default branch and its gates; each such submodule has its own `pr-review-hooks.md`, whose `merge-gate` names the merge method (a merge commit, a squash or a rebase)
 
 ### 3. Assess Quality (not just existence)
 

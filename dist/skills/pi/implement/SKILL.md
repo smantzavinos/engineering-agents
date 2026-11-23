@@ -56,7 +56,7 @@ Where the plan lives in one repository and the code in git submodules of it, rea
 - in the root, stage your own paths and the pointers of the submodules you changed, nothing else;
 - gates run per repository, with test selection from that submodule's base commit in `state.json`. Record each gate with its repository and that repository's `HEAD^{tree}`;
 - record in the ledger the submodule commits the check printed;
-- never amend, rebase or squash a submodule commit the root has pinned.
+- never amend, rebase or squash a submodule commit the root has pinned. (A squash at the merge is the host's, later, and fine.)
 
 ## Gates
 1. At the end, run T1's fast gates (builds, typecheck, lint and format on changed files, and the project's pattern rules on them) with the plan's Gates commands. For the rest of T1 (unit and E2E tests), record in the ledger the exact command lines, with an explicit base and spec list and retries off but no E2E worker count (the helper sets it), and why each spec was picked. Don't run them: a helper runs them beside the code review. When your task says to run T1 yourself (integration, checkpoint fix), run all of it.

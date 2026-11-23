@@ -26,7 +26,7 @@ Where the plan lives in one repository and the code in git submodules of it, rea
 - **every launch** carries each repository's base commit. A handed-over state is one root commit: record that id, and give reviewers ranges as root commits;
 - **T1 and full gates** run per repository, with that repository's commands. Never run two gate helpers in one repository at once;
 - approval lines, `state.json` and the ledger are committed in the root only;
-- **Close:** the final state is one root commit that pins every changed submodule. With the plan's pre-authorization, push every branch and hand the set to `pull-request` (one PR per changed submodule and one in the root, submodules merged first). Record each repository's branch and pinned commit for it.
+- **Close:** the final state is one root commit that pins every changed submodule. With the plan's pre-authorization, push every branch and hand the set to `pull-request` (one PR per changed submodule and one in the root; submodules merged first, by each repository's own method, squash included). Record each repository's branch and pinned commit for it.
 
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it between steps, when no one is writing in the worktree. Every resume returns a new run id, so record it each time. It holds:

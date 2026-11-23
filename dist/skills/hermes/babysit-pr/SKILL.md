@@ -186,10 +186,13 @@ access pattern lets the other multiply unchecked.
 
 When the PR is the root PR of a set (code in git submodules it pins; see the
 PR review contract, "A change across several repositories"): once every
-submodule PR of the set is merged, add the one commit that moves each pointer
-to its submodule's merge commit, update the pinned commits in the body, and
-push. That commit is not a fix round. Before then, never move a pointer to a
-commit that is not on the submodule PR's branch.
+submodule PR of the set is merged, run the contract's tree check on each:
+the merged commit (a merge commit or a squash commit) must have the tree of
+the head the last `READY` verdict names. If one differs, escalate and move
+nothing. Otherwise add the one commit that moves each pointer to its merged
+commit, update the pinned commits in the body, and push. That commit is not a
+fix round. Before then, never move a pointer to a commit that is not on the
+submodule PR's branch.
 
 ## Exit and interruption
 

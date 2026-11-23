@@ -60,9 +60,14 @@ Between two root commits, a submodule's range is between the two commits they po
 
 One pull request per changed submodule, and one in the root. The set, the links between them, the merge order and the last pointer move are in the PR review contract (`pull-request` → A change across several repositories).
 
+- A repository may merge by squash. The commit the root pins at the end is then a new one that holds the reviewed tree; the contract's tree check confirms it before the pointer moves.
+- The checks compare a submodule by the two commits the root points to. Those need not be related: only both must be in the local repository.
+- The ledger and the root's earlier commits keep naming the branch commits that were reviewed. After a squash those are off the target branch; the host keeps them under the pull request's head ref, so fetch that ref to read one.
+- The model checks run on the work branch before the merge, never on a target branch after it. After a squash merge of the root, the approval commits are likewise under the root pull request's head ref.
+
 ## Don't
 
 - Hand over a state that is not one root commit.
-- Rebase or squash a submodule branch after a commit of it has been pinned by the root: the root's history and the ledger name those commits.
+- Rewrite a submodule branch (amend, rebase, squash) once the root has pinned a commit of it: the root's history and the ledger name those commits. A squash by the host at the merge is not that: it adds a commit to the target branch and leaves the branch's commits as they are.
 - Move a pointer of a submodule the plan doesn't change.
 - Put a plan, a model or a ledger in a submodule.

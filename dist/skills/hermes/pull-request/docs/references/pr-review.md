@@ -231,19 +231,41 @@ commits of the root.
   root PR; a submodule PR carries what its own diff needs.
 - **Opened together.** Push every branch, then open the submodule PRs, then
   the root PR. A set with one changed submodule is still two PRs.
-- **Merge order.** Submodule PRs first, each with a **merge commit**: a
-  squash or a rebase leaves the commits that the root's history and the review
-  record name unreachable. The root PR is `BLOCKED` until every submodule PR
-  of the set is merged.
-- **The last pointer move.** When the last submodule PR is merged, the author
-  side (the session that opened the set, or the one babysitting the root PR)
-  adds one commit to the root PR that moves each pointer to that submodule's
-  merge commit, and updates the pinned commits in the body. The move adds
-  nothing of this change's, so it is not re-reviewed; the root's required
-  checks run on it as on any push. If they go red on work the merge commit
-  took in from elsewhere, escalate.
+- **Merge order.** Submodule PRs first, each by the method its repository's
+  `merge-gate` names: a merge commit, a squash or a rebase. The root PR is
+  `BLOCKED` until every submodule PR of the set is merged.
+- **The merged commit.** A merge leaves one commit for the PR at the tip of
+  the submodule's target branch (on GitHub:
+  `gh pr view <n> --json mergeCommit`). After a squash or a rebase it is a
+  new commit and does not descend from the reviewed head. No step may assume
+  that it does.
+- **The tree check.** Before a pointer moves, confirm that the merged commit
+  holds exactly what was reviewed: its tree equals the tree of the reviewed
+  head, the head the last `READY` verdict marker on that PR names.
+
+  ```sh
+  git -C <submodule> fetch origin <target branch> refs/pull/<n>/head
+  git -C <submodule> rev-parse '<merged commit>^{tree}' '<reviewed head>^{tree}'   # the same id twice
+  ```
+
+  If the trees differ (the target branch moved and the merge took in other
+  work, or the head moved after the verdict), escalate with
+  `git diff --stat <reviewed head> <merged commit>`. Never move that pointer
+  on your own; the human decides.
+- **The last pointer move.** When every submodule PR is merged and every tree
+  check has passed, the author side (the session that opened the set, or the
+  one babysitting the root PR) adds one commit to the root PR that moves each
+  pointer to its merged commit. The body then lists, per submodule, the merged
+  commit beside the reviewed head. The move changes no file (the trees are
+  equal), so it is not re-reviewed; the root's required checks run on it as on
+  any push.
+- **The review record keeps naming the reviewed commits.** The root's earlier
+  commits pin them, and the ledger and the verdict markers name them. After a
+  squash or a rebase they are not on the target branch. They stay reachable
+  on the host under the PR's head ref (on GitHub `refs/pull/<n>/head`, fetched
+  as above), which a default fetch does not bring.
 - **A fix after review** in a submodule is a new commit there and a new root
-  commit that pins it. Never rewrite a pinned commit.
+  commit that pins it. Never rewrite a pinned commit before the merge.
 
 ---
 

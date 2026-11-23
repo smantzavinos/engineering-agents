@@ -1202,6 +1202,47 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 			}
 		});
 
+		it('a submodule merged by squash: the pinned commit need not descend from the reviewed one, only hold its tree', () => {
+			const { top, dir, lib, commitBoth, args } = rootWithSubmodule();
+			try {
+				const base = git(lib, 'rev-parse', 'HEAD');
+				put(lib, 'src/page.ts', '// @pattern api/read-query\nexport function page() {\n\treturn [];\n}\n');
+				put(lib, 'src/glue.ts', 'export const glue = 1;\n');
+				commitBoth();
+				const reviewed = git(lib, 'rev-parse', 'HEAD');
+				const before = JSON.parse(run(dir, 'all', ...args, '--json').stdout);
+				/** Pins a commit of the submodule in a new root commit, as the last pointer move does. */
+				const pin = (commit) => {
+					git(lib, 'checkout', '-q', '--detach', commit);
+					git(dir, 'add', '-A');
+					git(dir, 'commit', '-q', '-m', 'pointer move');
+				};
+
+				// the squash: one new commit on the target branch with the reviewed tree, and no tie to the reviewed commit
+				const squash = git(lib, 'commit-tree', `${reviewed}^{tree}`, '-p', base, '-m', 'squash');
+				assert.equal(spawnSync('git', ['-C', lib, 'merge-base', '--is-ancestor', reviewed, squash]).status, 1);
+				pin(squash);
+				const after = run(dir, 'all', ...args, '--json');
+				assert.equal(after.status, 0, after.stdout + after.stderr);
+				const result = JSON.parse(after.stdout);
+				assert.deepEqual(result.code.submodules, [{ path: 'lib', base, head: squash }]);
+				assert.deepEqual(result.code.unaccounted, before.code.unaccounted);
+				assert.deepEqual(result.approved, before.approved);
+
+				// a squash that took in other work has another tree, and that work shows as changed lines
+				put(lib, 'src/other.ts', 'export const other = 1;\n');
+				git(lib, 'add', '-A');
+				const mixed = git(lib, 'commit-tree', git(lib, 'write-tree'), '-p', base, '-m', 'squash over a moved base');
+				git(lib, 'reset', '-q', '--hard');
+				assert.notEqual(git(lib, 'rev-parse', `${mixed}^{tree}`), git(lib, 'rev-parse', `${reviewed}^{tree}`));
+				pin(mixed);
+				const taken = JSON.parse(run(dir, 'all', ...args, '--json').stdout);
+				assert.deepEqual(taken.code.unaccounted.runs.map((r) => r.path), ['lib/src/glue.ts', 'lib/src/other.ts']);
+			} finally {
+				rmSync(top, { recursive: true, force: true });
+			}
+		});
+
 		it('a submodule that is needed and not checked out cannot be judged', () => {
 			const { top, dir, lib, commitBoth, args } = rootWithSubmodule();
 			try {

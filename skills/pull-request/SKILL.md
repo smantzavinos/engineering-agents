@@ -118,9 +118,10 @@ role procedure; never restate the contract from memory.
   stated as questions for the human, never resolved by agents.
 - Author: do not open a draft PR as a substitute for self-review; do not let
   plan-internal artifacts leak into the body.
-- A set across repositories: do not squash or rebase a submodule branch the
-  root pins, and do not mark the root PR READY while a submodule PR of its
-  set is unmerged.
+- A set across repositories: do not rewrite a submodule branch the root
+  pins (the merge itself may squash); do not mark the root PR READY while a
+  submodule PR of its set is unmerged; do not move a pointer to a merged
+  commit whose tree differs from the reviewed head's.
 - Either role: the manifest is pointers plus facts — if you find yourself
   copying rule text from the contract into a PR comment beyond the filled
   table, you are restating instead of referencing.
