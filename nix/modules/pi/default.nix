@@ -97,6 +97,7 @@ in
     defaultThinkingLevel = lib.mkOption {
       type = lib.types.str;
       default = modelDefaults.defaultThinkingLevel;
+      defaultText = lib.literalExpression "selected modelSet thinking level";
       description = "Default thinking level";
     };
 

@@ -93,7 +93,9 @@ in
         for the full parameter signature. Common keys: defaultProvider,
         defaultModel, defaultThinkingLevel, theme, footer,
         enabledModels, powerline,
-        powerlineShortcuts, powerlineTheme, extraSkills.
+        powerlineShortcuts, powerlineTheme, extraSkills. Use the module's
+        modelSet and zai.enable options, which take precedence over args.modelSet
+        and args.zaiEnabled.
       '';
     };
 
@@ -112,7 +114,7 @@ in
     enableAgentKit = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Install the agent-kit direnv extension.";
+      description = "Include the agent-kit direnv extension in the T3 RPC profile only.";
     };
 
     enableVisualExplainer = lib.mkOption {
@@ -151,9 +153,12 @@ in
 
         mkdir -p "$agent/packages" "$agent/sources" "$agent/extensions"
         ${lib.optionalString (!cfg.zai.enable) ''rm -f "$agent/mcp-adapter.json"''}
-        ${lib.optionalString (!cfg.enableAgentKit) ''
-          if [ -L "$agent/extensions/direnv" ]; then rm "$agent/extensions/direnv"; fi
-        ''}
+        # Remove only the previous static-tree direnv link, not a user install.
+        if [ -L "$agent/extensions/direnv" ]; then
+          case "$(readlink "$agent/extensions/direnv")" in
+            /nix/store/*-pi-agent-config/agent/extensions/direnv) rm "$agent/extensions/direnv" ;;
+          esac
+        fi
 
         # Static tree: link every top-level entry except the two that must
         # stay real, user-owned files.

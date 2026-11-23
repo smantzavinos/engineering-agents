@@ -135,13 +135,25 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 
   # T3 keeps the common tools but not terminal-only packages or the bridge.
   PI_T3_ARGS="$PI_FILES/.pi/agent/t3-profile.args"
+  # Compare the entire -e list, including duplicates. For index.ts entrypoints
+  # use the containing extension directory as the identifying basename.
+  expected_t3_extensions=$(printf '%s\n' direnv.ts pi-checkpoint pi-guardrails pi-lens \
+    pi-lens-policy pi-mcp-adapter pi-subdir-context pi-tasks pi-web-access startup-staleness-warning | LC_ALL=C sort)
   if [[ -f "$PI_T3_ARGS" ]] && grep -Fqx -- '-ne' "$PI_T3_ARGS" \
     && grep -Fqx -- '--exclude-tools' "$PI_T3_ARGS" \
-    && grep -Fxq 'TaskExecute,TaskOutput,TaskStop' "$PI_T3_ARGS" \
-    && grep -Eq '/packages/pi-mcp-adapter$' "$PI_T3_ARGS" \
-    && grep -Eq '/extensions/direnv/index.ts$' "$PI_T3_ARGS" \
-    && ! grep -Eq '/(pi-subagents|pi-tasks-subagents-bridge|pi-powerline-footer|pi-preset|pi-btw)(/|$)' "$PI_T3_ARGS"; then
-    pass "T3 profile explicitly loads extensions and excludes the terminal delegation tools"
+    && grep -Fxq 'TaskExecute,TaskOutput,TaskStop' "$PI_T3_ARGS"; then
+    pass "T3 profile opts out of discovery and excludes the terminal delegation tools"
+    actual_t3_extensions=$(awk '$0 == "-e" { getline; n = split($0, parts, "/"); print (parts[n] == "index.ts" ? parts[n-1] : parts[n]) }' "$PI_T3_ARGS" | LC_ALL=C sort)
+    if [[ "$actual_t3_extensions" == "$expected_t3_extensions" ]]; then
+      pass "T3 profile loads exactly the shared, repo, direnv and z.ai extensions"
+    else
+      fail "unexpected T3 extension list: $actual_t3_extensions"
+    fi
+    if grep -Eq '/(pi-ding|pi-notify|pi-ext-leader-key|pi-session-autoname|pi-zentui|pi-powerline-footer|pi-subagents|pi-btw|pi-preset)(/|$)' "$PI_T3_ARGS"; then
+      fail "T3 profile must not load terminal-only packages"
+    else
+      pass "T3 profile excludes all terminal-only packages"
+    fi
   else
     fail "T3 profile args must opt out of discovery and leave terminal delegation in terminal Pi"
   fi

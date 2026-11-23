@@ -608,6 +608,23 @@ async function pruneStaleArtifacts(directoryPath, keepNames, { artifactLabel }) 
   return warnings;
 }
 
+function rebaseSkillLinks(markdown, sourceDir, skillDir) {
+  // Inline destinations (including images) and reference definitions. Keep
+  // titles, angle brackets, query strings and fragments as written.
+  const destinations = /((?:\]\([ \t]*|^ {0,3}\[(?!\^)[^\]\n]+\]:[ \t]+))(<[^>\n]*>|[^\s)>]+)/gm;
+  return markdown.replace(destinations, (match, prefix, destination) => {
+    const angled = destination.startsWith('<');
+    const url = angled ? destination.slice(1, -1) : destination;
+    const [relative] = url.split(/[?#]/, 1);
+    if (!relative || /^(?:\/|[a-z][a-z\d+.-]*:)/i.test(relative)) return match;
+    const target = path.resolve(sourceDir, relative);
+    let rebased = path.relative(skillDir, target) || '.';
+    if (relative.endsWith('/') && !rebased.endsWith('/')) rebased += '/';
+    const updated = rebased + url.slice(relative.length);
+    return prefix + (angled ? `<${updated}>` : updated);
+  });
+}
+
 async function writeFacadePackage(pkg, packagesDir) {
   const packageDir = path.join(packagesDir, pkg.packageId);
   const metaDir = path.join(packageDir, 'meta');
@@ -628,14 +645,13 @@ async function writeFacadePackage(pkg, packagesDir) {
     const source = path.join(packageDir, '_source', entry.relativePath.slice(2));
     if (pkg.hiddenSkills.has(entry.id)) {
       const markdown = await fs.readFile(source, 'utf8');
+      const sourceDir = path.dirname(source);
       try {
-        await fs.writeFile(output, manualSkill(markdown));
+        await fs.writeFile(output, rebaseSkillLinks(manualSkill(markdown), sourceDir, skillDir));
       } catch (error) {
         throw new ExitError(`${pkg.packageId} hiddenSkills: ${entry.id}: ${error.message}`, 3);
       }
-      // Copy only the frontmatter-bearing file. Relative references and
-      // scripts alongside it still resolve to the vendored skill assets.
-      const sourceDir = path.dirname(source);
+      // Keep neighboring assets reachable for script paths and other references.
       const siblings = await fs.readdir(sourceDir);
       for (const name of siblings.sort()) {
         if (name === path.basename(source)) continue;

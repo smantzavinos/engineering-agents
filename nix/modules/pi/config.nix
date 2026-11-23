@@ -651,11 +651,11 @@ let
     let
       packages = [ "pi-guardrails" "pi-lens" "pi-checkpoint" "pi-subdir-context"
         "pi-web-access" "pi-tasks" ] ++ lib.optional zaiEnabled "pi-mcp-adapter";
-      extensions = [ "pi-lens-policy" "startup-staleness-warning" ]
-        ++ lib.optional (direnvExtension != null) "direnv";
+      extensions = [ "pi-lens-policy" "startup-staleness-warning" ];
     in lib.concatLines ([ "-ne" ]
       ++ lib.concatMap (id: [ "-e" "${managedPackagesDir}/${id}" ]) packages
       ++ lib.concatMap (id: [ "-e" "${extensionsDir}/${id}/index.ts" ]) extensions
+      ++ lib.optionals (direnvExtension != null) [ "-e" direnvExtension ]
       ++ [ "--exclude-tools" "TaskExecute,TaskOutput,TaskStop" ]);
 
   # ============================================================
@@ -954,7 +954,10 @@ let
     tmp=$(mktemp "$file.XXXXXX")
     trap 'rm -f "$tmp"' EXIT
     if [ -f "$file" ]; then
-      ${pkgs.jq}/bin/jq '.workflow = "none"' "$file" > "$tmp"
+      if ! ${pkgs.jq}/bin/jq -es 'select(length == 1 and (.[0] | type == "object")) | .[0].workflow = "none" | .[0]' "$file" > "$tmp" 2>/dev/null; then
+        printf 'Warning: skipping invalid Pi web-search config: %s\n' "$file" >&2
+        exit 0
+      fi
     else
       printf '%s\n' '{"workflow":"none"}' > "$tmp"
     fi
@@ -1145,10 +1148,6 @@ in
     cp ${repoRoot}/nix/modules/pi/guardrails.json $out/agent/guardrails.json
 
     ln -s ${preset} $out/agent/preset.jsonc
-    ${lib.optionalString (direnvExtension != null) ''
-      mkdir -p $out/agent/extensions/direnv
-      ln -s ${direnvExtension} $out/agent/extensions/direnv/index.ts
-    ''}
     ln -s ${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning $out/agent/extensions/startup-staleness-warning
     ln -s ${repoRoot}/nix/modules/pi/extensions/pi-lens-policy $out/agent/extensions/pi-lens-policy
     ln -s ${repoRoot}/nix/modules/pi/extensions/pi-tasks-subagents-bridge $out/agent/extensions/pi-tasks-subagents-bridge

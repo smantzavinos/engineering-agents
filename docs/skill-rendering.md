@@ -143,9 +143,9 @@ installed: use `/skill:name` or read their `SKILL.md` directly. Pi uses the
   limited to `configure-pi` and `create-skills`.
 - Managed packages: a declaration's `hiddenSkills` names the facade's manual-only
   skills. The compiler writes a facade-local `SKILL.md`, preserves sibling
-  resources, and never rewrites the vendored source.
-- Home Manager's pinned `visual-explainer` is copied and marked manual-only at
-  build time. Turning off an extension with `-ne` does not by itself hide its
+  resources, rebases relative Markdown links, and never rewrites the vendored source.
+- Both the Home Manager and NixOS Pi modules copy the pinned `visual-explainer`
+  and mark it manual-only at build time. Turning off an extension with `-ne` does not by itself hide its
   package skills.
 
 ## Renderer commands

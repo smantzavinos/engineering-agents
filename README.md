@@ -226,7 +226,8 @@ repository's own `.pi/settings.json` assumes the `copilot` set.
 The wrapper selects the T3 profile only for T3 RPC launches with an installed
 `t3-profile.args`; other launches retain the terminal configuration. Both
 profiles include guardrails, code intelligence, checkpointing, web tools and
-task tracking. Only the terminal loads the footer, presets and Pi subagent
+task tracking. The browser curator is off by default in both profiles,
+including terminal Pi; a per-call `workflow` can still open it. Only the terminal loads the footer, presets and Pi subagent
 launcher. T3 uses its own delegation tools, with the same installed role
 models and `.pi/settings.json` overrides. In T3, start the process with
 `/skill:scope`, `/skill:run-plan` or `/skill:run-epic` instead of `/preset`.

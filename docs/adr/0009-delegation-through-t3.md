@@ -15,6 +15,8 @@ have only Copilot access.
 - Terminal Pi keeps `pi-subagents`, the tasks bridge and terminal UI packages.
   A T3 RPC launch with an installed profile uses explicit extensions and T3's
   `delegate_task` instead. Remove `pi-hooks` and `pi-agent-guidance` from both.
+  The web-search browser curator is off by default in both profiles, including
+  terminal Pi; a per-call `workflow` can still open it.
 - Keep one installed definition per role. Use `delegate` → Launching a role
   for dispatch and lifecycle operations. T3 resolves the installed role and
   the same repo/user overrides the terminal launcher uses. A fresh review

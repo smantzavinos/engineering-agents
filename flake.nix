@@ -283,13 +283,13 @@
                    extensions/startup-staleness-warning/index.ts; do
             test -e "$cfgd/agent/$f" || { echo "MISSING: agent/$f"; exit 1; }
           done
-          for a in planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker researcher vision oracle; do
+          for a in plan-author implementer reviewer helper planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker researcher vision oracle; do
             test -f "$cfgd/agent/agents/$a.md" || { echo "MISSING: agents/$a.md"; exit 1; }
           done
           for s in $(ls ${self}/dist/skills/pi); do
             test -d "$cfgd/agent/skills/$s" || { echo "MISSING: skills/$s"; exit 1; }
           done
-          ${pkgs.jq}/bin/jq -e '.defaultProvider == "zai-coding-plan" and .defaultModel == "glm-5.2"' \
+          ${pkgs.jq}/bin/jq -e '.defaultProvider == "openai-codex" and .defaultModel == "gpt-5.6-sol"' \
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: default settings body"; exit 1; }
           ${pkgs.jq}/bin/jq -e '(.packages | index("./packages/pi-powerline-footer")) != null' \
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: powerline not in runtime packages"; exit 1; }
@@ -398,7 +398,7 @@
                 default = {};
               };
             };
-            eval = nixpkgs.lib.evalModules {
+            eval = overrides: nixpkgs.lib.evalModules {
               modules = [
                 mockBaseModule
                 self.nixosModules.pi-for-user
@@ -409,15 +409,21 @@
                     user = "testuser";
                     group = "testgroup";
                     targetDir = "/tmp/test-pi";
-                    args = {};
-                  };
+                  } // overrides;
                 }
               ];
             };
-            scriptText = eval.config.system.activationScripts."pi-for-user".text;
+            activation = overrides: (eval overrides).config.system.activationScripts."pi-for-user".text;
+            scriptText = activation { };
+            copilotScript = activation {
+              modelSet = "copilot";
+              zai.enable = false;
+              args.modelSet = "direct"; # The module option takes precedence.
+            };
           in
           pkgs.runCommand "pi-for-user-module-check" {
-            inherit scriptText;
+            inherit scriptText copilotScript;
+            nativeBuildInputs = [ pkgs.jq ];
           } ''
             echo "$scriptText" | grep -qF 'agent="/tmp/test-pi/agent"' || {
               echo "FAIL: activation script must target the configured targetDir/agent"
@@ -443,6 +449,33 @@
               echo "FAIL: activation script must chown to the configured user/group"
               exit 1
             }
+
+            # Exercise activation in the build sandbox without changing file ownership.
+            chown() { :; }
+            activate() (
+              eval "''${copilotScript//\/tmp\/test-pi/$TMPDIR/test-pi}"
+            )
+            agent="$TMPDIR/test-pi/agent"
+            mkdir -p "$agent/extensions"
+            ln -s /nix/store/old-pi-agent-config/agent/extensions/direnv "$agent/extensions/direnv"
+            touch "$agent/mcp-adapter.json"
+            printf '%s\n' '{"workflow":"summary-review","provider":"brave"}' > "$agent/web-search.json"
+            activate
+            jq -e '.defaultProvider == "github-copilot" and .defaultModel == "claude-sonnet-5.5"' "$agent/settings.json" >/dev/null
+            test ! -e "$agent/mcp-adapter.json"
+            test ! -L "$agent/extensions/direnv"
+            grep -qE '/extensions/direnv/direnv\.ts$' "$agent/t3-profile.args"
+            if grep -qF '/pi-mcp-adapter' "$agent/t3-profile.args"; then
+              echo 'FAIL: z.ai-off T3 profile must not load pi-mcp-adapter'
+              exit 1
+            fi
+            jq -e '.workflow == "none" and .provider == "brave"' "$agent/web-search.json" >/dev/null
+
+            printf '%s\n' 'not JSON' > invalid.json
+            cp invalid.json "$agent/web-search.json"
+            activate 2>activation.stderr
+            grep -qF 'skipping invalid Pi web-search config' activation.stderr
+            cmp invalid.json "$agent/web-search.json"
             touch $out
           '';
 

@@ -31,6 +31,7 @@ is_interactive_launch() {
 }
 
 is_t3_rpc_launch() {
+  # Bash inside T3 inherits this marker, so a nested pi --mode rpc also matches.
   [[ -v T3_PI_MCP_EXTENSION_PATH ]] || return 1
   while (( $# )); do
     case "$1" in
@@ -156,6 +157,7 @@ main() {
     local -a profile_args=()
     if is_t3_rpc_launch "$@" && [[ -f "$profile_file" ]] && mapfile -t profile_args < "$profile_file"; then
       local arg
+      # Caller options come last; Pi keeps the last --exclude-tools value.
       local -a caller_args=()
       for arg in "$@"; do
         # Pi 1.5.2 parses --mode rpc, but rejects --mode=rpc.

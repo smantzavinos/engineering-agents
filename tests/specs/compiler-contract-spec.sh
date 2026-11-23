@@ -285,6 +285,12 @@ if [[ -f "$(dirname "$HIDDEN_CONVENTION_SKILL")/reference.md" ]]; then
 else
   fail 'hidden skill lost its sibling reference.md in the facade'
 fi
+if grep -Fq '[Docs](../../_source/docs/x.md#anchor), [local](#demo-skill), and [external](https://example.com/docs).' "$HIDDEN_CONVENTION_SKILL" \
+  && [[ -f "$(dirname "$HIDDEN_CONVENTION_SKILL")/../../_source/docs/x.md" ]]; then
+  printf 'PASS: hidden skill rebases package-relative links and preserves anchors and external URLs\n'
+else
+  fail 'hidden skill must rebase relative links to vendored assets'
+fi
 
 HIDDEN_ROOT_SKILL="$(hidden_skill_file "$HIDDEN_ROOT_DIR")"
 if [[ -f "$HIDDEN_ROOT_SKILL" && ! -L "$HIDDEN_ROOT_SKILL" ]] \
