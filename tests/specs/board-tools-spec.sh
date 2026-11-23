@@ -5,7 +5,8 @@
 # Proves: the tracker CLI contract (list JSON with internal names; move compare-and-set fails with "is no longer";
 # a move into Your turn needs a comment; set Waiting for), board names accepted, Up next/Canceled guards, fields,
 # labels, migrate-your-turn, intake (bot-created -> Inbox, others -> Backlog), closed -> Done/Canceled,
-# close-proposal close/keep/auto-close, PR links, Waiting for reconciliation, and every bot comment starting 🤖.
+# close-proposal close/keep/auto-close, PR links, PR cards and labels, PR assignment, Waiting for reconciliation,
+# the owner digest, unheard replies (scripts/unheard.py), and every bot comment starting 🤖.
 # Requirement: FR-001
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -17,13 +18,14 @@ ok()   { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad()  { FAIL=$((FAIL+1)); echo "  FAIL: $1" >&2; }
 check() { if grep -Fq -- "$2" <<<"$1"; then ok "$3"; else bad "$3 (missing: $2)"; fi; }
 
-if "$PY" -m py_compile "$ROOT/scripts/gh-project.py" "$ROOT/scripts/board-sync.py" "$ROOT/scripts/commands.py"; then
+if "$PY" -m py_compile "$ROOT/scripts/gh-project.py" "$ROOT/scripts/board-sync.py" "$ROOT/scripts/commands.py" \
+    "$ROOT/scripts/unheard.py" "$ROOT/scripts/pipeline_runtime.py"; then
   ok "scripts compile"
 else
   bad "scripts do not compile"
 fi
 
-for t in test_gh_project test_board_sync; do
+for t in test_gh_project test_board_sync test_unheard; do
   if OUT="$(cd "$ROOT/tests/scripts" && "$PY" -m unittest -q "$t" 2>&1)"; then
     ok "unit tests: $t ($(grep -Eo 'Ran [0-9]+ tests' <<<"$OUT"))"
   else
@@ -93,6 +95,11 @@ gp board-sync.py >/dev/null
 OUT="$(gp gh-project.py list)"
 check "$OUT" '"waiting_for": "👍 approve"' "board-sync sets Waiting for on a Your turn card"
 check "$OUT" '"number": 7' "board-sync adds the bot-created issue to the board"
+OUT="$(gp board-sync.py --digest)"
+check "$OUT" "item(s) waiting on you" "board-sync --digest lists what waits on a person"
+check "$OUT" "#6 " "board-sync --digest names the waiting card"
+OUT="$(gp unheard.py --dry)"
+if [[ "$OUT" != *Traceback* && "$OUT" != *FAILED* ]]; then ok "unheard.py --dry runs end to end"; else bad "unheard.py --dry crashed"; printf '%s\n' "$OUT" >&2; fi
 
 if OUT="$(env -u PIPELINE_REPO -u GH_PROJECT_CONFIG "$PY" "$ROOT/scripts/gh-project.py" list 2>&1)"; then
   bad "gh-project.py without configuration must fail"

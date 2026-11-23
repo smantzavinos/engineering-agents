@@ -42,6 +42,8 @@ class FakeBoard:
             self.add_field('Waiting for', WAITING)
         self.items, self.comments, self.issues = [], {}, {}
         self.open_prs, self.prs, self.closed, self.labels, self.writes = [], [], [], {}, []
+        self.search_counts = {}  # search/issues total_count by 'created' / 'closed'
+        self.closed_prs = []  # merged/closed PRs with labels: {'number', 'labels': {'nodes': [{'name'}]}}
 
     # ------------------------------------------------------------ setup helpers
     def new_id(self, prefix):
@@ -85,15 +87,33 @@ class FakeBoard:
             return item
         return None
 
-    def add_pr_card(self, number, status, state='OPEN'):
-        item = {'id': self.new_id('PVTI'), 'isArchived': False, 'values': {self.field('Status')['id']: self.option_id('Status', status)},
+    def add_pr_card(self, number, status, state='OPEN', labels=(), waiting=None):
+        values = {self.field('Status')['id']: self.option_id('Status', status)} if status else {}
+        if waiting:
+            values[self.field('Waiting for')['id']] = self.option_id('Waiting for', waiting)
+        item = {'id': self.new_id('PVTI'), 'isArchived': False, 'values': values,
                 'content': {'__typename': 'PullRequest', 'number': number, 'state': state,
                             'repository': {'nameWithOwner': self.repo}}}
         self.items.append(item)
+        self.add_pr(number, labels)
         return item
 
-    def comment(self, number, login, body):
-        c = {'id': self.new_seq(), 'user': {'login': login}, 'body': body,
+    def add_pr(self, number, labels=(), assignees=(), closes=(), fork=False, updated='2026-01-01T00:00:00Z'):
+        """The PR's issue record (GitHub serves a PR's labels and assignees through the issues API)."""
+        self.issues[str(number)] = {'number': number, 'node_id': f'PR_{number}', 'state': 'pr', 'state_reason': None,
+                                    'body': '', 'title': 't', 'labels': [{'name': n} for n in labels],
+                                    'assignees': [{'login': a} for a in assignees], 'closes': list(closes),
+                                    'fork': fork, 'updatedAt': updated}
+        self.comments.setdefault(str(number), [])
+        return self.issues[str(number)]
+
+    def add_closed_pr(self, number, labels):
+        self.add_pr(number, labels)
+        self.closed_prs.append({'number': number, 'labels': {'nodes': [{'name': n} for n in labels]}})
+
+    def comment(self, number, login, body, created='2026-01-01T00:00:00Z', eyes=0):
+        c = {'id': self.new_seq(), 'user': {'login': login}, 'body': body, 'created_at': created,
+             'reactions': {'eyes': eyes},
              'issue_url': f'https://api.github.com/repos/{self.repo}/issues/{number}',
              'html_url': f'https://github.com/{self.repo}/issues/{number}#issuecomment-x'}
         self.comments.setdefault(str(number), []).append(c)
@@ -140,6 +160,19 @@ class FakeBoard:
             return {'repository': {'pullRequests': {'pageInfo': {'hasNextPage': False}, 'nodes': self.open_prs}}}
         if 'states:CLOSED' in query:
             return {'repository': {'issues': {'pageInfo': {'hasNextPage': False, 'endCursor': None}, 'nodes': self.closed}}}
+        if 'pullRequest(number:' in query:
+            pr = self.issues.get(str(v.get('p')), {})
+            here = f"{v.get('o')}/{v.get('r')}"
+            # An entry 'other/repo#N' closes issue N of another repository (its assignees are the local issue N's).
+            closing = [{'repository': {'nameWithOwner': str(n).split('#')[0] if '#' in str(n) else here},
+                        'assignees': {'nodes': self.issues[str(n).split('#')[-1]]['assignees']}}
+                       for n in pr.get('closes', ())]
+            return {'repository': {'pullRequest': {'assignees': {'nodes': pr.get('assignees', [])},
+                                                   'closingIssuesReferences': {'nodes': closing}}}}
+        if 'states:[MERGED,CLOSED]' in query:
+            nodes = [{'number': p['number'], 'labels': {'nodes': self.issues[str(p['number'])]['labels']}}
+                     for p in getattr(self, 'closed_prs', [])]
+            return {'repository': {'pullRequests': {'nodes': nodes}}}
         if 'pullRequests(first:100' in query:
             return {'repository': {'pullRequests': {'pageInfo': {'hasNextPage': False, 'endCursor': None}, 'nodes': self.prs}}}
         raise AssertionError('unexpected query: ' + query[:80])
@@ -206,11 +239,20 @@ class FakeBoard:
                 i += 1
         fields = dict(f.split('=', 1) for f in flags.get('-f', []))
         method = (flags.get('-X') or ['GET'])[0]
+        if rest[:2] == ['issue', 'list'] and '--search' in rest:
+            return [{'number': i['number'], 'title': i['title'], 'url': f'https://github.com/{self.repo}/issues/{i["number"]}'}
+                    for i in self.issues.values() if i['state'] == 'open' and i.get('recent')]
         if rest[:2] == ['issue', 'list']:
             label = (flags.get('--label') or [None])[0]
             out = [{'id': i['node_id'], 'number': i['number'], 'body': i['body']} for i in self.issues.values()
                    if i['state'] == 'open' and (label is None or label in {lab['name'] for lab in i['labels']})]
             return sorted(out, key=lambda i: -i['number'])
+        if rest[:2] == ['pr', 'list']:
+            label = (flags.get('--label') or [None])[0]
+            return [{'number': p['number'], 'title': p['title'], 'url': f'https://github.com/{self.repo}/pull/{p["number"]}',
+                     'labels': p['labels'], 'updatedAt': p.get('updatedAt', ''), 'isCrossRepository': p.get('fork', False)}
+                    for p in self.issues.values()
+                    if p['state'] == 'pr' and (label is None or label in {lab['name'] for lab in p['labels']})]
         if rest[:2] == ['label', 'list']:
             return list(self.labels.values())
         if rest[:2] == ['label', 'create']:
@@ -223,6 +265,9 @@ class FakeBoard:
         slurp = '--slurp' in rest
         if path == 'user':
             return {'login': self.me}
+        if path == 'search/issues':
+            q = fields['q']
+            return {'total_count': self.search_counts.get('created' if 'created:' in q else 'closed', 0)}
         m = re.fullmatch(r'repos/[^/]+/[^/]+/labels/(.+)', path)
         if m:
             name = unquote(m.group(1))
@@ -237,7 +282,11 @@ class FakeBoard:
             return self.labels[name]
         m = re.fullmatch(r'repos/[^/]+/[^/]+/issues/comments/(\d+)', path)
         if m:
-            return next(c for cs in self.comments.values() for c in cs if c['id'] == int(m.group(1)))
+            c = next(c for cs in self.comments.values() for c in cs if c['id'] == int(m.group(1)))
+            if method == 'PATCH':
+                c['body'] = fields['body']
+                self.writes.append(('edit', c['id'], fields['body']))
+            return c
         m = re.fullmatch(r'repos/[^/]+/[^/]+/issues/(\d+)/comments(?:\?per_page=100)?', path)
         if m:
             if method == 'POST':
@@ -246,6 +295,12 @@ class FakeBoard:
                 return c
             cs = self.comments.get(m.group(1), [])
             return [cs] if slurp else cs
+        m = re.fullmatch(r'repos/[^/]+/[^/]+/issues/(\d+)/assignees', path)
+        if m and method == 'POST':
+            people = [v.split('=', 1)[1] for v in flags.get('-f', []) if v.startswith('assignees[]=')]
+            self.issues[m.group(1)]['assignees'] += [{'login': a} for a in people]
+            self.writes.append(('assign', int(m.group(1)), tuple(people)))
+            return self.issues[m.group(1)]
         m = re.fullmatch(r'repos/[^/]+/[^/]+/issues/(\d+)/labels(?:/(.+))?', path)
         if m:
             issue = self.issues[m.group(1)]

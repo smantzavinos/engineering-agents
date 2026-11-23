@@ -2,6 +2,7 @@
 """Board sync: deterministic tracker hygiene for one repository's GitHub Project. Script-only cron entry, no LLM.
 
     board-sync.py [--dry] [--only reconcile|intake|waiting]
+    board-sync.py --digest          (owner digest: everything waiting on a person; read-only; daily cron)
 
 Generic subset of gm-agent-pipeline `pipeline/board_sync.py` (Daniel Gehriger). Configuration and board access come
 from gh-project.py beside it (same environment / GH_PROJECT_CONFIG; owners are required here).
@@ -10,10 +11,13 @@ Steps, in this order (`--only` runs one):
   intake     open issues not on the board: issues whose body carries `<!-- bot-created source=... -->` go to Inbox,
              every other one to Backlog (no bot reads Backlog; a person moves a card to Inbox). A card a person
              added without a Status is set to Inbox. BOARD_SYNC_INTAKE=all sends every off-board issue to Inbox.
-  reconcile  closed issues -> Done (Canceled when closed as not planned); close proposals: closed after an owner
+  reconcile  PR cards a person put on the board follow the PR (merged -> Done, closed -> Canceled, open -> In review,
+             or Your turn when its labels wait on a person); merged/closed PRs lose their workflow labels;
+             closed issues -> Done (Canceled when closed as not planned); close proposals: closed after an owner
              `close` (or `approve`) reply, or after `auto_close_after=<UTC>` with no reply from a person; `keep`
-             dismisses; related PRs are linked on the issue, and a merged PR that closes or names an open issue gets
-             a close proposal (closing keyword: auto-closes after 48 h).
+             dismisses; related PRs are linked on the issue, an open unassigned PR that closes an issue is assigned
+             to that issue's assignees (else the first owner), and a merged PR that closes or names an open issue
+             gets a close proposal (closing keyword: auto-closes after 48 h).
   waiting    `Waiting for` follows the card: in Your turn it shows the kind of wait (newest bot marker or PR
              labels), or `⏳ Bot's turn` once a valid reply waits for the dispatcher; it is cleared everywhere else.
 
@@ -36,6 +40,7 @@ import time
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import commands  # noqa: E402  (scripts/commands.py)
+import pipeline_runtime  # noqa: E402  (stopped alerts and repeat filter: scripts/pipeline_runtime.py)
 
 
 def load_gp():
@@ -52,6 +57,8 @@ gp = load_gp()
 MAX_MOVES = 10       # status / Waiting for changes per run
 MAX_COMMENTS = 8     # PR-link and close-proposal comments per run
 MAX_INTAKE = 40      # issues added per run; Inbox and Backlog additions count together
+MAX_LABEL_CLEANUPS = 20  # merged/closed PRs whose workflow labels are removed per run
+PR_HUMAN_LABELS = ('needs-human:merge', 'needs-human:decision')
 SYNC_LOCK_WAIT = 120
 AUTO_CLOSE_HOURS = 48
 STEPS = ('intake', 'reconcile', 'waiting')
@@ -143,6 +150,7 @@ class Context:
             self.state = {}
         self.moves = self.comments = self.intake_added = 0
         self.lines = []
+        self.failures = []  # failed parts of a step that still ran the rest (main reports them)
 
     @property
     def repo(self):
@@ -285,6 +293,7 @@ CLOSED = '''query($o:String!,$n:String!,$after:String) {repository(owner:$o,name
 PRS = '''query($o:String!,$n:String!,$after:String) {repository(owner:$o,name:$n) {
  pullRequests(first:100, after:$after, orderBy:{field:UPDATED_AT,direction:DESC}) {pageInfo {hasNextPage endCursor}
   nodes {number title body headRefName baseRefName state mergedAt isDraft url author {login __typename}
+   assignees(first:10) {nodes {login}}
    closingIssuesReferences(first:20) {nodes {number repository {nameWithOwner}}}}}}}'''
 
 
@@ -411,6 +420,102 @@ def ensure_propose_label(ctx):
         gp.ensure_labels(ctx.config, only=gp.PROPOSE_LABEL)
 
 
+def assign_pr(ctx, pr, issue_numbers):
+    """Assign an open, unassigned PR to the people responsible for the issues it closes: their assignees, or the
+    first owner when they have none. Assigned people may command the bots on the PR (pr-sweep-dispatch.py
+    pr_people). Returns the logins assigned (empty when nothing changed)."""
+    if pr.get('state') != 'OPEN' or (pr.get('assignees') or {}).get('nodes') or not issue_numbers:
+        return []
+    people = []
+    for n in sorted(issue_numbers):
+        try:
+            issue = gp.issue_of(ctx.config, n)
+        except (RuntimeError, ValueError, subprocess.SubprocessError):
+            continue
+        people += [a['login'] for a in issue.get('assignees') or [] if a.get('login') and a['login'] not in people]
+    people = people or list(ctx.config['owners'][:1])
+    if not people:
+        return []
+    ctx.say(f'PR #{pr["number"]}: assigned to ' + ', '.join(f'@{p}' for p in people))
+    if not ctx.dry:
+        ctx.gh('api', '-X', 'POST', f'repos/{ctx.repo}/issues/{pr["number"]}/assignees',
+               *[x for p in people for x in ('-f', f'assignees[]={p}')])
+    return people
+
+
+def pr_cards(ctx, nodes):
+    """PR cards a person put on the board follow the PR, so Your turn never shows a PR that waits on nobody.
+
+    The bots work on issue cards only; nothing else moves a PR card. Merged -> Done, closed -> Canceled (closing
+    the PR was a person's decision), open -> In review, or Your turn with its Waiting for when the PR labels say
+    a person acts (needs-human:decision, needs-human:merge). A card in Later stays there while the PR is open."""
+    fields = None
+    for node in nodes:
+        content = node.get('content') or {}
+        if (node.get('isArchived') or content.get('__typename') != 'PullRequest'
+                or (content.get('repository') or {}).get('nameWithOwner') != ctx.repo):
+            continue
+        current = gp.item_values(node).get('Status', '')
+        state, kind = content.get('state'), None
+        if state == 'MERGED':
+            want = 'Done'
+        elif state == 'CLOSED':
+            want = 'Canceled'
+        elif current == gp.PARKED_STATUS:
+            continue
+        else:
+            labels = {(lbl or {}).get('name') for lbl in gp.issue_of(ctx.config, content['number']).get('labels') or []}
+            kind = gp.review_status([labels])
+            want = 'Your turn' if kind in ('decide', 'merge') else 'In review'
+        want_wait = gp.WAITING_FOR.get(kind, '') if want == 'Your turn' else ''
+        has_wait = gp.stored_value(node, gp.WAITING_FIELD)
+        if current == want and has_wait == want_wait:
+            continue
+        fields = fields or gp.read_fields(ctx.config)
+        waiting = fields.get(gp.WAITING_FIELD)
+        option = next((o['id'] for o in waiting['options'] if o['name'] == want_wait), None) if waiting and want_wait else None
+        can_wait = bool(waiting) and (option is not None or not want_wait)
+        if current == want and not can_wait:
+            continue  # only Waiting for differs and the board cannot show it (no field or option): nothing to write
+        if ctx.moves >= MAX_MOVES:
+            return
+        why = {'Done': 'merged', 'Canceled': 'closed without merge'}.get(want, 'open; its labels say ' + (want_wait or 'a bot acts'))
+        ctx.say(f'PR #{content["number"]} card: {gp.board_value("Status", current) if current else "No Status"} -> '
+                f'{gp.board_value("Status", want)}' + (f', waiting for {want_wait}' if want_wait else '') + f' ({why})')
+        if not ctx.dry:
+            status = fields['Status']
+            if current != want:
+                gp.set_item_option(ctx.config, node['id'], status,
+                                   next(o['id'] for o in status['options'] if o['internal'] == want))
+            if has_wait != want_wait and can_wait:
+                gp.set_item_option(ctx.config, node['id'], waiting, option)
+        ctx.moves += 1
+
+
+def closed_pr_labels(ctx):
+    """A merged or closed PR loses its workflow labels (`review-bot:*`, `fix-bot:*`, needs-human:merge and
+    needs-human:decision, and their legacy names). The PR sweep reads open PRs only, so without this a merged PR
+    kept saying a person or a bot still has to act. Every other label stays."""
+    current = [name for name, _, _ in gp.WORKFLOW_LABELS
+               if name.startswith(('review-bot:', 'fix-bot:')) or name in PR_HUMAN_LABELS]
+    stale = set(current) | {old for old, new in gp.LEGACY_LABELS.items() if new in current}
+    owner, name = ctx.repo.split('/')
+    query = ('query($o:String!,$n:String!){repository(owner:$o,name:$n){pullRequests(first:50,states:[MERGED,CLOSED],'
+             'labels:' + json.dumps(sorted(stale)) + ',orderBy:{field:UPDATED_AT,direction:DESC}){'
+             'nodes{number labels(first:50){nodes{name}}}}}}')
+    removed = 0
+    for pr in ctx.gql(query, o=owner, n=name)['repository']['pullRequests']['nodes']:
+        drop = [lbl['name'] for lbl in pr['labels']['nodes'] if lbl['name'] in stale]
+        if not drop:
+            continue
+        if removed >= MAX_LABEL_CLEANUPS:
+            return
+        ctx.say(f'PR #{pr["number"]} closed: removed ' + ', '.join(drop))
+        for label in drop:
+            set_label(ctx, pr['number'], label, False)
+        removed += 1
+
+
 def link_prs(ctx, issues):
     """Link related PRs on open issues; propose closing an open issue a merged PR closes or names in its title.
     Backlog cards are never touched."""
@@ -428,6 +533,10 @@ def link_prs(ctx, issues):
         closing, in_title, in_body = references(repo, pr['number'], pr['title'], pr['body'], pr['headRefName'])
         closing |= {r['number'] for r in (pr.get('closingIssuesReferences') or {}).get('nodes', [])
                     if r['repository']['nameWithOwner'] == repo}
+        try:
+            assign_pr(ctx, pr, closing & set(candidates))
+        except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+            ctx.say(f'PR #{pr["number"]}: assigning FAILED: {exc}')
         for n in sorted((closing | in_title | in_body) & set(candidates)):
             if ctx.comments >= MAX_COMMENTS:
                 return
@@ -473,9 +582,16 @@ def link_prs(ctx, issues):
 
 
 def reconcile(ctx):
-    issues, _, _ = gp.snapshot(ctx.config)
+    issues, _, nodes = gp.snapshot(ctx.config)
     by_number = {i['number']: i for i in issues}
     moved = {}
+    # The PR features are extras: their failure is reported but never holds up the issue cards.
+    for name, part in (('PR cards', lambda: pr_cards(ctx, nodes)), ('closed PR labels', lambda: closed_pr_labels(ctx))):
+        try:
+            part()
+        except (RuntimeError, ValueError, KeyError, OSError, subprocess.SubprocessError) as exc:
+            ctx.failures.append(f'[{ctx.repo}] reconcile ({name}) FAILED: {exc}')
+            ctx.log(ctx.failures[-1])
     closed_issues(ctx, issues, moved)
     close_replies(ctx, issues, by_number, moved)
     link_prs(ctx, [i for i in issues if i['number'] not in moved])
@@ -493,7 +609,7 @@ def waiting_for(ctx, moved=None):
         n, have = issue['number'], issue.get('waiting_for', '')
         if moved.get(n, issue['status']) == 'Your turn':
             try:
-                label_sets = [{l['name'] for l in gp.issue_of(config, pr).get('labels', [])} for pr in issue.get('prs') or []]
+                label_sets = [{lbl['name'] for lbl in gp.issue_of(config, pr).get('labels', [])} for pr in issue.get('prs') or []]
                 kind, replied = gp.bot_turn(config, gp.comments_of(config, n), label_sets,
                                             lambda n=n: gp.issue_of(config, n))
             except (RuntimeError, ValueError, KeyError, OSError) as exc:
@@ -516,23 +632,140 @@ def waiting_for(ctx, moved=None):
         ctx.moves += 1
 
 
+# ---------------------------------------------------------------- owner digest
+
+DIGEST_ORDER = ('approve', 'unblock', 'answer', 'decide', 'merge')
+
+
+def age_days(stamp, now=None):
+    try:
+        then = calendar.timegm(time.strptime((stamp or '')[:19], '%Y-%m-%dT%H:%M:%S'))
+    except ValueError:
+        return 0
+    return max(0, int(((time.time() if now is None else now) - then) / 86400))
+
+
+def backlog_trend(ctx, days=7):
+    """One line on whether the backlog shrinks: issues opened vs closed in the last `days` days (2 search calls).
+    '' when the counts cannot be read, so the digest never fails on it."""
+    since = time.strftime('%Y-%m-%d', time.gmtime(time.time() - days * 86400))
+    try:
+        opened, closed = (int(ctx.gh('api', '-X', 'GET', 'search/issues', '-f',
+                                     f'q=repo:{ctx.repo} is:issue {q}:>={since}', '-f', 'per_page=1')['total_count'])
+                          for q in ('created', 'closed'))
+    except (RuntimeError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
+        ctx.log(f'backlog trend unavailable: {exc}')
+        return ''
+    net = opened - closed
+    verdict = 'shrinking' if net < 0 else 'flat' if net == 0 else 'growing'
+    return f'Backlog, last {days} days: {opened} opened, {closed} closed (net {net:+d}, {verdict})'
+
+
+def not_on_board(ctx, issues, nodes, days=7):
+    """Open issues opened in the last `days` days that are not on the board. Never raises."""
+    since = time.strftime('%Y-%m-%d', time.gmtime(time.time() - days * 86400))
+    have = {i['number'] for i in issues} | {
+        (n.get('content') or {}).get('number') for n in nodes
+        if ((n.get('content') or {}).get('repository') or {}).get('nameWithOwner') == ctx.repo}
+    try:
+        recent = ctx.gh('issue', 'list', '-R', ctx.repo, '--state', 'open', '--search', f'created:>={since}',
+                        '--limit', '50', '--json', 'number,title,url') or []
+    except (RuntimeError, ValueError, subprocess.SubprocessError) as exc:
+        ctx.log(f'recent issues unavailable: {exc}')
+        return []
+    return [f'#{i["number"]} {i["title"][:70]} {i["url"]}'
+            for i in sorted(recent, key=lambda i: i['number']) if i['number'] not in have]
+
+
+def digest(ctx, weekly=None):
+    """One message listing everything that waits on a person (stdout). Silent when nothing waits, except that
+    on Mondays (`weekly`) the backlog lines are sent even then."""
+    config, handle = ctx.config, ctx.config['handles'][0]
+    logins = gp.bot_logins(config)
+    waiting = {kind: [] for kind in DIGEST_ORDER}
+    issues, _, nodes = gp.snapshot(config)
+    offboard = not_on_board(ctx, issues, nodes)
+    for issue in issues:
+        if issue['state'] != 'OPEN' or issue['status'] != 'Your turn':
+            continue
+        n = issue['number']
+        line = f'#{n} {issue["title"][:70]} ({age_days(issue.get("updatedAt"))}d) https://github.com/{ctx.repo}/issues/{n}'
+        kind = gp.wait_kind(gp.comments_of(config, n), (), logins)[0]
+        if kind in waiting:
+            waiting[kind].append(line)
+        elif not issue.get('prs'):  # a card with a PR is listed from the PR labels below
+            waiting['unblock'].append(line + ' [no bot request found; a bot should have posted one]')
+    seen = set()
+    for label, key in (('needs-human:decision', 'decide'), ('needs-human:merge', 'merge')):
+        for pr in ctx.gh('pr', 'list', '-R', ctx.repo, '--label', label, '--state', 'open',
+                         '--json', 'number,title,url,updatedAt') or []:
+            if pr['number'] in seen:
+                continue
+            seen.add(pr['number'])
+            waiting[key].append(f'PR #{pr["number"]} {pr["title"][:70]} ({age_days(pr.get("updatedAt"))}d) {pr["url"]}')
+    total = sum(len(v) for v in waiting.values())
+    trend = backlog_trend(ctx)
+    weekly = time.localtime().tm_wday == 0 if weekly is None else weekly
+    lines = []
+    if total or (weekly and (trend or offboard)):
+        lines.append(f'[{ctx.repo}] ' + (f'{total} item(s) waiting on you' if total else 'nothing waiting on you'))
+        if trend:
+            lines += ['', trend]
+        if offboard:
+            lines += ['', f'Not on the board ({len(offboard)}, opened in the last 7 days): add the ones you want a bot '
+                      'to handle'] + ['- ' + x for x in offboard[:10]]
+            if len(offboard) > 10:
+                lines.append(f'- ...and {len(offboard) - 10} more')
+    hints = {'approve': f'reply `{handle} approve`, `revise: ...`, `discuss` or `reject` (owners only)',
+             'unblock': f'reply `{handle} unblock: <what changed>`',
+             'answer': f'reply `{handle} answer: 1A, 2 yes, ...` (or `answer: approve`)',
+             'decide': f'read the latest bot comment on the PR, then reply `{handle} fix` (your decision below it) '
+                       f'or `{handle} review`',
+             'merge': 'review passed and checks are green: merge the PR'}
+    for key, found in waiting.items():
+        if found:
+            lines += ['', f'{gp.WAITING_FOR[key]} ({len(found)}): {hints[key]}'] + ['- ' + x for x in found[:12]]
+            if len(found) > 12:
+                lines.append(f'- ...and {len(found) - 12} more (see the board)')
+    if lines:
+        print('\n'.join(lines), flush=True)
+    return lines
+
+
 # ---------------------------------------------------------------- entry point
 
 def run(ctx, only=None):
-    """All steps (or one); returns 0, or 1 when a step failed."""
-    failed = False
+    """All steps (or one); returns (steps run, failure lines). A failure is logged here and printed by main."""
+    failures, ran = [], 0
     moved = {}
     plan = [('intake', lambda: intake(ctx, only='inbox')), ('intake', lambda: intake(ctx, only='backlog')),
             ('reconcile', lambda: moved.update(reconcile(ctx) or {})), ('waiting', lambda: waiting_for(ctx, moved))]
     for name, step in plan:
         if only not in (None, name):
             continue
+        ran += 1
         try:
             step()
         except (RuntimeError, ValueError, KeyError, OSError, subprocess.SubprocessError) as exc:
-            ctx.say(f'{name} FAILED: {exc}', loud=True)
-            failed = True
-    return 1 if failed else 0
+            failures.append(f'[{ctx.repo}] {name} FAILED: {exc}')
+            ctx.log(failures[-1])
+    return ran, failures
+
+
+def report(ctx, ran, failures):
+    """Print what a person must see about failures: every step failing is one plain alert (repeated hourly, then
+    one line when the sync runs again); a single failing step or part of one (ctx.failures) repeats its line at
+    most once per 6 hours."""
+    if ctx.dry:
+        lines = failures + ctx.failures
+    else:
+        health = ctx.state_dir / 'health'
+        down = bool(failures) and len(failures) == ran
+        status = (pipeline_runtime.job_down(health, f'Board sync ({ctx.repo})', '; '.join(failures)) if down
+                  else pipeline_runtime.job_up(health, f'Board sync ({ctx.repo})'))
+        lines = status + pipeline_runtime.fresh_lines(health, 'errors', ([] if down else failures) + ctx.failures)
+    if lines:
+        print('\n'.join(lines), flush=True)
 
 
 def main(argv=None, config=None):
@@ -540,24 +773,30 @@ def main(argv=None, config=None):
     parser = argparse.ArgumentParser(prog='board-sync.py', description=(__doc__ or '').split('\n')[0])
     parser.add_argument('--dry', action='store_true', help='print intended changes; write nothing')
     parser.add_argument('--only', choices=STEPS)
+    parser.add_argument('--digest', action='store_true',
+                        help='print the owner digest (everything waiting on a person) instead of syncing; read-only')
     args = parser.parse_args(argv)
     config = gp.resolve_project(dict(gp.load_config() if config is None else config))
     gp.require_owners(config)
     ctx = Context(config, args.dry)
+    if args.digest:
+        digest(ctx)
+        return 0
     started = time.time()
     try:
         with gp.file_lock(gp.lock_path(config), wait=0 if args.dry else SYNC_LOCK_WAIT):
             try:
-                code = run(ctx, args.only)
+                ran, failures = run(ctx, args.only)
             finally:
                 ctx.save_state()
     except gp.LockBusy:
         print(f'[{config["repo"]}] board sync FAILED to start: another run held the board lock for over '
               f'{SYNC_LOCK_WAIT} s. Nothing changed; the next run retries.', flush=True)
         return 1
+    report(ctx, ran, failures)
     ctx.log(f'[{config["repo"]}] run done in {time.time() - started:.0f} s'
-            + ('; FAILED steps above' if code else ''))
-    return code
+            + ('; FAILED steps above' if failures else ''))
+    return 1 if failures else 0
 
 
 if __name__ == '__main__':

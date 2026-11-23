@@ -315,6 +315,99 @@ class LinkPrs(Sync):
         self.assertNotIn('auto_close_after', self.board.bodies(1)[0])
         self.assertEqual(self.board.bodies(2), [])
 
+    def test_an_unassigned_open_pr_gets_the_assignees_of_the_issues_it_closes_else_the_owner(self):
+        self.board.add_issue(1, '🤖 In progress', assignees=('dev',))
+        self.board.add_issue(2, '🤖 In progress')
+        self.board.add_pr(9)
+        self.board.add_pr(10)
+        self.board.add_pr(11, assignees=('someone',))
+        self.board.prs = [dict(self.pr(9, body='Fixes #1'), assignees={'nodes': []}),
+                          dict(self.pr(10, body='Closes #2'), assignees={'nodes': []}),
+                          dict(self.pr(11, body='Fixes #1'), assignees={'nodes': [{'login': 'someone'}]}),
+                          dict(self.pr(12, body='see #1'), assignees={'nodes': []})]
+        self.run_step(bs.reconcile)
+        assigned = [w for w in self.board.writes if w[0] == 'assign']
+        self.assertEqual(assigned, [('assign', 9, ('dev',)), ('assign', 10, (OWNER,))])
+
+    def test_assigning_in_a_dry_run_writes_nothing(self):
+        self.board.add_issue(1, '🤖 In progress', assignees=('dev',))
+        self.board.prs = [dict(self.pr(9, body='Fixes #1'), assignees={'nodes': []})]
+        _, out, _ = self.run_step(bs.reconcile, True)
+        self.assertIn('PR #9: assigned to @dev', out)
+        self.assertFalse([w for w in self.board.writes if w[0] == 'assign'])
+
+
+class PrCards(Sync):
+    def test_pr_cards_follow_the_pr(self):
+        self.board.add_pr_card(20, '🤖 In progress', state='MERGED')
+        self.board.add_pr_card(21, '🧑 Your turn', state='CLOSED', waiting='🔀 merge PR')
+        self.board.add_pr_card(22, None, labels=('review-bot:queued',))
+        self.board.add_pr_card(23, '🤖 In review', labels=('needs-human:merge',))
+        self.board.add_pr_card(24, '🤖 In review', labels=('needs-human:decision', 'needs-human:merge'))
+        self.board.add_pr_card(25, 'Later', labels=('needs-human:merge',))
+        self.board.add_pr_card(26, '🤖 In review', labels=('review-bot:running',))
+        self.run_step(bs.reconcile)
+        status = {n: self.board.value(n, 'Status') for n in range(20, 27)}
+        self.assertEqual(status, {20: 'Done', 21: 'Canceled', 22: '🤖 In review', 23: '🧑 Your turn',
+                                  24: '🧑 Your turn', 25: 'Later', 26: '🤖 In review'})
+        waiting = {n: self.board.value(n, 'Waiting for') for n in (21, 23, 24)}
+        self.assertEqual(waiting, {21: '', 23: gp.WAITING_FOR['merge'], 24: gp.WAITING_FOR['decide']})
+        self.assertEqual(self.board.bodies(), [])  # PR cards move silently
+        writes = len(self.board.writes)
+        self.run_step(bs.reconcile)
+        self.assertEqual(len(self.board.writes), writes)  # settled: nothing more to do
+
+    def test_pr_card_moves_respect_the_cap_and_dry_runs(self):
+        for n in range(20, 24):
+            self.board.add_pr_card(n, '🤖 In progress', state='MERGED')
+        _, out, _ = self.run_step(bs.reconcile, True)
+        self.assertIn('PR #20 card: 🤖 In progress -> Done (merged)', out)
+        self.assertEqual(self.board.writes, [])
+        with patch.object(bs, 'MAX_MOVES', 2):
+            self.run_step(bs.reconcile)
+        self.assertEqual([self.board.value(n, 'Status') for n in range(20, 24)],
+                         ['Done', 'Done', '🤖 In progress', '🤖 In progress'])
+
+    def test_a_waiting_value_the_board_cannot_show_is_not_a_move(self):
+        self.board = FakeBoard(waiting=False)
+        for target, name, fake in ((gp, 'gh', self.board.gh), (gp, 'graphql', self.board.graphql)):
+            p = patch.object(target, name, fake)
+            p.start()
+            self.addCleanup(p.stop)
+        self.board.add_pr_card(23, '🧑 Your turn', labels=('needs-human:merge',))
+        ctx, out, _ = self.run_step(bs.reconcile, True)
+        self.assertEqual((ctx.moves, out), (0, ''))
+        self.run_step(bs.reconcile)
+        self.assertEqual(self.board.writes, [])
+
+    def test_a_failing_pr_feature_is_reported_and_issue_cards_still_move(self):
+        self.board.add_issue(1, '🧑 📋 Ready to schedule', state='CLOSED')
+        self.board.closed = [{'number': 1, 'stateReason': 'COMPLETED', 'closedAt': '2026-01-02T00:00:00Z',
+                              'timelineItems': {'nodes': []}}]
+        with patch.object(bs, 'pr_cards', side_effect=RuntimeError('HTTP 502')):
+            ctx, _, _ = self.run_step(bs.reconcile)
+        self.assertEqual(self.board.value(1, 'Status'), 'Done')
+        self.assertEqual(ctx.failures, ['[o/r] reconcile (PR cards) FAILED: HTTP 502'])
+
+
+class ClosedPrLabels(Sync):
+    def test_merged_and_closed_prs_lose_their_workflow_labels_only(self):
+        self.board.add_closed_pr(30, ('needs-human:merge', 'bug', 'pr:babysat'))
+        self.board.add_closed_pr(31, ('review-bot:queued', 'fix-bot:owns-branch', 'needs-human:discussion'))
+        self.run_step(bs.reconcile)
+        self.assertEqual({lab['name'] for lab in self.board.issues['30']['labels']}, {'bug'})
+        self.assertEqual({lab['name'] for lab in self.board.issues['31']['labels']}, {'needs-human:discussion'})
+
+    def test_cleanup_is_capped_per_run_and_dry_runs_write_nothing(self):
+        for n in range(30, 34):
+            self.board.add_closed_pr(n, ('needs-human:merge',))
+        _, out, _ = self.run_step(bs.closed_pr_labels, True)
+        self.assertIn('PR #30 closed: removed needs-human:merge', out)
+        self.assertEqual(self.board.writes, [])
+        with patch.object(bs, 'MAX_LABEL_CLEANUPS', 3):
+            self.run_step(bs.closed_pr_labels)
+        self.assertEqual(len([w for w in self.board.writes if w[0] == 'label-']), 3)
+
 
 class Waiting(Sync):
     def test_your_turn_shows_the_kind_then_bots_turn_and_other_cards_are_cleared(self):
@@ -339,6 +432,44 @@ class Waiting(Sync):
         self.board.comment(1, 'bot', '<!-- close-proposal reason=fixed dup=- pr=4 -->')
         self.run_step(bs.waiting_for)
         self.assertEqual(self.board.value(1, 'Waiting for'), '')
+
+
+class Digest(Sync):
+    def test_lists_everything_waiting_on_a_person_by_kind(self):
+        self.board.add_issue(1, '🧑 Your turn', title='plan it')
+        self.board.comment(1, 'bot', '🤖 **Your turn**\n<!-- gate stage=Plan head=a branch=b plan=p -->')
+        self.board.add_issue(2, '🧑 Your turn', title='no request')
+        self.board.add_issue(3, '🤖 In progress')
+        self.board.add_pr(20, labels=('needs-human:merge',))
+        self.board.add_pr(21, labels=('needs-human:decision', 'needs-human:merge'))
+        self.board.add_issue(9, on_board=False, title='fresh bug')
+        self.board.issues['9']['recent'] = True
+        self.board.search_counts.update(created=3, closed=5)
+        ctx, out, lines = self.run_step(bs.digest, False, False)
+        self.assertIn('[o/r] 4 item(s) waiting on you', out)
+        self.assertIn('Backlog, last 7 days: 3 opened, 5 closed (net -2, shrinking)', out)
+        self.assertIn('#9 fresh bug', out)
+        self.assertIn(f'{gp.WAITING_FOR["approve"]} (1)', out)
+        self.assertIn('#2 no request', out)
+        self.assertIn(f'{gp.WAITING_FOR["decide"]} (1)', out)
+        self.assertIn(f'{gp.WAITING_FOR["merge"]} (1)', out)
+        self.assertNotIn('#3', out)
+        self.assertEqual(self.board.writes, [])
+
+    def test_silent_when_nothing_waits_except_the_weekly_backlog_lines(self):
+        self.board.add_issue(3, '🤖 In progress')
+        self.board.search_counts.update(created=1, closed=1)
+        _, out, _ = self.run_step(bs.digest, False, False)
+        self.assertEqual(out, '')
+        _, out, _ = self.run_step(bs.digest, False, True)
+        self.assertIn('nothing waiting on you', out)
+        self.assertIn('(net +0, flat)', out)
+
+    def test_digest_flag_runs_only_the_digest(self):
+        self.board.add_issue(1, '🤖 In progress', values={'Waiting for': '👍 approve'})
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(bs.main(['--digest'], config=self.config), 0)
+        self.assertEqual(self.board.writes, [])
 
 
 class Main(Sync):
@@ -381,6 +512,30 @@ class Main(Sync):
         self.assertEqual(code, 1)
         self.assertIn('reconcile FAILED: boom', out.getvalue())
         self.assertEqual(self.board.value(1, 'Waiting for'), '')
+
+    def run_main(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = bs.main([], config=self.config)
+        return code, out.getvalue()
+
+    def test_a_repeating_step_failure_is_printed_once(self):
+        with patch.object(bs, 'reconcile', side_effect=RuntimeError('boom')):
+            self.assertIn('reconcile FAILED: boom', self.run_main()[1])
+            code, out = self.run_main()
+        self.assertEqual((code, out), (1, ''))
+
+    def test_every_step_failing_alerts_once_then_says_when_it_runs_again(self):
+        boom = RuntimeError('bad credentials')
+        with patch.object(bs, 'intake', side_effect=boom), patch.object(bs, 'reconcile', side_effect=boom), \
+                patch.object(bs, 'waiting_for', side_effect=boom):
+            code, out = self.run_main()
+            self.assertEqual(code, 1)
+            self.assertIn('🛑 **Board sync (o/r) stopped since', out)
+            self.assertIn('bad credentials', out)
+            self.assertEqual(self.run_main()[1], '')
+        self.assertIn('✅ **Board sync (o/r) runs again**', self.run_main()[1])
+        self.assertEqual(self.run_main()[1], '')
 
 
 if __name__ == '__main__':
