@@ -14,6 +14,8 @@ An epic is the rare case: distinct workstreams, each with its own plan and its o
 
 **Untested with models.** No epic has run since plans gained a model. The steps marked *(open)* are settled only as far as written here; when one doesn't fit, stop for the human rather than improvise.
 
+**Untested with submodules.** No epic has run where the code sits in git submodules of the repository that holds the plans. `run-plan` → Code in submodules applies to each child; lanes, integration and checkpoints across several repositories are *(open)*: stop for the human rather than improvising.
+
 **Known gap.** The check counts changes from the child's approval commit, and can't take a later base. So what other children integrate between that commit and the child's base shows up in the child's results:
 - in check 2, as unaccounted lines and as changes to reused elements;
 - in check 3, as a re-approval stop for every catalog, rule or profile file another child changed. Every child that follows one proposing a pattern gets this.

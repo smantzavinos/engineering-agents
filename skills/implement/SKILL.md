@@ -49,6 +49,15 @@ After the build and before the gates:
 
 Never write or edit an `Approved:` or `Re-approved:` line.
 
+## Code in submodules
+Where the plan lives in one repository and the code in git submodules of it, read `architecture-model` → `references/repositories.md` first. Then:
+- work in each submodule on the branch `state.json` names. A submodule the build needs and the plan didn't name: add it as the agent guide says, branch it at the commit the root points to, note it under `### Details`, and name it in your reply;
+- **a handover is one root commit:** commit in each submodule, then make one root commit that moves those pointers and holds the model and the ledger. Do this before every `model-check` run, and before every reply. "A clean tree" means clean in every repository;
+- in the root, stage your own paths and the pointers of the submodules you changed, nothing else;
+- gates run per repository, with test selection from that submodule's base commit in `state.json`. Record each gate with its repository and that repository's `HEAD^{tree}`;
+- record in the ledger the submodule commits the check printed;
+- never amend, rebase or squash a submodule commit the root has pinned.
+
 ## Gates
 1. At the end, run T1's fast gates (builds, typecheck, lint and format on changed files, and the project's pattern rules on them) with the plan's Gates commands. For the rest of T1 (unit and E2E tests), record in the ledger the exact command lines, with an explicit base and spec list and retries off but no E2E worker count (the helper sets it), and why each spec was picked. Don't run them: a helper runs them beside the code review. When your task says to run T1 yourself (integration, checkpoint fix), run all of it.
    - **Selection:** compute it from `git diff <base>`, excluding the orchestrator's `state.json` and `epic.md`, not from the plan's guess at the changed paths. Selection flags default to uncommitted changes, which select nothing after a commit.

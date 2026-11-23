@@ -29,6 +29,7 @@ A plan's design is a model: a JSON file the diagram tool (`c4ish`) validates and
 - **Three checks.** The model validates and its tour walks every scenario (plan time). The model agrees with the code (before code review, and at close). Every difference between the approved model and the shipped one is a recorded deviation (the same).
 - **Deviations** are a detail, a model change the reviewer judges, or a re-approval that stops for the human.
 - **Approvals are recorded** as lines in `plan.md` naming a commit. Only the session that receives the human's approval writes one.
+- **Code in git submodules.** A plan can live in one repository with its code in submodules of it: one plan, one model and one approval, a branch per changed submodule, every handover one root commit that pins them, and a set of pull requests at the end ([references/plans-across-repositories.md](references/plans-across-repositories.md)). Untested on real work.
 
 ## Roles
 

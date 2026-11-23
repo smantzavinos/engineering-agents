@@ -1166,15 +1166,21 @@ describe('against a real repository', { skip: hasTool ? false : 'c4ish is not on
 				assert.deepEqual(result.unaccounted.runs.map((r) => r.path), ['lib/src/glue.ts']);
 
 				put(lib, 'src/page.ts', '// @pattern api/read-query\nexport function page() {\n\treturn [];\n}\n');
-				assert.equal(run(dir, 'code', ...args).status, 0);
+				const tagged = run(dir, 'code', ...args);
+				assert.equal(tagged.status, 0, tagged.stdout + tagged.stderr);
+				// the run names the submodule commits it compared: here nothing is committed, so both are the pinned one
+				const pinned = git(lib, 'rev-parse', 'HEAD');
+				assert.ok(tagged.stdout.includes(`  submodule lib: ${pinned.slice(0, 10)} → ${pinned.slice(0, 10)}\n`), tagged.stdout);
 
 				// committed in the submodule and pinned by the root: the same result, and the pointer is no changed line
 				commitBoth();
-				const pinned = run(dir, 'all', ...args, '--json');
-				assert.equal(pinned.status, 0, pinned.stdout + pinned.stderr);
-				const all = JSON.parse(pinned.stdout);
+				const committed = run(dir, 'all', ...args, '--json');
+				assert.equal(committed.status, 0, committed.stdout + committed.stderr);
+				const all = JSON.parse(committed.stdout);
 				assert.deepEqual(all.code.unaccounted.runs.map((r) => r.path), ['lib/src/glue.ts']);
 				assert.deepEqual(all.approved.paths, []);
+				assert.deepEqual(all.code.submodules, [{ path: 'lib', base: pinned, head: git(lib, 'rev-parse', 'HEAD') }]);
+				assert.notEqual(all.code.submodules[0].head, pinned);
 			} finally {
 				rmSync(top, { recursive: true, force: true });
 			}

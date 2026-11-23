@@ -799,7 +799,9 @@ function runCode(ctx, opts) {
 			return undefined;
 		}
 	};
-	return { base: report.base ?? base, ...checkCode(readJson(ctx.model), report, { styles, categories, project, outsideModel, read }) };
+	// the submodule commits that were compared, for the record of the run
+	const submodules = (report.repositories ?? []).map(({ path, base: from, head: to }) => ({ path, ...(from && { base: from }), ...(to && { head: to }) }));
+	return { base: report.base ?? base, ...(submodules.length && { submodules }), ...checkCode(readJson(ctx.model), report, { styles, categories, project, outsideModel, read }) };
 }
 
 function runApproved(ctx, opts) {
@@ -821,6 +823,7 @@ function runApproved(ctx, opts) {
 function printCode(r) {
 	const bad = r.elements.filter((e) => !e.ok).length;
 	console.log(`model-to-code${r.base ? ` (base ${String(r.base).slice(0, 10)})` : ''}: ${r.ok ? 'pass' : 'FAIL'} — ${r.elements.filter((e) => e.references).length} element(s) with references, ${bad} failing`);
+	for (const m of r.submodules ?? []) console.log(`  submodule ${m.path}: ${m.base ? m.base.slice(0, 10) : 'not at the base'} → ${m.head ? m.head.slice(0, 10) : 'not at the head'}`);
 	for (const f of r.failures) console.log(`  fail  ${f.where}: ${f.message}`);
 	const u = r.unaccounted;
 	console.log(`  unaccounted: ${u.lines} changed line(s) in ${new Set(u.runs.map((x) => x.path)).size} file(s) inside no reference${u.outsideModelLines ? ` (${u.outsideModelLines} in files the plan lists outside the model)` : ''}`);

@@ -20,6 +20,14 @@ Agents: `implementer`, `reviewer`, `oracle`, plus the fast `helper`. Launch them
 
 There is no plan loop here and no parallel work: one implementer builds the whole plan.
 
+## Code in submodules
+Where the plan lives in one repository and the code in git submodules of it, read `architecture-model` → `references/repositories.md` first. Then:
+- **Start:** `state.json` names each repository the plan changes, with its branch, base commit and baseline. Each must be on its branch, clean, and at the commit the root points to; if not, stop. A baseline that is missing or stale is rerun for that repository;
+- **every launch** carries each repository's base commit. A handed-over state is one root commit: record that id, and give reviewers ranges as root commits;
+- **T1 and full gates** run per repository, with that repository's commands. Never run two gate helpers in one repository at once;
+- approval lines, `state.json` and the ledger are committed in the root only;
+- **Close:** the final state is one root commit that pins every changed submodule. With the plan's pre-authorization, push every branch and hand the set to `pull-request` (one PR per changed submodule and one in the root, submodules merged first). Record each repository's branch and pinned commit for it.
+
 ## State
 `state.json` in the plan directory is your memory. Update it after every step, and commit it between steps, when no one is writing in the worktree. Every resume returns a new run id, so record it each time. It holds:
 - the approvals (date, commit, what a re-approval changed), the base commit, the estimate and the budget;

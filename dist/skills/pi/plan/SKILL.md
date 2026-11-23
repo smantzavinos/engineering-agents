@@ -67,6 +67,13 @@ The plan questions (`references/plan-questions.md`) are answered where they are 
 
 Aim for under 120 lines. If `plan.md` describes an element, a connection or an interface, move it to the model.
 
+## Code in submodules
+Where the plan lives in one repository and the code in git submodules of it (`architecture-model` → `references/repositories.md`):
+- every code reference, and every item under Changes outside the model, is a path from the root, the submodule's path first;
+- `plan.md` → Goal lists the repositories the plan changes, and Gates gives the T1 commands for each;
+- you write only in the root: `plan.md`, the model and your ledger responses;
+- if the design needs a submodule the scope didn't name, say so in your reply, so it gets a branch and a base before the approval.
+
 ## Judgment calls
 - **Course-setting decisions**, the ones that shape most of the remaining work: consult the oracle first. Take a clearly better option and record it. If there is none, say so in your reply; the session that started you stops for the human.
 - **Sizing:** record the estimate. A plan is as large as the work needs: never propose a split to meet a size number. Say so in your reply if the work holds parts with their own goal that could each be approved and shipped alone; that is the only reason to divide it.

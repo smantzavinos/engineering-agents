@@ -19,6 +19,8 @@ This skill holds the rules every role shares. `plan`, `implement`, `review`, `sc
 | `model.c4ish.json`, beside `plan.md` | What is built and how the pieces connect. Committed |
 | `review.md`, beside `plan.md` | The ledger: findings, gate evidence, deviations |
 
+Where the plan lives in one repository and the code in git submodules of it, [references/repositories.md](references/repositories.md) holds the further rules: paths, branches, what a handed-over state is, and how the checks read a submodule.
+
 Diagrams and tour pages are generated when needed and never committed. After the PR the model is a review record; nobody maintains it.
 
 `c4ish guide` is the reference for writing a model: fields, code reference forms, the tour and what counts as covered. Read it before writing or editing one. Don't restate it.
@@ -132,7 +134,7 @@ node <skill>/tools/model-check.mjs all --model <plan>/model.c4ish.json --project
 - `model-check` takes `code`, `approved` or `all`. It reads `plan.md` and `review.md` beside the model. Exit 0 is a pass, 1 a failure or a re-approval difference, 2 an error. `--json` prints the full result.
 - The command is fixed: `--model` is the plan's own model and `--project` is the path file the agent guide names. Anything else is not the check.
 - It runs only on an approved plan. `--no-approval` is a trial on an unapproved plan, judged by the working copy and marked as one. A trial is never evidence.
-- Where code sits in git submodules, run it from the repository that holds the plan. References and path-file globs start with the submodule's path. Each submodule the plan touches is checked out; exit 2 names one that isn't.
+- Where code sits in git submodules, run it from the repository that holds the plan, on a state that is one root commit ([references/repositories.md](references/repositories.md)). Exit 2 names a submodule it needed and couldn't read. It prints the submodule commits it compared.
 - It needs `c4ish` on the path. When `c4ish`, the check script or the path file the agent guide names is missing, stop and report; don't work around it.
 
 ## Don't

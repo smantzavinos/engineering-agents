@@ -216,6 +216,35 @@ check as red (its CI red→round transition fires once per head+conclusion
 set, tracked in `ci_key`); classic commit statuses (context/state) are not
 read.
 
+### A change across several repositories
+
+For a change whose code is in git submodules of a root repository, pinned by
+commits of the root.
+
+- **The set.** One PR per changed submodule, and one PR in the root. The root
+  PR holds the pointer moves and whatever the root itself changes (plan
+  record, docs). Every repository in the set needs its own
+  `pr-review-hooks.md`; each PR follows this contract in its own repository.
+- **Links.** The root PR's body lists every PR of the set, with the commit
+  of each submodule that the root pins. Each submodule PR's body links the
+  root PR. The plan record and the evidence that spans repositories go in the
+  root PR; a submodule PR carries what its own diff needs.
+- **Opened together.** Push every branch, then open the submodule PRs, then
+  the root PR. A set with one changed submodule is still two PRs.
+- **Merge order.** Submodule PRs first, each with a **merge commit**: a
+  squash or a rebase leaves the commits that the root's history and the review
+  record name unreachable. The root PR is `BLOCKED` until every submodule PR
+  of the set is merged.
+- **The last pointer move.** When the last submodule PR is merged, the author
+  side (the session that opened the set, or the one babysitting the root PR)
+  adds one commit to the root PR that moves each pointer to that submodule's
+  merge commit, and updates the pinned commits in the body. The move adds
+  nothing of this change's, so it is not re-reviewed; the root's required
+  checks run on it as on any push. If they go red on work the merge commit
+  took in from elsewhere, escalate.
+- **A fix after review** in a submodule is a new commit there and a new root
+  commit that pins it. Never rewrite a pinned commit.
+
 ---
 
 ## Orchestration (cron / hooks)

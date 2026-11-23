@@ -91,6 +91,14 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   While a T1 helper runs in your worktree, don't run tests: record a doubt as a minor that names the check, and the next T1 run includes it. Otherwise run a targeted test when you doubt something. Never run full suites.
 - **epic-diff:** the whole epic's diff. Check the seams between children (each cross-plan contract against its owner's model), and parity with every acceptance scenario. Name, for each finding, the child whose review should have caught it.
 
+## Code in submodules
+Where the plan lives in one repository and the code in git submodules of it (`architecture-model` → `references/repositories.md`), in code mode:
+- first confirm the state was handed over: every submodule the plan changes is clean and at the commit the root commit under review points to. If not, record a blocker headed `not handed over`, and read nothing further;
+- the diff is each repository's own: in a submodule, from its base (your task gives it) to the commit the root points to; after pass 1, between the commits the two root commits of your range point to;
+- run `model-check` from the root, and record in your pass the submodule commits it printed. They must be the ones the root commit points to;
+- gate evidence is per repository: check each repository's recorded command lines against its diff;
+- you commit only the ledger, in the root.
+
 ## Earlier passes
 Read the ledger first. For each earlier finding, verify in the artifact or diff, not in the response, whether it is fixed, rejected for a good reason, or still open. Oracle rulings are settled. If you disagree with a rejection, say so once; the author must then take it to the oracle.
 

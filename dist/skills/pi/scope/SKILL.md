@@ -30,6 +30,14 @@ A plan uses approved catalog entries. If it needs an entry that is still a draft
 6. Start a `helper` running the full gates on that branch as the baseline, in the background. It writes nothing tracked. When it replies, write its digest and the commit it ran on into `state.json`.
 7. Run the plan loop, then the approval gate.
 
+## Code in submodules
+Where the plan lives in one repository and the code in git submodules of it, read `architecture-model` → `references/repositories.md` first. Then:
+- **Before you start:** the agent guide names, for each submodule the work touches, how to add it, its default branch and its gates. If not, stop.
+- **Step 5:** add each of those submodules to the worktree and give it a branch at the commit the root points to. To start one from a newer commit, move its pointer in a root commit now. Record each repository's path, branch and base commit in `state.json`. A submodule the plan loop adds later gets the same, before the approval.
+- **Step 6:** the baseline is one full-gate run per repository, each digest recorded with its repository.
+- **The plan-author's task** carries the gate commands per repository.
+- **Recording the approval:** also check that each submodule the plan changes is clean, on its branch, and at the commit HEAD points to. That commit is its base; record it.
+
 ## Plan loop
 There is no `epic.md` for one plan, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
 1. Spawn a `plan-author` (`plan` skill), writing `plan.md` and `model.c4ish.json` at the plan directory root. Its task carries the agreed scope, the path file, and:

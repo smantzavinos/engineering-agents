@@ -17,6 +17,8 @@ The project's agent guide names one **path file** (JSON). Paths and globs are fr
 | `noTag` | File types that cannot carry a comment. Setting it replaces the default (JSON files), so include them |
 | `enforcement` | Optional. Maps the levels `platform`, `platform-correlated`, `derived`, `our-code`, `nothing` to the profile's own ids |
 
+Where the code sits in git submodules of the repository that holds the path file, every path and glob starts with the submodule's path, and the path file and the profile stay in that repository.
+
 The path file and the profile are committed. A plan cannot be approved before they are: the check reads both at the approval commit.
 
 ## The docs

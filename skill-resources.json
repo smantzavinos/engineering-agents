@@ -109,6 +109,10 @@
     {
       "source": "docs/references/pattern-catalog.md",
       "target": "references/pattern-catalog.md"
+    },
+    {
+      "source": "docs/references/plans-across-repositories.md",
+      "target": "references/repositories.md"
     }
   ],
   "map-patterns": [

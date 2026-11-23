@@ -35,6 +35,11 @@ role procedure; never restate the contract from memory.
 4. Load every file the manifest's `review-inputs` section names.
 5. Completion check: you can state the repo's verification commands, evidence
    method, and merge gate without re-reading.
+6. **A change across several repositories** (code in git submodules pinned
+   by a root repository): the PRs form one set. Follow the contract's section
+   of that name for the set, the links, the merge order and the last pointer
+   move. Do the steps below once per repository of the set, with that
+   repository's manifest.
 
 ## Author procedure
 
@@ -114,6 +119,9 @@ role procedure; never restate the contract from memory.
   stated as questions for the human, never resolved by agents.
 - Author: do not open a draft PR as a substitute for self-review; do not let
   plan-internal artifacts leak into the body.
+- A set across repositories: do not squash or rebase a submodule branch the
+  root pins, and do not mark the root PR READY while a submodule PR of its
+  set is unmerged.
 - Either role: the manifest is pointers plus facts — if you find yourself
   copying rule text from the contract into a PR comment beyond the filled
   table, you are restating instead of referencing.
