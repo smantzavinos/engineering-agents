@@ -448,7 +448,7 @@ def link_prs(ctx, issues):
                 deadline = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(time.time() + AUTO_CLOSE_HOURS * 3600))
                 ask = (f'it closes by itself after {AUTO_CLOSE_HOURS} h ({deadline[:16].replace("T", " ")} UTC) '
                        'unless you reply' if auto else 'the PR only names this issue: check that it covers it')
-                body = (f'🤖 **Your turn: close this issue? [PR #{pr["number"]}]({pr["url"]}) merged**\n\n- {ask}\n\n'
+                body = (f'🤖 **Possibly done: close this issue? [PR #{pr["number"]}]({pr["url"]}) merged**\n\n- {ask}\n\n'
                         f'<details>\n<summary><b>Reply with</b> <code>{handle} close</code> or '
                         f'<code>{handle} keep</code></summary>\n\n| Reply | Effect |\n|---|---|\n'
                         f'| `{handle} close` | Close as completed and move to Done |\n'

@@ -95,12 +95,12 @@ check  "$OUT" "would spawn babysit for o/r#7" "bot-review cap: the 5th bot revie
 round() {
   local tag="$1" kind="$2" pr="$3" head="$4" outcome="$5" extra="${6:-}" rextra="${7:-}" key=status
   [[ "$kind" == review ]] && key=verdict
-  mkdir -p "$TMP/state/results" "$TMP/state/logs"
-  echo ok > "$TMP/state/logs/$tag-test.log"
+  mkdir -p "$TMP/state/results" "$TMP/state/logs/$tag"
+  echo ok > "$TMP/state/logs/$tag/test.log"
   printf '{"ts":%s,"kind":"%s","repo":"o/r","pr":%s,"head":"%s","tag":"%s"%s}\n' \
     "$(date +%s)" "$kind" "$pr" "$head" "$tag" "${extra:+,$extra}" >> "$TMP/state/dispatches.jsonl"
   printf '{"repo":"o/r","pr":%s,"kind":"%s","%s":"%s","head":"%s","verification_artifacts":["%s"]%s}\n' \
-    "$pr" "$kind" "$key" "$outcome" "$head" "$TMP/state/logs/$tag-test.log" "${rextra:+,$rextra}" > "$TMP/state/results/$tag.json"
+    "$pr" "$kind" "$key" "$outcome" "$head" "$TMP/state/logs/$tag/test.log" "${rextra:+,$rextra}" > "$TMP/state/results/$tag.json"
 }
 H7=7777777777777777777777777777777777777777
 H8=8888888888888888888888888888888888888888

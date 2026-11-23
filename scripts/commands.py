@@ -62,7 +62,7 @@ def strategy(word):
 
 
 def first_line(text):
-    line = next((l.strip() for l in (text or '').splitlines() if l.strip()), '')
+    line = next((ln.strip() for ln in (text or '').splitlines() if ln.strip()), '')
     return line.strip('`').strip()
 
 
@@ -130,3 +130,21 @@ def normalize_handles(raw):
 def handle_logins(handles):
     """GitHub logins named by the '@' tokens (accounts the bots may post as); '/' tokens are not logins."""
     return {h[1:] for h in handles if h.startswith('@') and len(h) > 1}
+
+
+def bot_logins(configured=(), handles=(), owners=(), shared=False, whoami=None):
+    """Logins whose markers the tools trust (lower case): configured bot logins (PIPELINE_BOT_LOGINS), the
+    '@' handles, and the owners when they share the bot's account; when none is known, the login `whoami()`
+    returns (the account `gh` is logged in as). A '/' handle names no account, so the default `/devbot`
+    alone relies on that fallback."""
+    if isinstance(configured, str):
+        configured = configured.replace(',', ' ').split()
+    logins = {c.strip().lstrip('@').lower() for c in configured if c.strip().lstrip('@')}
+    logins |= handle_logins(handles)
+    if shared:
+        logins |= {o.lower() for o in owners}
+    if not logins and whoami is not None:
+        me = (whoami() or '').strip().lower()
+        if me:
+            logins.add(me)
+    return frozenset(logins)

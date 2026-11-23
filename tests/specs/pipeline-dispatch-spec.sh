@@ -71,7 +71,7 @@ refute "$OUT" "for #22" "reply: the verb must open the first line"
 check  "$OUT" "would label #23 needs-human:discussion" "reply: discuss parks the item (case-insensitive)"
 refute "$OUT" "for #23" "reply: discuss starts no session"
 check  "$OUT" "would move #24 to Canceled with comment" "reply: reject cancels with the reason"
-check  "$OUT" "would spawn work for #25 (unblock)" "reply: owner unblock resumes a Blocked item"
+check  "$OUT" "would spawn work for #25 (unblock)" "reply: owner unblock resumes a Your turn (unblock) item"
 
 # consumed reply: a recorded reply_id is not acted on again
 mkdir -p "$TMP/state"; echo '{"kind":"work","item":20,"reply_id":101,"ts":0,"tag":"work-item20-0","pid":0,"stage":"Design","reason":"resume"}' > "$TMP/state/dispatches.jsonl"

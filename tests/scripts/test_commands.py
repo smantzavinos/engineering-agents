@@ -15,7 +15,8 @@ sys.path.insert(0, str(SCRIPTS))
 import commands  # noqa: E402
 
 H = ('/devbot', '@bot-name')
-ENV = {"PIPELINE_OWNERS": "owner", "PR_AGENT_HANDLE": "/devbot", "PR_SWEEP_REPOS": "o/r"}
+ENV = {"PIPELINE_OWNERS": "owner", "PR_AGENT_HANDLE": "/devbot", "PR_SWEEP_REPOS": "o/r",
+       "GH_BIN": "false"}  # never reach GitHub: an unresolvable `gh api user` leaves no fallback login
 
 
 class th:  # the helpers the upstream tests import from test_command_handles
@@ -78,7 +79,45 @@ class Parser(unittest.TestCase):
             self.assertEqual(commands.strategy(word), expect, word)
 
 
+class Handles(unittest.TestCase):
+    def test_normalize_handles(self):
+        self.assertEqual(commands.normalize_handles(''), ('/devbot',))
+        self.assertEqual(commands.normalize_handles('bot-name, /x /x'), ('@bot-name', '/x'))
+        self.assertEqual(commands.handle_logins(('@a', '/b')), {'a'})
+
+    def test_bot_logins_fall_back_to_the_gh_account_only_when_none_is_named(self):
+        asked = []
+
+        def whoami():
+            asked.append(1)
+            return 'Bot-Account'
+        self.assertEqual(commands.bot_logins('', ('/devbot',), whoami=whoami), {'bot-account'})
+        self.assertEqual(commands.bot_logins('ci-bot, @Other', ('/devbot', '@named'), whoami=whoami),
+                         {'ci-bot', 'other', 'named'})
+        self.assertEqual(commands.bot_logins((), ('/devbot',), owners=('Owner',), shared=True, whoami=whoami), {'owner'})
+        self.assertEqual(len(asked), 1)  # asked only when nothing is configured
+        self.assertEqual(commands.bot_logins('', ('/devbot',), whoami=lambda: ''), frozenset())
+
+
 class Callers(unittest.TestCase):
+    def test_default_handle_trusts_the_configured_bot_login(self):
+        g = th.load('pipeline-dispatch.py', {**ENV, "PIPELINE_BOT_LOGINS": "bot-name"})
+        gate = th.comment('🤖 gate\n<!-- gate stage=Plan head=a branch=b plan=p -->', login='bot-name', cid=7)
+        self.assertTrue(g['by_agent'](gate))
+        self.assertFalse(g['by_agent'](th.comment('<!-- gate stage=Plan -->', login='owner')))
+        self.assertEqual(g['latest_gate']([gate])[0]['id'], 7)
+        sweep = th.load('pr-sweep-dispatch.py', {**ENV, "PIPELINE_BOT_LOGINS": "bot-name"})
+        self.assertEqual(sweep['agent_logins'](), {'bot-name'})
+
+    def test_gate_decisions_are_owner_only(self):
+        g = th.load('pipeline-dispatch.py', {**ENV, "PIPELINE_BOT_LOGINS": "bot-name"})
+        self.assertEqual(g['repliers'](5, 'approve'), ('owner',))  # assignees and responders never approve
+        gate = th.comment('🤖 gate\n<!-- gate stage=Plan head=a branch=b plan=p -->', login='bot-name', cid=1)
+        assignee = th.comment('/devbot approve', login='dev', cid=2)
+        pending = g['pending_reply']
+        self.assertIsNone(pending([gate, assignee], 1, set(), g['REPLY_VERBS']['approve'], owners=('owner',)))
+        self.assertIsNotNone(pending([gate, assignee], 1, set(), g['REPLY_VERBS']['approve'], owners=('owner', 'dev')))
+
     def test_pipeline_dispatch_parse_reply(self):
         parse = th.load('pipeline-dispatch.py')['parse_reply']
         want = parse(th.comment('/devbot approve'))

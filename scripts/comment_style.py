@@ -18,7 +18,7 @@ INFER = [('gate', r'<!--\s*gate stage='), ('pr-review', r'<!--\s*pr-review verdi
          ('triage-clarify', r'<!--\s*triage outcome=(clarify|left)'), ('notice', r'<!--\s*dispatcher blocked\b'), ('blocked', r'<!--\s*blocked\b'),
          ('fix-round', r'<!--\s*babysit-round\b'),
          ('notice', r'<!--\s*unheard\b'),  # replies to people: person-facing
-         ('machine', r'<!--\s*(pr-link|jira-link|sync|work-claim|close-proposal dismissed)\b'),
+         ('machine', r'<!--\s*(pr-link|sync|work-claim|close-proposal dismissed)\b'),
          ('machine', r'^\s*(?:🤖\s*)?(work|fix-bot|babysit):\s')]
 BANNED = ['gate:', 'artifacts (pushed', 'what is done on the branch', 'what went wrong', 'all tests green',
           'fields set', 'decided for you', 'the merge was aborted', 'nothing was changed', 'i did not touch',

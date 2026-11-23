@@ -1,4 +1,4 @@
-"""Unit tests for scripts/gh-project.py (GitHub Project v2 adapter) and scripts/commands.py; no network.
+"""Unit tests for scripts/gh-project.py (GitHub Project v2 adapter); no network. commands.py: test_commands.py.
 
 Ported from gm-agent-pipeline test_gem_project / test_board_columns / test_board_names / test_migrate_your_turn.
 Requirement: FR-001
@@ -218,9 +218,9 @@ class Move(Board):
     def test_waiting_for_needs_the_field(self):
         self.board = FakeBoard(waiting=False)
         self.board.add_issue(5, '🧑 Your turn')
-        with patch.object(gp, 'gh', self.board.gh), patch.object(gp, 'graphql', self.board.graphql):
-            with self.assertRaisesRegex(ValueError, 'gh-project.py fields'):
-                gp.mutate_field(self.config, 5, 'Waiting for', 'approve', '')
+        with patch.object(gp, 'gh', self.board.gh), patch.object(gp, 'graphql', self.board.graphql), \
+                self.assertRaisesRegex(ValueError, 'gh-project.py fields'):
+            gp.mutate_field(self.config, 5, 'Waiting for', 'approve', '')
 
     def test_up_next_needs_a_verified_reply(self):
         self.board.add_issue(5, '🧑 Your turn', assignees=['dev'])
@@ -252,8 +252,11 @@ class Move(Board):
         self.assertEqual(self.board.value(5, 'Status'), '🤖 Up next')
 
     def test_canceled_needs_a_reject_reply_or_closed_not_planned(self):
-        self.board.add_issue(5, '🧑 Your turn')
+        self.board.add_issue(5, '🧑 Your turn', assignees=['dev'])
         self.board.comment(5, OWNER, '/devbot approve')
+        with self.assertRaisesRegex(ValueError, 'explicit reject'):
+            gp.mutate_field(self.config, 5, 'Status', 'Canceled', 'why')
+        self.board.comment(5, 'dev', '/devbot reject')  # reject is owner-only: an assignee's does not cancel
         with self.assertRaisesRegex(ValueError, 'explicit reject'):
             gp.mutate_field(self.config, 5, 'Status', 'Canceled', 'why')
         self.board.comment(5, OWNER, '/devbot rejected')
@@ -524,28 +527,6 @@ class Migration(Board):
                 code = gp.migrate_your_turn(self.config, False)
         self.assertEqual(code, 1)
         self.assertIn('REFUSED', out.getvalue())
-
-
-class Commands(unittest.TestCase):
-    H = ('/devbot', '@bot-name')
-
-    def test_tolerant_spelling(self):
-        for text, expect in [('/devbot approve', ('/devbot', 'approve', '')),
-                             ('\\devbot approved', ('/devbot', 'approve', '')),
-                             ('/DevBot: Revise: shorter', ('/devbot', 'revise', 'shorter')),
-                             ('@Bot-Name re-review', ('@bot-name', 'review', '')),
-                             ('/devbot fix rebase', ('/devbot', 'fix', 'rebase')),
-                             ('/devbot kept', ('/devbot', 'keep', ''))]:
-            self.assertEqual(commands.parse(text, self.H), expect, text)
-
-    def test_questions_and_unknown_words_are_not_commands(self):
-        for text in ('/devbot approve?', 'please /devbot approve', '/devbotx approve', '/devbot lgtm', '\\bot-name approve'):
-            self.assertIsNone(commands.parse(text, self.H), text)
-
-    def test_handles(self):
-        self.assertEqual(commands.normalize_handles(''), ('/devbot',))
-        self.assertEqual(commands.normalize_handles('bot-name, /x /x'), ('@bot-name', '/x'))
-        self.assertEqual(commands.handle_logins(('@a', '/b')), {'a'})
 
 
 if __name__ == '__main__':

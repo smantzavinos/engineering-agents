@@ -169,7 +169,8 @@ class CiTick(unittest.TestCase):
         recs.append({"ts": 0, "kind": "review", "repo": "o/r", "pr": 9, "head": self.HEAD8,
                      "tag": "review-pr9-stamped"})
         d.RESULTS.mkdir(parents=True, exist_ok=True)
-        log = d.RESULTS / "review-pr9-stamped.test.log"
+        log = d.LOGS / "review-pr9-stamped" / "test.log"  # under the round's artifacts directory
+        log.parent.mkdir(parents=True, exist_ok=True)
         log.write_text("ok")
         (d.RESULTS / "review-pr9-stamped.json").write_text(json.dumps(
             {"repo": "o/r", "pr": 9, "kind": "review", "verdict": "READY", "head": self.HEAD8,

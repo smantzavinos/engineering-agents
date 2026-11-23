@@ -216,7 +216,7 @@ class Closed(Sync):
 class CloseProposals(Sync):
     def proposal(self, n, deadline=None, reason='fixed', dup='-', pr='4'):
         attrs = f'reason={reason} dup={dup} pr={pr}' + (f' auto_close_after={deadline}' if deadline else '')
-        return self.board.comment(n, 'bot', f'🤖 **Your turn: close this issue?**\n\n<!-- close-proposal {attrs} -->')
+        return self.board.comment(n, 'bot', f'🤖 **Possibly done: close this issue?**\n\n<!-- close-proposal {attrs} -->')
 
     def test_close_reply_closes_completed_to_done(self):
         self.board.add_issue(1, '🧑 📋 Ready to schedule', labels=[gp.PROPOSE_LABEL])

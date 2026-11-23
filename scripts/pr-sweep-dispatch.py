@@ -22,6 +22,8 @@ Environment:
   PR_SESSION_PROVIDER     provider passed to `hermes chat`
   PR_SWEEP_UNLABELED      ignore (default: opt-in) | review (drift: unlabeled = awaiting review)
   PR_BABYSIT_STALE_MIN    (60; chat-started claims only)   PR_REVIEW_STUCK_MIN (90)
+  PIPELINE_BOT_LOGINS     logins the bots post as, whose thread replies answer a review thread (default: the
+                          '@' handles, else the account `gh` is logged in as)
   PR_BOT_REVIEWERS        bot logins whose reviews trigger sweep-owned babysit rounds
                           (default copilot-pull-request-reviewer[bot])
   PR_BOT_REVIEW_CAP       max bot-review rounds per PR (default 5)
@@ -61,7 +63,9 @@ def parse_handles(raw):
 
 HANDLES = parse_handles(ENV.get("PR_AGENT_HANDLE", ""))
 HANDLE = HANDLES[0]  # primary command token, for prompt templates and hints
-LOGINS = {h[1:] for h in HANDLES if h.startswith("@")}  # accounts behind the '@' tokens ('/' tokens are not accounts)
+# Logins the bots post as (their thread replies answer a thread): PIPELINE_BOT_LOGINS and the '@' handles;
+# when neither names one (the default `/devbot`), agent_logins() falls back to the account `gh` uses.
+LOGINS = set(commands.bot_logins(ENV.get("PIPELINE_BOT_LOGINS", ""), HANDLES))
 CHECKOUT_ROOT = pathlib.Path(ENV.get("PR_SWEEP_CHECKOUT_ROOT", str(pathlib.Path.home() / "repos")))
 REVIEW_MODEL = ENV.get("PR_REVIEW_MODEL", "")
 REVIEW_REASONING = ENV.get("PR_REVIEW_REASONING", "medium")
@@ -287,6 +291,18 @@ def integrate_strategy(comment, handles):
 
 # ---------------------------------------------------------------- side effects
 
+def agent_logins():
+    """LOGINS, or the login `gh` is logged in as when none is configured (resolved once per run)."""
+    if not LOGINS:
+        try:
+            me = ((gh("api", "user") or {}).get("login") or "").lower()
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            me = ""
+        if me:
+            LOGINS.add(me)
+    return LOGINS
+
+
 def gh(*args, parse=True) -> Any:
     env = {k: v for k, v in ENV.items() if not k.startswith(("HERMES_CRON", "HERMES_SESSION"))}
     if "GH_TOKEN" not in env and TOKEN_FILE.exists():
@@ -345,9 +361,12 @@ def result_problem(rec):
         if REQUIRE_LOGS and not nothing_published and outcome != 'STALE':
             if not isinstance(artifacts, list) or not artifacts or not all(isinstance(p, str) for p in artifacts):
                 return 'verification log list missing'
+            own = (LOGS / str(rec.get('tag'))).resolve()
             for p in artifacts:  # every listed log must exist; an empty log is fine (clean tools print nothing)
                 if not pathlib.Path(p).is_file():
                     return f'verification log missing: {p}'
+                if not pathlib.Path(p).resolve().is_relative_to(own):  # a log the round wrote, not any file
+                    return f'verification log outside the artifacts directory: {p}'
             if not any(pathlib.Path(p).stat().st_size > 0 for p in artifacts):
                 return f'verification logs all empty: {", ".join(artifacts)}'
         return None
@@ -651,7 +670,7 @@ def addressed_without_code(mine, head, verdict_id):
 
 
 def human_comment(repo, n, head, key, headline, why, how, comments, reported):
-    """One PR comment when the sweep itself hands a PR to a person (house style, comment-templates.md).
+    """One PR comment when the sweep itself hands a PR to a person (house style, docs/references/comment-style.md).
 
     Deduped per PR + head + reason by `reported` and by a hidden marker in the PR's own comments."""
     marker = f"<!-- pr-sweep needs-human head={head[:12]} reason={key} -->"
@@ -691,7 +710,7 @@ def sweep_repo(repo, recs, reported):
         try:
             threads = gh("api", "graphql", "-f", f"query={THREADS_QUERY}", "-f", f"o={owner_name}",
                          "-f", f"r={repo_name}", "-F", f"p={n}")["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-            open_threads = unanswered_threads(threads, LOGINS)
+            open_threads = unanswered_threads(threads, agent_logins())
         except Exception:  # noqa: BLE001 — unknown thread state never blocks the rest of the sweep
             open_threads = []
         vs = verdicts(comments)

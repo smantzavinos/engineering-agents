@@ -33,11 +33,9 @@ class ResultEvidenceTests(unittest.TestCase):
         return d
 
     def write_result(self, d, tag, artifacts):
-        evidence = d.LOGS / f'{tag}.sonar.json'
-        evidence.write_text('{}')
         (d.RESULTS / f'{tag}.json').write_text(json.dumps({
             'repo': 'o/r', 'kind': 'review', 'pr': 214, 'head': HEAD, 'verdict': 'READY',
-            'sonar_evidence': evidence.as_posix(), 'verification_artifacts': artifacts}))
+            'verification_artifacts': artifacts}))
         return {'repo': 'o/r', 'pr': 214, 'head': HEAD, 'kind': 'review', 'tag': tag, 'pid': 5, 'ts': time.time()}
 
     def test_pr214_artifact_shapes(self):
@@ -48,17 +46,23 @@ class ResultEvidenceTests(unittest.TestCase):
             self.assertIn('verification log missing', d.result_problem(gone))
             msys = self.write_result(d, 'msys', ['/tmp/pr214-d1087f29/fmt.log'])
             self.assertFalse(d.has_result(msys))
-            art = Path(temp) / 'art'
-            art.mkdir()
-            (art / 'fmt.log').write_text('')
-            (art / 'test.log').write_text('ok')
-            (art / 'test-elmo.log').write_text('ok')
-            mixed = self.write_result(d, 'mixed', [(art / n).as_posix() for n in ('fmt.log', 'test.log', 'test-elmo.log')])
+            for tag in ('mixed', 'empty', 'one'):  # each round writes its logs under LOGS/<tag>
+                art = d.LOGS / tag
+                art.mkdir()
+                (art / 'fmt.log').write_text('')
+                (art / 'test.log').write_text('ok')
+                (art / 'test-elmo.log').write_text('ok')
+            mixed = self.write_result(d, 'mixed', [(d.LOGS / 'mixed' / n).as_posix()
+                                                    for n in ('fmt.log', 'test.log', 'test-elmo.log')])
             self.assertTrue(d.has_result(mixed), 'an empty fmt.log next to non-empty logs is evidence')
-            only_empty = self.write_result(d, 'empty', [(art / 'fmt.log').as_posix()])
+            only_empty = self.write_result(d, 'empty', [(d.LOGS / 'empty' / 'fmt.log').as_posix()])
             self.assertFalse(d.has_result(only_empty))
-            missing_one = self.write_result(d, 'one', [(art / 'test.log').as_posix(), (art / 'nope.log').as_posix()])
+            missing_one = self.write_result(d, 'one', [(d.LOGS / 'one' / 'test.log').as_posix(),
+                                                       (d.LOGS / 'one' / 'nope.log').as_posix()])
             self.assertFalse(d.has_result(missing_one), 'a listed but missing file still rejects')
+            borrowed = self.write_result(d, 'borrowed', [(d.LOGS / 'mixed' / 'test.log').as_posix()])
+            self.assertIn('outside the artifacts directory', d.result_problem(borrowed),
+                          "another round's log, or any other existing file, is not this round's evidence")
 
     def test_spawn_gives_artifacts_dir(self):
         text = (SCRIPTS / 'pr-sweep-prompts/review.md').read_text(encoding='utf-8')

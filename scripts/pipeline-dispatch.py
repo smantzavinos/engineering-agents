@@ -3,7 +3,7 @@
 
 One script, three jobs (docs/references/delivery-pipeline.md §5, §7):
 
-  pipeline-dispatch.py triage    every ~15 min: Inbox / answered Clarification items -> one triage session
+  pipeline-dispatch.py triage    every ~15 min: Inbox / answered Your turn questions -> one triage session
   pipeline-dispatch.py work      every ~3 min: gate/unblock replies, dead sessions, Up next pickups
                                  under the WIP limit, worktree cleanup -> one work session per item
   pipeline-dispatch.py hygiene   weekly: report stale waiting states and unlabeled PRs (no sessions)
@@ -35,11 +35,13 @@ Environment:
   PIPELINE_RESPONDERS     extra logins whose `answer:` replies answer triage questions (assignees count too)
   PIPELINE_BRANCH_TEMPLATE  branch of a new item (default item/{n})
   PIPELINE_BOARD_NAMES    JSON map internal status -> board column name, for messages (default: internal names)
-  PR_AGENT_HANDLE         agent handles replies mention (required; same vocabulary as the PR sweep)
+  PR_AGENT_HANDLE         agent handles replies start with (default /devbot; same vocabulary as the PR sweep)
+  PIPELINE_BOT_LOGINS     logins the bot posts as, whose markers are trusted (default: the '@' handles,
+                          the owners on a shared account, else the account `gh` is logged in as)
   PIPELINE_SHARED_ACCOUNT=1  the owner and the agent post from the same login. Replies are then
                           recognised by format alone: an owner-login comment counts only if it
                           carries no pipeline marker (`<!-- ... -->`, `work:`/`babysit:` claim lines).
-                          Sessions must never start a comment with `@<handle> <verb>`.
+                          Sessions must never start a comment with `<handle> <verb>`.
   PIPELINE_BASE           base branch for new item branches (default main)
   PIPELINE_WORKTREE_ROOT  where item worktrees live (default <checkout>-worktrees)
   PIPELINE_WIP            In progress limit (default 2)
@@ -89,9 +91,23 @@ def _command_rest(line, handles):
     return None
 
 
+_WHOAMI: list = []
+
+
+def _whoami():
+    """The login `gh` is logged in as (resolved once; '' when it cannot be read)."""
+    if not _WHOAMI:
+        try:
+            _WHOAMI.append((gh("api", "user") or {}).get("login") or "")
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _WHOAMI.append("")
+    return _WHOAMI[0]
+
+
 def _logins(handles):
-    """Account names behind the '@' tokens (a '/' token is not an account)."""
-    return {t[1:] for t in handles if t.startswith("@")}
+    """Logins whose comments are the bot's own: PIPELINE_BOT_LOGINS, the '@' handles, the owners on a
+    shared account; otherwise the account `gh` is logged in as (a '/' handle names no account)."""
+    return commands.bot_logins(BOT_LOGINS, handles, OWNERS, SHARED, whoami=_whoami)
 
 
 REPO = ENV.get("PIPELINE_REPO", "")
@@ -103,6 +119,7 @@ OWNERS = tuple(o.lower() for o in _handles(ENV.get("PIPELINE_OWNERS", "")))
 RESPONDERS = tuple(o.lower() for o in _handles(ENV.get("PIPELINE_RESPONDERS", "")))
 HANDLES = _tokens(ENV.get("PR_AGENT_HANDLE", ""))
 SHARED = bool(ENV.get("PIPELINE_SHARED_ACCOUNT"))
+BOT_LOGINS = ENV.get("PIPELINE_BOT_LOGINS", "")
 # Automation text on the shared owner account: an HTML marker, a 🤖 first line, or a claim line.
 AGENT_MARK = re.compile(r"<!--|\A\s*🤖|^\s*(?:🤖\s*)?(work|babysit|fix-bot):\s", re.M)
 BOT_PREFIX = "🤖 "
@@ -253,7 +270,7 @@ def open_questions_text(comments):
 
 
 def needs_triage(item, comments, owners=OWNERS):
-    """Inbox with no triage marker yet, or Your turn waiting for an answer (kind answer) with an `@<handle> answer:`
+    """Inbox with no triage marker yet, or Your turn waiting for an answer (kind answer) with a `<handle> answer:`
     reply after the question (every instruction is a command; a plain comment is context, not an answer)."""
     marks = [c["id"] for c in comments if by_agent(c) and TRIAGE_RE.search(c.get("body") or "")]
     if item["status"] == "Inbox":
@@ -303,7 +320,7 @@ def review_status(label_sets):
     """What an issue in the PR stage waits for, from the labels of its open PRs: 'decide' or 'merge' (a person's
     turn, decide wins) or 'In review' (the review and fix bots')."""
     names = {name for labels in label_sets for name in labels}
-    if any(n.startswith("needs-human:") and n != "needs-human:merge" for n in names) or names & {"pr:escalated", "pr:sonar-blocked"}:
+    if any(n.startswith("needs-human:") and n != "needs-human:merge" for n in names) or "pr:escalated" in names:
         return "decide"
     if names & {"needs-human:merge", "pr:ready-merge"}:
         return "merge"
@@ -421,6 +438,12 @@ def assignees_of(n):
 def responders_of(n):
     """Logins whose `answer:` comments answer triage questions on item n: owner, configured responders, assignees."""
     return tuple(dict.fromkeys((*OWNERS, *RESPONDERS, *assignees_of(n))))
+
+
+def repliers(n, kind):
+    """Logins whose reply to a `kind` wait counts: gate decisions (approve, revise, discuss, reject) are the
+    owners' alone; answers and unblocks also come from configured responders and the item's assignees."""
+    return OWNERS if kind == "approve" else responders_of(n)
 
 
 def labels_of(n):
@@ -874,7 +897,7 @@ def job_work(items, recs, reported):
             return False
         gate = latest_gate(comments)
         mine = {rid for (item_n, rid) in consumed if item_n == n}
-        hit = pending_reply(comments, anchor_c["id"], mine, REPLY_VERBS[kind], owners=responders_of(n))
+        hit = pending_reply(comments, anchor_c["id"], mine, REPLY_VERBS[kind], owners=repliers(n, kind))
         if hit and kind == "answer":
             # Triage reads the answer: back to Inbox, where the bot takes it from.
             react(hit[0]["id"])
@@ -944,11 +967,11 @@ def job_work(items, recs, reported):
             mine = {rid for (item_n, rid) in consumed if item_n == n}
             if kind == "approve" and PARK in labels_of(n):
                 return
-            hit = pending_reply(comments, anchor_c["id"], mine, REPLY_VERBS[kind], owners=responders_of(n))
+            hit = pending_reply(comments, anchor_c["id"], mine, REPLY_VERBS[kind], owners=repliers(n, kind))
             if hit:
                 act_on_reply(i, gate, hit[0], hit[1], hit[2], i["status"])
                 return
-            bad = unreadable_reply(comments, kind, anchor_c["id"], mine, owners=responders_of(n))
+            bad = unreadable_reply(comments, kind, anchor_c["id"], mine, owners=repliers(n, kind))
             if bad:
                 comment_on(n, f"**Still waiting for you:** I can't act on [your comment]({bad.get('html_url', '')}). "
                               f"Start a new comment with {reply_menu(kind)}; the card stays in "
@@ -970,7 +993,7 @@ def job_work(items, recs, reported):
             def resume_queued(i=i, n=n, ack=ack):
                 comments = comments_of(n)
                 c = next((c for c in comments if c["id"] == ack["reply_id"]), None)
-                r = parse_reply(c, owners=responders_of(n)) if c else None
+                r = parse_reply(c, owners=repliers(n, next((k for k, vs in REPLY_VERBS.items() if ack["verb"] in vs), ""))) if c else None
                 if not r or r[0] != ack["verb"]:
                     special.discard(n)
                     report_once(reported, f"ackgone:{n}:{ack['reply_id']}", f"#{n}: the reply that queued it was "
@@ -1034,8 +1057,8 @@ def job_work(items, recs, reported):
                         f"{prs} still waits for you: {what}.\n\n"
                         f"<!-- handoff-bounced from=In-review to=Your-turn -->")
             else:
-                head = (f"🧑 **Needs your decision: {prs}**" if target == "decide"
-                        else f"🧑 **Needs your merge: {prs}**")
+                head = (f"🤖 **Needs your decision: {prs}**" if target == "decide"
+                        else f"🤖 **Review passed: merge {prs}**")
                 body = f"{head}\n\n- {what}\n\n<!-- dispatcher pr-mirror -->"
             try_move(n, "Your turn", comment=body, expect=i["status"], waiting=target)
         guarded(i["number"], mirror)
@@ -1110,9 +1133,14 @@ def main(argv):
         return 2
     missing = [k for k, v in (("PIPELINE_REPO", REPO), ("PIPELINE_CHECKOUT", ENV.get("PIPELINE_CHECKOUT")),
                               ("PIPELINE_LIST_CMD", LIST_CMD), ("PIPELINE_MOVE_CMD", MOVE_CMD),
-                              ("PIPELINE_OWNERS", OWNERS), ("PR_AGENT_HANDLE", HANDLES)) if not v]
+                              ("PIPELINE_OWNERS", OWNERS)) if not v]
     if missing:
         print("Pipeline dispatch error: set " + ", ".join(missing))
+        return 1
+    if not _logins(HANDLES):
+        # Without a bot login no gate, blocked or triage marker is trusted, and every reply looks unanswered.
+        print("Pipeline dispatch error: no bot login: set PIPELINE_BOT_LOGINS (or an @ handle in "
+              "PR_AGENT_HANDLE), or log gh in as the bot account")
         return 1
     for d in (STATE, RESULTS, LOGS):
         d.mkdir(parents=True, exist_ok=True)

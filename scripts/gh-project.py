@@ -22,8 +22,9 @@ Configuration: environment variables override the JSON file named by GH_PROJECT_
   GH_PROJECT_NUMBER        project number [project_number] (required)
   GH_PROJECT_ID            project node id [project_id] (optional; resolved from owner + number otherwise)
   GH_BIN                   GitHub CLI binary [gh_bin] (default gh)
-  PIPELINE_OWNERS          owner logins [owners]: gate approvals and close replies come from them
-  PIPELINE_RESPONDERS      extra logins whose replies count [responders] (the item's assignees always count)
+  PIPELINE_OWNERS          owner logins [owners]: gate decisions (approve, revise, discuss, reject) come from them
+  PIPELINE_RESPONDERS      extra logins whose answer, unblock and close/keep replies count [responders] (the
+                           item's assignees always count)
   PR_AGENT_HANDLE          command handles [handles] (default /devbot; `@name` also accepted)
   PIPELINE_BOT_LOGINS      logins the bots post as [bot_logins] (default: the '@' handles, the owners when
                            PIPELINE_SHARED_ACCOUNT=1, else the account `gh` is logged in as)
@@ -338,16 +339,14 @@ def bot_logins(config):
     """Logins whose markers the tools trust: configured bot logins, '@' handles, the owners on a shared account;
     otherwise the account `gh` is logged in as (resolved once)."""
     if config.get('_bot_logins') is None:
-        logins = set(config.get('bot_logins') or ()) | commands.handle_logins(config.get('handles') or ())
-        if config.get('shared_account'):
-            logins |= set(config.get('owners') or ())
-        if not logins:
+        def whoami():
             try:
-                me = (gh(config, 'api', 'user') or {}).get('login') or ''
+                return (gh(config, 'api', 'user') or {}).get('login') or ''
             except (RuntimeError, ValueError, OSError):
-                me = ''
-            logins = {me.lower()} if me else set()
-        config['_bot_logins'] = frozenset(logins)
+                return ''
+        config['_bot_logins'] = commands.bot_logins(
+            config.get('bot_logins') or (), config.get('handles') or (), config.get('owners') or (),
+            bool(config.get('shared_account')), whoami=whoami)
     return config['_bot_logins']
 
 
@@ -618,11 +617,12 @@ def verify_ack_reply(config, number, comment_id):
 
 
 def cancel_allowed(config, number):
-    """Canceled: the issue was closed as not planned, or the latest human reply is `<handle> reject`."""
+    """Canceled: the issue was closed as not planned, or the latest owner reply is `<handle> reject` (reject is
+    owner-only, like every gate decision)."""
     issue = issue_of(config, number)
     if issue.get('state') == 'closed' and issue.get('state_reason') == 'not_planned':
         return True
-    people = responders(config, issue)
+    people = tuple(config.get('owners', ()))
     replies = [c for c in comments_of(config, number) if human_comment(c, people)]
     found = commands.parse(replies[-1].get('body') or '', config['handles']) if replies else None
     return bool(found and found[1] == 'reject')
@@ -904,7 +904,7 @@ _OLD_BY_NAME = {name.lower(): old for old, (names, _) in OLD_PERSON_STATUSES.ite
 # head, so none is ever invented for it.
 MIGRATION_MARKERS = {'unblock': '<!-- blocked reason=migration -->', 'answer': '<!-- triage outcome=clarify -->'}
 MIGRATION_NOTE = 'moved to 🧑 Your turn (board simplification); nothing else changed'
-MIGRATION_WHO = {'approve': 'Needs your approval', 'decide': 'Needs your decision', 'merge': 'Needs your merge'}
+MIGRATION_WHO = {'approve': 'Needs your approval', 'decide': 'Needs your decision', 'merge': 'Review passed'}
 MIGRATION_ASKS = {'unblock': 'the bot was already waiting for you to unblock it',
                   'answer': 'the bot was already waiting for your answers'}
 
