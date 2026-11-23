@@ -118,7 +118,7 @@ OWNERS = tuple(o.lower() for o in _handles(ENV.get("PIPELINE_OWNERS", "")))
 # Extra logins whose `/devbot answer:` comments answer triage questions (the item's assignees always count too).
 RESPONDERS = tuple(o.lower() for o in _handles(ENV.get("PIPELINE_RESPONDERS", "")))
 HANDLES = _tokens(ENV.get("PR_AGENT_HANDLE", ""))
-SHARED = bool(ENV.get("PIPELINE_SHARED_ACCOUNT"))
+SHARED = (ENV.get("PIPELINE_SHARED_ACCOUNT") or "").strip().lower() not in ("", "0", "false", "no")
 BOT_LOGINS = ENV.get("PIPELINE_BOT_LOGINS", "")
 # Automation text on the shared owner account: an HTML marker, a 🤖 first line, or a claim line.
 AGENT_MARK = re.compile(r"<!--|\A\s*🤖|^\s*(?:🤖\s*)?(work|babysit|fix-bot):\s", re.M)

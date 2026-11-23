@@ -82,7 +82,7 @@ echo '[{"id":49,"user":{"login":"agent"},"body":"stuck <!-- blocked reason=token
 OUT="$(run work ITEMS="$TMP/items2b.json" PIPELINE_WIP=5)"
 refute "$OUT" "would spawn work for #26" "reply: an assignee's approve does not pass a gate"
 check  "$OUT" "would spawn work for #27 (unblock)" "reply: an assignee's unblock resumes the item"
-rm -f "$TMP"/i*.json
+rm -f "$TMP"/i[0-9]*.json
 
 # consumed reply: a recorded reply_id is not acted on again
 mkdir -p "$TMP/state"; echo '{"kind":"work","item":20,"reply_id":101,"ts":0,"tag":"work-item20-0","pid":0,"stage":"Design","reason":"resume"}' > "$TMP/state/dispatches.jsonl"
