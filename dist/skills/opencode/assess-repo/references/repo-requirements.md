@@ -68,7 +68,7 @@ Must define every required hook for tracking work outside the current plan:
 - Required source backlink format
 - How to list untriaged captured work (`Inbox` or equivalent)
 - How to list human-approved next work (`Up next` or equivalent)
-- How to mark items ready, done, canceled, deferred/iceboxed, or blocked
+- How to mark items ready, done, canceled, or deferred/iceboxed, and how to move them to `Your turn`
 - Whether `Up next` is human-controlled or delegated
 - Whether agents may create non-critical follow-ups directly or must ask first
 - What agents do for critical/blocking discoveries

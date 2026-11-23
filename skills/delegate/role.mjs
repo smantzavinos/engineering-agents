@@ -68,7 +68,7 @@ function resolveRole(role) {
   });
   const explicit = list(effective.skillPath).map((entry) =>
     entry.startsWith('~/') ? join(homedir(), entry.slice(2)) : resolve(dirname(file), entry));
-  return { role, model, thinking, skills, skillPaths: [...new Set([...paths, ...explicit])] };
+  return { role, model, thinking, skills, skillPaths: [...new Set([...paths, ...explicit])], mayDelegate: skills.includes('delegate') };
 }
 
 try {

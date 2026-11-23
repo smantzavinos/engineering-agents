@@ -9,7 +9,9 @@ model or launcher for a missing role model; stop and report the model and set.
 1. From the project root, run `node "${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/skills/delegate/role.mjs" <role>`.
    Use its `model`, `thinking`, `skills` and `skillPaths`: repo
    `.pi/settings.json` override, then the user's override, then the installed
-   `agents/<role>.md` frontmatter, field by field.
+   `agents/<role>.md` frontmatter, field by field. The resolver does not read
+   `agentOverridesByProvider`, `subagents.defaultModel`, `subagents.defaultProvider`,
+   or project `.pi/agents/<role>.md` files.
 2. Discover the local catalog with `orchestrator_capabilities` before the first
    launch. Use the Pi instance offering the resolved model. Launch with
    `delegate_task`, for example:
@@ -34,8 +36,10 @@ model or launcher for a missing role model; stop and report the model and set.
    oracle); name the exact Pi role and its skills in the task. T3 does not
    inject the agent file: tell the child to read it and any resolved skill
    paths. For a manual-only skill, give the file path or start the task with
-   `/skill:<name>`. When the role and task allow nested delegation, explicitly
-   say so; otherwise T3 tells the child not to start more agents.
+   `/skill:<name>`. When `mayDelegate` is true (the resolved skills include
+   `delegate`, as for the shipped plan-author, implementer and reviewer), the
+   T3 task must explicitly say the child may delegate bounded helper errands.
+   Otherwise don't grant nested delegation.
 3. Record `taskId`, `childThreadId`, the child run ID if returned, and the
    launcher in `state.json` when the workflow uses it. Each child is a visible
    thread. Honor the launch receipt's completion instruction; don't poll a

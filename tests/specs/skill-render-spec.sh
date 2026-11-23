@@ -423,7 +423,7 @@ name: reviewer
 description: fixture reviewer
 model: github-copilot/claude-opus-5.5
 thinking: high
-skill: review, test-quality
+skill: review, test-quality, delegate
 ---
 Fixture body.
 MD
@@ -465,7 +465,7 @@ REVIEWER_JSON="$(role_json reviewer)"
 json_expect 'role.mjs: project override beats user settings and frontmatter' "$REVIEWER_JSON" \
   'j.role === "reviewer" && j.model === "zai-coding-plan/glm-5.3" && j.thinking === "low"'
 json_expect 'role.mjs: frontmatter skills and skill paths are reported' "$REVIEWER_JSON" \
-  'JSON.stringify(j.skills) === JSON.stringify(["review", "test-quality"]) && j.skillPaths.length === 2 && j.skillPaths.every((p) => p.endsWith("/SKILL.md"))'
+  'JSON.stringify(j.skills) === JSON.stringify(["review", "test-quality", "delegate"]) && j.skillPaths.length === 3 && j.skillPaths.every((p) => p.endsWith("/SKILL.md"))'
 
 PLANNER_JSON="$(role_json planner)"
 json_expect 'role.mjs: user settings override beats frontmatter when no project entry exists' "$PLANNER_JSON" \
@@ -474,6 +474,9 @@ json_expect 'role.mjs: user settings override beats frontmatter when no project 
 HELPER_JSON="$(role_json helper)"
 json_expect 'role.mjs: frontmatter is used when no override exists' "$HELPER_JSON" \
   'j.model === "zai-coding-plan/glm-5.3-flash" && j.thinking === "low" && JSON.stringify(j.skills) === JSON.stringify(["test-quality"])'
+
+json_expect 'role.mjs: delegate skill grants mayDelegate' "$REVIEWER_JSON" 'j.mayDelegate === true'
+json_expect 'role.mjs: roles without delegate skill do not get mayDelegate' "$HELPER_JSON" 'j.mayDelegate === false'
 
 if (cd "$ROLE_PROJECT" && PI_CODING_AGENT_DIR="$ROLE_AGENT_DIR" node skills/delegate/role.mjs no-such-role >/dev/null 2>&1); then
   fail 'role.mjs must exit non-zero for a role with no agent file or override'
