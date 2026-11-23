@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Dry-run smoke test for scripts/pr-sweep-dispatch.py against a fake `gh`.
-# Proves: opt-in ignores unlabeled PRs; pr:ready-review dispatches a review;
-# a stale verdict on pr:ready-merge is demoted; drift mode reviews unlabeled PRs.
+# Proves the PR label flow in docs/hermes/pr-automation.md: opt-in ignores unlabeled PRs;
+# review-bot:queued dispatches a review; a push after a passed review re-queues it; legacy pr:* labels
+# are renamed; Copilot-review rounds, CI gate, owner commands, resolve-only re-review, prompt rendering.
+# Finer decisions are unit-tested in tests/scripts/.
 # Requirement: FR-001
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -11,8 +13,9 @@ cat > "$TMP/gh" <<'EOF'
 case "$*" in
   "pr list"*) cat <<'J'
 [{"number":1,"title":"unlabeled","headRefName":"a","headRefOid":"1111111111111111111111111111111111111111","labels":[],"isDraft":false},
- {"number":2,"title":"wants review","headRefName":"b","headRefOid":"2222222222222222222222222222222222222222","labels":[{"name":"pr:ready-review"}],"isDraft":false},
- {"number":3,"title":"moved after READY","headRefName":"c","headRefOid":"3333333333333333333333333333333333333333","labels":[{"name":"pr:ready-merge"}],"isDraft":false}]
+ {"number":2,"title":"wants review","headRefName":"b","headRefOid":"2222222222222222222222222222222222222222","labels":[{"name":"review-bot:queued"}],"isDraft":false},
+ {"number":3,"title":"moved after READY","headRefName":"c","headRefOid":"3333333333333333333333333333333333333333","labels":[{"name":"needs-human:merge"}],"isDraft":false},
+ {"number":4,"title":"legacy label","headRefName":"d","headRefOid":"4444444444444444444444444444444444444444","labels":[{"name":"pr:ready-review"}],"isDraft":false}]
 J
   ;;
   *"issues/3/comments"*) echo '[{"id":9,"user":{"login":"bot"},"body":"<!-- pr-review verdict=READY head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -->"}]' ;;
@@ -25,15 +28,17 @@ PY="$(command -v python3 || true)"
 if [[ -z "$PY" ]]; then echo "  FAIL: python3 not on PATH (run inside nix develop)" >&2; exit 1; fi
 run() { env -u GH_TOKEN PR_SWEEP_DRY=1 PR_SWEEP_REPOS=o/r PR_SWEEP_STATE="$TMP/state" GH_BIN="$TMP/gh" HERMES_HOME="$TMP" "$@" "$PY" "$ROOT/scripts/pr-sweep-dispatch.py"; }
 PASS=0 FAIL=0
-check() { if grep -Fq "$2" <<<"$1"; then PASS=$((PASS+1)); echo "  PASS: $3"; else FAIL=$((FAIL+1)); echo "  FAIL: $3 (missing: $2)" >&2; fi; }
+check() { if grep -Fq "$2" <<<"$1"; then PASS=$((PASS+1)); echo "  PASS: $3"; else FAIL=$((FAIL+1)); echo "  FAIL: $3 (missing: $2)" >&2; [[ -n "${SPEC_DEBUG:-}" ]] && printf "%s\n" "$1" >&2; fi; }
 refute() { if grep -Fq "$2" <<<"$1"; then FAIL=$((FAIL+1)); echo "  FAIL: $3 (unexpected: $2)" >&2; else PASS=$((PASS+1)); echo "  PASS: $3"; fi; }
 
 OUT="$(run)"
 refute "$OUT" "spawn review for o/r#1" "opt-in: unlabeled PR is ignored"
-check  "$OUT" "would spawn review for o/r#2" "pr:ready-review dispatches a detached review"
-check  "$OUT" "would set o/r#2 label pr:in-review" "dispatch marks the PR in-review"
-check  "$OUT" "would set o/r#3 label pr:re-review" "push after READY demotes to re-review"
-check  "$OUT" "new commits after READY" "stale READY is reported to the human"
+check  "$OUT" "would spawn review for o/r#2" "review-bot:queued dispatches a detached review"
+check  "$OUT" "would set o/r#2 label review-bot:running" "dispatch marks the PR in-review"
+check  "$OUT" "would set o/r#3 label review-bot:queued" "push after a passed review queues a new review"
+check  "$OUT" "new commits after the passed review" "stale READY is reported to the human"
+check  "$OUT" "would rename o/r#4 label pr:ready-review -> review-bot:queued" "legacy pr:* labels are renamed"
+check  "$OUT" "would spawn review for o/r#4" "a renamed legacy label is acted on in the same tick"
 OUT="$(PR_SWEEP_UNLABELED=review run)"
 check  "$OUT" "would spawn review for o/r#1" "drift mode: unlabeled PR is reviewed"
 
@@ -43,7 +48,7 @@ check  "$OUT" "would spawn review for o/r#1" "drift mode: unlabeled PR is review
 BOT="$TMP/gh-bot"
 cat > "$BOT" <<'EOF'
 #!/usr/bin/env bash
-old='{"number":7,"title":"owned","headRefName":"item/7","headRefOid":"7777777777777777777777777777777777777777","labels":[{"name":"pr:babysat"},{"name":"pr:in-review"}],"isDraft":false}'
+old='{"number":7,"title":"owned","headRefName":"item/7","headRefOid":"7777777777777777777777777777777777777777","labels":[{"name":"fix-bot:owns-branch"}],"isDraft":false}'
 # PR 8: READY stamped at its head; rollup controlled by CI_ROLLUP (red|green|pending|none)
 mk8() {
   case "${CI_ROLLUP:-red}" in
@@ -52,10 +57,10 @@ mk8() {
     pending) R='[{"name":"CI","status":"IN_PROGRESS","conclusion":null}]';;
     none)    R='[]';;
   esac
-  if [ "${PR8_LABEL:-pr:ready-merge}" = "pr:babysat" ]; then
-    L='[{"name":"pr:babysat"},{"name":"pr:in-review"}]'
+  if [ "${PR8_LABEL:-needs-human:merge}" = "fix-bot:owns-branch" ]; then
+    L='[{"name":"fix-bot:owns-branch"},{"name":"review-bot:running"}]'
   else
-    L="[{\"name\":\"${PR8_LABEL:-pr:ready-merge}\"}]"
+    L="[{\"name\":\"${PR8_LABEL:-needs-human:merge}\"}]"
   fi
   printf '{"number":8,"title":"ready+ci","headRefName":"item/8","headRefOid":"8888888888888888888888888888888888888888","labels":%s,"isDraft":false,"statusCheckRollup":%s}' "$L" "$R"
 }
@@ -64,7 +69,7 @@ case "$*" in
   *"issues/7/comments"*) echo '[{"id":70,"user":{"login":"agent"},"body":"babysit: session=babysit-pr-item7-x heartbeat=2000-01-01T00:00:00Z"}]' ;;
   *"issues/8/comments"*)
     C='[{"id":80,"user":{"login":"agent"},"body":"<!-- pr-review verdict=READY head=8888888888888888888888888888888888888888 -->"}'
-    if [ "${PR8_LABEL:-}" = "pr:babysat" ]; then
+    if [ "${PR8_LABEL:-}" = "fix-bot:owns-branch" ]; then
       C="$C,{\"id\":81,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=${PR8_SESSION:-babysit-pr-item8-x} heartbeat=${PR8_HEARTBEAT:-2000-01-01T00:00:00Z}\"}"
     fi
     echo "$C]" ;;
@@ -81,68 +86,78 @@ check  "$OUT" "would spawn babysit for o/r#7" "sweep-owned claim: new bot review
 refute "$OUT" "claim went stale" "sweep-owned claim does not age by heartbeat"
 OUT="$(run BOT_REVIEWS=6 GH_BIN="$BOT")"
 refute "$OUT" "would spawn babysit for o/r#7" "bot-review cap: no round past 5 bot reviews"
-check  "$OUT" "bot-review cap (5) reached" "bot-review cap is reported once"
+check  "$OUT" "Copilot has reviewed this PR 5 times" "bot-review cap is reported once"
 OUT="$(run BOT_REVIEWS=5 GH_BIN="$BOT")"
 check  "$OUT" "would spawn babysit for o/r#7" "bot-review cap: the 5th bot review still gets a round"
 
-# A round consumes EVERY bot review it saw: the dispatch record's bot_review_ids are
-# read back as handled, so two bot reviews between ticks cost one round, not two.
-mkdir -p "$TMP/state"
-printf '%s\n' '{"ts":0,"kind":"babysit","repo":"o/r","pr":7,"head":"7777777777777777777777777777777777777777","bot_review_id":702,"bot_review_ids":[701,702]}' > "$TMP/state/dispatches.jsonl"
-OUT="$(run BOT_REVIEWS=2 GH_BIN="$BOT")"
-refute "$OUT" "would spawn babysit for o/r#7" "bot-review batching: a record carrying all seen ids suppresses the follow-up round"
-printf '%s\n' '{"ts":0,"kind":"babysit","repo":"o/r","pr":7,"head":"7777777777777777777777777777777777777777","bot_review_id":701}' > "$TMP/state/dispatches.jsonl"
-OUT="$(run BOT_REVIEWS=2 GH_BIN="$BOT")"
-check  "$OUT" "would spawn babysit for o/r#7" "bot-review batching: a pre-fix single-id record still gets the round for the second review"
+# Finished rounds are read back from the dispatch log plus an accepted result file. `round` writes both:
+# round TAG KIND PR HEAD OUTCOME [extra record JSON] [extra result JSON] — the result lists one non-empty log.
+round() {
+  local tag="$1" kind="$2" pr="$3" head="$4" outcome="$5" extra="${6:-}" rextra="${7:-}" key=status
+  [[ "$kind" == review ]] && key=verdict
+  mkdir -p "$TMP/state/results" "$TMP/state/logs"
+  echo ok > "$TMP/state/logs/$tag-test.log"
+  printf '{"ts":%s,"kind":"%s","repo":"o/r","pr":%s,"head":"%s","tag":"%s"%s}\n' \
+    "$(date +%s)" "$kind" "$pr" "$head" "$tag" "${extra:+,$extra}" >> "$TMP/state/dispatches.jsonl"
+  printf '{"repo":"o/r","pr":%s,"kind":"%s","%s":"%s","head":"%s","verification_artifacts":["%s"]%s}\n' \
+    "$pr" "$kind" "$key" "$outcome" "$head" "$TMP/state/logs/$tag-test.log" "${rextra:+,$rextra}" > "$TMP/state/results/$tag.json"
+}
+H7=7777777777777777777777777777777777777777
+H8=8888888888888888888888888888888888888888
 
-# CI gate: red at the stamped READY head demotes; green restores; pending/none are not red.
+# A finished round consumes EVERY Copilot review it saw (bot_review_ids), so two reviews between
+# ticks cost one round, not two; a record naming only the first leaves the second due.
+rm -rf "$TMP/state"
+round b7 babysit 7 "$H7" RELEASED '"bot_review_ids":[701,702]'
+OUT="$(run BOT_REVIEWS=2 GH_BIN="$BOT")"
+refute "$OUT" "would spawn babysit for o/r#7" "bot-review batching: a round that saw both reviews suppresses the follow-up round"
+rm -rf "$TMP/state"
+round b7 babysit 7 "$H7" RELEASED '"bot_review_id":701'
+OUT="$(run BOT_REVIEWS=2 GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#7" "bot-review batching: a round that saw only the first review leaves the second due"
+rm -rf "$TMP/state"
+
+# CI gate: red at the reviewed head sends the PR back to the fix bot; green restores needs-human:merge;
+# pending checks or no checks are not red.
 OUT="$(run GH_BIN="$BOT")"
-check  "$OUT" "would spawn babysit for o/r#8" "CI gate: red at READY head demotes, round dispatched"
-check  "$OUT" "would set o/r#8 label pr:re-review" "CI gate: red at READY head demotes the label"
-check  "$OUT" "CI red at the READY head (E2E (FAILURE)); moved back to pr:re-review" "CI gate: demotion is reported once"
-# tick 2 (live-mode ledger seeded with the record's ci_key): label is now pr:re-review —
-# no re-dispatch and no second human-facing line for the same transition.
-mkdir -p "$TMP/state"
-printf '%s\n' '{"ts":0,"kind":"babysit","repo":"o/r","pr":8,"head":"8888888888888888888888888888888888888888","ci_key":"888888888888:E2E (FAILURE)"}' > "$TMP/state/dispatches.jsonl"
-OUT="$(run PR8_LABEL=pr:re-review GH_BIN="$BOT")"
-refute "$OUT" "would spawn babysit for o/r#8" "CI gate: the CI round fires once per red transition"
-refute "$OUT" "CI red" "CI gate: no second human-facing line for the same transition"
-rm -f "$TMP/state/dispatches.jsonl"
-OUT="$(run PR8_LABEL=pr:in-review GH_BIN="$BOT")"
-check  "$OUT" "CI red (E2E (FAILURE)); the babysitting author owns the fix." "CI gate: red under review reports ownership"
-OUT="$(run PR8_LABEL=pr:re-review CI_ROLLUP=green GH_BIN="$BOT")"
-check  "$OUT" "CI green at the READY head; restored pr:ready-merge" "CI gate: green restores pr:ready-merge"
+check  "$OUT" "would spawn babysit for o/r#8" "CI gate: red at the reviewed head dispatches a fix round"
+check  "$OUT" "would set o/r#8 label fix-bot:queued" "CI gate: red at the reviewed head re-queues the fix bot"
+check  "$OUT" "CI red on the reviewed commit (E2E (FAILURE)); back to fix-bot:queued" "CI gate: the owner is told"
+# tick 2: a finished round already handled this red set -> no second round, no second line.
+round c8 babysit 8 "$H8" FIXED '"ci_key":"888888888888:E2E (FAILURE)"'
+OUT="$(run PR8_LABEL=fix-bot:queued GH_BIN="$BOT")"
+refute "$OUT" "would spawn babysit for o/r#8" "CI gate: the CI round fires once per red set"
+refute "$OUT" "CI red" "CI gate: no second line for the same red set"
+rm -rf "$TMP/state"
+OUT="$(run PR8_LABEL=review-bot:running GH_BIN="$BOT")"
+check  "$OUT" "CI red (E2E (FAILURE)); the fix bot will fix it." "CI gate: red while a review runs is handed to the fix bot"
+OUT="$(run PR8_LABEL=fix-bot:queued CI_ROLLUP=green GH_BIN="$BOT")"
+check  "$OUT" "CI green on the reviewed commit; back to needs-human:merge" "CI gate: green restores needs-human:merge"
 OUT="$(run CI_ROLLUP=green GH_BIN="$BOT")"
-refute "$OUT" "restored pr:ready-merge" "CI gate: green at pr:ready-merge is silent"
+refute "$OUT" "back to needs-human:merge" "CI gate: green at needs-human:merge is silent"
 OUT="$(run CI_ROLLUP=pending GH_BIN="$BOT")"
 refute "$OUT" "CI red" "CI gate: pending checks are ignored"
 OUT="$(run CI_ROLLUP=none GH_BIN="$BOT")"
 refute "$OUT" "CI red" "CI gate: no checks yet is not a red"
 
-# A sweep-owned babysitter takes the CI round when one is due.
-OUT="$(run PR8_LABEL=pr:babysat CI_ROLLUP=red GH_BIN="$BOT")"
+# A sweep-owned fix bot takes the CI round; so does a PR nobody owns. A chat-started claim with a
+# fresh last-active stamp gets no sweep twin.
+OUT="$(run PR8_LABEL=fix-bot:owns-branch CI_ROLLUP=red GH_BIN="$BOT")"
 check  "$OUT" "would spawn babysit for o/r#8" "CI gate: sweep-owned claim gets a CI-fix round"
-
-# CI red with NO claim at all also gets the CI round: the sweep posts its own claim per the
-# prompt, so "nobody on the PR" must not leave a READY-stamped PR parked red until green.
-OUT="$(run PR8_LABEL=pr:ready-merge CI_ROLLUP=red GH_BIN="$BOT")"
-check  "$OUT" "would spawn babysit for o/r#8" "CI gate: red at READY head with no claim dispatches the round"
-
-# A chat-started claim must NOT get a sweep twin: only sweep-owned sessions (prefix babysit-pr)
-# are eligible for the CI round — the heartbeat must be FRESH so the claim is active, not stale.
-OUT="$(run PR8_LABEL=pr:babysat PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" CI_ROLLUP=red GH_BIN="$BOT")"
+OUT="$(run PR8_LABEL=needs-human:merge CI_ROLLUP=red GH_BIN="$BOT")"
+check  "$OUT" "would spawn babysit for o/r#8" "CI gate: red with no claim dispatches the round"
+OUT="$(run PR8_LABEL=fix-bot:owns-branch PR8_SESSION=20260101_chat PR8_HEARTBEAT="$(date -u +%Y-%m-%dT%H:%M:%SZ)" CI_ROLLUP=red GH_BIN="$BOT")"
 refute "$OUT" "would spawn babysit for o/r#8" "CI gate: chat-started claim gets no sweep twin"
 
 
-# Mentions: `@h review` -> Reviewer; any other mention -> a babysit round (also under a
-# sweep-owned claim, and from inline review threads). A handle-authored comment counts only on a
-# shared account and only without a pipeline marker.
+# Owner commands: `<handle> review` -> review bot; `<handle> fix` -> fix bot; free text and the bot's
+# own comments never trigger anything.
 MEN="$TMP/gh-men"
 cat > "$MEN" <<'EOF'
 #!/usr/bin/env bash
-pr='{"number":9,"title":"mention","headRefName":"item/9","headRefOid":"9999999999999999999999999999999999999999","labels":[{"name":"pr:ready-merge"}%s],"isDraft":false}'
+pr='{"number":9,"title":"mention","headRefName":"item/9","headRefOid":"9999999999999999999999999999999999999999","labels":[{"name":"needs-human:merge"}%s],"isDraft":false}'
 case "${M_CLAIM:-none}" in
-  owned) L=',{"name":"pr:babysat"}' ;;
+  owned) L=',{"name":"fix-bot:owns-branch"}' ;;
   *) L='' ;;
 esac
 case "$*" in
@@ -152,55 +167,53 @@ case "$*" in
     [ "${M_CLAIM:-none}" = owned ] && C="$C,{\"id\":91,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=babysit-pr-x heartbeat=2000-01-01T00:00:00Z\"}"
     [ -n "${M_BODY:-}" ] && C="$C,{\"id\":92,\"user\":{\"login\":\"${M_USER:-human}\"},\"body\":\"$M_BODY\"}"
     echo "$C]" ;;
-  *"pulls/9/comments"*)
-    if [ -n "${M_INLINE:-}" ]; then echo "[{\"id\":5,\"user\":{\"login\":\"human\"},\"body\":\"$M_INLINE\"}]"; else echo '[]'; fi ;;
   *) echo '[]' ;;
 esac
 EOF
 chmod +x "$MEN"
-mrun() { run PR_AGENT_HANDLE=agent GH_BIN="$MEN" "$@"; }
-OUT="$(M_BODY='@agent please rename the helper' mrun)"
-check  "$OUT" "would spawn babysit for o/r#9" "mention: a free-form instruction dispatches a babysit round"
-refute "$OUT" "would spawn review for o/r#9" "mention: a free-form instruction does not dispatch the Reviewer"
+mrun() { run PR_AGENT_HANDLE=@agent GH_BIN="$MEN" "$@"; }
+OUT="$(M_BODY='@agent fix: please rename the helper' mrun)"
+check  "$OUT" "would spawn babysit for o/r#9" "command: '<handle> fix' dispatches a fix round"
+refute "$OUT" "would spawn review for o/r#9" "command: '<handle> fix' does not dispatch the review bot"
 OUT="$(M_BODY='@agent review' mrun)"
-check  "$OUT" "would spawn review for o/r#9" "mention: '@h review' dispatches the Reviewer"
-refute "$OUT" "would spawn babysit for o/r#9" "mention: '@h review' does not dispatch a babysit round"
-OUT="$(M_BODY='@agent please rename the helper' M_CLAIM=owned mrun)"
-check  "$OUT" "would spawn babysit for o/r#9" "mention: runs under a sweep-owned claim"
-OUT="$(M_INLINE='@agent is this safe?' mrun)"
-check  "$OUT" "would spawn babysit for o/r#9" "mention: an inline review-thread mention dispatches a babysit round"
-OUT="$(M_USER=agent M_BODY='@agent please rename the helper' mrun)"
-refute "$OUT" "would spawn babysit for o/r#9" "shared account off: a handle-authored comment is a self-mention"
-OUT="$(M_USER=agent M_BODY='@agent please rename the helper' mrun PR_SHARED_ACCOUNT=1)"
-check  "$OUT" "would spawn babysit for o/r#9" "shared account: an unmarked handle-authored comment is a human mention"
-OUT="$(M_USER=agent M_BODY='done <!-- babysit-reply --> cc @agent' mrun PR_SHARED_ACCOUNT=1)"
-refute "$OUT" "would spawn babysit for o/r#9" "shared account: a marked agent comment never triggers"
+check  "$OUT" "would spawn review for o/r#9" "command: '<handle> review' dispatches the review bot"
+refute "$OUT" "would spawn babysit for o/r#9" "command: '<handle> review' does not dispatch a fix round"
+OUT="$(M_BODY='@agent fix' M_CLAIM=owned mrun)"
+check  "$OUT" "would spawn babysit for o/r#9" "command: runs under a sweep-owned claim"
+OUT="$(M_BODY='@agent please rename the helper' mrun)"
+refute "$OUT" "would spawn" "command: free text after the handle is not a command"
+OUT="$(M_BODY='@agent fix?' mrun)"
+refute "$OUT" "would spawn" "command: a question is not a command"
+OUT="$(M_USER=agent M_BODY='@agent fix' mrun)"
+refute "$OUT" "would spawn babysit for o/r#9" "command: the bot's own comment never triggers"
 
 
-# A babysit round that resolved threads without pushing (status FIXED, same head) gets one fresh
-# review of that head; without such a round, a finished review at the head is not repeated.
+# A fix round that answered the review without changing code (FIXED, same head, addressed_without_code)
+# gets one fresh review of that head; without such a round, a finished review at the head is not repeated.
 RES="$TMP/gh-res"
 cat > "$RES" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr list"*) echo '[{"number":10,"title":"resolved","headRefName":"item/10","headRefOid":"1010101010101010101010101010101010101010","labels":[{"name":"pr:re-review"}],"isDraft":false}]' ;;
+  "pr list"*) echo '[{"number":10,"title":"resolved","headRefName":"item/10","headRefOid":"1010101010101010101010101010101010101010","labels":[{"name":"fix-bot:queued"}],"isDraft":false}]' ;;
+  *"issues/10/comments"*) echo '[{"id":100,"user":{"login":"agent"},"body":"<!-- pr-review verdict=FIX head=1010101010101010101010101010101010101010 -->"}]' ;;
   *) echo '[]' ;;
 esac
 EOF
 chmod +x "$RES"
-rm -rf "$TMP/state"; mkdir -p "$TMP/state/results"
 H=1010101010101010101010101010101010101010
-printf '%s\n' "{\"ts\":100,\"kind\":\"review\",\"repo\":\"o/r\",\"pr\":10,\"head\":\"$H\",\"tag\":\"rev1\"}" > "$TMP/state/dispatches.jsonl"
-echo '{"verdict":"FIX"}' > "$TMP/state/results/rev1.json"
+rm -rf "$TMP/state"
+round rev1 review 10 "$H" FIX
 OUT="$(run GH_BIN="$RES")"
 refute "$OUT" "would spawn review for o/r#10" "resolve-only: a finished review at this head is not repeated"
-printf '%s\n' "{\"ts\":200,\"kind\":\"babysit\",\"repo\":\"o/r\",\"pr\":10,\"head\":\"$H\",\"tag\":\"bab1\"}" >> "$TMP/state/dispatches.jsonl"
-echo '{"status":"FIXED"}' > "$TMP/state/results/bab1.json"
+round bab1 babysit 10 "$H" FIXED '"verdict_id":100' '"addressed_without_code":true'
 OUT="$(run GH_BIN="$RES")"
-check  "$OUT" "would spawn review for o/r#10" "resolve-only: a FIXED babysit round with no push gets one re-review of the same head"
-echo '{"status":"RELEASED"}' > "$TMP/state/results/bab1.json"
+check  "$OUT" "would set o/r#10 label review-bot:queued" "resolve-only: a FIXED round with no push queues one re-review of the same head"
+rm -rf "$TMP/state"
+round rev1 review 10 "$H" FIX
+round bab1 babysit 10 "$H" RELEASED '"verdict_id":100'
 OUT="$(run GH_BIN="$RES")"
-refute "$OUT" "would spawn review for o/r#10" "resolve-only: a round that did not fix anything does not trigger a re-review"
+refute "$OUT" "would spawn review for o/r#10" "resolve-only: a round that fixed nothing does not trigger a re-review"
+refute "$OUT" "would set o/r#10 label review-bot:queued" "resolve-only: a round that fixed nothing does not queue a re-review"
 rm -rf "$TMP/state"
 
 
@@ -209,13 +222,24 @@ rm -rf "$TMP/state"
 if "$PY" - "$ROOT/scripts/pr-sweep-prompts" <<'PYEOF'
 import sys, pathlib
 kw = dict(repo="o/r", number=1, head="a" * 40, short_head="aaaaaaa", title="t", branch="b", checkout="/c",
-          hermes="h", handle="agent", result_file="/r", tag="t", fix_loops=0, bot_rounds=0, bot_cap=5,
-          trigger="mention", mention_ref="r5")
+          hermes="h", handle="@agent", result_file="/r", tag="t", artifacts_dir="/a", scripts_dir="/s",
+          merge_state="CLEAN", merge_status="MERGEABLE", base_branch="main", base_sha="b" * 40,
+          integrate_strategy="merge", signing="unknown", fix_loops=0, fix_loop_cap=3, bot_rounds=0, bot_cap=5,
+          trigger="owner request")
 for k in ("review", "babysit"):
     (pathlib.Path(sys.argv[1]) / f"{k}.md").read_text().format(**kw)
 PYEOF
 then PASS=$((PASS+1)); echo "  PASS: prompt templates render with spawn()'s placeholders"
 else FAIL=$((FAIL+1)); echo "  FAIL: a prompt template does not render" >&2; fi
+
+# Unit tests for the decisions behind this flow (tests/scripts/test_pr_sweep_*.py, the command parser and the comment checker).
+for t in test_pr_sweep_dispatch test_pr_sweep_progress test_pr_sweep_transient_review test_pr_sweep_result_evidence test_pr_sweep_review_threads test_commands test_comment_style; do
+  if UOUT="$(cd "$ROOT/tests/scripts" && "$PY" -m unittest -q "$t" 2>&1)"; then
+    PASS=$((PASS+1)); echo "  PASS: unit tests: $t ($(grep -Eo 'Ran [0-9]+ tests' <<<"$UOUT"))"
+  else
+    FAIL=$((FAIL+1)); echo "  FAIL: unit tests: $t" >&2; printf '%s\n' "$UOUT" >&2
+  fi
+done
 
 printf '\nResults: %d passed, %d failed\n' "$PASS" "$FAIL"
 [[ "$FAIL" -eq 0 ]]
