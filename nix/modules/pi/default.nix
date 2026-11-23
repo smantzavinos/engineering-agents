@@ -44,7 +44,7 @@ let
   # Static agent tree (settings.json here is the declarative body; the
   # activation merges it into the user's writable settings.json).
   piConfigTree = makePiConfig {
-    inherit (cfg) modelSet defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels;
+    inherit (cfg) modelSet defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels extraModels;
     zaiEnabled = cfg.zai.enable;
     managedPackagesDir = "${piManagedTree}/agent/packages";
     direnvExtension = if cfg.enableAgentKit then "${agentKit}/extensions/direnv/direnv.ts" else null;
@@ -144,6 +144,16 @@ in
       default = modelDefaults.enabledModels;
       defaultText = lib.literalExpression "models for the selected modelSet and z.ai switch";
       description = "Models available for cycling";
+    };
+
+    extraModels = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf (lib.types.attrsOf lib.types.anything));
+      default = { };
+      description = ''
+        Extra Pi models.json entries, grouped by provider ID. Appends to any
+        module-managed models for that provider without changing authentication,
+        defaults, or cycling. z.ai entries are omitted when zai.enable is false.
+      '';
     };
 
     enableAgentKit = lib.mkOption {

@@ -302,6 +302,31 @@
           touch $out
         '';
 
+        # Home Manager extraModels must reach the generated models.json.
+        pi-extra-models =
+          let
+            configured = zaiEnabled: (self.checks.${system}.pi-module.extendModules {
+              modules = [{
+                engineering-agents.pi = {
+                  zai.enable = zaiEnabled;
+                  extraModels.github-copilot = [{ id = "test-copilot-model"; api = "openai-responses"; }];
+                  extraModels.zai-coding-plan = [{ id = "test-zai-model"; }];
+                };
+              }];
+            }).config.home.file.".pi/agent/models.json".source;
+          in
+          pkgs.runCommand "pi-extra-models-check" { nativeBuildInputs = [ pkgs.jq ]; } ''
+            for catalog in ${configured true} ${configured false}; do
+              jq -e '.providers["github-copilot"] == { models: [{ id: "test-copilot-model", api: "openai-responses" }] }' "$catalog"
+            done
+            jq -e '.providers["zai-coding-plan"] |
+              .apiKey == "$ZAI_API_KEY" and .api == "openai-completions" and
+              any(.models[]; .id == "glm-5.3") and any(.models[]; .id == "test-zai-model")' \
+              ${configured true}
+            jq -e '.providers | has("zai-coding-plan") | not' ${configured false}
+            touch $out
+          '';
+
         # makePiConfig agentOverrides patch shipped agent frontmatter at build
         # time and subagent settings pass through to settings.json.
         pi-agent-config-agent-overrides = pkgs.runCommand "pi-agent-config-agent-overrides-check" {} ''

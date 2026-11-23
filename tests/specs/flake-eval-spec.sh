@@ -458,16 +458,10 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi enabledModels is missing GLM 5.3 or GLM 5.3 Flash"
   fi
 
-  if jq -e '.providers["github-copilot"].models | any(.id == "claude-opus-5" and .api == "anthropic-messages" and .contextWindow == 1048576 and .maxTokens == 128000 and .compat.forceAdaptiveThinking == true and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
-    pass "models.json extends github-copilot with Claude Opus 5"
+  if jq -e '.providers | has("github-copilot") | not' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
+    pass "models.json leaves Copilot definitions to Pi's own catalog by default"
   else
-    fail "models.json missing Claude Opus 5 github-copilot model"
-  fi
-
-  if jq -e '.providers["github-copilot"].models | any(.id == "grok-4.7" and .api == "openai-responses" and .contextWindow == 500000 and .maxTokens == 128000 and .headers["Editor-Version"] == "vscode/1.107.0")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
-    pass "models.json extends github-copilot with Grok 4.7"
-  else
-    fail "models.json missing Grok 4.7 github-copilot model"
+    fail "models.json replaces Pi's Copilot catalog entries by default"
   fi
 
   # S12 model set, direct (default): OpenAI Codex, plus GLM while z.ai is on.

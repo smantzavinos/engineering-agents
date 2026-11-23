@@ -193,8 +193,24 @@ Plus `preset.jsonc` defining three presets: **scope**, **run-plan** and **run-ep
 | `powerline.nerdFonts` | `"force"` | Nerd Font detection: `"auto"`, `"force"`, or `"disable"` |
 | `powerline.theme` | *(see module default)* | Declarative Powerline `theme.json` color and icon override |
 | `enabledModels` | Set-selected | Models for cycling |
+| `extraModels` | `{ }` | Extra Pi `models.json` entries, grouped by provider ID |
 | `enableAgentKit` | `true` | Install the agent-kit direnv extension |
 | `enableVisualExplainer` | `true` | Install the pinned, manual-only visual-explainer skill |
+
+To add a model to an existing provider without changing its authentication or
+making it the default, use [Pi model definitions](https://docs.pi.dev/latest/models-configuration):
+
+```nix
+engineering-agents.pi.extraModels.openai = [
+  { id = "example-model-id"; api = "openai-responses"; }
+];
+```
+
+Use the provider's actual model ID and request format. For temporary entries,
+remove them once Pi's catalog supplies them: a custom entry with the same ID
+replaces Pi's catalog metadata. Add the model to `enabledModels` only if you want
+it in the model cycle. The NixOS service-user module accepts the same definitions
+as `engineering-agents.pi-for-user.args.extraModels`.
 
 The NixOS service-user module exposes `modelSet` and `zai.enable` under
 `engineering-agents.pi-for-user`. Explicit session defaults still win over

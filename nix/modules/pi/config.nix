@@ -837,67 +837,6 @@ let
           ];
         };
 
-        # PI-VERSION-OVERLAY: Temporary github-copilot catalog patches.
-        # A custom model with the same id replaces the packaged definition.
-        # The provider's built-in OAuth configuration remains in effect.
-        # Copilot requires this IDE identity on every request, including
-        # requests for models added outside Pi's bundled catalog.
-        #
-        # Remove each entry independently when ALL of the following are true:
-        # 1. `pi --version`'s baked github-copilot catalog includes that model
-        #    id (search the pi package; do not use models.dev alone).
-        # 2. https://pi.dev/api/models/providers/github-copilot includes that
-        #    model id, so `pi update --models` would supply it without this
-        #    overlay. Pi's live refresh uses pi.dev, not models.dev.
-        github-copilot = {
-          models = [
-            {
-              id = "claude-opus-5";
-              name = "Claude Opus 5";
-              api = "anthropic-messages";
-              headers = {
-                "User-Agent" = "GitHubCopilotChat/0.35.0";
-                "Editor-Version" = "vscode/1.107.0";
-                "Editor-Plugin-Version" = "copilot-chat/0.35.0";
-                "Copilot-Integration-Id" = "vscode-chat";
-              };
-              reasoning = true;
-              thinkingLevelMap = {
-                minimal = "low";
-                xhigh = "xhigh";
-                max = "max";
-              };
-              input = [ "text" "image" ];
-              contextWindow = 1048576;
-              maxTokens = 128000;
-              compat = {
-                forceAdaptiveThinking = true;
-                supportsTemperature = false;
-              };
-            }
-            {
-              id = "grok-4.7";
-              name = "Grok 4.7";
-              api = "openai-responses";
-              headers = {
-                "User-Agent" = "GitHubCopilotChat/0.35.0";
-                "Editor-Version" = "vscode/1.107.0";
-                "Editor-Plugin-Version" = "copilot-chat/0.35.0";
-                "Copilot-Integration-Id" = "vscode-chat";
-              };
-              reasoning = true;
-              thinkingLevelMap = {
-                low = "low";
-                medium = "medium";
-                high = "high";
-                xhigh = "xhigh";
-              };
-              input = [ "text" "image" ];
-              contextWindow = 500000;
-              maxTokens = 128000;
-            }
-          ];
-        };
       };
     };
 
@@ -1081,6 +1020,7 @@ in
     managedPackagesDir ? null,
     direnvExtension ? null,
     extraSkills ? {},
+    extraModels ? {},
     # Per-consumer agent routing: attrset of <agentName> -> { model ?,
     # thinking ? } patched into the shipped agent
     # frontmatter at build time (subagentOverrides are settings-level).
@@ -1101,8 +1041,12 @@ in
     roleOverrides = lib.recursiveUpdate models.agentOverrides agentOverrides;
     settings = makePiSettings (builtins.intersectAttrs (builtins.functionArgs makePiSettings) args);
     modelCatalog = builtins.fromJSON piStaticFiles.models;
+    providers = modelCatalog.providers // lib.mapAttrs (provider: entries:
+      let base = modelCatalog.providers.${provider} or { };
+      in base // { models = (base.models or [ ]) ++ entries; }
+    ) (lib.filterAttrs (_: entries: entries != [ ]) extraModels);
     modelCatalogForUser = modelCatalog // {
-      providers = if zaiEnabled then modelCatalog.providers else removeAttrs modelCatalog.providers [ "zai-coding-plan" ];
+      providers = if zaiEnabled then providers else removeAttrs providers [ "zai-coding-plan" ];
     };
     preset = pkgs.runCommand "pi-preset.jsonc" {} ''
       substitute ${repoRoot}/agents/preset.jsonc "$out" \

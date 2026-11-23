@@ -92,7 +92,7 @@ in
         Arguments forwarded to makePiConfig. See nix/modules/pi/config.nix
         for the full parameter signature. Common keys: defaultProvider,
         defaultModel, defaultThinkingLevel, theme, footer,
-        enabledModels, powerline,
+        enabledModels, extraModels, powerline,
         powerlineShortcuts, powerlineTheme, extraSkills. Use the module's
         modelSet and zai.enable options, which take precedence over args.modelSet
         and args.zaiEnabled.
