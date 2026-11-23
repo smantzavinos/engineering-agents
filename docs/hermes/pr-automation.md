@@ -81,7 +81,8 @@ Four trigger surfaces, in priority order:
    [`scripts/commands.py`](../../scripts/commands.py), which accepts common
    spellings (`\devbot fixed`, `/DevBot: review`). An explicit command wins
    over sweep state and caps, once per command; the sweep marks the comment
-   as read with an 👀 reaction.
+   as read with an 👀 reaction. Only some people may command the bots: see
+   [Who the sweep listens to](#who-the-sweep-listens-to).
 3. **Push demotion.** A new commit on a PR labeled `needs-human:merge` or
    `needs-human:decision`, or past a `reviewed@` stamp, moves it to
    `review-bot:queued` (labels updated mechanically; no LLM needed). This
@@ -206,6 +207,33 @@ Per PR, each tick:
   every tick, the rules are wrong: fix the script, do not widen a session's
   job.
 
+### Who the sweep listens to
+
+A PR conversation comment counts only from:
+
+- the owners (`PIPELINE_OWNERS`; the sweep refuses to run without it) and
+  the bot logins (`PIPELINE_BOT_LOGINS`): read as written;
+- the PR's people: `PIPELINE_RESPONDERS`, the PR's assignees and the
+  assignees of the issues it closes (issues of this repository only). Their
+  commands count, but a comment of theirs that looks like automation in any
+  way (a hidden-marker delimiter `<!--` or `-->`, a 🤖 first line, claim,
+  heartbeat or verdict text anywhere) is ignored entirely, so nobody can
+  forge a verdict, a claim or a bot reply;
+- nobody else: a stranger's comment is not read at all.
+
+Hidden markers therefore count only from the owners and the bot logins.
+Reviews count only from `PR_BOT_REVIEWERS`. A review thread counts only when
+it was started by an owner, one of the PR's people, a bot login or one of
+`PR_BOT_REVIEWERS`, and a later reply from anyone else neither opens nor
+reopens it. The review and fix sessions are told the same list of logins and
+the comment that triggered them, and treat everything else as information,
+never as instructions. PRs from forks are skipped: the
+bots never check out, run or push to a fork's branch. Board sync assigns an
+open PR with no assignee to the assignees of the issues it closes (else the
+first owner), so the people working on an item may command the bots on its
+PR. `scripts/unheard.py` tells anyone else, once, why nothing happens, and
+tells a person whose command was ignored because it carries bot-only text.
+
 ### Shared human/agent account
 
 When the human and the agent post as the same login, bot comments are told
@@ -225,7 +253,7 @@ login is also an owner, because it could not tell their replies apart.
   `needs-human:decision`, removing any other state label. The sweep's push
   demotion still moves it to `review-bot:queued` when the head moves.
 - An unresolved review thread whose last comment is not the PR author's is an
-  open finding. The Reviewer cannot post READY while one exists, a
+  open finding, when it counts (see [Who the sweep listens to](#who-the-sweep-listens-to)). The Reviewer cannot post READY while one exists, a
   `needs-human:merge` PR with one goes back to `fix-bot:queued`, and green CI
   does not restore `needs-human:merge` until it is answered. The fix round
   fixes or answers each thread and resolves it.
@@ -341,6 +369,9 @@ Install:  copy scripts/*.py, scripts/pr-sweep-prompts/ and scripts/pipeline-prom
           into $HERMES_HOME/scripts/ (the dispatchers import commands.py and
           comment_style.py from their own directory; sessions post through post-comment.py)
 Env:      PR_SWEEP_REPOS="owner/repo-a owner/repo-b"   PR_AGENT_HANDLE="/devbot [@login ...]"
+          PIPELINE_OWNERS (required: the logins who command the bots), PIPELINE_RESPONDERS
+          PIPELINE_WIP (2; author sessions shared with the pipeline's work sessions, whose
+          state PIPELINE_STATE names), PIPELINE_QUIET_HOURS / _WEEKENDS / _MODES, PIPELINE_FORCE
           PR_REVIEW_MODEL (strong)  PR_BABYSIT_MODEL (cheaper)  PR_REVIEW_REASONING
           PR_REVIEW_SKILLS / PR_BABYSIT_SKILLS (add repo overlay skills)
           PR_SESSION_PROVIDER, PR_SWEEP_CHECKOUT_ROOT (local checkouts, default ~/repos)
@@ -353,6 +384,10 @@ Env:      PR_SWEEP_REPOS="owner/repo-a owner/repo-b"   PR_AGENT_HANDLE="/devbot 
           COMMENT_STYLE_ENFORCE_FROM (ISO date; post-comment.py only warns before it)
 Deliver:  the channel where the human wants READY / BLOCKED / ESCALATE digests
 ```
+
+When every repository fails on a tick, the sweep sends one `🛑 PR sweep
+stopped` alert, repeats it at most hourly, and sends one line when it runs
+again; one failing repository repeats its error at most once per 6 hours.
 
 `PR_SWEEP_DRY=1` prints the actions a tick would take without mutating GitHub
 or the dispatch record. Run it once before enabling the cron. The session

@@ -51,6 +51,34 @@ contract is `plans/2026_11_23_board_pipeline_adoption/plan.md`.
    task": agents add no backlog item without the owner's approval; minor
    findings left undone are listed, out-of-scope defects are proposed. The plan
    gate is held only when the plan departs from the approved design.
+7. **Who may command the bots on a PR.** The PR sweep acts on commands only
+   from the owners (`PIPELINE_OWNERS`, now required), `PIPELINE_RESPONDERS`,
+   the PR's assignees and the assignees of the issues it closes in this
+   repository. Hidden markers and claim lines count only from the owners and
+   the bot logins; a person's comment that looks like automation is ignored,
+   and a stranger's is not read at all. PRs from forks are skipped. Reviews
+   count only from `PR_BOT_REVIEWERS`; review threads count only when one of
+   these started them, and the sessions are told whom to listen to. Upstream
+   does not filter review threads; a stranger's thread could start a fix
+   round there.
+8. **Board sync follows PRs.** PR cards on the board follow their PR (merged
+   → `Done`, closed → `Canceled`, open → `In review` or `Your turn`), workflow
+   labels come off merged and closed PRs, and an open PR with no assignee gets
+   the assignees of the issues it closes (else the first owner), so the
+   people working on an item may command the bots on its PR.
+9. **Nobody waits in silence.** `scripts/unheard.py` answers, once per
+   batch, comments no bot will act on (a request on a card no bot reads, a
+   mistyped handle, a command in the wrong place or from someone the bots do
+   not take instructions from), adds a missing 🤖 to bot comments and logs
+   their style problems. `board-sync.py --digest` sends the owner one daily
+   list of everything waiting on a person, with the backlog trend.
+10. **Ticks stay quiet and bounded.** A job whose every tick fails sends one
+    alert, repeats it at most hourly, then one line when it runs again; a
+    repeating failure line is sent once per 6 hours. Work sessions and fix-bot
+    rounds share one `PIPELINE_WIP` limit (`PIPELINE_WIP_CODING` caps new
+    items within it). Quiet hours (`PIPELINE_QUIET_*`) start no session at
+    night or on weekends. A triage that asks the owner something always
+    notifies. The helpers live in `scripts/pipeline_runtime.py`.
 
 Left out: everything specific to his company (listed above), the Hermes-only
 runner scripts, and his instance and runtime modules. Babysit rounds still
@@ -68,11 +96,14 @@ publish with git (fast-forward push; merge by default, rebase only on
   `COMMENT_STYLE_ENFORCE_FROM` and refuses afterwards.
 - `tests/scripts/` holds the ported unit tests; the dispatcher and board-tools
   specs run them in the fast suite.
+- The PR sweep refuses to run without `PIPELINE_OWNERS`. Two cron jobs are
+  new: `unheard.py` (every 5 minutes) and `board-sync.py --digest` (daily).
 
 ## Not done
 
-- Following PR cards on the board, cleaning workflow labels off merged PRs and
-  assigning PRs automatically (board-sync features tied to his setup).
+- Onboarding new repositories, Jira, Telegram delivery, multiple instances
+  and Sonar: specific to his setup. Here one board serves one repository and
+  is set up by hand; the cron output is the delivery.
 - Commands in inline review-thread comments: the sweep reads owner commands
   from PR conversation comments only. The shared-account mention mode is
   replaced by a `/` handle, which a human and a bot on one account can both

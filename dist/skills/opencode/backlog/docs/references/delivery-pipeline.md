@@ -298,7 +298,9 @@ flowchart LR
 | triage | 15 min | `Inbox` items, including recovery of an incomplete move or historical `left`; `Your turn` items waiting for an answer, with a real owner `answer:` comment newer than the last triage marker | One triage session per batch | Questions/owner decisions and failures |
 | dispatch | 3 min | Gate and unblock replies, dead sessions, `Up next` under the WIP limit, worktrees of `Done`/`Canceled` items | One work session per item | Gate reached (digest), repeated session failures |
 | pr-sweep | 2 min | PR labels, verdicts, pushes, mentions, merges | Reviewer and babysitter sessions | READY, BLOCKED/ESCALATE, stuck |
-| board-sync | 5 min | Off-board issues, `Waiting for` drift, close proposals past their deadline, merged PRs | None (script only) | Moves and closes it made |
+| board-sync | 5 min | Off-board issues, `Waiting for` drift, close proposals past their deadline, merged PRs, PR cards, labels on closed PRs, unassigned PRs | None (script only) | Moves and closes it made |
+| digest | Daily | Everything waiting on a person, the backlog trend, recent issues not on the board | None (script only) | One list; silent when nothing waits (Mondays: the backlog lines anyway) |
+| unheard | 5 min | Comments no bot will act on; bot comments missing the 🤖 | None (script only) | Nothing: it replies on the issue or PR |
 | hygiene | Weekly | Whole board and open PRs | None | Stale `Your turn` cards, parked `discuss` items, PRs outside the review flow |
 
 The reference implementation for Hermes is `scripts/pipeline-dispatch.py`
@@ -318,16 +320,34 @@ markers, and a friendlier board name (`Icebox` shows as `Later`, `Track` as
 `Size`, `Origin` as `Source`, `Autonomy` as `Bot approvals`); the adapter
 accepts either. `scripts/board-sync.py` is the script-only sync job: it adds
 off-board issues (bot-created ones to `Inbox`, others to `Backlog`), keeps
-`Waiting for` truthful, links open PRs to their cards, proposes closing items
-a merged PR implemented, and closes close proposals nobody answered within
-48 hours. Both read their settings from environment variables or the JSON
+`Waiting for` truthful, links open PRs to their cards, assigns an open PR
+with no assignee to the assignees of the issues it closes (else the first
+owner), moves PR cards a person put on the board with their PR (merged →
+`Done`, closed → `Canceled`, open → `In review` or `Your turn`; never out of
+`Later`), removes workflow labels from merged and closed PRs, proposes closing
+items a merged PR implemented, and closes close proposals nobody answered
+within 48 hours. `board-sync.py --digest` is the daily owner digest.
+`scripts/unheard.py` replies once per batch to comments no bot will act on (a
+card no bot reads, a mistyped handle, a command in the wrong place or from
+someone the bots do not take instructions from) and says what to do instead.
+All three read their settings from environment variables or the JSON
 file named by `GH_PROJECT_CONFIG`.
 
-**WIP limit.** Counts items in `In progress` only; `Your turn` and `In review`
-do not hold a slot. Start at **2** and raise it once
+**WIP limit.** Counts items in `In progress` plus the PR sweep's running
+fix-bot rounds (both dispatchers read the same `PIPELINE_WIP`); `Your turn`
+and `In review` do not hold a slot. Start at **2** and raise it once
 throughput is stable. Resumes (T11, T14) are served before new pickups and also
 need a free slot. New pickups take `Up next` items in Priority order, oldest
-first within a priority.
+first within a priority, and stop at `PIPELINE_WIP_CODING` running new-item
+sessions (default: the WIP limit), so the rest stays free for resumes and fix
+rounds.
+
+**Quiet hours.** With `PIPELINE_QUIET_HOURS` (for example `22:00-07:00`)
+and/or `PIPELINE_QUIET_WEEKENDS=1`, the jobs in `PIPELINE_QUIET_MODES`
+(default `work pr`) start no session; finished results are still delivered.
+`PIPELINE_FORCE=1` overrides it for one run. A job whose every tick fails
+sends one alert, repeats it at most hourly, and sends one line when it runs
+again. A triage result that asks the owner something always notifies.
 
 **Isolation.** One worktree and branch per item, named per the dispatch
 contract. The claim comment (`work: session=…`) is an audit trail for humans:
@@ -366,7 +386,11 @@ assignees and the configured responders (`PIPELINE_RESPONDERS`). The bot's
 own logins never count, even if listed: `PIPELINE_BOT_LOGINS`, the `@`
 handles, or else the account `gh` is logged in as (a `/` handle names no
 account). On a shared account an owner comment counts only without a
-pipeline marker.
+pipeline marker. On a PR, commands count from the owners, the configured
+responders, the PR's assignees and the assignees of the issues it closes
+in the same repository; hidden markers count only from the owners and the
+bot's logins, review threads only when one of them started it, and PRs from
+forks are skipped (`docs/hermes/pr-automation.md`, "Who the sweep listens to").
 
 **Reply grammar.** A reply is an owner comment whose first non-empty line is
 `<handle> <verb>[:] <body>`, where `<handle>` is one of the agent's handles

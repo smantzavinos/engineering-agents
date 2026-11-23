@@ -94,11 +94,23 @@ An agent being handed ownership of one or more repos runs this once:
      `PIPELINE_MOVE_CMD="python3 <scripts>/gh-project.py move {number} {status}"`
      (install notes in its header; run each once with `PIPELINE_DRY=1` first);
    - create the board-sync job (every 5m) from `scripts/board-sync.py` (run
-     once with `--dry` first);
+     once with `--dry` first), the owner digest (daily, `board-sync.py
+     --digest`: everything waiting on a person, silent when nothing waits)
+     and the unheard job (every 5m, `scripts/unheard.py`: one reply to
+     comments no bot will act on; run once with `--dry` first);
+   - agree the limits with the human: `PIPELINE_WIP` (author sessions at
+     once, shared by work sessions and fix-bot rounds; set it on both
+     dispatchers), `PIPELINE_WIP_CODING` (new items within it), and quiet
+     hours (`PIPELINE_QUIET_HOURS=22:00-07:00`, `PIPELINE_QUIET_WEEKENDS=1`,
+     `PIPELINE_QUIET_MODES`, default `work pr`; `PIPELINE_FORCE=1` for one
+     run). A job whose every tick fails sends one alert, hourly at most, and
+     one line when it runs again;
    - confirm the repo documents the pipeline hooks in its task-tracking doc.
 3. **Register the trigger surface**: confirm the command handle
    (`PR_AGENT_HANDLE`, default `/devbot`; first line `<handle> <command>`)
-   and the owner logins (`PIPELINE_OWNERS`). With a `/` handle only, set
+   and the owner logins (`PIPELINE_OWNERS`, required by every job). Commands
+   on a PR count from the owners, `PIPELINE_RESPONDERS`, the PR's assignees
+   and the assignees of the issues it closes. With a `/` handle only, set
    `PIPELINE_BOT_LOGINS` to the account the bots post as (otherwise the
    dispatchers use the account `gh` is logged in as, and refuse to run when
    none resolves). When people and bots share one account, set
