@@ -17,7 +17,7 @@ You produce the durable execution tracking document that implementation sub-agen
 - Plan directory path
 - Read: `plan.md` (for task list and verification commands)
 - Read: Repo test architecture docs (for exact verification commands if plan references them)
-- Read: Repo task-tracking/backlog docs if available (for follow-up capture policy)
+- Read: Repo task-tracking/backlog docs if available (stable ID format only; follow-ups follow "Finish in task")
 - Read: Repo requirements docs if available and the plan cites or updates requirements
 
 ## Process
@@ -56,7 +56,7 @@ The worklog must include environment setup needed before implementation:
 - Runtime versions
 - How to start/stop services
 
-Get this from repo docs or ask the user.
+Get this from repo docs, CI workflow files and build scripts; record anything you had to infer.
 
 ### Gate policy must be explicit
 The worklog must state the plan's chosen unrelated failure policy (`block-on-global-gate` | `allow-scoped-completion` | `split-follow-up`) and include instructions for what the implementer should do if a broader gate fails for reasons unrelated to their task.
@@ -64,15 +64,14 @@ The worklog must state the plan's chosen unrelated failure policy (`block-on-glo
 ### Gate rationale must be explained
 The worklog must include a brief note explaining what the task completion gate catches that fast-feedback commands miss (e.g., type mismatches between packages, missing exports, interface drift, cross-module integration issues). This teaches the implementer WHY the gate matters.
 
-### Backlog capture policy must be explicit
-The worklog must tell implementers how to handle follow-up work discovered during execution:
-- Where the repo backlog lives, or that no backlog mechanism is documented
-- How to create accepted follow-up items
-- What stable ID/reference format to write back into the worklog
-- Default destination for non-critical follow-ups (usually `Inbox`)
-- What to do for critical or current-plan-affecting discoveries
+### Follow-up policy must be explicit ("Finish in task")
+The worklog must state the owner's follow-up policy (`software-development` "Finish in task" and "Decide, don't ask") and give implementers these sections to fill:
+- `Decisions made` — numbered, each with its source; includes extra work done because it belonged to the item
+- `Extra tasks for the orchestrator` — work that belongs to the item but did not fit its task
+- `Considered and not done` — one line each; never filed
+- `Proposed new issues (need your OK)` — only genuine defects outside the item, after a duplicate search; never created by an implementer
 
-If no repo task-tracking mechanism is documented, write that explicitly and instruct implementers to ask before trying to capture follow-up items.
+Implementers never create backlog items, and stop only for owner-list items (contradiction the sources cannot resolve, irreversible or external action, spend, security, a FROZEN change, safety).
 
 ### Requirement change policy must be explicit when relevant
 If the plan cites or updates requirements, the worklog must tell implementers:

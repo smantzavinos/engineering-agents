@@ -175,6 +175,26 @@ handoff comment names the branch), run the rest of the pipeline end to end:
 - **Bug fix**: see the plan-level table — Simple bug fix when the root cause
   is obvious (regression test first), otherwise Standard.
 
+## Artifact formatting (NORMATIVE)
+
+Every process artifact (`brief.md`, `approach.md`, `plan.md`, `worklog.md`,
+findings, all `*_review*.md`, result files) writes its metadata header as a
+two-column table, never as consecutive `**Key:** value` lines, which
+Markdown joins into one paragraph:
+
+```md
+|                         |  |
+|-------------------------|--|
+| **Created**             | YYYY-MM-DD |
+| **Item**                | <owner/repo#N> |
+| **Task review default** | each |
+```
+
+Pad the key column so the source stays aligned; escape a literal `|` in a
+value as `\|`. The same applies to any other run of two or more key/value
+lines (task metadata blocks, review summaries); separate them by blank lines
+or use a table or a list.
+
 ## Process choices (each has a point, a mechanism, and a record)
 
 Every choice in the process happens at a defined point, by a defined
@@ -193,7 +213,10 @@ mechanism, documented in a defined place:
 
 - **Auto**: everything WITHIN an approved plan's execution (task order,
   internal fixes, gate re-runs).
-- **Human gates**: (1) plan approval before execution; (2) contract
+- **Human gates**: (1) plan approval before execution (in unattended board
+  mode the approved Design gate covers it; a separate Plan gate is posted
+  only when the plan departs from the approved approach, see
+  `execution-orchestrator` detached mode); (2) contract
   freezes — the point where a contract task's tests are declared frozen;
   changing them afterward requires human approval; (3) owner-ruling
   classes — contradictions in the spec or plan, contract-level questions the repo cannot answer, irreversible actions, external contact, spend, security
@@ -208,16 +231,107 @@ mechanism, documented in a defined place:
   `--name` is a display name only and selects nothing.
 - Verification runs on the orchestrator's host after every delegated step; a
   worker's report is not evidence.
+- **Commit signing is never a precondition.** If `git commit` fails only
+  because signing fails, rerun it as `git -c commit.gpgsign=false commit ...`
+  and continue. Exception: a repository that requires signed commits (the
+  push is rejected for unverified signatures). Then re-sign the unsigned
+  outgoing commits with content unchanged
+  (`git rebase --exec "git commit --amend --no-edit -S" <base>`) and push; if
+  signing still fails, block with reason `commit-signing`.
 - **Investigation continuity:** while one task's root cause is unproven, the
   same implementer session may be resumed across rounds. Record
   `session: <id> — continuity: <reason>` in the worklog, gate on the host
   every round, review in fresh sessions, and end it once the cause is proven
   (details: `references/execution-modes.md`).
 
+## Decide, don't ask (NORMATIVE; owner policy)
+
+The owner's attention is the scarcest resource in the pipeline. Ask only
+about items on the **owner list** below; decide everything else yourself,
+record it, and move on. This section overrides any wording in the stage
+skills ("ask", "stop and ask", "ambiguous", "confirm", "open question")
+that would send a non-owner-list question to the human.
+
+**Sources, in this order:** the item text and owner comments; the
+repository (code, tests, `AGENTS.md`, docs, git history, open and merged
+PRs, earlier plan directories); the specs/requirements the repo cites; documentation the repo links;
+conventions in sibling repositories. When two
+answers are defensible, pick the one the sources support best; if they are
+silent, pick the smaller, reversible option.
+
+**Record every non-trivial decision** in a numbered **Decisions made** list
+with its source in brackets, e.g.
+`D3. Nightly run at 02:17 UTC [convention: other nightly workflows in .github/workflows]`.
+The list lives in the brief/approach, the plan (new decisions only), and
+the PR body (one merged list). The owner vetoes with `revise: D3 …` at a
+gate or in a PR comment; a veto is cheap, a question is not. A decision
+with a source is never phrased as a question.
+
+**Owner list (ask; never decide):**
+
+1. A contradiction between the item and the specs/requirements, or between
+   two requirements, that the sources do not resolve.
+2. An irreversible or externally visible action: data migration, public API
+   or wire-format change, release, anything that touches production or a
+   customer.
+3. Spend: anything that adds cost — a new paid service or licence, or a
+   bigger or paid CI machine (e.g. GitHub "larger runners").
+4. Security posture: permissions, secrets, trust boundaries.
+5. Changing a FROZEN decision or a frozen contract test.
+6. Safety behaviour (stop conditions, interlocks, limits) that the spec
+   does not already fix.
+7. Creating a new backlog item (see "Finish in task").
+
+Plus the human gates under "Autonomy defaults". **Not** on the list:
+"scope" (follow "Finish in task"), "ambiguous" (resolve it from the
+sources), file placement, naming, test selection, schedules, defaults,
+version bumps that follow repo convention, and anything already answered
+by an approved gate. A diagnostic only a person can run (bench logs,
+hardware access) is a request for information, phrased as one, not a
+decision.
+
+**Questions sections** (gates, triage, result files) hold owner-list items
+only, at most three. When there are none, write
+`Questions: none — see Decisions made.`
+
+## Finish in task (NORMATIVE; owner policy)
+
+The goal is a backlog that **shrinks**. An item is done when the problem
+it states is solved for every case the repository can reach, including the
+gaps found by the design scan and the review findings of every severity.
+
+- **Default: do it here**, in this item's branch and PR. A file the work
+  needs outside the plan's Scope/Touched-files list is added and recorded
+  under Decisions made; it is never a question.
+- **New backlog items: zero without the owner's explicit approval.** Propose
+  one only for (a) a genuine defect outside this item's problem that cannot
+  be fixed in this PR without changing an unrelated module's behaviour, or
+  (b) an epic-sized item, where the Design gate proposes a split into 2–3
+  items with one-line goals (more than three means an umbrella; recommend
+  closing it after the split). Before proposing, search open issues
+  (`gh issue list --search <key words>`) and propose extending a matching
+  one instead. Proposals go in the next gate, or in the PR body under
+  `## Proposed new issues (need your OK)`; nothing is filed until the
+  owner approves.
+- **Review Minors** are fixed in the same round when small (rename, doc,
+  test, roughly under 30 lines); otherwise dropped with one line under
+  `## Considered and not done` in the PR body. Minors are never filed and
+  never listed as follow-ups.
+- **Related repositories are in scope.** A change the item needs in another
+  repository (dependency, consumer, shared library, schema or API) is made
+  as a companion PR there, cross-linked with this item's PR; never merged
+  by an agent. "It lives in another repository" is never a reason to stop,
+  ask, or file a follow-up.
+- **Nice-to-haves** outside the item's problem are dropped and listed under
+  "Considered and not done", not filed.
+- The PR body's follow-ups section lists only issues that already exist
+  with numbers, or says `None — finished in task.`
+
 ## Review bar
 
 A plan/code review passes at zero **Blocker/Critical/Major** findings;
-Minors ride with recorded follow-ups. Approach/plan/code reviews run as a
+Minors follow "Finish in task" (fixed in the same round, or dropped and
+listed under "Considered and not done"; never filed as issues). Approach/plan/code reviews run as a
 loop: each round re-reviews the fixed artifact until the bar is met. Every
 plan and code review round uses at least TWO reviewers, distinct from each
 other and from the author (`dual`, the default); the round passes only when

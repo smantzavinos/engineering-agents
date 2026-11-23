@@ -29,7 +29,7 @@ You are a senior code reviewer. Your job is to verify that the implementation ac
 2. **Read existing review** — If `code_review.md` exists, check for prior findings and implementer responses
 3. **Analyze the diff** — `git diff main..HEAD` (or appropriate ref range)
 4. **Review against quality gates** (see below)
-5. **Separate fixes from follow-ups** — Current-plan Blocker/Critical/Major issues must be fixed; non-blocking improvements may be suggested as backlog items
+5. **Separate fixes from suggestions** — Current-plan Blocker/Critical/Major issues must be fixed; mark each non-blocking suggestion fix-now (small: rename, doc, test, roughly under 30 lines) or drop. Never suggest backlog items (`software-development` "Finish in task")
 6. **Check requirement alignment** — If the repo maintains requirements or the plan cites requirement IDs, verify implementation and tests align with them
 7. **Write findings** — Create/append to `code_review.md`
 8. **Commit** — Stage and commit only code_review.md
@@ -80,19 +80,16 @@ If the repo maintains requirements or the plan cites requirement IDs:
 - Shared exports changed without consumer tests
 - Bug fixes without regression tests
 
-### 6. Backlog-worthy follow-ups
-If you notice useful work that is not required for the current plan to be correct, do not inflate its severity to force it into the current plan. Instead, list it as a suggested backlog item with recommended metadata:
-- Title
-- Kind/type
-- Origin: `review-finding`
-- Suggested priority
-- Rationale
-- Acceptance criteria if obvious
+### 6. Non-blocking suggestions (Finish in task)
+If you notice useful work that is not required for the current plan to be correct, do not inflate its severity. Classify it:
+- **Fix now** — belongs to the item's problem and is small; the fix pass does it.
+- **Drop** — nice-to-have or unrelated; one line for the PR body's "Considered and not done".
+- **Proposed new issue** — only a genuine defect outside the item that cannot be fixed in this PR; the owner decides. Never suggest backlog items for anything else.
 
-Reviewers should not create backlog items directly unless the orchestrator or human explicitly asks them to. Suggested backlog items are non-blocking unless they are tied to an open Blocker/Critical/Major finding.
+Also check the plan's and worklog's `Decisions made` entries touched by this diff: flag any whose cited source does not support it.
 
 ### 7. TODO traceability
-Check TODO comments introduced or modified by the diff. If a TODO represents follow-up work but does not reference a backlog ID, flag it as Minor or Major depending on risk. TODOs are not a backlog system; real follow-up work needs a durable backlog item ID.
+Check TODO comments introduced or modified by the diff. A new TODO for future work is a Minor finding (do the work now, or drop the TODO and list it under "Considered and not done"); Major if it hides required behavior, risk, or incomplete implementation. Existing TODOs that represent real work must reference a backlog ID.
 
 ## Severity Levels
 
@@ -135,7 +132,7 @@ Code Review Summary:
 - Coverage matrix: X/Y rows covered
 - New issues: X Blocker, X Critical, X Major
 - Prior issues resolved: X
-- Suggested backlog items: X
+- Suggestions: X fix-now, X dropped, X proposed new issues
 - Total open significant issues: X
 - Status: COMPLETE | NEEDS_FIX
 ```
@@ -149,7 +146,7 @@ Commit only `code_review.md`. Message: `code-review: review N`
 - Do not implement fixes (this skill reviews only)
 - Do not modify source code or test files
 - Do not modify plan.md or worklog.md
-- Do not create backlog items directly unless explicitly instructed; suggest them in code_review.md instead
+- Do not create or suggest backlog items; classify suggestions as fix-now, drop, or (genuine out-of-scope defect only) proposed new issue
 - Do not treat non-blocking follow-ups as current-plan blockers
 - Do not require requirement updates for repos that do not maintain requirements, but note missing requirement docs if they are relevant to the plan
 - Do not ignore worklog verification evidence (missing evidence = Major finding)

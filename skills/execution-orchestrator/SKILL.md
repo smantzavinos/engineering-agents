@@ -24,7 +24,7 @@ You are the autonomous execution coordinator. You manage the full lifecycle by c
   choice in the worklog header):
   - **approval-gate** (default): Stop after plan review for human approval before implementing
   - **auto-continue**: Only stop for critical/irreversible decisions
-  - **detached**: Run unattended under `work-item`. Every point where this skill would wait for the human becomes a gate comment on the backlog item (per the `backlog` skill), after which the session commits and ends. The item's `Autonomy` field decides the plan gate: `gated` posts it, `auto` continues.
+  - **detached**: Run unattended under `work-item`. Every point where this skill would wait for the human becomes a gate comment on the backlog item (per the `backlog` skill), after which the session commits and ends. The approved Design gate is the plan approval: a Plan gate is posted only when the plan departs from the approved approach (Step 3).
 - Repo task-tracking/backlog policy, if documented in AGENTS.md or repo docs
 - Repo requirements policy, if documented and relevant to the plan
 
@@ -44,9 +44,9 @@ This process is a strict sequential pipeline: plan → review → worklog → T1
 4. Commit approved plan artifacts
 5. Create worklog (sub-agent with create-worklog skill)
 6. Commit initialized worklog before T1
-7. Execute tasks (one sub-agent per task with execute-task skill; each task commits atomically and records accepted backlog follow-ups and approved requirement edits)
+7. Execute tasks (one sub-agent per task with execute-task skill; each task commits atomically and records approved requirement edits)
    - Per-task review when the task calls for it (sub-agent with review-code skill, scoped to task diff); see Step 5
-8. Final code review (sub-agent with review-code skill, full branch diff; suggested backlog items separated from required fixes; requirement alignment checked when relevant)
+8. Final code review (sub-agent with review-code skill, full branch diff; non-blocking suggestions marked fix-now or drop; requirement alignment checked when relevant)
 9. Fix issues if found (sub-agent for fixes, re-review; commit each coherent fix)
 10. Complete
 ```
@@ -108,8 +108,8 @@ If mode is `auto-continue`:
 
 If mode is `detached`:
 - `Autonomy: auto` behaves like auto-continue.
-- `Autonomy: gated`: commit the reviewed plan, post the **Plan** gate on the item (task count, review passes, and any decisions the plan made that the human should see), and end the session. A later session resumes here on `approve`, or reruns Steps 1–2 with the reply on `revise:`.
-- Any pause elsewhere in this skill becomes a gate or a stop, never a chat question. Specifically: "ask the human" / "stop and ask" / "pause and report" / cap exhaustion / requirement conflict → **Escalation** gate; a missing task-tracking or requirements mechanism → Escalation gate; non-blocking follow-ups → list them as proposed items in the next gate instead of asking; a task reported blocked by an external dependency → mark the item `Blocked`; "Report final summary to the human" → the result file and the PR body.
+- `Autonomy: gated` (owner policy: one gate per standard item): the approved Design gate already covers the plan. Commit the reviewed plan, record `Plan gate skipped: plan follows the approved design` in the worklog header, and continue to Step 4 in this session. Post the **Plan** gate (task count, review passes, the plan's new Decisions made, and only owner-list questions) and end the session **only** when the plan departs from the approved approach — it adds or removes scope the approach did not have, reverses a recorded decision, or introduces an owner-list item (`software-development` "Decide, don't ask"). A later session resumes here on `approve`, or reruns Steps 1–2 with the reply on `revise:`.
+- Any pause elsewhere in this skill becomes a gate or a stop, never a chat question — but only for owner-list items. Specifically: an owner-list decision / cap exhaustion / an unresolvable requirement contradiction → **Escalation** gate; anything else this skill says to "ask" about is decided from the sources and recorded under Decisions made in the worklog and PR body; a missing task-tracking or requirements mechanism → proceed without backlog capture (nothing is filed anyway) and note it; non-blocking follow-ups → `software-development` "Finish in task" (fix now or drop under "Considered and not done"; only a genuine out-of-scope defect is proposed, never filed without approval); a task reported blocked by an external dependency → move the item to `Your turn` (Waiting for `unblock`) with a `blocked` marker comment; "Report final summary to the human" → the result file and the PR body.
 - Resume position comes from the committed artifacts (`state.json` phase, `worklog.md` NEXT STEP), which stay authoritative inside the plan. The item's `Stage` field only mirrors them for the dispatcher (`Plan` until the plan is approved, `Execute` after).
 - Epic roots are out of scope in detached mode: raise an Escalation gate recommending the item be split.
 
@@ -124,13 +124,13 @@ If there are unrelated dirty changes, pause and ask before committing.
 
 ### Step 4: Create Worklog
 
-Before creating the worklog, identify the repo task-tracking mechanism from AGENTS.md or repo docs. If no mechanism is documented, ask whether to proceed with no backlog capture for this run or initialize a repo-approved mechanism.
+Before creating the worklog, identify the repo task-tracking mechanism from AGENTS.md or repo docs. If no mechanism is documented, proceed: under "Finish in task" nothing is filed during execution, so no capture mechanism is needed. Note the gap in the worklog.
 
 If the plan cites or updates requirements, also identify the repo requirements mechanism from AGENTS.md or repo docs. If no mechanism is documented, ask before allowing canonical requirement edits.
 
 ```
 {{delegate:worklog skill=create-worklog}}
-Create a worklog for the plan at [plan directory path]/plan.md. Include the repo backlog capture policy from AGENTS.md or task-tracking docs if available. If the plan cites or updates requirements, include the repo requirements policy and approved requirement updates.
+Create a worklog for the plan at [plan directory path]/plan.md. Record the 'Finish in task' policy from the software-development skill as the follow-up policy (fix now or drop; no backlog capture; out-of-scope defects are only proposed in the PR body). If the plan cites or updates requirements, include the repo requirements policy and approved requirement updates.
 {{/delegate}}
 ```
 
@@ -160,7 +160,7 @@ High tier:
 
 ```
 {{delegate:executeTaskHigh skill=execute-task}}
-Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, follow the worklog's backlog capture policy and record any created item IDs. If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.
+Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, apply 'Finish in task' from the software-development skill (fix it within this task if it belongs to the item's problem, otherwise note it under 'Considered and not done'; never create backlog items). If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.
 {{/delegate}}
 ```
 
@@ -168,7 +168,7 @@ Low tier:
 
 ```
 {{delegate:executeTaskLow skill=execute-task}}
-Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, follow the worklog's backlog capture policy and record any created item IDs. If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.
+Execute the next task in the worklog at [plan directory path]/worklog.md. Read the worklog first to determine which task to do. If you discover non-blocking follow-up work, apply 'Finish in task' from the software-development skill (fix it within this task if it belongs to the item's problem, otherwise note it under 'Considered and not done'; never create backlog items). If the task includes approved requirement updates, apply them through the documented requirements mechanism and record changed requirement IDs.
 {{/delegate}}
 ```
 
@@ -183,7 +183,7 @@ When the review is due, review just that task's committed changes:
 
 ```
 {{delegate:codeReview skill=review-code}}
-Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggested backlog items. Check requirement alignment if the plan cites or updates requirements.
+Review the most recent commit's changes against the plan at [plan directory path]/plan.md. Focus only on the current task's diff. Separate required fixes from non-blocking suggestions; mark each suggestion fix-now (small) or drop (never backlog). Check requirement alignment if the plan cites or updates requirements.
 {{/delegate}}
 ```
 
@@ -196,7 +196,9 @@ Fix the issues found in the code review at [plan directory path]/code_review.md.
 
 Cap per-task fix attempts at 2 per task. Each fix pass must leave no intended changes uncommitted before advancing.
 
-If per-task review suggests non-blocking backlog items, ask the human whether to capture them unless repo policy pre-authorizes capture. When accepted, create items through the repo backlog mechanism and reference the created IDs in `code_review.md` or `worklog.md`.
+If an implementer notes an extra task for the item in the worklog (work that belongs to the item's problem but did not fit its task), append it to `plan.md` and the worklog as a new task with the next number, record it under Decisions made, and execute it in this plan. Do not file it, and do not ask unless it is an owner-list item.
+
+If per-task review suggests non-blocking items, apply `software-development` "Finish in task": fix them in this task's fix pass when small, otherwise drop them with one line under "Considered and not done" in `code_review.md`. Never capture them as backlog items.
 
 ### Step 6: Final Code Review
 
@@ -204,7 +206,7 @@ After all tasks complete:
 
 ```
 {{delegate:codeReview skill=review-code}}
-Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggested backlog items. Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.
+Review the full implementation against the plan at [plan directory path]/plan.md. Review the complete branch diff. Separate required current-plan fixes from non-blocking suggestions; mark each suggestion fix-now (small) or drop (never backlog). Check requirement alignment if the repo maintains requirements or the plan cites requirement IDs.
 {{/delegate}}
 ```
 
@@ -225,19 +227,21 @@ Fix the issues found in [plan directory path]/code_review.md. Address all open B
 ### Step 8: Complete
 
 When code review reports COMPLETE:
-- Capture any accepted non-blocking review follow-ups in the repo backlog and reference their stable IDs in the review/worklog
+- Fix or drop the remaining non-blocking suggestions per "Finish in task"; list dropped ones under "Considered and not done" for the PR body (nothing is captured in the backlog)
 - Confirm approved requirement changes, if any, were applied and recorded in the worklog/review
 - Update state.json: `{ "phase": "complete", "status": "complete" }`
 - Commit the completion state if it is not already included in the final review-fix commit: `status: mark [slug] complete`
-- Report final summary to the human, including created backlog item IDs
+- Report final summary to the human, including the Decisions made list and anything under "Considered and not done"
 
 ## Decision Autonomy
+
+Follows `software-development` "Decide, don't ask".
 
 | Decision Type | Action |
 |---------------|--------|
 | Obvious/mechanical | Make it, don't ask |
-| Low-risk | Make it, note in worklog |
-| High-risk/ambiguous | Stop and ask the human |
+| Low-risk, or two defensible answers | Pick the one the sources support; record under Decisions made |
+| Owner-list item (contradiction, irreversible/external, spend, security, FROZEN change, safety, new backlog item) | Stop and ask the human (detached: Escalation gate) |
 | Irreversible (schema migrations, public API changes) | Always stop |
 
 ## Convergence Caps
@@ -252,8 +256,8 @@ When code review reports COMPLETE:
 
 - **Sub-agent fails:** Retry once. If second failure, try with a different task framing. If still failing, pause and report.
 - **Build/test fails during implementation:** The execute-task sub-agent handles this. If it reports the task as blocked, note it and continue to the next independent task (if any) or pause.
-- **Follow-up discovered:** If non-blocking, capture via repo backlog policy after approval. If it affects current-plan correctness or safety, pause and ask whether to fix, re-plan, or backlog.
-- **Requirement conflict discovered:** If missing/unclear/conflicting requirements affect current-plan correctness, safety, scope, or verification, pause and ask whether to update requirements, revise the plan, or adjust scope.
+- **Follow-up discovered:** Apply "Finish in task": if it belongs to the item's problem, add a task or fix pass and record it under Decisions made; if it is a genuine defect outside the item, propose it (never file it) in the PR body under "Proposed new issues (need your OK)" after a duplicate search; otherwise drop it under "Considered and not done".
+- **Requirement conflict discovered:** If the sources resolve it, decide and record. Only a contradiction the sources cannot resolve that affects correctness, safety or verification is an owner-list item: pause and ask (detached: Escalation gate).
 - **Cap exhaustion:** Set state.json status to `paused`, report all unresolved issues to human for decision.
 
 ## What You MUST NOT Do
@@ -262,8 +266,8 @@ When code review reports COMPLETE:
 - Do not skip the plan review loop (even if the plan "looks fine")
 - Do not skip the code review (even if all tests pass)
 - Do not create a detailed `plan.md` directly at an epic root
-- Do not auto-continue past the approval gate unless explicitly told to (in `detached` mode, `Autonomy: auto` is that instruction)
-- Do not let accepted follow-up work exist only in chat; record it in the repo backlog and source artifact
+- Do not auto-continue past the approval gate unless explicitly told to (in `detached` mode, the approved Design gate is that instruction unless the plan departs from the approved approach)
+- Do not create backlog items for follow-up work; follow "Finish in task" (fix now, or drop and list under "Considered and not done")
 - Do not treat optional backlog items as current-plan blockers unless they expose a significant correctness issue
 - Do not leave intended stage or task changes uncommitted before stopping, except when explicitly waiting for human review
 - Do not run delegations asynchronously — every step depends on the previous step's output; use synchronous calls only

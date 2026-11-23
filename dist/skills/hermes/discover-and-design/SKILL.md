@@ -38,17 +38,19 @@ process with these changes:
 
 - The premise changes: there was no prior discussion, so the item is the
   whole input. "When to use / when to stop" does not apply; do not redirect.
-- Wherever this skill says *ask* (steps 1, 3 and 4) or *wait* (step 6), choose
-  the best-supported default and record it in the brief as a numbered
-  **assumption** or a numbered **open question with your recommended answer**.
-  Do not stop to ask.
+- Wherever this skill says *ask* (steps 1, 3 and 4) or *wait* (step 6),
+  follow `software-development` "Decide, don't ask": decide from the
+  sources and record the choice under a numbered **Decisions made** list in
+  the brief, with its source in brackets. Only owner-list items become gate
+  questions (at most three). Do not stop to ask.
 - The plan directory is the one `work-item` names; never ask for a path.
 - Step 5's approach review always runs (no human is present to waive it).
 - If verification or the review exposes a real design fork, do not redirect:
-  write the options into the approach, recommend one, and make the choice the
-  first gate question.
-- If the work is epic-sized, say so as the first gate question and recommend
-  splitting the item; do not decompose it unattended.
+  write the options into the approach and pick the one the sources support,
+  recorded under Decisions made. Make it a gate question only when the fork
+  touches an owner-list item.
+- If the work is epic-sized, propose splitting it into 2–3 items (one-line
+  goal each) as the first gate question; do not decompose it unattended.
 - A `revise:` reply from an earlier Design gate is authoritative: apply every
   answer, and do not re-ask what it settled.
 - If the item is too vague to draft responsibly, still write the brief with
@@ -85,9 +87,11 @@ pi -p --session-id <plan-slug>-research-<topic> --name "researcher" --model <mod
    operations, validation and safety, compatibility, requirement gaps — and
    raise only the ones that would change the design or are required for a
    complete, safe v1. Ask at most one focused batch of questions about them.
-   Record the scan outcome in the brief (goals, non-goals, or open questions)
-   so planning can see what was considered. Everything else goes to open
-   questions or, with the human's confirmation, the backlog — not into scope.
+   Record the scan outcome in the brief (goals, non-goals, or Decisions
+   made) so planning can see what was considered. Gaps that belong to the
+   item's problem go into scope (`software-development` "Finish in task");
+   the rest are dropped with one line under "Considered and not done" —
+   never sent to the backlog.
 4. **Write both artifacts** into the plan directory (ask for the path if
    missing). Use the templates in
    [references/brief-template.md](references/brief-template.md) and

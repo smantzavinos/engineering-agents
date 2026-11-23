@@ -21,6 +21,16 @@ role procedure; never restate the contract from memory.
   agent and a fresh session than the author; if you are the author's session,
   stop and say so.
 
+## Checks and human handoff
+
+The merge handoff (`needs-human:merge`) needs an independent READY at the
+exact current head and every applicable check completed and passing there;
+pending, absent or incomplete check evidence is not green. Checks only a
+person can satisfy (the sweep's `PR_HUMAN_CHECKS`, for example a merge-label
+check) are expected to be absent at handoff and are never a FIX. CI
+maintenance is exempt from the two-FIX cap. Never weaken thresholds or
+exclusions to turn a check green. The human merges.
+
 ## Common inputs (both roles)
 
 1. Read the canonical contract (above).
@@ -44,7 +54,7 @@ role procedure; never restate the contract from memory.
 ## Author procedure
 
 1. **Build the body** per the contract's body-contract section, exactly.
-   Missing sections say `None.`; diagrams per the contract's trigger rules.
+   Leave out sections with no content (never write `None.`); diagrams per the contract's trigger rules.
 2. **Generate evidence** per the manifest's `evidence-captures` rows —
    before/after captures for UI diffs; durable URLs only. Tier 2 video only
    on explicit request.
@@ -66,15 +76,18 @@ role procedure; never restate the contract from memory.
    exact command + outcome. Never write a line for a command you did not run.
 4. **Self-review**: apply R1–R6 and every manifest `review-rules` row to your
    own diff with their detection methods; fill the review-rules table with
-   real evidence links. Fix BLOCKERs; declare ESCALATEs in Follow-ups with
-   the question for the human.
+   real evidence links. Fix BLOCKERs, MAJORs and the small MINORs; list the
+   rest under "Considered and not done"; declare ESCALATEs (owner-list items
+   only) with the question for the human. Never file follow-up issues
+   (`software-development` "Finish in task").
 5. **Open the PR**, set tracking state per `pr-tracking`. The body on GitHub
    must match the prepared body and describe the final SHA you push.
 6. **Link and hand off.** When the work came from a backlog item, the body
    carries its closing reference (`Closes #N` on GitHub) and the item moves to
-   `In review` (per the `backlog` skill). Then start babysitting: add
-   `pr:babysat` and post the claim comment
-   `babysit: session=babysit-pr-<item or PR>-<UTC ISO> heartbeat=<UTC ISO>`.
+   `In review` (per the `backlog` skill). Label the PR `review-bot:queued`.
+   Then start babysitting: add `fix-bot:owns-branch` and post the claim
+   comment
+   `🤖 fix-bot: owns this branch; session=babysit-pr-<item or PR>-<UTC ISO> last-active=<UTC ISO>`.
    The `babysit-pr` prefix makes it sweep-owned, so the PR sweep runs fix
    rounds on FIX verdicts and bot reviews without a watcher (see the delivery
    pipeline's dispatch contract). The PR is not handed off until it is labeled

@@ -40,15 +40,18 @@ verdict and `reviewed@<sha>` stamp come only from an independent Reviewer run
    superseded findings.
 3. Confirm scope and publication boundaries. Follow the repo's canonical
    process docs (`docs/process.md`, `docs/references/pr-review.md`) and the
-   repo's `pr-review-hooks.md` manifest. Ask the human before consequential
-   security, architecture, compatibility, or scope choices; no merge or
-   production deployment without approval. No history rewriting on shared PR
-   branches.
-4. **Claim the PR.** Add the `pr:babysat` label and post one comment
-   `babysit: session=<id> heartbeat=<iso-time>`. If another session already
-   holds an *active* claim, stop and report it; do not start a second
-   babysitter. On every round you process, edit that same comment's
-   heartbeat instead of posting a new one. Record the claim comment ID with
+   repo's `pr-review-hooks.md` manifest. Follow `software-development`
+   "Decide, don't ask": decide what the sources answer and record it; ask the
+   human only about owner-list items (security, irreversible or external
+   actions, spend, a FROZEN change, safety). No merge or production deployment
+   without approval. No history rewriting on shared PR branches, except the
+   lease-protected push after an owner's `<handle> fix rebase`.
+4. **Claim the PR.** Add the `fix-bot:owns-branch` label and post one comment
+   `🤖 fix-bot: owns this branch; session=<id> last-active=<iso-time>` (the
+   older form `babysit: session=<id> heartbeat=<iso-time>` is still read). If
+   another session already holds an *active* claim, stop and report it; do
+   not start a second babysitter. On every round you process, edit that same
+   comment's `last-active` instead of posting a new one. Record the claim comment ID with
    the watcher handle.
 5. **Read the loop count.** Count prior `FIX` verdicts on the PR. The
    two-fix-loop bound from the PR review process applies to the PR as a
@@ -122,15 +125,23 @@ notification can re-enter.
 3. Fetch remote head before publication; commit intended files and push
    normally to the PR branch (`git push origin HEAD:refs/heads/<branch>`).
    Require fast-forward ancestry; if diverged, start from published head and
-   cherry-pick only corrective commits, never force-push without explicit
-   authority. Read back the PR head SHA after pushing.
+   cherry-pick only corrective commits. When the PR has merge conflicts or is
+   behind a base that requires an up-to-date branch, merge the base in
+   (`git merge origin/<base>`, one merge commit) by default; rebase only
+   after an owner's `<handle> fix rebase`, and then publish only with
+   `git push --force-with-lease=refs/heads/<branch>:<old head> origin HEAD:refs/heads/<branch>`,
+   the one force push ever allowed. A conflict that needs a product or design
+   choice is escalated, not guessed. Read back the PR head SHA after pushing.
 4. Resolve every review thread you addressed (fixed, or answered with
    evidence) with the GraphQL `resolveReviewThread` mutation; leave a thread
    open only when it needs a human decision and say so. The independent
    Reviewer will not issue READY while any thread is unresolved.
    Reply to inline comments with actual commit/test evidence. Before any
    non-idempotent reply/review request, query existing replies/events to
-   prevent duplicates. Read back exact reply IDs/bodies and confirm the
+   prevent duplicates. Every comment you post starts with `🤖 `, follows the
+   [comment style](docs/references/comment-style.md), and is posted with
+   `scripts/post-comment.py` (shorten and repost when it refuses). Read back
+   exact reply IDs/bodies and confirm the
    review request was registered; POST success alone is insufficient.
    Request another reviewer pass once per new head after fixes, until the PR
    reaches the bot-review cap; at the cap, stop requesting and list the
@@ -141,15 +152,17 @@ notification can re-enter.
    If a new `FIX` verdict brings the PR to the two-fix-loop bound, stop and
    escalate with the findings history instead of re-arming.
    **Every escalation is a PR comment, not just a result file:** post one
-   comment with the question, the options and tradeoffs, and a recommended
-   answer per question (numbered, so the human can reply by number), ending in
-   `<!-- babysit-reply escalate head=<sha> -->`. Then set the state label to
-   `pr:escalated` (removing `pr:ready-merge` or any other state label) and
-   release the claim. A human instruction posted as an `@<agent>` mention is
-   work for this loop, not the Reviewer: do it, answer it on the PR, or escalate
-   it when it needs a decision. Mark your own replies with
-   `<!-- babysit-reply -->` and omit the agent handle, so a shared human/agent
-   account is not read as a new mention. Report factual CI/check state
+   comment whose first line is `🤖 **Needs your decision: <what>**`, with a
+   `## Questions` section (numbered, each option its own bullet, the
+   recommended one marked ⭐ with its reason, so the human can reply by
+   number), ending in `<!-- babysit-reply escalate head=<sha> -->`. Then set
+   the state label to `needs-human:decision` (removing `needs-human:merge` or
+   any other state label) and release the claim. An owner command whose first
+   line is `<handle> fix` (or `fix merge` / `fix rebase`) is work for this
+   loop, not the Reviewer: do it, answer it on the PR, or escalate it when it
+   needs a decision. Mark your own replies with `<!-- babysit-reply -->` and
+   never start one with the handle, so a shared human/agent account is not
+   read as a new command. Report factual CI/check state
    separately from local tests; no checks is **not** green CI. Note runtime
    limitations honestly.
 
@@ -199,7 +212,8 @@ submodule PR's branch.
 Stop on PR closure, explicit human stop, consequential decision needing
 approval, irrecoverable auth/runtime failure, or session end. Kill the
 recorded watcher when stopping/replacing and verify state. Release the claim:
-remove `pr:babysat` and edit the claim comment to `babysit: released`. If the
+remove `fix-bot:owns-branch` and edit the claim comment to
+`🤖 fix-bot: stopped`. If the
 session dies without releasing, the sweep's stale-claim rule recovers the PR. Do not blindly
 re-request reviews to chase a permanently retained historical finding;
 investigate current behavior, explain evidence, ask for a decision if

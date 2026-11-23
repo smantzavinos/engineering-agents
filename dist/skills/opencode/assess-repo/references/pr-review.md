@@ -76,7 +76,8 @@ Each section is a fixed-shape table so skills can parse it deterministically.
 ```
 
 Severity vocabulary for `review-rules`: `BLOCKER` (cannot merge), `MAJOR`
-(fix before merge), `MINOR` (fix or backlog), `ESCALATE` (human decision
+(fix before merge), `MINOR` (fix now or list under `Considered and not done`;
+never backlog — see "Finish in task"), `ESCALATE` (human decision
 required, always).
 
 New repos: `assess-repo` drafts the manifest as part of repo setup.
@@ -85,9 +86,10 @@ New repos: `assess-repo` drafts the manifest as part of repo setup.
 
 ## PR body contract
 
-Every PR body contains these sections, in this order. Sections with no content
-say `None.` rather than being dropped — absence must be distinguishable from
-omission.
+PR bodies use these sections, in this order. Leave out a section that has no
+content; never write `None.`. `Intent and scope` and `What changed / What did
+not change` are always present. Bot-written bodies start with `🤖 ` and follow
+the [comment style](comment-style.md) for wording.
 
 ```markdown
 ## Intent and scope
@@ -116,8 +118,19 @@ Automation first; manual steps listed separately with exact steps.
 The filled table: rule → evidence/link → pass/fail/N-A. Pre-filled by the
 author; confirmed by the reviewer.
 
+## Decisions made
+Numbered list, each with its source in brackets (`software-development`
+"Decide, don't ask"). The owner vetoes with `revise: D<n>` in a comment.
+
+## Considered and not done
+One line each: review Minors and nice-to-haves deliberately left out.
+
+## Proposed new issues (need your OK)
+Genuine defects outside this PR that cannot be fixed here, each with the
+duplicate search done. Never filed without the owner's approval.
+
 ## Follow-ups
-Known limitations and backlog items (with IDs).
+Only issues that already exist, with numbers.
 ```
 
 Rules for the body:
@@ -183,13 +196,15 @@ not ceilings.
    the stamp plus verification that prior findings are resolved. Unchanged,
    already-approved code is not re-reviewed.
 5. **Review threads gate READY.** The Reviewer posts READY only when every
-   review thread on the PR is resolved. An unresolved thread is `FIX` (the
-   author resolves it by fixing or by answering with evidence), or an ESCALATE
-   finding when it needs a human decision. The Reviewer never resolves threads
+   review thread on the PR is resolved. An unresolved thread whose last
+   comment is not the PR author's is `FIX` (the author resolves it by fixing
+   or by answering with evidence), or an ESCALATE finding when it needs a
+   human decision. The Reviewer never resolves threads
    itself. The author side (babysit) resolves the threads it addresses.
 6. **Fix loops are bounded.** The author fixes and pushes; after **two** fix
    loops without a `READY` verdict, the PR escalates to the human with the
-   findings history summarized. Agents do not loop indefinitely, and the
+   findings history summarized. An explicit owner `fix` command is a ruling
+   for that round and is not counted against the bound. Agents do not loop indefinitely, and the
    human never reviews an intermediate state.
 7. **Notifications.** On `READY`, the author notifies the human with a short
    digest: what the PR does, evidence links, the verdict, and the merge-gate
@@ -205,8 +220,12 @@ not ceilings.
 ## Merge
 
 The merge gate is the repo's `merge-gate` manifest section (required checks,
-required verdict, who merges). Default across LLS repos: only the human
-merges; agents stage work for merge. Required checks are a hard gate in both
+required verdict, who merges). Only the human merges; agents stage work for
+merge. The agent's merge handoff (`needs-human:merge`) requires an independent
+READY at the exact current head and completed, passing checks; pending,
+absent or incomplete check evidence is not green. Checks only a person can
+satisfy (for example a merge-label check; `PR_HUMAN_CHECKS`) are expected to
+be absent at handoff and are never an agent failure. Required checks are a hard gate in both
 directions: the Reviewer posts BLOCKED, never READY, when a required check is
 red at the reviewed head; the author (usually the babysitting session) keeps
 them green and fixes reds — CI maintenance rounds do not consume the

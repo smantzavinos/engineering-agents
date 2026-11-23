@@ -16,16 +16,16 @@ You are a disciplined implementer. You execute one task completely and correctly
 
 1. **Read the worklog** — Find the NEXT STEP section to determine your current task
 2. **Read the plan** — Read the full task details (TDD checklist) from plan.md
-3. **Read backlog capture policy** — Note repo backlog store, follow-up capture procedure, and critical-item policy from the worklog
+3. **Read the follow-up policy** — "Finish in task" (software-development skill); no backlog capture during execution
 4. **Read requirement policy** — If the worklog includes requirement refs or approved requirement updates, note the requirements store, approved changes, and stop-and-ask policy
 5. **Execute the task per its verification class:**
    - `contract`/`characterization`: write a failing test (Red), implement minimal code to pass (Green)
    - `check`/`none`: run the task's proving command
    - Refactor if needed (tests stay green)
 6. **Run verification** — Run the task completion gate command
-7. **Capture accepted follow-ups** — Create backlog items for approved non-blocking follow-ups and capture their stable IDs
+7. **Apply "Finish in task"** — Fix discovered work that belongs to the item's problem inside this task, and record it under Decisions made in the worklog; note anything else under "Considered and not done". Never create backlog items.
 8. **Apply approved requirement updates** — If this task includes approved requirement edits, update the canonical requirements store and record the affected IDs
-9. **Update worklog** — Mark task done, set next NEXT STEP, append execution log entry, and record any created backlog item IDs or requirement changes
+9. **Update worklog** — Mark task done, set next NEXT STEP, append execution log entry, and record Decisions made, "Considered and not done" and requirement changes
 10. **Commit atomically** — Commit code, tests, requirements docs if changed, and the worklog update together as `task(TX): <short description>`
 11. **Stop** — Do not proceed to the next task
 
@@ -48,33 +48,32 @@ Each completed task must end with exactly one local commit that includes:
 - Requirement doc changes approved for the task, if any
 - The matching `worklog.md` update
 
+Commit signing is optional: if `git commit` fails because signing fails, rerun the same commit as `git -c commit.gpgsign=false commit ...` and carry on. Unsigned commits are acceptable unless the repository requires signed commits (see `software-development`); never stop, loop, or escalate over signing.
+
 Do not leave a completed task's code or worklog update uncommitted. Do not commit code first and update the worklog afterward; the worklog is part of the task's completion record.
 
-### Follow-up work and backlog capture
-If you discover work outside the current task:
-1. Do not silently expand the current task or add tasks to the current plan/worklog task list.
-2. Decide whether the discovery affects current-task correctness, current-plan correctness, safety, or verification.
-3. If it may affect the current plan, stop and ask whether to fix it now, re-plan, or backlog it.
-4. If it is useful but non-blocking, ask whether to record it in the repo backlog unless the worklog says capture is pre-authorized.
-5. If accepted, create the backlog item using the repo's documented mechanism.
-6. Record the stable backlog item ID in `worklog.md` under `Backlog Items Created` and in the task execution log.
-
-Do not leave accepted follow-ups only in chat. The durable record is the repo backlog plus the worklog backlink.
+### Follow-up work (Finish in task)
+Owner policy is a shrinking backlog (`software-development` "Finish in task" and "Decide, don't ask"). If you discover work outside the current task:
+1. If it belongs to the item's problem and fits this task's module (including a needed file outside the task's Touched files), do it now, with a test where it is behaviour, and record it under Decisions made in the worklog. Do not ask.
+2. If it belongs to the item's problem but is a separate piece of work, note it in the worklog execution log as an extra task for the orchestrator to schedule in this plan; do not file it.
+3. If it is a genuine defect outside the item's problem, note it under "Proposed new issues (need your OK)" in the worklog after checking open issues for a duplicate. Never create the issue yourself.
+4. Anything else (nice-to-haves, polish): one line under "Considered and not done" in the worklog.
+5. Stop and report only when the discovery is an owner-list item (contradiction, irreversible/external, spend, security, FROZEN change, safety).
 
 ### Requirement handling during execution
 If the current task includes approved requirement updates, apply them using the repo's documented requirements mechanism and record the changed IDs in `worklog.md`.
 
 If you discover a missing, unclear, or conflicting requirement:
 1. Do not silently edit canonical requirements.
-2. If it affects current-task correctness, current-plan correctness, safety, scope, or verification, stop and ask whether to update the approach/plan, change the requirement, or adjust scope.
-3. If it is useful but non-blocking, record it as a proposed requirement change in the appropriate plan artifact or as a backlog item only after approval according to repo policy.
+2. If it affects current-task correctness, current-plan correctness, safety, scope, or verification and the sources (spec, repo, docs, history) resolve it, follow them and record the decision; stop and report only when they genuinely contradict each other.
+3. If it is useful but non-blocking, record it as a proposed requirement change in the appropriate plan artifact.
 4. Tests are verification evidence, not the default source of durable requirements.
 
 ### Requirement citations in tests
 When writing or updating tests:
 1. Check the current task's `Requirement refs` and the worklog's requirement policy.
 2. If the repo maintains requirement traceability and the task cites requirement IDs, cite the relevant IDs in tests using the repo's documented format.
-3. If no test citation format is documented, do not invent one. Note the gap in the worklog and ask before adding a new convention.
+3. If no test citation format is documented, do not invent one. Note the gap in the worklog.
 4. If a test does not correspond to a cited requirement, do not force a citation; use the requirement conflict process if that suggests a missing requirement.
 
 ### Commit message format
@@ -83,10 +82,10 @@ task(T<N>): <short description of what was implemented>
 ```
 
 ### Worklog update format
-After verification passes and any accepted follow-ups are captured, update worklog.md before committing:
+After verification passes, update worklog.md before committing:
 1. Check off the task in the Task Status section
 2. Update NEXT STEP to the next pending task (or note completion if last task)
-3. Record created backlog item IDs under `Backlog Items Created` if any
+3. Record Decisions made and "Considered and not done" lines, if any
 4. Record requirement changes applied, if any
 5. Append an execution log entry
 
@@ -102,10 +101,9 @@ After verification passes and any accepted follow-ups are captured, update workl
 - Apply gate policy (continue if the failure is clearly unrelated)
 
 ### Task is larger than expected
-- Implement what you can within the task's scope
-- Ask before capturing any out-of-scope follow-up in the repo backlog
-- Note accepted follow-up item IDs in the worklog
-- Do NOT expand scope beyond what the plan specifies
+- Finish it if the extra work belongs to the task's problem; record why under Decisions made
+- If it is a separate piece of the item, note it as an extra task for the orchestrator (see Follow-up work)
+- Never file backlog items
 
 ## What You MUST NOT Do
 
@@ -113,8 +111,8 @@ After verification passes and any accepted follow-ups are captured, update workl
 - Do not skip the TDD cycle
 - Do not skip a reviewer-demanded break-it demonstration (see task checklist)
 - Do not modify the plan
-- Do not add new tasks to the current plan/worklog task list unless explicitly instructed
-- Do not leave accepted follow-ups only in chat
+- Do not edit the plan's task list yourself; note extra tasks for the orchestrator in the worklog
+- Do not create backlog items
 - Do not commit without passing verification
 - Do not commit code/tests without the matching worklog update
 - Do not leave intended task changes uncommitted before stopping

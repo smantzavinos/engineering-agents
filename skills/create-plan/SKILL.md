@@ -21,7 +21,7 @@ You will receive:
 
 ## Clarification Gate
 
-If the brief or approach has ambiguities that would affect task decomposition, verification strategy, or scope — **you MUST ask before proceeding**. Do not guess. Examples: unclear boundary between in-scope and out-of-scope behavior, missing verification commands, conflicting requirements. Keep questions focused and actionable.
+Owner policy (`software-development` "Decide, don't ask"): if the brief or approach has ambiguities that affect task decomposition, verification strategy, or scope, settle them from the sources (the item, the approved approach and its decisions, the repository and its history, cited specs, linked docs) and record each under `Decisions made` with its source. Scope follows "Finish in task": what the item's problem needs is in. Ask only about owner-list items (a contradiction the sources cannot resolve, irreversible or external action, spend, security, a FROZEN change, safety); in unattended mode that is an Escalation gate. Do not guess where no source exists: pick the smaller, reversible option and say so.
 
 ## Process
 
@@ -78,13 +78,13 @@ Do NOT invent verification commands. Get them from:
 1. The plan's brief/constraints (if specified)
 2. Repo test architecture docs (referenced in AGENTS.md)
 3. Per-directory AGENTS.md files
-4. Ask the user if none of the above apply
+4. Existing CI workflow files and build scripts; if none of these exist, record the gap under `Decisions made` and use the narrowest command that proves the task
 
 ### Tasks must be small enough for one iteration
 Each task should be completable in one sub-agent call. If a task requires more than ~30 minutes of focused work, break it into smaller tasks.
 
-### Keep unrelated follow-ups out of the task graph
-Do not absorb future work, nice-to-have improvements, or out-of-scope follow-ups into the current plan just because they are nearby. If the brief/approach references related backlog items, link them in a `Related Backlog Items` section, but keep the executable task graph scoped to the approved work.
+### Finish in task, but keep unrelated work out
+Owner policy (`software-development` "Finish in task"): the plan covers everything the item's problem needs, including edge cases, error paths, docs and tests the approach implies, so nothing is left for a follow-up. Work that is unrelated to the item's problem (nice-to-haves, nearby cleanups) stays out and is listed in one line each under `Considered and not done`; it is never turned into backlog items. If the brief/approach references related open backlog items, link them in a `Related Backlog Items` section. Record every choice the plan makes beyond the approach in a numbered `Decisions made` list with its source; leave no open questions except owner-list items.
 
 ### Requirements must be explicit when relevant
 If the repo maintains requirements:
@@ -109,7 +109,7 @@ Before T1 implementation begins, the plan must require running all package-wide 
 The plan must state the unrelated failure policy:
 - `block-on-global-gate` — all pre-existing failures must be resolved first
 - `allow-scoped-completion` — plan succeeds if only its own scope passes
-- `split-follow-up` — pre-existing failures get a separate follow-up issue
+- `split-follow-up` — pre-existing failures are listed under "Proposed new issues (need your OK)" in the PR body; nothing is filed without the owner's approval
 
 ## Coverage Matrix
 

@@ -27,9 +27,9 @@ Be collaborative and structured. You drive the process but the human makes the k
 - **Document decisions** — Every significant decision records: options considered, choice made, rationale
 - **Challenge weak designs** — If an approach doesn't address a constraint from the brief, say so
 - **Identify what's missing** — If research reveals gaps, call them out before finalizing the approach
-- **Separate future work from current scope** — Capture out-of-scope ideas as backlog follow-ups after human confirmation instead of folding them into the approach.
+- **Finish in task, keep unrelated work out** — Everything the item's problem needs is in scope (`software-development` "Finish in task"). Unrelated ideas are listed in one line each under "Considered and not done"; they are not captured as backlog items unless the human explicitly asks.
 - **Preserve requirement intent** — If the repo maintains requirements, check relevant actors/use cases/workflows/requirements before finalizing the approach. Cite IDs where relevant and draft proposed requirement changes in `approach.md` instead of silently changing canonical requirements.
-- **Validate likely-overlooked needs** — Review the brief's anticipated follow-on/day-2 decisions. Ensure included items have design coverage. If research shows a deferred item is required for a safe/complete v1, stop and ask whether to expand scope.
+- **Validate likely-overlooked needs** — Review the brief's anticipated follow-on/day-2 decisions. Ensure included items have design coverage. If research shows a deferred item is required for a safe/complete v1, include it and record why under Decisions made.
 
 ### What you MUST NOT do
 
@@ -49,7 +49,7 @@ Based on the brief, suggest 3-6 research topics. Examples:
 - "What WebSocket capabilities exist?" → `findings/code_structure.md`
 - "What libraries could we use for X?" → `findings/library_research.md`
 
-Ask the human to confirm before starting research.
+List the research topics and start; the human can redirect at any time.
 
 ### 3. Execute Research
 For each approved topic, call a research sub-agent:
@@ -148,16 +148,13 @@ git commit -m "design: approve approach for [slug]"
 
 For epics, also include `epic.md` and `epic_review.md` in the same commit. Do not commit draft approaches before human acceptance.
 
-## Backlog Capture During Design
+## Future Work During Design
 
-If research or approach work reveals useful future work that is not part of the current brief:
-1. Identify it as out of scope or a future follow-up.
-2. Ask whether the human wants it captured in the repo backlog.
-3. If yes, use the repo's documented task-tracking mechanism.
-4. Use `origin: plan-follow-up` for items derived from this plan, or `origin: agent-observation` for broader observations.
-5. Reference created backlog IDs in the approach, final summary, or another durable plan artifact.
-
-Do not include future work in the executable plan scope unless the human explicitly changes the brief/approach boundary.
+Owner policy is a shrinking backlog (`software-development` "Finish in task"):
+1. Work the item's problem needs (including day-2 and failure handling for a complete v1) goes into the approach, recorded under Decisions made.
+2. Unrelated or nice-to-have ideas go under "Considered and not done", one line each.
+3. Epic-sized work is split into 2–3 child items with one-line goals, proposed for the human's approval.
+4. Only items the human explicitly approves are captured, with `origin: plan-follow-up`, and their IDs referenced in the approach.
 
 ## Requirement Change Proposals During Design
 
@@ -186,13 +183,12 @@ You can delegate multiple independent research tasks before synthesizing finding
 
 ## Human Interaction Points
 
-Stop and ask the human at these moments:
-1. **Research topic approval** — "Here are the topics I want to research. Confirm?"
-2. **Design option decisions** — "Here are the options with tradeoffs. Which direction?"
-3. **Approach review** — "Here's the completed approach. Does this match your intent?"
-4. **Epic decomposition review** (epics only) — "Here is the proposed workstream/child-plan breakdown. Does this decomposition match your intent?"
-5. **Testing-readiness trigger** (when applicable) — "Research suggests implementation would be risky without preparatory test/harness work. Should I represent that explicitly as an early child plan/workstream?"
-6. **Overlooked-needs/scope trigger** (when applicable) — "Research suggests a day-2 operation or lifecycle capability is required for a complete v1 but was not in the accepted brief. Should I expand the approach scope or defer it explicitly?"
+Follow `software-development` "Decide, don't ask". Stop and ask the human only at these moments:
+1. **Design option decisions** — only when the sources (repo, history, specs, docs) do not favour one option, or the choice is an owner-list item; otherwise pick, and record the options and the reason under Decisions made.
+2. **Approach review** — "Here's the completed approach, with the decisions I made. Does this match your intent?"
+3. **Epic decomposition review** (epics only) — "Here is the proposed 2–3 item breakdown. Does this match your intent?"
+
+Preparatory test/harness work that research shows is needed, and day-2 or lifecycle capabilities required for a complete v1, are included and recorded under Decisions made, not asked about.
 
 ## When You're Done
 

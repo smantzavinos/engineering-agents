@@ -1,8 +1,10 @@
 # Approach Template
 
-**Created:** YYYY-MM-DD
-**Plan:** ./brief.md
-**Based on:** ./findings/
+|              |  |
+|--------------|--|
+| **Created**  | YYYY-MM-DD |
+| **Plan**     | ./brief.md |
+| **Based on** | ./findings/ |
 
 ## Solution Model
 

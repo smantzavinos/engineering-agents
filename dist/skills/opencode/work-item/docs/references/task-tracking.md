@@ -46,7 +46,7 @@ Every repo using this process should document the following hooks in `AGENTS.md`
 | List inbox | How does an agent find untriaged captured work? |
 | List up next | How does an agent find human-approved next work? |
 | Mark ready/done/canceled/deferred/blocked | How are lifecycle transitions recorded? |
-| Agent capture policy | May agents create non-critical follow-ups directly, or must they ask first? |
+| Agent capture policy | Default: agents create no items without explicit owner approval ("Finish in task") |
 | Critical/blocking policy | What should an agent do when the item may affect current-plan correctness or safety? |
 | Tool/auth/fallback | What tool access is required, which operations mutate state, and what should agents do if the tool is unavailable? |
 
@@ -100,14 +100,13 @@ Repos do not have to store these as literal fields, but they should map their tr
 
 | Status | Meaning |
 |--------|---------|
+| `Backlog` | Optional parking for issues nobody has asked to work on; no bot acts on it, a person moves an item to `Inbox` |
 | `Inbox` | Captured item; not yet triaged or shaped |
-| `Clarification needed` | Missing information or unresolved questions block readiness |
 | `Ready` | Clear enough to start discovery/design/planning or direct implementation |
 | `Up next` | Human-approved queue; eligible for agent execution |
 | `In progress` | Actively being worked |
 | `In review` | Implementation is ready for human or final review |
-| `Awaiting approval` | An agent reached a human gate (design, plan, findings) and is waiting on a reply; see [Delivery Pipeline](delivery-pipeline.md#3-gate-protocol) |
-| `Blocked` | Cannot proceed without external input, dependency, or decision |
+| `Your turn` | A person has to act: answer questions, approve a gate (design, plan, findings; see [Delivery Pipeline](delivery-pipeline.md#3-gate-protocol)), unblock a bot, decide on a PR or merge it. The display-only `Waiting for` field says which (`💬 answer`, `👍 approve`, `🛠️ unblock`, `⚖️ decide on PR`, `🔀 merge PR`; `⏳ Bot's turn` once a valid reply waits for the dispatcher); bots never read it |
 | `Done` | Completed |
 | `Canceled` | Explicitly closed without implementation |
 | `Icebox` | Intentionally captured but not active for agent processing |
@@ -193,57 +192,51 @@ A ready item should have:
 
 ## Agent Capture Behavior
 
-### Do not expand scope silently
+Owner policy (`software-development` "Finish in task" and "Decide, don't
+ask"): the backlog should shrink. Agents create **no** items without the
+owner's explicit approval.
 
-If an agent discovers work outside the current task or plan, it must not silently add it to the current implementation scope.
+### Classify every discovery
 
-Instead, it should classify the discovery:
-
-1. **Required for current correctness** — stop and ask, or treat as a current-plan blocker/finding.
-2. **Useful but non-blocking follow-up** — ask whether to capture it in the repo backlog, unless repo policy pre-authorizes capture.
-3. **Unrelated pre-existing issue** — follow the plan's gate policy and repo task-tracking policy.
+1. **Part of the current item's problem** — do it in this item (a fix pass
+   or an extra plan task) and record it under Decisions made. Do not ask;
+   do not file.
+2. **A genuine defect outside the item** that cannot be fixed here without
+   changing an unrelated module — search open issues for a duplicate, then
+   *propose* it on the gate or in the PR body under
+   `Proposed new issues (need your OK)`. File it only after the owner
+   approves.
+3. **Nice-to-have, polish, review Minor not fixed now** — one line under
+   `Considered and not done` in the PR body. Never filed.
+4. **Owner-list item** (contradiction, irreversible/external, spend,
+   security, FROZEN change, safety) — stop and ask (unattended: Escalation
+   gate).
 
 ### TODO comments are not backlog tracking
 
-TODO comments may exist as local code markers, but they are not a backlog system. If a TODO represents real follow-up work, it must reference a backlog ID:
+TODO comments may exist as local code markers, but they are not a backlog
+system. Do not add new TODOs for future work; finish it or list it under
+"Considered and not done". An existing TODO that represents real work must
+reference a backlog ID:
 
 ```ts
 // TODO(TASK-0042): Add malformed config regression tests.
 ```
 
-Do not leave TODOs, chat notes, or worklog notes as the only durable record of future work.
-
-### Suggested prompt
+### Proposal format (PR body or gate)
 
 ```text
-I found a possible follow-up that is outside the current task:
-
-Title: Add malformed config regression tests
-Suggested kind: hardening
-Suggested origin: plan-follow-up
-Suggested priority: P2
-Suggested status: Inbox
-
-Should I add this to the repo backlog?
+Proposed new issues (need your OK):
+1. <title> — <one line: the defect, where, why it cannot be fixed here>.
+   Duplicate check: <searched terms>; none found / extends #<n>.
 ```
 
-### If the user says yes
+### If the owner approves
 
-The agent should:
-
-1. Create the backlog item using the repo's documented mechanism.
-2. Capture the stable ID assigned by that mechanism.
-3. Add a reference to the source artifact, usually `worklog.md` or `code_review.md`.
-4. Include the created ID in its final summary.
-
-### Critical discoveries
-
-If the item may invalidate the current plan, affect correctness, introduce security/safety risk, or block verification, the agent should stop and ask before continuing:
-
-```text
-I found a potential blocker that may affect the current plan: <summary>.
-Should I stop and re-plan, fix it in this plan, or capture it as a backlog item?
-```
+1. Create the item using the repo's documented mechanism, with
+   `origin: plan-follow-up`.
+2. Capture the stable ID and add it to the source artifact.
+3. Include the created ID in the final summary.
 
 ---
 
@@ -260,10 +253,10 @@ Backlog system: <Markdown backlog | GitHub Issues + Project | Beads | Jira | oth
 Details: `<path/to/task-tracking-doc.md>`
 
 Rules:
-- New agent-discovered non-critical follow-ups default to `<Inbox equivalent>`.
+- Agents file no new items without explicit owner approval; approved ones start in `<Inbox equivalent>`.
 - Stable IDs are `<TASK-0001 | #123 | BD-123 | other>`.
 - `Up next` is human-controlled unless explicitly delegated.
-- Critical/current-plan-affecting discoveries require stopping and asking.
+- Only owner-list discoveries (contradiction, irreversible/external, spend, security, FROZEN change, safety) require stopping and asking.
 ```
 
 ### Detailed repo doc skeleton
@@ -307,8 +300,8 @@ This repo uses <system> as the canonical backlog.
 
 ## Agent Capture Policy
 
-- Ask before creating backlog items unless <pre-authorization rule>.
-- Default new follow-ups to <status> with <metadata>.
+- Create no backlog items without explicit owner approval ("Finish in task").
+- Owner-approved items start in <status> with <metadata>.
 - Record the created ID back in the source artifact.
 ```
 
@@ -335,10 +328,10 @@ Backlog system: Markdown
 Details: `docs/backlog.md`
 
 Rules:
-- New agent-discovered non-critical follow-ups go under `## Inbox`.
+- Owner-approved agent proposals go under `## Inbox`.
 - Stable IDs use `TASK-0001`, `TASK-0002`, etc.
 - `Up next` is human-controlled by moving items under `## Up next`.
-- Critical/current-plan-affecting discoveries require stopping and asking.
+- Only owner-list discoveries (contradiction, irreversible/external, spend, security, FROZEN change, safety) require stopping and asking.
 ```
 
 ### `docs/backlog.md` structure
@@ -372,13 +365,11 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 
 ## Inbox
 
-## Clarification needed
-
 ## In progress
 
 ## In review
 
-## Blocked
+## Your turn
 
 ## Icebox
 
@@ -464,13 +455,11 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 - Notes:
   - Captured during task tracking process design.
 
-## Clarification needed
-
 ## In progress
 
 ## In review
 
-## Blocked
+## Your turn
 
 ## Icebox
 
@@ -483,7 +472,7 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 
 - The section containing the item is the canonical status.
 - Do not duplicate status inside the item unless the repo has automation to keep it synchronized.
-- New agent-discovered non-critical follow-ups default to `Inbox`.
+- Owner-approved agent proposals default to `Inbox`.
 - Stable IDs use a documented format such as `TASK-0001`.
 - Moving an item between sections changes its lifecycle state.
 - Worklogs and reviews reference the item ID after creation.
@@ -506,9 +495,9 @@ Details: `docs/engineering/task_tracking.md`
 Rules:
 - Issues are canonical backlog items.
 - Stable IDs are GitHub issue numbers, referenced as `#123`.
-- New agent-discovered non-critical follow-ups are created as issues with Status `Inbox`.
+- Owner-approved agent proposals are created as issues with Status `Inbox`.
 - `Up next` is human-controlled through the GitHub Project Status field.
-- Critical/current-plan-affecting discoveries require stopping and asking.
+- Only owner-list discoveries (contradiction, irreversible/external, spend, security, FROZEN change, safety) require stopping and asking.
 ```
 
 ### Detailed GitHub task-tracking doc skeleton
@@ -553,12 +542,19 @@ This repo uses GitHub Issues as canonical backlog items and the `<Project Name>`
 
 | Field | Purpose |
 |-------|---------|
-| `Status` | Workflow state: Inbox, Clarification needed, Ready, Up next, In progress, Awaiting approval, In review, Blocked, Done, Canceled, Icebox |
+| `Status` | Workflow state: Backlog, Inbox, Ready, Up next, In progress, Your turn, In review, Done, Canceled, Icebox (board name `Later`) |
+| `Waiting for` | Display only, on cards in `Your turn`: `💬 answer`, `👍 approve`, `🛠️ unblock`, `⚖️ decide on PR`, `🔀 merge PR`. Set best-effort when a card enters `Your turn`, cleared when it leaves, corrected by board sync. Never an input to any decision |
 | `Stage` | Pipeline repos: `Design`, `Plan`, `Execute`, `Research`, `PR` (see [Delivery Pipeline](delivery-pipeline.md#item-fields)) |
-| `Autonomy` | Optional; `gated` (default) or `auto` (skips the plan gate) |
+| `Autonomy` | Optional; `gated` (default; one Design gate, Plan gate only when the plan departs from the design) or `auto` (never a Plan gate) |
 | `Track` | Process depth: `fast-path`, `standard-implementation`, `analysis-spike`, `docs-process` (use these exact values; routers match on them) |
 | `Priority` | P0–P3 |
 | `Area` | Optional; use only if useful for project views |
+
+`scripts/gh-project.py fields` creates these fields and the Status options on a
+GitHub Project with their board names and descriptions, and
+`scripts/gh-project.py labels` creates the workflow labels; both accept
+`--dry`. Use the adapter's `move` and `set` for every change so its guards
+apply (see [Delivery Pipeline](delivery-pipeline.md#5-scheduled-jobs)).
 
 ### Recommended labels
 
@@ -735,7 +731,7 @@ Document IDs in the repo like this:
 | Up next | `<up-next-option-id>` |
 | In progress | `<in-progress-option-id>` |
 | In review | `<in-review-option-id>` |
-| Blocked | `<blocked-option-id>` |
+| Your turn | `<your-turn-option-id>` |
 | Done | `<done-option-id>` |
 | Canceled | `<canceled-option-id>` |
 | Icebox | `<icebox-option-id>` |
@@ -845,7 +841,7 @@ Agents may triage issues and recommend readiness, but moving work into `Up next`
 ## Backlog Hygiene
 
 Repos should periodically review backlog state so captured work remains useful:
-- Triage `Inbox` items into `Ready`, `Clarification needed`, `Icebox`, or `Canceled`
+- Triage `Inbox` items into `Ready`, `Your turn`, `Icebox`, or `Canceled`
 - Keep `Up next` intentionally small and human-approved
 - Move stale low-value items to `Icebox` or `Canceled`
 - Close or update items completed by plans
