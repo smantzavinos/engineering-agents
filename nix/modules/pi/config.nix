@@ -34,6 +34,7 @@
 
 let
   nodejs = pkgs.nodejs;
+  getModelSet = import ./model-sets.nix { inherit lib; };
 
   # ============================================================
   # Managed Pi package declarations (single source of truth)
@@ -44,6 +45,7 @@ let
   # matching `gitSources` entry below — nix/AGENTS.md enforces this.
   managedPackages = {
     pi-subagents = {
+      hiddenSkills = [ "pi-subagents" "council-mode" ];
       source = {
         type = "npm";
         packageName = "pi-subagents";
@@ -71,40 +73,6 @@ let
       };
     };
 
-    pi-hooks = {
-      source = {
-        type = "git";
-        packageName = "pi-hooks";
-        spec = "github:smantzavinos/pi-hooks#fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
-        installSpec = "github:smantzavinos/pi-hooks#fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
-      };
-      # LSP moved to pi-lens: never expose ./lsp/lsp.ts or ./lsp/lsp-tool.ts
-      # alongside it (two LSP clients per session duplicate language servers
-      # and watchers). Keep this selection if the source returns upstream.
-      expose = {
-        extensions = [
-          "./checkpoint/checkpoint.ts"
-          "./permission/permission.ts"
-          "./ralph-loop/ralph-loop.ts"
-          "./repeat/repeat.ts"
-          "./token-rate/token-rate.ts"
-        ];
-        skills = [ ];
-        prompts = [ ];
-        themes = [ ];
-      };
-    };
-
-    pi-agent-guidance = {
-      source = {
-        type = "npm";
-        packageName = "@tmustier/pi-agent-guidance";
-        spec = "@tmustier/pi-agent-guidance@0.1.5";
-        installSpec = "@tmustier/pi-agent-guidance@0.1.5";
-        version = "0.1.5";
-      };
-    };
-
     pi-mcp-adapter = {
       source = {
         type = "npm";
@@ -116,6 +84,7 @@ let
     };
 
     pi-web-access = {
+      hiddenSkills = [ "librarian" ];
       source = {
         type = "npm";
         packageName = "pi-web-access";
@@ -231,6 +200,7 @@ let
     };
 
     pi-btw = {
+      hiddenSkills = [ "btw" ];
       source = {
         type = "npm";
         packageName = "pi-btw";
@@ -241,6 +211,7 @@ let
     };
 
     pi-lens = {
+      hiddenSkills = [ "pi-lens-write-ast-grep-rule" "pi-lens-write-tree-sitter-rule" ];
       source = {
         type = "npm";
         packageName = "pi-lens";
@@ -248,7 +219,7 @@ let
         installSpec = "pi-lens@4.4.3";
         version = "4.4.3";
       };
-      # Replaces pi-hooks' LSP. Runtime policy lives in pi-lens-global.json + the
+      # Runtime policy lives in pi-lens-global.json + the
       # pi-lens-policy extension: no runtime installs (binaries come from
       # pi-lens-tools.nix on pi's PATH), every feature and tool on except
       # format/autofix, which rewrite whole files beyond the agent's edit
@@ -298,14 +269,6 @@ let
   # Git package pins: one immutable tarball per source repo (shared by the
   # two pi-ext packageIds). Hashes are unpacked-codeload SRI values.
   gitSources = {
-    "pi-hooks" = {
-      rev = "fb492365e5c83a170fe7aaabebb210e7b8f2c3d7";
-      tarball = pkgs.fetchzip {
-        url = "https://github.com/smantzavinos/pi-hooks/archive/fb492365e5c83a170fe7aaabebb210e7b8f2c3d7.tar.gz";
-        hash = "sha256-XAgHF1rsqsT5OU8heG06NR5JSjcif7nl8B0qkBjjoC4=";
-        stripRoot = true;
-      };
-    };
     "pi-ext" = {
       rev = "d162f4c47ae82d2cdb5d1d499136601ff8718303";
       tarball = pkgs.fetchzip {
@@ -359,26 +322,8 @@ let
   # ============================================================
   # Default configuration values
   # ============================================================
-  defaultEnabledModels = [
-    "openai-codex/gpt-5.6-luna"
-    "openai-codex/gpt-5.6-terra"
-    "openai-codex/gpt-5.6-sol"
-    "zai-coding-plan/glm-5.2"
-    "zai-coding-plan/glm-5.3"
-    "zai-coding-plan/glm-5.3-flash"
-    "xai/grok-4.5"
-    "xai/grok-4.6"
-    "fireworks/accounts/fireworks/models/deepseek-v4-flash-0731"
-    "fireworks/accounts/fireworks/models/deepseek-v4-pro-0813"
-    "fireworks/accounts/fireworks/models/qwen3p7-plus"
-    "fireworks/accounts/fireworks/models/qwen3p8-max"
-    "fireworks/accounts/fireworks/models/kimi-k2p7-code"
-    "fireworks/accounts/fireworks/models/kimi-k3"
-    "fireworks/accounts/fireworks/models/minimax-m3"
-    "fireworks/accounts/fireworks/models/glm-5p2"
-    "fireworks/accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b"
-    "fireworks/accounts/fireworks/models/muse-glimmer-30b"
-  ];
+  defaultEnabledModels = (getModelSet {}).enabledModels;
+  packagesFor = zaiEnabled: if zaiEnabled then managedPackages else removeAttrs managedPackages [ "pi-mcp-adapter" ];
 
   footerPackageIds = [ "pi-powerline-footer" "pi-zentui" ];
 
@@ -436,7 +381,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-1zc78jJbJRDfY6C7zhz9a010ZsMIewLWZXDIrbzQhpQ=";
+      hash = "sha256-967NNvSVaeMj7kWlmyzSkFGlECiqg5+6wKOfU9tE3Dw=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
@@ -608,9 +553,9 @@ let
 
   # Build the complete managed-package agent artifacts (facades, sources,
   # declarations/report/install-state) for a given package selection.
-  makePiManagedPackages = { powerlineTheme ? defaultPowerlineTheme }:
+  makePiManagedPackages = { powerlineTheme ? defaultPowerlineTheme, zaiEnabled ? true }:
     let
-      enabledPackages = managedPackages;
+      enabledPackages = packagesFor zaiEnabled;
       enabledIds = lib.attrNames enabledPackages;
 
       themeFile = pkgs.writeText "pi-powerline-footer-theme.json"
@@ -624,6 +569,8 @@ let
           };
         } // lib.optionalAttrs (enabledPackages.${packageId} ? expose) {
           expose = enabledPackages.${packageId}.expose;
+        } // lib.optionalAttrs (enabledPackages.${packageId} ? hiddenSkills) {
+          hiddenSkills = enabledPackages.${packageId}.hiddenSkills;
         }) enabledIds;
       });
 
@@ -654,6 +601,7 @@ let
       # 1. Materialize the npm vendor tree (writable copy).
       # --no-preserve: store sources are read-only; the vendor copy must be writable
       cp -r --no-preserve=mode,ownership ${piVendor}/node_modules "$out/vendor/node_modules"
+      ${lib.optionalString (!zaiEnabled) ''rm -rf "$out/vendor/node_modules/pi-mcp-adapter"''}
 
       # 2. Place git-pinned packages with their install metadata.
       ${lib.concatMapStrings (packageName: installGitPackage packageName)
@@ -689,9 +637,9 @@ let
     '';
 
   # Pi runtime package list (settings.json `packages`) for a footer choice.
-  makePiRuntimePackageIds = { footer ? "powerline" }:
+  makePiRuntimePackageIds = { footer ? "powerline", zaiEnabled ? true }:
     let
-      enabledIds = lib.attrNames managedPackages;
+      enabledIds = lib.attrNames (packagesFor zaiEnabled);
       selectedFooterPackageId = if footer == "powerline" then "pi-powerline-footer" else "pi-zentui";
     in
     lib.filter (packageId:
@@ -699,12 +647,26 @@ let
       && (!lib.elem packageId footerPackageIds || packageId == selectedFooterPackageId)
     ) enabledIds;
 
+  makeT3Profile = { managedPackagesDir, extensionsDir, zaiEnabled, direnvExtension }:
+    let
+      packages = [ "pi-guardrails" "pi-lens" "pi-checkpoint" "pi-subdir-context"
+        "pi-web-access" "pi-tasks" ] ++ lib.optional zaiEnabled "pi-mcp-adapter";
+      extensions = [ "pi-lens-policy" "startup-staleness-warning" ]
+        ++ lib.optional (direnvExtension != null) "direnv";
+    in lib.concatLines ([ "-ne" ]
+      ++ lib.concatMap (id: [ "-e" "${managedPackagesDir}/${id}" ]) packages
+      ++ lib.concatMap (id: [ "-e" "${extensionsDir}/${id}/index.ts" ]) extensions
+      ++ [ "--exclude-tools" "TaskExecute,TaskOutput,TaskStop" ]);
+
   # ============================================================
   # settings.json body (shared by HM shim and NixOS shim)
   # ============================================================
-  makePiSettings = { defaultProvider ? "zai-coding-plan", defaultModel ? "glm-5.2"
-    , defaultThinkingLevel ? "medium", theme ? "catppuccin-mocha"
-    , footer ? "powerline", enabledModels ? defaultEnabledModels
+  makePiSettings = { modelSet ? "direct", zaiEnabled ? true
+    , defaultProvider ? (getModelSet { inherit modelSet zaiEnabled; }).defaultProvider
+    , defaultModel ? (getModelSet { inherit modelSet zaiEnabled; }).defaultModel
+    , defaultThinkingLevel ? (getModelSet { inherit modelSet zaiEnabled; }).defaultThinkingLevel
+    , enabledModels ? (getModelSet { inherit modelSet zaiEnabled; }).enabledModels
+    , theme ? "catppuccin-mocha", footer ? "powerline"
     , powerline ? defaultPowerlineConfig, powerlineShortcuts ? defaultPowerlineShortcuts
     , subagentDefaultModel ? null, subagentOverrides ? { }
     }:
@@ -742,7 +704,7 @@ let
       inherit enabledModels;
 
       packages = map (packageId: "./packages/${packageId}")
-        (makePiRuntimePackageIds { inherit footer; });
+        (makePiRuntimePackageIds { inherit footer zaiEnabled; });
 
       # pi-subagents routing. disableBuiltins keeps the extension's bundled
       # agents out; the shipped repo agents (agents/*.md) are custom agents.
@@ -983,8 +945,37 @@ let
     };
   };
 
+  # pi-web-access has no environment switch for the curator workflow. Keep
+  # its config writable, retaining any user provider settings and API keys.
+  mergeWebSearchConfig = pkgs.writeShellScript "pi-web-search-config" ''
+    set -euo pipefail
+    file="$1"
+    mkdir -p "$(dirname "$file")"
+    tmp=$(mktemp "$file.XXXXXX")
+    trap 'rm -f "$tmp"' EXIT
+    if [ -f "$file" ]; then
+      ${pkgs.jq}/bin/jq '.workflow = "none"' "$file" > "$tmp"
+    else
+      printf '%s\n' '{"workflow":"none"}' > "$tmp"
+    fi
+    mv "$tmp" "$file"
+  '';
+
   # Repo-owned assets linked into every agent tree.
   repoRoot = "${self}";
+
+  makeManualSkill = name: source: pkgs.runCommand "pi-manual-skill-${name}" {
+    nativeBuildInputs = [ nodejs ];
+  } ''
+    mkdir -p "$out"
+    cp -r --no-preserve=mode,ownership ${source}/. "$out/"
+    node --input-type=module -e '
+      import fs from "node:fs";
+      import { manualSkill } from "${./skill-visibility.mjs}";
+      const file = process.argv[1];
+      fs.writeFileSync(file, manualSkill(fs.readFileSync(file, "utf8")));
+    ' "$out/SKILL.md"
+  '';
 
   # Patch a shipped agent definition's frontmatter at build time (the pi
   # analogue of opencode's agentModelOverrides). Settings-level
@@ -1063,6 +1054,9 @@ in
     makePiManagedPackages
     makePiRuntimePackageIds
     makePiSettings
+    getModelSet
+    makeManualSkill
+    mergeWebSearchConfig
     piStaticFiles
     defaultEnabledModels
     defaultPowerlineConfig
@@ -1079,20 +1073,15 @@ in
   #   makePiConfig { defaultModel = "glm-5.2"; footer = "zentui"; }
   #   makePiConfig { extraSkills.visual-explainer = "<store path>"; }
   makePiConfig = args@{
-    defaultProvider ? "zai-coding-plan",
-    defaultModel ? "glm-5.2",
-    defaultThinkingLevel ? "medium",
-    theme ? "catppuccin-mocha",
-    footer ? "powerline",
-    enabledModels ? defaultEnabledModels,
-    powerline ? defaultPowerlineConfig,
-    powerlineShortcuts ? defaultPowerlineShortcuts,
+    modelSet ? "direct",
+    zaiEnabled ? true,
+    managedPackagesDir ? null,
+    direnvExtension ? null,
     extraSkills ? {},
     # Per-consumer agent routing: attrset of <agentName> -> { model ?,
     # thinking ? } patched into the shipped agent
     # frontmatter at build time (subagentOverrides are settings-level).
     agentOverrides ? {},
-    subagentDefaultModel ? null,
     subagentOverrides ? {},
     ...
   }:
@@ -1105,27 +1094,36 @@ in
   assert lib.assertMsg (lib.all (o: !(lib.isAttrs o && o ? fallbackModels)) (lib.attrValues subagentOverrides))
     "makePiConfig subagentOverrides: fallbackModels is unsupported (settings load error); configure one model instead";
   let
-    settings = makePiSettings {
-      inherit
-        defaultProvider
-        defaultModel
-        defaultThinkingLevel
-        theme
-        footer
-        enabledModels
-        powerline
-        powerlineShortcuts
-        subagentDefaultModel
-        subagentOverrides;
+    models = getModelSet { inherit modelSet zaiEnabled; };
+    roleOverrides = lib.recursiveUpdate models.agentOverrides agentOverrides;
+    settings = makePiSettings (builtins.intersectAttrs (builtins.functionArgs makePiSettings) args);
+    modelCatalog = builtins.fromJSON piStaticFiles.models;
+    modelCatalogForUser = modelCatalog // {
+      providers = if zaiEnabled then modelCatalog.providers else removeAttrs modelCatalog.providers [ "zai-coding-plan" ];
     };
+    preset = pkgs.runCommand "pi-preset.jsonc" {} ''
+      substitute ${repoRoot}/agents/preset.jsonc "$out" \
+        --replace-fail '"provider": "openai-codex"' '"provider": "${models.presetProvider}"' \
+        --replace-fail '"model": "gpt-5.6-sol"' '"model": "${models.presetModel}"'
+    '';
   in
   pkgs.runCommand "pi-agent-config" {} ''
     mkdir -p $out/agent/{themes,agents,skills,extensions}
 
     cp ${pkgs.writeText "pi-settings-nix.json" (builtins.toJSON settings)} $out/agent/settings.json
     cp ${pkgs.writeText "pi-keybindings.json" piStaticFiles.keybindings} $out/agent/keybindings.json
-    cp ${pkgs.writeText "pi-models.json" piStaticFiles.models} $out/agent/models.json
-    cp ${pkgs.writeText "pi-mcp.json" piStaticFiles.mcp} $out/agent/mcp-adapter.json
+    cp ${pkgs.writeText "pi-models.json" (builtins.toJSON modelCatalogForUser)} $out/agent/models.json
+    ${lib.optionalString zaiEnabled ''
+      cp ${pkgs.writeText "pi-mcp.json" piStaticFiles.mcp} $out/agent/mcp-adapter.json
+    ''}
+    ${lib.optionalString (managedPackagesDir != null) ''
+      # Keep absolute store paths so the profile works from any cwd, even
+      # after relocating the agent directory in the pi-dev sandbox.
+      substitute ${pkgs.writeText "t3-profile.args" (makeT3Profile {
+        inherit managedPackagesDir zaiEnabled direnvExtension;
+        extensionsDir = "@extensionsDir@";
+      })} "$out/agent/t3-profile.args" --replace-fail '@extensionsDir@' "$out/agent/extensions"
+    ''}
     # pi-tasks global defaults (read-only to the package; /tasks settings
     # write project overrides instead). session-global keeps task files under
     # the agent dir rather than in <workspace>/.pi/tasks/.
@@ -1146,17 +1144,17 @@ in
     # decisions); shims copy it in, they must not symlink it.
     cp ${repoRoot}/nix/modules/pi/guardrails.json $out/agent/guardrails.json
 
-    ln -s ${repoRoot}/agents/preset.jsonc $out/agent/preset.jsonc
+    ln -s ${preset} $out/agent/preset.jsonc
+    ${lib.optionalString (direnvExtension != null) ''
+      mkdir -p $out/agent/extensions/direnv
+      ln -s ${direnvExtension} $out/agent/extensions/direnv/index.ts
+    ''}
     ln -s ${repoRoot}/nix/modules/pi/extensions/startup-staleness-warning $out/agent/extensions/startup-staleness-warning
     ln -s ${repoRoot}/nix/modules/pi/extensions/pi-lens-policy $out/agent/extensions/pi-lens-policy
     ln -s ${repoRoot}/nix/modules/pi/extensions/pi-tasks-subagents-bridge $out/agent/extensions/pi-tasks-subagents-bridge
 
     ${lib.concatMapStringsSep "\n  " (name:
-      "ln -s ${
-        if agentOverrides ? ${name}
-        then patchAgentMd name agentOverrides.${name}
-        else "${repoRoot}/agents/${name}.md"
-      } $out/agent/agents/${name}.md"
+      "ln -s ${patchAgentMd name roleOverrides.${name}} $out/agent/agents/${name}.md"
     ) piAgents}
 
     ${lib.concatMapStringsSep "\n  " (name:

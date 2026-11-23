@@ -1,8 +1,8 @@
 ---
 name: worker-low
 description: Low-tier implementation agent. Executes plan tasks marked `Execution tier: low` (mechanical, bounded, well-specified, non-UI).
-model: zai-coding-plan/glm-5-turbo
-thinking: medium
+model: zai-coding-plan/glm-5.3-flash
+thinking: low
 defaultProgress: true
 ---
 

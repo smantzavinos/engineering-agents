@@ -1,7 +1,7 @@
 ---
 name: oracle
 description: Read-only second opinion agent for architecture, debugging, and risk assessment. Maximum reasoning depth. Does not modify anything.
-model: openai-codex/gpt-5.5
+model: openai-codex/gpt-5.6-sol
 thinking: xhigh
 tools: read, bash
 ---

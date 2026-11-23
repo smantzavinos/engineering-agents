@@ -30,6 +30,21 @@ is_interactive_launch() {
   [[ "$#" -eq 0 ]]
 }
 
+is_t3_rpc_launch() {
+  [[ -v T3_PI_MCP_EXTENSION_PATH ]] || return 1
+  while (( $# )); do
+    case "$1" in
+      --mode=rpc) return 0 ;;
+      --mode)
+        [[ "${2:-}" == rpc ]] && return 0
+        ;;
+      --) break ;;
+    esac
+    shift
+  done
+  return 1
+}
+
 compute_expires_at() {
   local created_at="$1"
 
@@ -137,6 +152,21 @@ NODE
 main() {
   if ! is_interactive_launch "$@"; then
     clear_startup_status_env
+    local profile_file="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/t3-profile.args"
+    local -a profile_args=()
+    if is_t3_rpc_launch "$@" && [[ -f "$profile_file" ]] && mapfile -t profile_args < "$profile_file"; then
+      local arg
+      local -a caller_args=()
+      for arg in "$@"; do
+        # Pi 1.5.2 parses --mode rpc, but rejects --mode=rpc.
+        if [[ "$arg" == --mode=rpc ]]; then
+          caller_args+=(--mode rpc)
+        else
+          caller_args+=("$arg")
+        fi
+      done
+      exec_real_pi "${profile_args[@]}" "${caller_args[@]}"
+    fi
     exec_real_pi "$@"
   fi
 

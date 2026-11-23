@@ -1,7 +1,7 @@
 ---
 name: vision
 description: Multimodal visual analysis agent. Analyzes screenshots, UI mockups, design comps, and visual diffs. Delegated to when visual reasoning is needed.
-model: google-gemini-cli/gemini-3-pro-preview
+model: openai-codex/gpt-5.6-sol
 thinking: medium
 tools: read, bash
 ---

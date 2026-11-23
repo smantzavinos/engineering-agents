@@ -29,6 +29,52 @@ store_file_from_activate() {
   grep -o "/nix/store/[^\" ]*-${suffix}" "$activate_path" | head -1 || true
 }
 
+# S12 helpers. package_skill_visibility prints {skillName: hidden} for the
+# skills each managed package facade exposes (hidden = disable-model-invocation).
+package_skill_visibility() {
+  node - "$@" <<'JS'
+const fs = require('node:fs');
+const path = require('node:path');
+const out = {};
+for (const pkgDir of process.argv.slice(2)) {
+  const pkg = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'));
+  for (const rel of pkg.pi?.skills ?? []) {
+    const file = path.join(pkgDir, rel);
+    out[path.basename(path.dirname(file))] = /^disable-model-invocation: true$/m.test(fs.readFileSync(file, 'utf8'));
+  }
+}
+process.stdout.write(JSON.stringify(out));
+JS
+}
+
+# agent_model_expect FILES AGENT MODEL THINKING: installed agent file frontmatter.
+agent_model_expect() {
+  local files="$1" agent="$2" model="$3" thinking="$4"
+  local path="$files/.pi/agent/agents/$agent.md"
+  if [[ -f "$path" ]] && grep -Fqx "model: $model" "$path" && grep -Fqx "thinking: $thinking" "$path"; then
+    pass "installed agent $agent runs $model ($thinking)"
+  else
+    fail "installed agent $agent must run $model ($thinking)"
+  fi
+}
+
+# agent_models_within FILES PROVIDER_REGEX: every installed agent model is in the set.
+agent_models_within() {
+  local files="$1" providers="$2" path bad=0
+  for path in "$files"/.pi/agent/agents/*.md; do
+    if ! grep -Eq "^model: (${providers})/" "$path"; then
+      bad=1
+      printf '    model outside the set: %s\n' "$path" >&2
+    fi
+  done
+  [[ "$bad" == 0 ]]
+}
+
+build_pi_out() {
+  nix build "$REPO_ROOT#checks.x86_64-linux.$1.activationPackage" --no-link --print-out-paths 2>&1 \
+    | grep '^/nix/store' | head -1 || true
+}
+
 # ============================================================
 printf 'Flake module instantiation verification\n'
 printf '========================================\n\n'
@@ -87,6 +133,19 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module missing keybindings.json in activation package"
   fi
 
+  # T3 keeps the common tools but not terminal-only packages or the bridge.
+  PI_T3_ARGS="$PI_FILES/.pi/agent/t3-profile.args"
+  if [[ -f "$PI_T3_ARGS" ]] && grep -Fqx -- '-ne' "$PI_T3_ARGS" \
+    && grep -Fqx -- '--exclude-tools' "$PI_T3_ARGS" \
+    && grep -Fxq 'TaskExecute,TaskOutput,TaskStop' "$PI_T3_ARGS" \
+    && grep -Eq '/packages/pi-mcp-adapter$' "$PI_T3_ARGS" \
+    && grep -Eq '/extensions/direnv/index.ts$' "$PI_T3_ARGS" \
+    && ! grep -Eq '/(pi-subagents|pi-tasks-subagents-bridge|pi-powerline-footer|pi-preset|pi-btw)(/|$)' "$PI_T3_ARGS"; then
+    pass "T3 profile explicitly loads extensions and excludes the terminal delegation tools"
+  else
+    fail "T3 profile args must opt out of discovery and leave terminal delegation in terminal Pi"
+  fi
+
   # pi-tasks: repo-clean storage default, the forked shutdown fix in the
   # built facade, and pi-ext's npm copy left in place.
   if jq -e '.taskScope == "session-global"' "$PI_FILES/.pi/agent/tasks-config.json" >/dev/null 2>&1; then
@@ -108,20 +167,25 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   else
     fail "Pi module vendor @tintinweb/pi-tasks is not the locked npm 0.4.3 (git fork overwrote it?)"
   fi
-  # pi-hooks keeps its five non-LSP components; LSP belongs to pi-lens.
-  if jq -e '.pi.extensions == ["./_source/checkpoint/checkpoint.ts", "./_source/permission/permission.ts", "./_source/ralph-loop/ralph-loop.ts", "./_source/repeat/repeat.ts", "./_source/token-rate/token-rate.ts"]' \
-       "$PI_MANAGED_AGENT/packages/pi-hooks/package.json" >/dev/null 2>&1; then
-    pass "Pi module pi-hooks facade exposes exactly its five non-LSP extensions"
+  # S12: pi-hooks (the whole git package) and pi-agent-guidance are removed from
+  # every profile: no declaration, no settings entry, no installed package.
+  if jq -e 'all(.packages[]; .packageId != "pi-hooks" and .packageId != "pi-agent-guidance")' "$PI_MANAGED_PACKAGES_JSON" >/dev/null 2>&1 \
+    && jq -e 'all(.packages[]; test("pi-hooks|pi-agent-guidance") | not)' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && [[ ! -e "$PI_MANAGED_AGENT/packages/pi-hooks" && ! -e "$PI_MANAGED_AGENT/packages/pi-agent-guidance" ]]; then
+    pass "Pi module removes pi-hooks and pi-agent-guidance from every profile"
   else
-    fail "Pi module pi-hooks facade must expose checkpoint/permission/ralph-loop/repeat/token-rate only (no lsp)"
+    fail "Pi module still declares, configures or installs pi-hooks or pi-agent-guidance"
   fi
   # pi-lens owns LSP: narrow facade, managed config, in-process install policy.
-  if jq -e '.pi.extensions == ["./_source/dist/index.js"] and (.pi.skills | sort) == (["pi-lens-ast-grep", "pi-lens-lsp-navigation", "pi-lens-write-ast-grep-rule", "pi-lens-write-tree-sitter-rule"] | map("./_source/skills/\(.)/SKILL.md"))' \
-       "$PI_MANAGED_AGENT/packages/pi-lens/package.json" >/dev/null 2>&1 \
+  # S12: the two write-rule skills are hidden per package; the LSP and ast-grep
+  # skills stay visible.
+  PI_LENS_VISIBILITY="$(package_skill_visibility "$PI_MANAGED_AGENT/packages/pi-lens")"
+  if jq -e '. == {"pi-lens-ast-grep": false, "pi-lens-lsp-navigation": false, "pi-lens-write-ast-grep-rule": true, "pi-lens-write-tree-sitter-rule": true}' <<<"$PI_LENS_VISIBILITY" >/dev/null 2>&1 \
+    && jq -e '.pi.extensions == ["./_source/dist/index.js"]' "$PI_MANAGED_AGENT/packages/pi-lens/package.json" >/dev/null 2>&1 \
     && jq -e '.packages | index("./packages/pi-lens") != null' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
-    pass "Pi module enables pi-lens with its extension and LSP/ast-grep skills"
+    pass "Pi module enables pi-lens with its extension; write-rule skills hidden, LSP/ast-grep visible"
   else
-    fail "Pi module pi-lens facade/runtime package selection is wrong"
+    fail "Pi module pi-lens facade/runtime package selection or skill visibility is wrong"
   fi
   # The source is a global-config template, not a project policy. A lens
   # project basename here is auto-discovered when working in this module,
@@ -183,17 +247,14 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   else
     fail "Pi module pi-tasks-subagents-bridge extension missing or incomplete"
   fi
-  # Guardrails tool registration protocol (#99): Guardrails fork and pi-hooks
-  # permission consume registrations; pi-lens-policy registers pi-lens tools.
+  # Guardrails tool registration protocol (#99): the Guardrails fork consumes
+  # registrations; pi-lens-policy registers pi-lens tools.
   PI_GUARDRAILS_SRC="$PI_MANAGED_AGENT/packages/pi-guardrails/_source"
-  PI_HOOKS_SRC="$PI_MANAGED_AGENT/packages/pi-hooks/_source"
   if grep -Fq 'GUARDRAILS_REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_GUARDRAILS_SRC/src/shared/tool-registry.ts" 2>/dev/null \
     && [[ -e "$PI_GUARDRAILS_SRC/node_modules/@aliou/sh" && -e "$PI_GUARDRAILS_SRC/node_modules/@aliou/pi-utils-settings" ]] \
-    && grep -Fq 'REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_HOOKS_SRC/permission/tool-registry.ts" 2>/dev/null \
-    && grep -Fq 'createRegisteredToolResolver(pi.events)' "$PI_HOOKS_SRC/permission/permission.ts" 2>/dev/null \
     && grep -Fq 'REGISTER_TOOL_EVENT = "guardrails:register-tool"' "$PI_LENS_POLICY" \
     && grep -Fq 'ast_grep_replace:' "$PI_LENS_POLICY" && grep -Fq 'lsp_navigation:' "$PI_LENS_POLICY"; then
-    pass "Pi module wires the guardrails tool registration protocol (guardrails, pi-hooks permission, pi-lens-policy)"
+    pass "Pi module wires the guardrails tool registration protocol (guardrails and pi-lens-policy)"
   else
     fail "Pi module guardrails tool registration protocol wiring is incomplete"
   fi
@@ -257,10 +318,11 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 
   # Verify visual-explainer is installed from the pinned flake input (not a
   # runtime git clone) and that slash-command prompts come from commands/.
-  if grep -q 'cp -r /nix/store/[^ ]*/plugins/visual-explainer' "$PI_OUT/activate"; then
-    pass "Pi module installs visual-explainer from pinned store source"
+  PI_VISUAL_SKILL="$(store_file_from_activate "$PI_OUT/activate" 'pi-manual-skill-visual-explainer')"
+  if [[ -f "$PI_VISUAL_SKILL/SKILL.md" ]]; then
+    pass "Pi module installs visual-explainer from the build-time store copy"
   else
-    fail "Pi module does not install visual-explainer from pinned store source"
+    fail "Pi module does not install visual-explainer from the build-time store copy"
   fi
   if ! grep -q 'git clone .*visual-explainer' "$PI_OUT/activate"; then
     pass "Pi module no longer clones visual-explainer at activation"
@@ -348,7 +410,8 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   fi
 
   # Verify agents are linked
-  for agent in planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker researcher vision oracle; do
+  for agent in planner plan-reviewer code-reviewer worker worker-high worker-low ui-worker researcher vision oracle \
+               plan-author implementer reviewer helper; do
     if [[ -f "$PI_FILES/.pi/agent/agents/$agent.md" ]]; then
       pass "Pi module links agent: $agent"
     else
@@ -395,6 +458,55 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json missing Grok 4.7 github-copilot model"
   fi
 
+  # S12 model set, direct (default): OpenAI Codex, plus GLM while z.ai is on.
+  # The installed role agents carry the approved table's models and thinking.
+  if jq -e '.defaultProvider == "openai-codex" and .defaultModel == "gpt-5.6-sol" and .defaultThinkingLevel == "medium"' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && jq -e 'all(.enabledModels[]; test("^(openai-codex|zai-coding-plan)/")) and (.enabledModels | index("zai-coding-plan/glm-5.3") != null)' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
+    pass "direct model set: default OpenAI Codex gpt-5.6-sol; enabledModels are OpenAI Codex and GLM only"
+  else
+    fail "direct model set: default or enabledModels are wrong (Fireworks, xAI or Copilot present?)"
+  fi
+  if agent_models_within "$PI_FILES" 'openai-codex|zai-coding-plan'; then
+    pass "direct model set: every installed agent names an OpenAI Codex or GLM model"
+  else
+    fail "direct model set: an installed agent names a model outside OpenAI Codex and GLM"
+  fi
+  agent_model_expect "$PI_FILES" plan-author openai-codex/gpt-5.6-sol high
+  agent_model_expect "$PI_FILES" implementer openai-codex/gpt-5.6-sol medium
+  agent_model_expect "$PI_FILES" reviewer zai-coding-plan/glm-5.3 high
+  agent_model_expect "$PI_FILES" helper zai-coding-plan/glm-5.3-flash low
+  agent_model_expect "$PI_FILES" oracle openai-codex/gpt-5.6-sol xhigh
+  agent_model_expect "$PI_FILES" researcher zai-coding-plan/glm-5.3-flash low
+  agent_model_expect "$PI_FILES" planner openai-codex/gpt-5.6-sol high
+  agent_model_expect "$PI_FILES" vision openai-codex/gpt-5.6-sol medium
+  agent_model_expect "$PI_FILES" code-reviewer zai-coding-plan/glm-5.3 high
+  agent_model_expect "$PI_FILES" worker-low zai-coding-plan/glm-5.3-flash low
+  if grep -v '^[[:space:]]*//' "$PI_FILES/.pi/agent/preset.jsonc" \
+     | jq -e '.presets | length == 3 and all(.[]; .provider == "openai-codex" and .model == "gpt-5.6-sol")' >/dev/null; then
+    pass "presets take the plan-author model of the direct set"
+  else
+    fail "preset.jsonc must take the direct set's plan-author model"
+  fi
+  # S12 hidden skills: pi-subagents, council-mode, btw and librarian are manual-only;
+  # visual-explainer is hidden by a build-time copy.
+  PI_HIDDEN_SKILLS="$(package_skill_visibility "$PI_MANAGED_AGENT/packages/pi-subagents" "$PI_MANAGED_AGENT/packages/pi-btw" "$PI_MANAGED_AGENT/packages/pi-web-access")"
+  if jq -e '[.["pi-subagents"], .["council-mode"], .["btw"], .["librarian"]] | all(. == true)' <<<"$PI_HIDDEN_SKILLS" >/dev/null 2>&1; then
+    pass "package skills pi-subagents, council-mode, btw and librarian are manual-only"
+  else
+    fail "package skills pi-subagents, council-mode, btw or librarian are still visible to the model"
+  fi
+  if grep -Fxq 'disable-model-invocation: true' "$PI_VISUAL_SKILL/SKILL.md" 2>/dev/null; then
+    pass "visual-explainer is installed as a manual-only skill"
+  else
+    fail "visual-explainer must be installed with disable-model-invocation: true"
+  fi
+  if jq -e '.packages | any(test("pi-mcp-adapter"))' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
+    && [[ -f "$PI_FILES/.pi/agent/mcp-adapter.json" ]]; then
+    pass "direct set with z.ai on keeps pi-mcp-adapter and its config"
+  else
+    fail "direct set with z.ai on must keep pi-mcp-adapter and mcp-adapter.json"
+  fi
+
   if jq -e '.providers | has("fireworks")' "$PI_FILES/.pi/agent/models.json" >/dev/null 2>&1; then
     fail "models.json must not define fireworks provider (use built-in + FIREWORKS_API_KEY)"
   else
@@ -403,6 +515,80 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
 else
   fail "Pi module activation package failed to build"
   printf '  Output: %s\n' "$PI_OUT" >&2
+fi
+
+# S12 model sets. pi-copilot-module is the g3660 machine: modelSet copilot with
+# zai.enable = false. pi-direct-no-zai-module is the direct set with z.ai off.
+# Each names only its own providers; z.ai off drops GLM and the adapter.
+printf '\nBuilding Copilot model-set activation package (z.ai off)...\n'
+COPILOT_OUT="$(build_pi_out pi-copilot-module)"
+if [[ -n "$COPILOT_OUT" && -d "$COPILOT_OUT" ]]; then
+  pass "Copilot model-set Pi module builds"
+  COPILOT_FILES="$(readlink -f "$COPILOT_OUT/home-files")"
+  COPILOT_SETTINGS="$(store_file_from_activate "$COPILOT_OUT/activate" 'pi-agent-config')/agent/settings.json"
+  if jq -e '.defaultProvider == "github-copilot" and .defaultModel == "claude-sonnet-5.5" and .defaultThinkingLevel == "medium" and (.enabledModels | length > 0) and all(.enabledModels[]; startswith("github-copilot/"))' "$COPILOT_SETTINGS" >/dev/null 2>&1; then
+    pass "Copilot model set: default and enabledModels are Copilot only"
+  else
+    fail "Copilot model set: default or enabledModels name a non-Copilot model"
+  fi
+  if agent_models_within "$COPILOT_FILES" 'github-copilot'; then
+    pass "Copilot model set: every installed agent names a Copilot model"
+  else
+    fail "Copilot model set: an installed agent names a non-Copilot model"
+  fi
+  agent_model_expect "$COPILOT_FILES" plan-author github-copilot/claude-opus-5.5 high
+  agent_model_expect "$COPILOT_FILES" implementer github-copilot/gpt-6.2-sol medium
+  agent_model_expect "$COPILOT_FILES" reviewer github-copilot/claude-opus-5.5 high
+  agent_model_expect "$COPILOT_FILES" helper github-copilot/claude-haiku-5.5 low
+  agent_model_expect "$COPILOT_FILES" oracle github-copilot/claude-fable-5.2 high
+  agent_model_expect "$COPILOT_FILES" researcher github-copilot/claude-sonnet-5.5 low
+  if grep -v '^[[:space:]]*//' "$COPILOT_FILES/.pi/agent/preset.jsonc" \
+     | jq -e '.presets | length == 3 and all(.[]; .provider == "github-copilot" and .model == "claude-opus-5.5")' >/dev/null; then
+    pass "presets take the plan-author model of the Copilot set"
+  else
+    fail "preset.jsonc must take the Copilot set's plan-author model"
+  fi
+  if ! jq -e '.packages | any(test("pi-mcp-adapter"))' "$COPILOT_SETTINGS" >/dev/null 2>&1 \
+    && [[ ! -e "$COPILOT_FILES/.pi/agent/mcp-adapter.json" ]]; then
+    pass "Copilot model set with z.ai off has no pi-mcp-adapter and no mcp-adapter.json"
+  else
+    fail "Copilot model set with z.ai off still ships pi-mcp-adapter or mcp-adapter.json"
+  fi
+else
+  fail "Copilot model-set Pi module (checks.pi-copilot-module) is missing or fails to build"
+fi
+
+printf '\nBuilding direct model-set activation package (z.ai off)...\n'
+NOZAI_OUT="$(build_pi_out pi-direct-no-zai-module)"
+if [[ -n "$NOZAI_OUT" && -d "$NOZAI_OUT" ]]; then
+  pass "direct model-set Pi module with z.ai off builds"
+  NOZAI_FILES="$(readlink -f "$NOZAI_OUT/home-files")"
+  NOZAI_SETTINGS="$(store_file_from_activate "$NOZAI_OUT/activate" 'pi-agent-config')/agent/settings.json"
+  if jq -e '.defaultProvider == "openai-codex" and .defaultModel == "gpt-5.6-sol" and all(.enabledModels[]; startswith("openai-codex/"))' "$NOZAI_SETTINGS" >/dev/null 2>&1; then
+    pass "direct set with z.ai off: enabledModels are OpenAI Codex only"
+  else
+    fail "direct set with z.ai off: enabledModels name a non-OpenAI-Codex model"
+  fi
+  if agent_models_within "$NOZAI_FILES" 'openai-codex'; then
+    pass "direct set with z.ai off: every installed agent names an OpenAI Codex model"
+  else
+    fail "direct set with z.ai off: an installed agent names a non-OpenAI-Codex model"
+  fi
+  agent_model_expect "$NOZAI_FILES" reviewer openai-codex/gpt-5.6-sol high
+  agent_model_expect "$NOZAI_FILES" helper openai-codex/gpt-5.6-luna low
+  agent_model_expect "$NOZAI_FILES" researcher openai-codex/gpt-5.6-luna low
+  NOZAI_PACKAGES="$(store_file_from_activate "$NOZAI_OUT/activate" 'pi-managed-packages')/agent/packages"
+  if jq -e '.packages | all(.[]; contains("pi-mcp-adapter") | not)' "$NOZAI_SETTINGS" >/dev/null \
+    && jq -e '.providers | has("zai-coding-plan") | not' "$NOZAI_FILES/.pi/agent/models.json" >/dev/null \
+    && [[ -d "$NOZAI_PACKAGES" && ! -e "$NOZAI_PACKAGES/pi-mcp-adapter" && ! -e "$NOZAI_FILES/.pi/agent/mcp-adapter.json" ]] \
+    && [[ -f "$NOZAI_FILES/.pi/agent/t3-profile.args" ]] \
+    && ! grep -Fq '/packages/pi-mcp-adapter' "$NOZAI_FILES/.pi/agent/t3-profile.args"; then
+    pass "z.ai off drops GLM config and the adapter from both profiles and the managed facades"
+  else
+    fail "z.ai off still ships GLM config or the adapter in at least one profile"
+  fi
+else
+  fail "direct model-set Pi module with z.ai off (checks.pi-direct-no-zai-module) is missing or fails to build"
 fi
 
 # The alternate footer profile must build independently and configure only

@@ -102,7 +102,7 @@
         # Pi config + managed package delivery for system users via activation
         # script (hermes agent profiles). Consumes the same build-time
         # managed-packages derivation as homeManagerModules.pi.
-        pi-for-user = import ./nix/modules/pi/nixos-user.nix { inherit self llmAgents visualExplainer; };
+        pi-for-user = import ./nix/modules/pi/nixos-user.nix { inherit self llmAgents visualExplainer agentKit; };
       };
 
       # ============================================================
@@ -321,13 +321,14 @@
           if grep -l '^fallbackModels:' "$cfgd"/agent/agents/*.md; then
             echo "FAIL: agent frontmatter declares unsupported fallbackModels"; exit 1
           fi
-          grep -Fqx 'model: zai-coding-plan/glm-5.2' "$cfgd/agent/agents/code-reviewer.md" \
-            || { echo "FAIL: unspecified fields must pass through (code-reviewer model)"; exit 1; }
+          grep -Fqx 'model: zai-coding-plan/glm-5.3' "$cfgd/agent/agents/code-reviewer.md" \
+            || { echo "FAIL: unspecified fields must use the model set (code-reviewer)"; exit 1; }
           grep -Fqx 'thinking: low' "$cfgd/agent/agents/oracle.md" \
             || { echo "FAIL: oracle thinking patch missing"; exit 1; }
-          # Untouched agent keeps its shipped frontmatter.
-          grep -Fqx 'model: openai-codex/gpt-5.5' "$cfgd/agent/agents/planner.md" \
-            || { echo "FAIL: planner must remain unpatched without an override"; exit 1; }
+          grep -Fqx 'model: openai-codex/gpt-5.6-sol' "$cfgd/agent/agents/oracle.md" \
+            || { echo "FAIL: a thinking-only override must keep the selected model"; exit 1; }
+          grep -Fqx 'model: openai-codex/gpt-5.6-sol' "$cfgd/agent/agents/planner.md" \
+            || { echo "FAIL: legacy planner must use the plan-author model"; exit 1; }
           # Settings passthrough.
           ${pkgs.jq}/bin/jq -e '.subagents.disableBuiltins == true and .subagents.defaultModel == "zai-coding-plan/glm-5" and .subagents.agentOverrides.researcher.model == "zai-coding-plan/glm-5-turbo"' \
             "$cfgd/agent/settings.json" >/dev/null || { echo "FAIL: subagent settings passthrough"; exit 1; }
@@ -338,7 +339,7 @@
         # patched, git metadata present, install-state is well-formed.
         pi-managed-packages-shape = pkgs.runCommand "pi-managed-packages-shape-check" {} ''
           tree=${self.packages.${system}.pi-managed-packages}
-          for id in pi-subagents pi-checkpoint pi-hooks pi-agent-guidance pi-mcp-adapter \
+          for id in pi-subagents pi-checkpoint pi-mcp-adapter \
                     pi-web-access pi-powerline-footer pi-zentui \
                     pi-subdir-context pi-ding pi-notify pi-session-autoname pi-ext-leader-key \
                     pi-guardrails pi-preset pi-btw; do
@@ -347,7 +348,7 @@
           test ! -e "$tree/agent/packages/pi-gitnexus" || { echo "FAIL: retired pi-gitnexus must be absent"; exit 1; }
           test ! -e "$tree/agent/packages/pi-auto-rename" || { echo "FAIL: replaced pi-auto-rename must be absent"; exit 1; }
           # Removed with team mode / code-mode consolidation; must not come back.
-          for id in pi-messenger pi-prompt-template-model pi-ext-review pi-interactive-shell; do
+          for id in pi-messenger pi-prompt-template-model pi-ext-review pi-interactive-shell pi-hooks pi-agent-guidance; do
             test ! -e "$tree/agent/packages/$id" || { echo "FAIL: $id must not be installed"; exit 1; }
           done
 
@@ -371,7 +372,7 @@
           fi
 
           # Git sources carry install metadata for the staleness checker.
-          test -f "$tree/vendor/node_modules/pi-hooks/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
+          test -f "$tree/vendor/node_modules/pi-guardrails/.pi-managed-install.json" || { echo "FAIL: git install metadata missing"; exit 1; }
 
           # Powerline theme override applied at build time.
           ${pkgs.jq}/bin/jq -e '.colors.model == "#cba6f7"' \
@@ -380,7 +381,7 @@
 
           # Install state covers every declared facade package and no GitNexus.
           count=$(${pkgs.jq}/bin/jq '.sources | map(.packageIds[]) | unique | length' "$tree/agent/managed-packages.install-state.json")
-          [ "$count" = "18" ] || { echo "FAIL: install-state covers $count packageIds, expected 18"; exit 1; }
+          [ "$count" = "16" ] || { echo "FAIL: install-state covers $count packageIds, expected 16"; exit 1; }
           touch $out
         '';
 
@@ -388,7 +389,7 @@
         # script that materializes config + managed packages into targetDir.
         pi-for-user-module =
           let
-            mockBaseModule = { config, lib, ... }: {
+            mockBaseModule = { lib, ... }: {
               options.system.activationScripts = lib.mkOption {
                 type = lib.types.attrsOf (lib.types.submodule {
                   options.text = lib.mkOption { type = lib.types.str; default = ""; };
@@ -449,7 +450,7 @@
         # script that materializes the config into targetDir.
         opencode-for-user-module =
           let
-            mockBaseModule = { config, lib, ... }: {
+            mockBaseModule = { lib, ... }: {
               options.system.activationScripts = lib.mkOption {
                 type = lib.types.attrsOf (lib.types.submodule {
                   options.text = lib.mkOption { type = lib.types.str; default = ""; };
@@ -551,6 +552,14 @@
               engineering-agents.pi.enableVisualExplainer = true;
             }
           ];
+        };
+
+        # Both model sets, including Codex fallbacks when z.ai is disabled.
+        pi-copilot-module = self.checks.${system}.pi-module.extendModules {
+          modules = [{ engineering-agents.pi = { modelSet = "copilot"; zai.enable = false; }; }];
+        };
+        pi-direct-no-zai-module = self.checks.${system}.pi-module.extendModules {
+          modules = [{ engineering-agents.pi.zai.enable = false; }];
         };
 
         # Alternate Pi footer profile builds independently and must load only

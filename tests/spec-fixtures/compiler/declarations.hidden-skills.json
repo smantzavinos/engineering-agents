@@ -1,0 +1,31 @@
+{
+  "packages": [
+    {
+      "packageId": "hidden-convention",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/convention#v1",
+        "materializedPath": "./sources/convention"
+      },
+      "hiddenSkills": [
+        "demo"
+      ],
+      "expose": {
+        "skills": [
+          "demo"
+        ]
+      }
+    },
+    {
+      "packageId": "hidden-root-skill",
+      "source": {
+        "type": "npm",
+        "spec": "pi-root-skill-source@1.0.0",
+        "materializedPath": "./sources/root-skill"
+      },
+      "hiddenSkills": [
+        "./SKILL.md"
+      ]
+    }
+  ]
+}

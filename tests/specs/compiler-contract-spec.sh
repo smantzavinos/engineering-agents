@@ -241,4 +241,80 @@ NEGATIVE_CASE_DIR="$(assert_compile_status \
 : "$NEGATIVE_CASE_DIR"
 printf 'PASS: overlapping selected resources return exit code 3\n'
 
+# S12: per-package hiddenSkills. A hidden skill's facade gets a facade-local
+# copy of SKILL.md with disable-model-invocation: true; the shared source is
+# never edited, and the copy's sibling files stay reachable.
+if grep -RFq 'disable-model-invocation' "$SUCCESS_OUTPUT_DIR"; then
+  fail 'ok fixture without hiddenSkills must not hide any skill'
+else
+  printf 'PASS: ok fixture without hiddenSkills hides no skill\n'
+fi
+
+HIDDEN_CASE_DIR="$(assert_compile_status \
+  'hiddenSkills declarations compile successfully' \
+  "$FIXTURE_DIR/declarations.hidden-skills.json" \
+  0)"
+HIDDEN_STDOUT="$HIDDEN_CASE_DIR/stdout.json"
+HIDDEN_OUTPUT_DIR="$HIDDEN_CASE_DIR/output"
+HIDDEN_CONVENTION_DIR="$HIDDEN_OUTPUT_DIR/packages/hidden-convention"
+HIDDEN_ROOT_DIR="$HIDDEN_OUTPUT_DIR/packages/hidden-root-skill"
+
+assert_json \
+  'hiddenSkills leaves the compiler skill ids unchanged in the report' \
+  "$HIDDEN_STDOUT" \
+  'any(.packages[]; .packageId == "hidden-convention" and .selectedResources.skills == ["demo"])
+   and any(.packages[]; .packageId == "hidden-root-skill" and .selectedResources.skills == ["./SKILL.md"])'
+
+hidden_skill_file() {
+  local package_dir="$1"
+  local relative
+  relative="$(jq -r '.pi.skills[0]' "$package_dir/package.json")"
+  printf '%s/%s\n' "$package_dir" "${relative#./}"
+}
+
+HIDDEN_CONVENTION_SKILL="$(hidden_skill_file "$HIDDEN_CONVENTION_DIR")"
+if [[ -f "$HIDDEN_CONVENTION_SKILL" && ! -L "$HIDDEN_CONVENTION_SKILL" ]] \
+  && grep -Fxq 'disable-model-invocation: true' "$HIDDEN_CONVENTION_SKILL" \
+  && grep -Fq 'Used to prove convention-based skill discovery.' "$HIDDEN_CONVENTION_SKILL"; then
+  printf 'PASS: hidden convention skill is a facade-local copy with disable-model-invocation: true\n'
+else
+  fail 'hidden convention skill must be a facade-local SKILL.md copy with disable-model-invocation: true'
+fi
+if [[ -f "$(dirname "$HIDDEN_CONVENTION_SKILL")/reference.md" ]]; then
+  printf 'PASS: hidden skill keeps its sibling reference.md reachable\n'
+else
+  fail 'hidden skill lost its sibling reference.md in the facade'
+fi
+
+HIDDEN_ROOT_SKILL="$(hidden_skill_file "$HIDDEN_ROOT_DIR")"
+if [[ -f "$HIDDEN_ROOT_SKILL" && ! -L "$HIDDEN_ROOT_SKILL" ]] \
+  && grep -Fxq 'disable-model-invocation: true' "$HIDDEN_ROOT_SKILL"; then
+  printf 'PASS: hidden root-level skill is redirected to a facade-local flagged copy\n'
+else
+  fail 'hidden root-level SKILL.md must be a facade-local copy with disable-model-invocation: true'
+fi
+
+if grep -Fq 'disable-model-invocation' "$FIXTURE_DIR/sources/convention/skills/demo/SKILL.md" \
+  || grep -Fq 'disable-model-invocation' "$FIXTURE_DIR/sources/root-skill/SKILL.md"; then
+  fail 'hiddenSkills must not edit the shared source SKILL.md'
+else
+  printf 'PASS: hiddenSkills leaves the shared source SKILL.md untouched\n'
+fi
+
+NEGATIVE_CASE_DIR="$(assert_compile_status \
+  'hiddenSkills naming an unknown skill returns exit code 3' \
+  "$FIXTURE_DIR/declarations.hidden-skills-unknown.json" \
+  3 \
+  'hiddenSkills')"
+: "$NEGATIVE_CASE_DIR"
+printf 'PASS: hiddenSkills naming an unknown skill returns exit code 3\n'
+
+NEGATIVE_CASE_DIR="$(assert_compile_status \
+  'hiddenSkills that is not an array returns exit code 3' \
+  "$FIXTURE_DIR/declarations.hidden-skills-not-array.json" \
+  3 \
+  'hiddenSkills')"
+: "$NEGATIVE_CASE_DIR"
+printf 'PASS: hiddenSkills that is not an array returns exit code 3\n'
+
 printf 'compiler contract spec ok\n'

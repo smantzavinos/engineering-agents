@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Web/external research agent. Searches documentation, evaluates libraries, reads external sources. Use for non-codebase research.
-model: google-gemini-cli/gemini-3-flash-preview
+model: zai-coding-plan/glm-5.3-flash
 thinking: low
 tools: read, write, web_search, fetch_content, get_search_content
 output: research.md

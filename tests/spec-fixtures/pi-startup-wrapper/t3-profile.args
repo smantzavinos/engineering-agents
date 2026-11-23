@@ -1,0 +1,7 @@
+-ne
+-e
+/fixtures/t3/pi-mcp-facade
+-e
+/fixtures/t3/with space/t3-extension.ts
+--exclude-tools
+TaskExecute,TaskOutput,TaskStop

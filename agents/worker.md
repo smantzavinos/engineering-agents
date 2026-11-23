@@ -1,8 +1,8 @@
 ---
 name: worker
 description: General backend/logic agent. Creates worklogs, performs codebase research, and fixes review findings. Plan tasks go to worker-high or worker-low by execution tier.
-model: zai-coding-plan/glm-5.2
-thinking: high
+model: openai-codex/gpt-5.6-sol
+thinking: medium
 defaultProgress: true
 ---
 

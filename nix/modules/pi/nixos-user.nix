@@ -26,7 +26,7 @@
 #     };
 #   };
 #
-{ self, llmAgents, visualExplainer }:
+{ self, llmAgents, visualExplainer, agentKit }:
 
 { config, lib, pkgs, ... }:
 
@@ -36,11 +36,17 @@ let
   inherit (import ./config.nix { inherit lib pkgs self; })
     makePiConfig
     makePiManagedPackages
+    makeManualSkill
+    mergeWebSearchConfig
     defaultPowerlineTheme;
 
   forwardedArgs = cfg.args // {
+    inherit (cfg) modelSet;
+    zaiEnabled = cfg.zai.enable;
+    managedPackagesDir = "${cfgManaged}/agent/packages";
+    direnvExtension = if cfg.enableAgentKit then "${agentKit}/extensions/direnv/direnv.ts" else null;
     extraSkills = (cfg.args.extraSkills or { }) // lib.optionalAttrs cfg.enableVisualExplainer {
-      visual-explainer = "${visualExplainer}/plugins/visual-explainer";
+      visual-explainer = makeManualSkill "visual-explainer" "${visualExplainer}/plugins/visual-explainer";
     };
   };
 
@@ -51,6 +57,7 @@ let
   # Same managed-packages derivation the Home Manager module consumes.
   cfgManaged = makePiManagedPackages {
     powerlineTheme = cfg.args.powerlineTheme or defaultPowerlineTheme;
+    zaiEnabled = cfg.zai.enable;
   };
 in
 {
@@ -90,6 +97,24 @@ in
       '';
     };
 
+    modelSet = lib.mkOption {
+      type = lib.types.enum [ "direct" "copilot" ];
+      default = "direct";
+      description = "Machine model defaults for Pi sessions, roles and presets.";
+    };
+
+    zai.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable z.ai models and its managed MCP adapter.";
+    };
+
+    enableAgentKit = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Install the agent-kit direnv extension.";
+    };
+
     enableVisualExplainer = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -125,6 +150,10 @@ in
         managed=${cfgManaged}/agent
 
         mkdir -p "$agent/packages" "$agent/sources" "$agent/extensions"
+        ${lib.optionalString (!cfg.zai.enable) ''rm -f "$agent/mcp-adapter.json"''}
+        ${lib.optionalString (!cfg.enableAgentKit) ''
+          if [ -L "$agent/extensions/direnv" ]; then rm "$agent/extensions/direnv"; fi
+        ''}
 
         # Static tree: link every top-level entry except the two that must
         # stay real, user-owned files.
@@ -187,6 +216,10 @@ in
         fi
         chown ${cfg.user}:${cfg.group} "$agent/settings.json"
         chmod 0644 "$agent/settings.json"
+
+        # Web-access reads this location when the service sets PI_CODING_AGENT_DIR.
+        ${mergeWebSearchConfig} "$agent/web-search.json"
+        chown ${cfg.user}:${cfg.group} "$agent/web-search.json"
 
         # guardrails.json: real, user-owned copy installed only when absent;
         # the extension persists confirmed decisions into it and those must

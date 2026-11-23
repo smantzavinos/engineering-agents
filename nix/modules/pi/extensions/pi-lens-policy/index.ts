@@ -17,11 +17,9 @@
 //      devshell tools still win. Child processes (including the bash tool)
 //      inherit it.
 //
-// 2. Tool registration (guardrails tool registration protocol,
-//    aliou/pi-guardrails#99, implemented in the smantzavinos forks of
-//    pi-guardrails and pi-hooks): pi-lens tools that read or write files are
-//    registered so guardrails policies/path access and the pi-hooks
-//    permission levels gate them like the built-in read/edit tools.
+// 2. Tool registration (aliou/pi-guardrails#99, implemented in the
+//    managed pi-guardrails fork): register file-reading and file-writing
+//    pi-lens tools so guardrails gates them like built-in read/edit tools.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";

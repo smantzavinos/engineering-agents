@@ -289,4 +289,117 @@ else
   printf 'PASS: repeated interactive launches get unique snapshot paths\n'
 fi
 
+# ============================================================
+# T3 profile (S12): under T3 (T3_PI_MCP_EXTENSION_PATH set and --mode rpc),
+# the wrapper prepends the literal arguments in t3-profile.args (one argument
+# per line, read from ${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}) before the
+# caller's arguments. Everything else is unchanged.
+T3_PROFILE_FIXTURE="$FIXTURE_DIR/t3-profile.args"
+mapfile -t T3_PROFILE_ARGS <"$T3_PROFILE_FIXTURE"
+if [[ "${#T3_PROFILE_ARGS[@]}" -ne 7 || "${T3_PROFILE_ARGS[0]}" != '-ne' ]]; then
+  fail "t3-profile.args fixture must hold seven literal lines starting with -ne"
+fi
+
+assert_argv() {
+  local description="$1"
+  local log_path="$2"
+  shift 2
+  local expected_path="$TMP_DIR/expected-argv.$RANDOM"
+  local actual_path="$TMP_DIR/actual-argv.$RANDOM"
+
+  if [[ "$#" -eq 0 ]]; then
+    : >"$expected_path"
+  else
+    printf '%s\n' "$@" >"$expected_path"
+  fi
+  sed -n 's/^arg=//p' "$log_path" >"$actual_path"
+
+  if cmp -s "$expected_path" "$actual_path"; then
+    printf 'PASS: %s\n' "$description"
+  else
+    printf 'expected argv:\n' >&2
+    cat "$expected_path" >&2
+    printf 'actual argv:\n' >&2
+    cat "$actual_path" >&2
+    fail "$description"
+  fi
+}
+
+# Runs the wrapper with a clean T3/agent-dir environment. $1 HOME, $2 agent dir
+# or "" (unset), $3 "t3" to set T3_PI_MCP_EXTENSION_PATH, $4 real-pi log, then
+# the wrapper arguments.
+run_profile_wrapper() {
+  local home_dir="$1" agent_dir="$2" t3_mode="$3" real_log="$4"
+  shift 4
+  local -a extra_env=()
+
+  if [[ -n "$agent_dir" ]]; then
+    extra_env+=(PI_CODING_AGENT_DIR="$agent_dir")
+  fi
+  if [[ "$t3_mode" == 't3' ]]; then
+    extra_env+=(T3_PI_MCP_EXTENSION_PATH="$FIXTURE_DIR/fake-real-pi.sh")
+  fi
+
+  env -u PI_CODING_AGENT_DIR -u T3_PI_MCP_EXTENSION_PATH \
+    HOME="$home_dir" \
+    PATH="$poison_dir:$PATH" \
+    FAKE_REAL_PI_LOG="$real_log" \
+    PI_WRAPPER_REAL_PI_BIN="$FIXTURE_DIR/fake-real-pi.sh" \
+    PI_WRAPPER_NODE_BIN="$REAL_NODE_BIN" \
+    "${extra_env[@]}" \
+    "$WRAPPER_PATH" "$@" >"$real_log.out" 2>"$real_log.err"
+}
+
+PROFILE_AGENT_DIR="$TMP_DIR/profile-agent-dir"
+mkdir -p "$PROFILE_AGENT_DIR"
+cp "$T3_PROFILE_FIXTURE" "$PROFILE_AGENT_DIR/t3-profile.args"
+T3_RPC_ARGS=(--mode rpc --session "$TMP_DIR/t3-session.jsonl" --extension /t3/pi-t3-mcp-extension.ts)
+
+T3_LONG_LOG="$TMP_DIR/t3-long-real.log"
+run_profile_wrapper "$TMP_DIR/home-t3-long" "$PROFILE_AGENT_DIR" t3 "$T3_LONG_LOG" "${T3_RPC_ARGS[@]}"
+assert_argv \
+  'T3 rpc launch puts the T3 profile arguments before the caller arguments' \
+  "$T3_LONG_LOG" "${T3_PROFILE_ARGS[@]}" "${T3_RPC_ARGS[@]}"
+
+T3_EQ_LOG="$TMP_DIR/t3-eq-real.log"
+run_profile_wrapper "$TMP_DIR/home-t3-eq" "$PROFILE_AGENT_DIR" t3 "$T3_EQ_LOG" \
+  --mode=rpc --session "$TMP_DIR/t3-session.jsonl" --extension /t3/pi-t3-mcp-extension.ts
+assert_argv \
+  'T3 launch with --mode=rpc gets the profile and Pi-compatible mode arguments' \
+  "$T3_EQ_LOG" "${T3_PROFILE_ARGS[@]}" "${T3_RPC_ARGS[@]}"
+
+T3_HOME_LOG="$TMP_DIR/t3-home-real.log"
+mkdir -p "$TMP_DIR/home-t3-default/.pi/agent"
+cp "$T3_PROFILE_FIXTURE" "$TMP_DIR/home-t3-default/.pi/agent/t3-profile.args"
+run_profile_wrapper "$TMP_DIR/home-t3-default" "" t3 "$T3_HOME_LOG" "${T3_RPC_ARGS[@]}"
+assert_argv \
+  'T3 launch reads the profile from $HOME/.pi/agent when PI_CODING_AGENT_DIR is unset' \
+  "$T3_HOME_LOG" "${T3_PROFILE_ARGS[@]}" "${T3_RPC_ARGS[@]}"
+
+TERMINAL_LOG="$TMP_DIR/terminal-session-real.log"
+run_profile_wrapper "$TMP_DIR/home-terminal" "$PROFILE_AGENT_DIR" t3 "$TERMINAL_LOG" --session "$TMP_DIR/t3-session.jsonl"
+assert_argv \
+  'non-rpc launch under the T3 environment gets no profile arguments' \
+  "$TERMINAL_LOG" --session "$TMP_DIR/t3-session.jsonl"
+
+TERMINAL_NOARGS_LOG="$TMP_DIR/terminal-noargs-real.log"
+run_profile_wrapper "$TMP_DIR/home-terminal-noargs" "$PROFILE_AGENT_DIR" t3 "$TERMINAL_NOARGS_LOG"
+assert_argv \
+  'interactive terminal launch under the T3 environment gets no profile arguments' \
+  "$TERMINAL_NOARGS_LOG"
+
+NO_ENV_LOG="$TMP_DIR/no-env-real.log"
+run_profile_wrapper "$TMP_DIR/home-no-env" "$PROFILE_AGENT_DIR" "" "$NO_ENV_LOG" "${T3_RPC_ARGS[@]}"
+assert_argv \
+  'rpc launch without T3_PI_MCP_EXTENSION_PATH gets no profile arguments' \
+  "$NO_ENV_LOG" "${T3_RPC_ARGS[@]}"
+
+MISSING_ARGS_DIR="$TMP_DIR/agent-without-profile"
+mkdir -p "$MISSING_ARGS_DIR"
+MISSING_LOG="$TMP_DIR/missing-args-real.log"
+run_profile_wrapper "$TMP_DIR/home-missing-args" "$MISSING_ARGS_DIR" t3 "$MISSING_LOG" "${T3_RPC_ARGS[@]}"
+assert_argv \
+  'T3 rpc launch with no t3-profile.args file is a no-op' \
+  "$MISSING_LOG" "${T3_RPC_ARGS[@]}"
+
 printf 'pi startup wrapper spec ok\n'

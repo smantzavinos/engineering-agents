@@ -1,8 +1,8 @@
 ---
 name: ui-worker
 description: Frontend/UI implementation agent. Executes plan tasks involving components, styling, client state, and accessibility. Use for all frontend work.
-model: anthropic/claude-sonnet-4
-thinking: high
+model: openai-codex/gpt-5.6-sol
+thinking: medium
 defaultProgress: true
 ---
 

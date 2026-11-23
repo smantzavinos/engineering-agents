@@ -1,7 +1,7 @@
 ---
 name: plan-author
 description: Frontier planner for the frontier pipeline. Writes one plan — a short plan.md and its diagram model, built from the project's pattern catalog — and revises it from fresh-review findings; resumed across review rounds. Use from the scope and run-epic skills, not the legacy execute preset.
-model: github-copilot/gpt-6.1-sol
+model: openai-codex/gpt-5.6-sol
 thinking: high
 inheritProjectContext: true
 skill: plan, architecture-model, delegate, test-quality

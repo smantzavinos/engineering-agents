@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { manualSkill } from './skill-visibility.mjs';
 
 class ExitError extends Error {
   constructor(message, exitCode) {
@@ -536,22 +537,22 @@ function assertNoOverlaps(compiledPackages) {
   }
 }
 
+function facadeSkillPath(entry, pkg) {
+  const sourcePath = `./_source/${entry.relativePath.slice(2)}`;
+  const parent = path.posix.basename(path.posix.dirname(sourcePath));
+  // Pi checks the parent directory name. Root-level and manual-only skills
+  // need a facade-local directory rather than an unmodified source link.
+  if (parent === '_source' || pkg.hiddenSkills.has(entry.id)) {
+    const name = parent === '_source' ? pkg.sourceManifestName : parent;
+    return `./skills/${name}/SKILL.md`;
+  }
+  return sourcePath;
+}
+
 function toFacadePaths(selectedResources, pkg) {
   return {
     extensions: selectedResources.extensions.map((entry) => `./_source/${entry.relativePath.slice(2)}`),
-    skills: selectedResources.skills.map((entry) => {
-      // Pi expects the parent directory of SKILL.md to match the skill name.
-      // If the SKILL.md parent directory would be '_source' (root-level skill),
-      // we redirect it through a facade-local skills/<name>/ directory instead.
-      // Use the sourceManifestName as the skill directory name for root-level skills.
-      const sourceFacadePath = `./_source/${entry.relativePath.slice(2)}`;
-      const parentDir = path.posix.basename(path.posix.dirname(sourceFacadePath));
-      if (parentDir === '_source') {
-        const skillDirName = pkg.sourceManifestName || pkg.packageId;
-        return `./skills/${skillDirName}/SKILL.md`;
-      }
-      return sourceFacadePath;
-    }),
+    skills: selectedResources.skills.map((entry) => facadeSkillPath(entry, pkg)),
     prompts: selectedResources.prompts.map((entry) => `./_source/${entry.relativePath.slice(2)}`),
     themes: selectedResources.themes.map((entry) => `./_source/${entry.relativePath.slice(2)}`),
   };
@@ -617,19 +618,31 @@ async function writeFacadePackage(pkg, packagesDir) {
   const relativeSourceTarget = path.relative(packageDir, pkg.sourceRoot);
   await fs.symlink(relativeSourceTarget, sourceLinkPath, 'dir');
 
-  // For skills whose SKILL.md is at the source root (parent would be _source),
-  // create a facade-local skills/<name>/ directory with a symlink to the actual SKILL.md.
-  // This ensures Pi sees the correct parent directory name matching the skill name.
   const facadePaths = toFacadePaths(pkg.selected, pkg);
   for (const entry of pkg.selected.skills) {
-    const sourceFacadePath = `./_source/${entry.relativePath.slice(2)}`;
-    const parentDir = path.posix.basename(path.posix.dirname(sourceFacadePath));
-    if (parentDir === '_source') {
-      const skillDirName = pkg.sourceManifestName || pkg.packageId;
-      const skillDir = path.join(packageDir, 'skills', skillDirName);
-      await ensureDirectory(skillDir);
-      const skillMdTarget = path.relative(skillDir, path.join(packageDir, '_source', entry.relativePath.slice(2)));
-      await fs.symlink(skillMdTarget, path.join(skillDir, 'SKILL.md'));
+    const facadePath = facadeSkillPath(entry, pkg);
+    if (facadePath.startsWith('./_source/')) continue;
+    const output = path.join(packageDir, facadePath);
+    const skillDir = path.dirname(output);
+    await ensureDirectory(skillDir);
+    const source = path.join(packageDir, '_source', entry.relativePath.slice(2));
+    if (pkg.hiddenSkills.has(entry.id)) {
+      const markdown = await fs.readFile(source, 'utf8');
+      try {
+        await fs.writeFile(output, manualSkill(markdown));
+      } catch (error) {
+        throw new ExitError(`${pkg.packageId} hiddenSkills: ${entry.id}: ${error.message}`, 3);
+      }
+      // Copy only the frontmatter-bearing file. Relative references and
+      // scripts alongside it still resolve to the vendored skill assets.
+      const sourceDir = path.dirname(source);
+      const siblings = await fs.readdir(sourceDir);
+      for (const name of siblings.sort()) {
+        if (name === path.basename(source)) continue;
+        await fs.symlink(path.relative(skillDir, path.join(sourceDir, name)), path.join(skillDir, name));
+      }
+    } else {
+      await fs.symlink(path.relative(skillDir, source), output);
     }
   }
 
@@ -737,6 +750,15 @@ async function compileDeclarations({ declarationsPath, outputDir }) {
 
     const cachedSource = sourceCache.get(materializedKey);
     const selected = selectResources(cachedSource.discovered, declaration.expose ?? {});
+    const hiddenSkills = new Set(normalizeSelectionIds(declaration.hiddenSkills, {
+      field: 'hiddenSkills',
+      kind: 'name',
+    }) ?? []);
+    for (const id of hiddenSkills) {
+      if (!selected.skills.some((skill) => skill.id === id)) {
+        throw new ExitError(`hiddenSkills: ${declaration.packageId} does not expose skill ${id}`, 3);
+      }
+    }
 
     compiledPackages.push({
       packageId: declaration.packageId,
@@ -745,6 +767,7 @@ async function compileDeclarations({ declarationsPath, outputDir }) {
       sourceRoot,
       sourceManifestName: cachedSource.manifest.name,
       selected,
+      hiddenSkills,
     });
   }
 

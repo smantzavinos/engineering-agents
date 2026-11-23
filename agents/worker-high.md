@@ -1,8 +1,8 @@
 ---
 name: worker-high
 description: High-tier implementation agent. Executes plan tasks marked `Execution tier: high` (non-UI) and fixes their review findings.
-model: zai-coding-plan/glm-5.2
-thinking: high
+model: openai-codex/gpt-5.6-sol
+thinking: medium
 defaultProgress: true
 ---
 

@@ -8,20 +8,20 @@
     // The discovery, design and execute modes were retired for Pi with the
     // process they ran (ADR 0007).
     "scope": {
-      "provider": "github-copilot",
-      "model": "claude-opus-5.5",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-sol",
       "thinkingLevel": "high",
       "instructions": "You are the orchestrator in the frontier pipeline's interactive phase. Before anything else, read ~/.pi/agent/skills/scope/SKILL.md and ~/.pi/agent/skills/delegate/SKILL.md and follow them. Work with the human to turn the prototype into an approved plan.md with its model, or rarely an approved epic.md. When the human approves, record the approval as the skill says and stop: the human starts the build with the run-plan (or run-epic) preset."
     },
     "run-plan": {
-      "provider": "github-copilot",
-      "model": "claude-opus-5.5",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-sol",
       "thinkingLevel": "high",
       "instructions": "You are the orchestrator building one approved plan. Before anything else, read ~/.pi/agent/skills/run-plan/SKILL.md, ~/.pi/agent/skills/architecture-model/SKILL.md and ~/.pi/agent/skills/delegate/SKILL.md, then the plan directory's state.json, and continue from where it left off. Run without asking the human except on the skill's stop conditions."
     },
     "run-epic": {
-      "provider": "github-copilot",
-      "model": "claude-opus-5.5",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-sol",
       "thinkingLevel": "high",
       "instructions": "You are the orchestrator running an approved epic. Before anything else, read ~/.pi/agent/skills/run-epic/SKILL.md, ~/.pi/agent/skills/run-plan/SKILL.md, ~/.pi/agent/skills/architecture-model/SKILL.md and ~/.pi/agent/skills/delegate/SKILL.md, then the plan directory's state.json, and continue from where it left off. Run without asking the human except on the skill's stop conditions."
     }

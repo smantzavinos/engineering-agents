@@ -83,8 +83,9 @@ console.log(JSON.stringify({
   spec: field(sourceBlock, "spec"),
   installSpec: field(sourceBlock, "installSpec"),
   version: field(declaration, "version"),
-  allPackagesEnabledForBuild: source.includes("enabledPackages = managedPackages;"),
-  runtimeUsesManagedPackageIds: source.includes("enabledIds = lib.attrNames managedPackages;"),
+  buildUsesPackageSelection: source.includes("enabledPackages = packagesFor zaiEnabled;"),
+  runtimeUsesPackageSelection: source.includes("enabledIds = lib.attrNames (packagesFor zaiEnabled);"),
+  onlyMcpAdapterIsOptional: source.includes('if zaiEnabled then managedPackages else removeAttrs managedPackages [ "pi-mcp-adapter" ]'),
   runtimeEligibleSourceFilter: source.includes("managedPackages.${packageId}.source.type != \"local\""),
   footerIds,
 }));
@@ -98,10 +99,8 @@ assert_value "$(jq -r '.spec // "<missing>"' <<<"$NIX_BTW_JSON")" "pi-btw@$EXPEC
 assert_value "$(jq -r '.installSpec // "<missing>"' <<<"$NIX_BTW_JSON")" "pi-btw@$EXPECTED_VERSION" "config.nix pi-btw source installSpec"
 assert_value "$(jq -r '.version // "<missing>"' <<<"$NIX_BTW_JSON")" "$EXPECTED_VERSION" "config.nix pi-btw declaration version"
 
-# The module derives the enabled package set from managedPackages; confirm the
-# declaration remains on that default path and is not a footer-only package.
-assert_value "$(jq -r '.allPackagesEnabledForBuild' <<<"$NIX_BTW_JSON")" "true" "all managed declarations remain enabled for the build"
-assert_value "$(jq -r '.runtimeUsesManagedPackageIds' <<<"$NIX_BTW_JSON")" "true" "runtime package IDs remain derived from managedPackages"
+# pi-btw remains installed and available in terminal Pi regardless of z.ai.
+assert_value "$(jq -r '.buildUsesPackageSelection and .runtimeUsesPackageSelection and .onlyMcpAdapterIsOptional' <<<"$NIX_BTW_JSON")" "true" "build and terminal settings share a package selection with only the MCP adapter optional"
 assert_value "$(jq -r '.runtimeEligibleSourceFilter' <<<"$NIX_BTW_JSON")" "true" "npm declarations remain eligible for Pi runtime settings"
 if jq -e --arg id pi-btw '.footerIds | index($id) == null' <<<"$NIX_BTW_JSON" >/dev/null; then
   pass "pi-btw is not excluded as a footer variant"

@@ -1,0 +1,13 @@
+{
+  "packages": [
+    {
+      "packageId": "hidden-not-array",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/convention#v1",
+        "materializedPath": "./sources/convention"
+      },
+      "hiddenSkills": "demo"
+    }
+  ]
+}

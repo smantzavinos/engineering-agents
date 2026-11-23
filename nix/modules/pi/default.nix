@@ -24,12 +24,16 @@ let
   inherit (import ./config.nix { inherit lib pkgs self; })
     makePiConfig
     makePiManagedPackages
-    defaultEnabledModels
+    getModelSet
+    makeManualSkill
+    mergeWebSearchConfig
     defaultPowerlineConfig
     defaultPowerlineShortcuts
     defaultPowerlineTheme
     piAgentNames
     piSkillNames;
+
+  modelDefaults = getModelSet { inherit (cfg) modelSet; zaiEnabled = cfg.zai.enable; };
 
   # Repository root path for referencing skills and agents
   repoRoot = "${self}";
@@ -40,8 +44,12 @@ let
   # Static agent tree (settings.json here is the declarative body; the
   # activation merges it into the user's writable settings.json).
   piConfigTree = makePiConfig {
-    inherit (cfg) defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels;
-    inherit (cfg.powerline) config shortcuts;
+    inherit (cfg) modelSet defaultProvider defaultModel defaultThinkingLevel theme footer enabledModels;
+    zaiEnabled = cfg.zai.enable;
+    managedPackagesDir = "${piManagedTree}/agent/packages";
+    direnvExtension = if cfg.enableAgentKit then "${agentKit}/extensions/direnv/direnv.ts" else null;
+    powerline = cfg.powerline.config;
+    powerlineShortcuts = cfg.powerline.shortcuts;
   };
 
   # Build-time managed package materialization (vendor tree + facades +
@@ -49,9 +57,10 @@ let
   # consume via nixosModules.pi-for-user — identical bits in both places.
   piManagedTree = makePiManagedPackages {
     powerlineTheme = cfg.powerline.theme;
+    zaiEnabled = cfg.zai.enable;
   };
 
-  visualExplainerSkill = "${visualExplainer}/plugins/visual-explainer";
+  visualExplainerSkill = makeManualSkill "visual-explainer" "${visualExplainer}/plugins/visual-explainer";
   agentKitSrc = agentKit;
 
 in
@@ -59,21 +68,35 @@ in
   options.engineering-agents.pi = {
     enable = lib.mkEnableOption "Pi coding agent with engineering-agents skills, agents, and presets";
 
+    modelSet = lib.mkOption {
+      type = lib.types.enum [ "direct" "copilot" ];
+      default = "direct";
+      description = "Machine model defaults for Pi sessions, roles and presets.";
+    };
+
+    zai.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable z.ai models and its managed MCP adapter.";
+    };
+
     defaultProvider = lib.mkOption {
       type = lib.types.str;
-      default = "zai-coding-plan";
+      default = modelDefaults.defaultProvider;
+      defaultText = lib.literalExpression "selected modelSet provider";
       description = "Default Pi model provider";
     };
 
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "glm-5.2";
+      default = modelDefaults.defaultModel;
+      defaultText = lib.literalExpression "selected modelSet model";
       description = "Default Pi model";
     };
 
     defaultThinkingLevel = lib.mkOption {
       type = lib.types.str;
-      default = "medium";
+      default = modelDefaults.defaultThinkingLevel;
       description = "Default thinking level";
     };
 
@@ -117,8 +140,9 @@ in
 
     enabledModels = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = defaultEnabledModels;
-      description = "Models available for Ctrl+P cycling";
+      default = modelDefaults.enabledModels;
+      defaultText = lib.literalExpression "models for the selected modelSet and z.ai switch";
+      description = "Models available for cycling";
     };
 
     enableAgentKit = lib.mkOption {
@@ -148,7 +172,7 @@ in
       # auth.json, models-store.json, and session state at runtime.
       ".pi/agent/keybindings.json".source = "${piConfigTree}/agent/keybindings.json";
       ".pi/agent/models.json".source = "${piConfigTree}/agent/models.json";
-      ".pi/agent/mcp-adapter.json".source = "${piConfigTree}/agent/mcp-adapter.json";
+      ".pi/agent/t3-profile.args".source = "${piConfigTree}/agent/t3-profile.args";
       ".pi/agent/tasks-config.json".source = "${piConfigTree}/agent/tasks-config.json";
       ".pi/agent/pi-lens.json".source = "${piConfigTree}/agent/pi-lens.json";
       ".pi/agent/pi-lens-tools".source = "${piConfigTree}/agent/pi-lens-tools";
@@ -172,6 +196,8 @@ in
       # Repo-owned bridge: pi-tasks TaskExecute -> managed pi-subagents RPC
       ".pi/agent/extensions/pi-tasks-subagents-bridge/index.ts".source =
         "${piConfigTree}/agent/extensions/pi-tasks-subagents-bridge/index.ts";
+    } // lib.optionalAttrs cfg.zai.enable {
+      ".pi/agent/mcp-adapter.json".source = "${piConfigTree}/agent/mcp-adapter.json";
     } // builtins.listToAttrs (map (name:
       lib.nameValuePair ".pi/agent/agents/${name}.md" {
         source = "${piConfigTree}/agent/agents/${name}.md";
@@ -207,6 +233,14 @@ in
         fi
 
         rm -f "$SETTINGS_FILE.backup" "$SETTINGS_FILE.bak"
+      '';
+
+      installPiWebSearchSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        ${mergeWebSearchConfig} "$HOME/.pi/web-search.json"
+        ${lib.optionalString config.xdg.enable ''
+          ${mergeWebSearchConfig} ${lib.escapeShellArg "${config.xdg.configHome}/pi/web-search.json"}
+        ''}
+        ${mergeWebSearchConfig} "$HOME/.pi/agent/web-search.json"
       '';
 
       # Materialize managed packages from the build-time tree: facades,

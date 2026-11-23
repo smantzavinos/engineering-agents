@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Creates detailed implementation plans from brief + approach + findings. Frontier reasoning model for strong decomposition and task ordering.
-model: openai-codex/gpt-5.5
+model: openai-codex/gpt-5.6-sol
 thinking: high
 ---
 

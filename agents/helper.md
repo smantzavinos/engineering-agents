@@ -1,7 +1,7 @@
 ---
 name: helper
 description: Fast, cheap errand runner for frontier agents. Scouts code, runs and digests long commands, verifies claims, and applies sweeps it is given. Read-only unless the errand allows edits.
-model: github-copilot/claude-haiku-5.5
+model: zai-coding-plan/glm-5.3-flash
 thinking: low
 inheritProjectContext: true
 defaultProgress: true

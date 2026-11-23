@@ -1,0 +1,20 @@
+{
+  "packages": [
+    {
+      "packageId": "hidden-unknown-skill",
+      "source": {
+        "type": "git",
+        "spec": "github:demo/convention#v1",
+        "materializedPath": "./sources/convention"
+      },
+      "hiddenSkills": [
+        "no-such-skill"
+      ],
+      "expose": {
+        "skills": [
+          "demo"
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Frontier implementer for the frontier pipeline. Builds a whole approved plan and its model, tags the code, passes the gates and the model checks, and fixes fresh-review findings; resumed across review rounds. Use from the run-plan and run-epic skills, not the legacy execute preset.
-model: github-copilot/gpt-6.1-sol
+model: openai-codex/gpt-5.6-sol
 thinking: medium
 inheritProjectContext: true
 skill: implement, architecture-model, delegate, test-quality
