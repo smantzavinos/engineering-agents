@@ -19,6 +19,7 @@ def dispatcher():
     spec = importlib.util.spec_from_file_location('sweep_evidence', SCRIPTS / 'pr-sweep-dispatch.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    module.OWNERS, module.LOGINS = frozenset({'owner'}), {'bot'}
     return module
 
 

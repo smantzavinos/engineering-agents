@@ -55,6 +55,27 @@ def canonical(word):
     return None
 
 
+# Text only automation writes: a claim line (first line), a claim or heartbeat, a verdict.
+_CLAIM_START = re.compile(r'\s*(?:\U0001F916|(?:work|babysit|fix-bot):)')
+_AUTOMATION_TEXT = re.compile(r'^\s*(?:\U0001F916\s*)?(?:work|babysit|fix-bot):|(?:fix-bot: owns this branch;|babysit:) '
+                              r'session=|pr-review verdict=', re.M)
+
+
+def automation_start(text):
+    """True when a comment reads as a bot's at first sight: a hidden marker, or a 🤖 or claim first line.
+    The sweep and unheard skip such comments from anyone (on a shared account they are the bot's)."""
+    text = text or ''
+    return '<!--' in text or bool(_CLAIM_START.match(text))
+
+
+def looks_automated(text):
+    """True when a comment carries anything only automation may write anywhere in it: a hidden-marker delimiter
+    (`<!--`, `-->`), a 🤖 first line, a claim line, claim, heartbeat or verdict text. A person who is not an
+    owner cannot command the bots with such a comment (pr-sweep-dispatch.py trusted_comments)."""
+    text = text or ''
+    return automation_start(text) or '-->' in text or bool(_AUTOMATION_TEXT.search(text))
+
+
 def strategy(word):
     """'rebase' | 'merge' for a strategy word in any inflection, else None."""
     word = canonical(word)

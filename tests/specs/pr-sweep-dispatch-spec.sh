@@ -15,10 +15,11 @@ case "$*" in
 [{"number":1,"title":"unlabeled","headRefName":"a","headRefOid":"1111111111111111111111111111111111111111","labels":[],"isDraft":false},
  {"number":2,"title":"wants review","headRefName":"b","headRefOid":"2222222222222222222222222222222222222222","labels":[{"name":"review-bot:queued"}],"isDraft":false},
  {"number":3,"title":"moved after READY","headRefName":"c","headRefOid":"3333333333333333333333333333333333333333","labels":[{"name":"needs-human:merge"}],"isDraft":false},
- {"number":4,"title":"legacy label","headRefName":"d","headRefOid":"4444444444444444444444444444444444444444","labels":[{"name":"pr:ready-review"}],"isDraft":false}]
+ {"number":4,"title":"legacy label","headRefName":"d","headRefOid":"4444444444444444444444444444444444444444","labels":[{"name":"pr:ready-review"}],"isDraft":false},
+ {"number":5,"title":"from a fork","headRefName":"e","headRefOid":"5555555555555555555555555555555555555555","labels":[{"name":"review-bot:queued"}],"isDraft":false,"isCrossRepository":true}]
 J
   ;;
-  *"issues/3/comments"*) echo '[{"id":9,"user":{"login":"bot"},"body":"<!-- pr-review verdict=READY head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -->"}]' ;;
+  *"issues/3/comments"*) echo '[{"id":9,"user":{"login":"agent"},"body":"<!-- pr-review verdict=READY head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -->"}]' ;;
   *"/comments"*) echo '[]' ;;
   *) echo '[]' ;;
 esac
@@ -26,7 +27,7 @@ EOF
 chmod +x "$TMP/gh"
 PY="$(command -v python3 || true)"
 if [[ -z "$PY" ]]; then echo "  FAIL: python3 not on PATH (run inside nix develop)" >&2; exit 1; fi
-run() { env -u GH_TOKEN PR_SWEEP_DRY=1 PR_SWEEP_REPOS=o/r PIPELINE_BOT_LOGINS=agent PR_SWEEP_STATE="$TMP/state" GH_BIN="$TMP/gh" HERMES_HOME="$TMP" "$@" "$PY" "$ROOT/scripts/pr-sweep-dispatch.py"; }
+run() { env -u GH_TOKEN PR_SWEEP_DRY=1 PR_SWEEP_REPOS=o/r PIPELINE_OWNERS=owner PIPELINE_BOT_LOGINS=agent PR_SWEEP_STATE="$TMP/state" GH_BIN="$TMP/gh" HERMES_HOME="$TMP" "$@" "$PY" "$ROOT/scripts/pr-sweep-dispatch.py"; }
 PASS=0 FAIL=0
 check() { if grep -Fq "$2" <<<"$1"; then PASS=$((PASS+1)); echo "  PASS: $3"; else FAIL=$((FAIL+1)); echo "  FAIL: $3 (missing: $2)" >&2; [[ -n "${SPEC_DEBUG:-}" ]] && printf "%s\n" "$1" >&2; fi; }
 refute() { if grep -Fq "$2" <<<"$1"; then FAIL=$((FAIL+1)); echo "  FAIL: $3 (unexpected: $2)" >&2; else PASS=$((PASS+1)); echo "  PASS: $3"; fi; }
@@ -39,6 +40,9 @@ check  "$OUT" "would set o/r#3 label review-bot:queued" "push after a passed rev
 check  "$OUT" "new commits after the passed review" "stale READY is reported to the human"
 check  "$OUT" "would rename o/r#4 label pr:ready-review -> review-bot:queued" "legacy pr:* labels are renamed"
 check  "$OUT" "would spawn review for o/r#4" "a renamed legacy label is acted on in the same tick"
+refute "$OUT" "o/r#5" "trust: a PR from a fork is never reviewed or fixed"
+OUT="$(run PIPELINE_OWNERS= || true)"
+check  "$OUT" "set PIPELINE_OWNERS" "trust: the sweep refuses to run without owners"
 OUT="$(PR_SWEEP_UNLABELED=review run)"
 check  "$OUT" "would spawn review for o/r#1" "drift mode: unlabeled PR is reviewed"
 
@@ -165,8 +169,14 @@ case "$*" in
   *"issues/9/comments"*)
     C='[{"id":90,"user":{"login":"agent"},"body":"<!-- pr-review verdict=READY head=9999999999999999999999999999999999999999 -->"}'
     [ "${M_CLAIM:-none}" = owned ] && C="$C,{\"id\":91,\"user\":{\"login\":\"agent\"},\"body\":\"babysit: session=babysit-pr-x heartbeat=2000-01-01T00:00:00Z\"}"
-    [ -n "${M_BODY:-}" ] && C="$C,{\"id\":92,\"user\":{\"login\":\"${M_USER:-human}\"},\"body\":\"$M_BODY\"}"
+    [ -n "${M_BODY:-}" ] && C="$C,{\"id\":92,\"user\":{\"login\":\"${M_USER:-owner}\"},\"body\":\"$M_BODY\"}"
     echo "$C]" ;;
+  *closingIssuesReferences*)
+    printf '{"data":{"repository":{"pullRequest":{"assignees":{"nodes":[]},"closingIssuesReferences":{"nodes":[{"repository":{"nameWithOwner":"%s"},"assignees":{"nodes":[{"login":"%s"}]}}]}}}}}' "${M_CLOSES_REPO:-o/r}" "${M_ASSIGNEE:-dev}" ;;
+  *reviewThreads*)
+    if [ -n "${M_THREAD:-}" ]; then
+      printf '{"data":{"repository":{"pullRequest":{"reviewThreads":{"nodes":[{"isResolved":false,"start":{"nodes":[{"author":{"login":"%s"}}]},"comments":{"nodes":[{"databaseId":5,"author":{"login":"%s"}}]}}]}}}}}' "$M_THREAD" "$M_THREAD"
+    else echo '{"data":{"repository":{"pullRequest":{"reviewThreads":{"nodes":[]}}}}}'; fi ;;
   *) echo '[]' ;;
 esac
 EOF
@@ -186,6 +196,55 @@ OUT="$(M_BODY='@agent fix?' mrun)"
 refute "$OUT" "would spawn" "command: a question is not a command"
 OUT="$(M_USER=agent M_BODY='@agent fix' mrun)"
 refute "$OUT" "would spawn babysit for o/r#9" "command: the bot's own comment never triggers"
+OUT="$(M_USER=stranger M_BODY='@agent fix' mrun)"
+refute "$OUT" "would spawn" "trust: a stranger's command is ignored"
+OUT="$(M_USER=dev M_BODY='@agent fix' mrun)"
+check  "$OUT" "would spawn babysit for o/r#9" "trust: an assignee of the issue the PR closes may command the bots"
+OUT="$(M_USER=dev M_ASSIGNEE=someone-else M_BODY='@agent fix' mrun)"
+refute "$OUT" "would spawn" "trust: someone who is not assigned may not"
+OUT="$(M_USER=dev M_CLOSES_REPO=x/y M_BODY='@agent fix' mrun)"
+refute "$OUT" "would spawn" "trust: assignees of an issue in another repository are not people of the PR"
+OUT="$(M_THREAD=owner mrun)"
+check  "$OUT" "review comment(s) have no answer" "threads: an owner's open review thread sends a ready PR back to the fix bot"
+OUT="$(M_THREAD=copilot-pull-request-reviewer mrun)"
+check  "$OUT" "review comment(s) have no answer" "threads: a bot reviewer's thread counts (GraphQL drops the [bot] suffix)"
+OUT="$(M_THREAD=stranger mrun)"
+refute "$OUT" "review comment(s) have no answer" "threads: a stranger's review thread changes nothing"
+refute "$OUT" "would spawn babysit" "threads: a stranger's review thread starts no fix round"
+
+# Shared author limit and quiet hours (scripts/pipeline_runtime.py). A live "hermes" process stands in for a
+# running work session of the delivery pipeline (alive() reads /proc/<pid>/cmdline).
+"$PY" -c 'import time; time.sleep(60)' hermes-stand-in & LIVE=$!
+mkdir -p "$TMP/pipe"; echo "{\"kind\":\"work\",\"item\":1,\"reason\":\"start\",\"ts\":0,\"pid\":$LIVE}" > "$TMP/pipe/dispatches.jsonl"
+OUT="$(M_BODY='@agent fix' mrun PIPELINE_WIP=1 PIPELINE_STATE="$TMP/pipe")"
+refute "$OUT" "would spawn babysit for o/r#9" "shared WIP: a live work session holds the only author slot"
+check  "$OUT" "your fix request waits for a free bot" "shared WIP: a waiting owner command is told why"
+OUT="$(run GH_BIN="$BOT" PIPELINE_WIP=1 PIPELINE_STATE="$TMP/pipe")"
+refute "$OUT" "would spawn babysit for o/r#7" "shared WIP: a bot-review round waits for a free slot"
+refute "$OUT" "no bot is due to act" "shared WIP: a waiting fix round is not reported as stalled"
+OUT="$(M_BODY='@agent fix' mrun PIPELINE_WIP=2 PIPELINE_STATE="$TMP/pipe")"
+check  "$OUT" "would spawn babysit for o/r#9" "shared WIP: a free slot starts the fix round"
+kill "$LIVE" 2>/dev/null || true
+OUT="$(M_BODY='@agent fix' mrun PIPELINE_QUIET_HOURS=00:00-00:00)"
+refute "$OUT" "would spawn" "quiet hours: no session starts"
+OUT="$(M_BODY='@agent fix' mrun PIPELINE_QUIET_HOURS=00:00-00:00 PIPELINE_FORCE=1)"
+check  "$OUT" "would spawn babysit for o/r#9" "quiet hours: PIPELINE_FORCE=1 overrides"
+
+# Every repository failing: one alert, silence within the hour, then one recovery line (not a dry run).
+printf '#!/usr/bin/env bash\necho "[]"\n' > "$TMP/gh-empty"; chmod +x "$TMP/gh-empty"
+real() { run PR_SWEEP_DRY= PR_SWEEP_STATE="$TMP/real" "$@"; }
+OUT="$(real GH_BIN="$TMP/missing-gh" || true)"
+check  "$OUT" "PR sweep stopped since" "stopped: the first failing tick alerts"
+OUT="$(real GH_BIN="$TMP/missing-gh" || true)"
+refute "$OUT" "stopped" "stopped: the next failing tick within the hour is silent"
+OUT="$(real GH_BIN="$TMP/gh-empty" PIPELINE_QUIET_HOURS=00:00-00:00)"
+refute "$OUT" "runs again" "stopped: a quiet tick ran nothing, so it reports no recovery"
+OUT="$(real GH_BIN="$TMP/gh-empty")"
+check  "$OUT" "PR sweep runs again" "stopped: the first good tick says it runs again"
+OUT="$(real GH_BIN="$TMP/gh-empty" PR_SWEEP_REPOS="o/r o/s" PIPELINE_QUIET_HOURS=late PR_SWEEP_STATE="$TMP/real-cfg" || true)"
+check  "$OUT" "PR sweep stopped since" "stopped: malformed quiet hours stop every repository, so they alert"
+OUT="$(M_USER=helper M_BODY='@agent review' mrun PIPELINE_RESPONDERS=helper)"
+check  "$OUT" "would spawn review for o/r#9" "trust: a configured responder may command the bots"
 
 
 # A fix round that answered the review without changing code (FIXED, same head, addressed_without_code)
@@ -195,7 +254,8 @@ cat > "$RES" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
   "pr list"*) echo '[{"number":10,"title":"resolved","headRefName":"item/10","headRefOid":"1010101010101010101010101010101010101010","labels":[{"name":"fix-bot:queued"}],"isDraft":false}]' ;;
-  *"issues/10/comments"*) echo '[{"id":100,"user":{"login":"agent"},"body":"<!-- pr-review verdict=FIX head=1010101010101010101010101010101010101010 -->"}]' ;;
+  *"issues/10/comments"*) echo "[{\"id\":100,\"user\":{\"login\":\"${R_USER:-agent}\"},\"body\":\"<!-- pr-review verdict=FIX head=1010101010101010101010101010101010101010 -->\"}]" ;;
+  *closingIssuesReferences*) echo '{"data":{"repository":{"pullRequest":{"assignees":{"nodes":[{"login":"dev"}]},"closingIssuesReferences":{"nodes":[]}}}}}' ;;
   *) echo '[]' ;;
 esac
 EOF
@@ -209,6 +269,12 @@ round bab1 babysit 10 "$H" FIXED '"verdict_id":100' '"addressed_without_code":tr
 OUT="$(run GH_BIN="$RES")"
 check  "$OUT" "would set o/r#10 label review-bot:queued" "resolve-only: a FIXED round with no push queues one re-review of the same head"
 rm -rf "$TMP/state"
+OUT="$(R_USER=stranger run GH_BIN="$RES")"
+check  "$OUT" "would set o/r#10 label review-bot:queued" "trust: a verdict marker posted by a stranger is not a verdict"
+OUT="$(R_USER=dev run GH_BIN="$RES")"
+check  "$OUT" "would set o/r#10 label review-bot:queued" "trust: a verdict marker posted by an assignee is not a verdict either"
+OUT="$(run GH_BIN="$RES")"
+refute "$OUT" "would set o/r#10 label review-bot:queued" "trust: the bot's own verdict marker counts"
 round rev1 review 10 "$H" FIX
 round bab1 babysit 10 "$H" RELEASED '"verdict_id":100'
 OUT="$(run GH_BIN="$RES")"
@@ -225,7 +291,7 @@ kw = dict(repo="o/r", number=1, head="a" * 40, short_head="aaaaaaa", title="t", 
           hermes="h", handle="@agent", result_file="/r", tag="t", artifacts_dir="/a", scripts_dir="/s",
           merge_state="CLEAN", merge_status="MERGEABLE", base_branch="main", base_sha="b" * 40,
           integrate_strategy="merge", signing="unknown", fix_loops=0, fix_loop_cap=3, bot_rounds=0, bot_cap=5,
-          trigger="owner request")
+          trigger="owner request", trusted_logins="owner, agent", comment_id=92)
 for k in ("review", "babysit"):
     (pathlib.Path(sys.argv[1]) / f"{k}.md").read_text().format(**kw)
 PYEOF

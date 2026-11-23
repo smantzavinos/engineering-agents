@@ -22,8 +22,12 @@ Environment:
   PR_SESSION_PROVIDER     provider passed to `hermes chat`
   PR_SWEEP_UNLABELED      ignore (default: opt-in) | review (drift: unlabeled = awaiting review)
   PR_BABYSIT_STALE_MIN    (60; chat-started claims only)   PR_REVIEW_STUCK_MIN (90)
-  PIPELINE_BOT_LOGINS     logins the bots post as, whose thread replies answer a review thread (default: the
-                          '@' handles, else the account `gh` is logged in as)
+  PIPELINE_OWNERS         owner logins (required): they command the bots on any PR and their comments keep
+                          their hidden markers
+  PIPELINE_RESPONDERS     extra logins who may command the bots on any PR (with the PR's assignees and the
+                          assignees of the issues it closes)
+  PIPELINE_BOT_LOGINS     logins the bots post as: their hidden markers count and their thread replies answer a
+                          review thread (default: the '@' handles, else the account `gh` is logged in as)
   PR_BOT_REVIEWERS        bot logins whose reviews trigger sweep-owned babysit rounds
                           (default copilot-pull-request-reviewer[bot])
   PR_BOT_REVIEW_CAP       max bot-review rounds per PR (default 5)
@@ -34,6 +38,10 @@ Environment:
   PR_FIX_LOOP_CAP         FIX verdicts answered automatically before a human decides (default 2)
   PR_HUMAN_CHECKS         comma-separated check names only a person can satisfy (e.g. a merge-label check);
                           never treated as a code failure and never awaited
+  PIPELINE_WIP            author sessions at once, shared with the pipeline's work sessions (default 2);
+                          PIPELINE_STATE names the pipeline's state dir (default $HERMES_HOME/state/pipeline)
+  PIPELINE_QUIET_HOURS, PIPELINE_QUIET_WEEKENDS, PIPELINE_QUIET_MODES (default "work pr"), PIPELINE_FORCE:
+                          quiet hours, as in pipeline-dispatch.py; job name `pr`
 
 Labels: `review-bot:*` / `fix-bot:*` mean a bot acts next; `needs-human:*` means a person acts next.
 A PR carries at most one state label, and it always names who acts next: a bot state that no bot
@@ -53,6 +61,7 @@ from typing import Any
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import commands  # noqa: E402  (shared command parser, scripts/commands.py)
+import pipeline_runtime  # noqa: E402  (quiet hours, shared WIP, stopped alerts: scripts/pipeline_runtime.py)
 
 ENV = os.environ
 REPOS = (ENV.get("PR_SWEEP_REPOS") or ENV.get("PR_SWEEP_REPO") or "").split()
@@ -66,6 +75,8 @@ HANDLE = HANDLES[0]  # primary command token, for prompt templates and hints
 # Logins the bots post as (their thread replies answer a thread): PIPELINE_BOT_LOGINS and the '@' handles;
 # when neither names one (the default `/devbot`), agent_logins() falls back to the account `gh` uses.
 LOGINS = set(commands.bot_logins(ENV.get("PIPELINE_BOT_LOGINS", ""), HANDLES))
+OWNERS = frozenset(o.lstrip("@").lower() for o in ENV.get("PIPELINE_OWNERS", "").replace(",", " ").split())
+RESPONDERS = frozenset(o.lstrip("@").lower() for o in ENV.get("PIPELINE_RESPONDERS", "").replace(",", " ").split())
 CHECKOUT_ROOT = pathlib.Path(ENV.get("PR_SWEEP_CHECKOUT_ROOT", str(pathlib.Path.home() / "repos")))
 REVIEW_MODEL = ENV.get("PR_REVIEW_MODEL", "")
 REVIEW_REASONING = ENV.get("PR_REVIEW_REASONING", "medium")
@@ -77,6 +88,8 @@ UNLABELED = ENV.get("PR_SWEEP_UNLABELED", "ignore")
 STALE_MIN = int(ENV.get("PR_BABYSIT_STALE_MIN", "60"))
 BOT_REVIEWERS = tuple(ENV.get("PR_BOT_REVIEWERS", "copilot-pull-request-reviewer[bot]").split())
 BOT_CAP = int(ENV.get("PR_BOT_REVIEW_CAP", "5"))
+# Fix-bot rounds and the delivery pipeline's work sessions share one limit of live author sessions.
+WIP = int(ENV.get("PIPELINE_WIP", "2"))
 REQUIRE_LOGS = ENV.get("PR_REQUIRE_VERIFICATION_LOGS", "1") not in ("0", "false", "no")
 RETRY_COOLDOWN_SECS = 30 * 60  # wait before retrying a round that failed or hit a passing blocker
 CONFLICT_CAP = 2  # automatic merge-conflict rounds per PR since the owner last asked for a fix
@@ -88,6 +101,7 @@ GH = ENV.get("GH_BIN", "gh")
 TOKEN_FILE = pathlib.Path(ENV.get("GH_TOKEN_FILE", "/nonexistent"))
 HOME = pathlib.Path(ENV.get("HERMES_HOME", str(pathlib.Path.home())))
 STATE = pathlib.Path(ENV.get("PR_SWEEP_STATE", str(HOME / "state" / "pr-automation")))
+PIPELINE_STATE = pathlib.Path(ENV.get("PIPELINE_STATE", str(HOME / "state" / "pipeline")))
 DISPATCH, RESULTS, REPORTED, LOGS = STATE / "dispatches.jsonl", STATE / "results", STATE / "reported.json", STATE / "logs"
 PROMPTS = pathlib.Path(__file__).resolve().parent / "pr-sweep-prompts"
 _SIGNING = {}  # (repo, branch) -> "required" | "optional" | "unknown", for one tick
@@ -180,18 +194,37 @@ def bot_reviews(reviews, bots=BOT_REVIEWERS):
 
 
 THREADS_QUERY = ("query($o:String!,$r:String!,$p:Int!){repository(owner:$o,name:$r){pullRequest(number:$p){"
-                 "reviewThreads(first:100){nodes{isResolved comments(last:1){nodes{databaseId author{login}}}}}}}}")
+                 "reviewThreads(first:100){nodes{isResolved start:comments(first:1){nodes{author{login}}} "
+                 "comments(last:30){nodes{databaseId author{login}}}}}}}}")
 
 
-def unanswered_threads(threads, authors):
+def unanswered_threads(threads, authors, voices=None):
     """Ids of the last comment of every unresolved review thread whose last word is not the PR author's
-    (the owner account the fix bot replies from). Such a thread was neither fixed nor answered."""
+    (the owner account the fix bot replies from). Such a thread was neither fixed nor answered.
+
+    `voices`: a callable returning everyone else the sweep listens to on this PR (owners, the PR's people,
+    PR_BOT_REVIEWERS). With it, a thread counts only when one of them (or the bot) started it, and a later
+    comment from anyone else neither opens nor reopens it. None: every author counts (unit tests)."""
+    def norm(who):  # GraphQL names a bot `copilot-pull-request-reviewer`, REST `copilot-pull-request-reviewer[bot]`
+        return (who or "").lower().removesuffix("[bot]")
+
+    def author(node):
+        return norm((node.get("author") or {}).get("login"))
+    mine = {norm(a) for a in authors}
     out = []
     for t in threads:
-        last = ((t.get("comments") or {}).get("nodes") or [None])[-1]
-        if t.get("isResolved") or not last:
+        nodes = (t.get("comments") or {}).get("nodes") or []
+        if t.get("isResolved") or not nodes:
             continue
-        if ((last.get("author") or {}).get("login") or "").lower() not in authors:
+        if voices is not None:
+            heard = mine | {norm(v) for v in voices()}
+            if author(((t.get("start") or {}).get("nodes") or [{}])[0]) not in heard:
+                continue
+            nodes = [c for c in nodes if author(c) in heard]
+            if not nodes:
+                continue
+        last = nodes[-1]
+        if author(last) not in mine:
             out.append(last["databaseId"])
     return out
 
@@ -254,17 +287,64 @@ def ci_round_due(rollup, handled_keys, stamp_head, head):
 
 
 
+# Comments that look like automation (a hidden marker, the bot emoji, a claim line) are never requests.
+AUTOMATION_RE = re.compile(r"<!--|\A\s*\U0001F916|^\s*(?:\U0001F916\s*)?(?:work|babysit|fix-bot):\s", re.M)
+AUTOMATION_START_RE = re.compile(r"\s*(?:\U0001F916|(?:work|babysit|fix-bot):)")
+
+
+def login_of(record):
+    return ((record.get("user") or {}).get("login") or "").lower()
+
+
+def trusted_comments(comments, bots, people):
+    """The PR comments the sweep reads, filtered by author (docs/hermes/pr-automation.md, Who the bots listen to).
+
+    Owners and bot logins: kept as they are (their hidden markers carry verdicts and claims).
+    People who may command the bots (`people()`: responders, the PR's assignees, the assignees of the issues
+    it closes): kept only when nothing in the comment looks like automation (no hidden-marker delimiter, no
+    🤖 first line, no claim, heartbeat or verdict text anywhere), so they cannot pose as a bot. Anyone else:
+    dropped, so a stranger can neither start a bot round nor forge a verdict.
+    `people` is a callable, asked only when a comment comes from someone outside the first group."""
+    trusted = OWNERS | set(bots)
+    kept = []
+    for c in comments:
+        who = login_of(c)
+        if who in trusted:
+            kept.append(c)
+        elif who and who in people() and not looks_automated(c.get("body") or ""):
+            kept.append(c)
+    return kept
+
+
+def trusted_logins(people):
+    """The logins a session may take instructions from on this PR, for its prompt. Bots are listed with and
+    without `[bot]`: GraphQL review threads name them without it."""
+    logins = OWNERS | people() | set(BOT_REVIEWERS) | set(agent_logins())
+    return ", ".join(sorted(logins | {x.removesuffix("[bot]") for x in logins})) or "none"
+
+
+def looks_automated(body):
+    """True when a comment carries anything only automation may write (commands.looks_automated; unheard.py
+    applies the same rule when it explains why no bot acted)."""
+    return (commands.looks_automated(body) or bool(AUTOMATION_RE.search(body)) or bool(HEARTBEAT_RE.search(body))
+            or bool(VERDICT_RE.search(body)))
+
+
 def mentions(comments, handles, seen_ids):
     """Newest unprocessed (review_comment, babysit_comment) across the handle vocabulary.
 
     `fix` and `babysit` both mean an author round. A comment is ignored when the
-    author IS one of the configured handles (self-mention) — not just the primary.
+    author IS one of the configured handles (self-mention) — not just the primary —
+    or when it looks like automation (a worker's comment posted from a shared account).
+    Callers pass trusted_comments(), so only owners and the PR's people reach this.
     """
     review = babysit = None
     if not handles:
         return None, None
     for c in comments:
         if c["id"] in seen_ids or c["user"]["login"].lower() in {h[1:] for h in handles if h.startswith("@")}:
+            continue
+        if commands.automation_start(c.get("body")):  # a claim line further down is an owner's instruction
             continue
         found = commands.parse(c.get("body"), handles)
         if found is None or found[1] not in ("review", "fix", "babysit"):
@@ -630,7 +710,8 @@ def spawn(kind, repo, pr, head, model, reasoning, skills, extra=None):
     artifacts_dir = LOGS / tag  # pipeline-owned and durable: the session writes its verification logs here
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     extra = {"merge_state": "UNKNOWN", "merge_status": "UNKNOWN", "base_branch": "", "base_sha": "",
-             "integrate_strategy": "merge", "signing": "unknown", "fix_loops": 0, "fix_loop_cap": FIX_LOOP_CAP, **(extra or {})}
+             "integrate_strategy": "merge", "signing": "unknown", "fix_loops": 0, "fix_loop_cap": FIX_LOOP_CAP,
+             "trusted_logins": ", ".join(sorted(OWNERS)) or "none", "comment_id": "none", **(extra or {})}
     prompt = (PROMPTS / f"{kind}.md").read_text().format(
         repo=repo, number=n, head=head, short_head=head[:7], title=pr["title"], branch=pr["headRefName"],
         checkout=str(CHECKOUT_ROOT / repo.split("/")[-1]), hermes=HERMES, handle=HANDLE,
@@ -699,22 +780,56 @@ def human_comment(repo, n, head, key, headline, why, how, comments, reported):
         out.append(f"{repo}#{n}: could not post the hand-over comment: {e}")
 
 
+PEOPLE_QUERY = ("query($o:String!,$r:String!,$p:Int!){repository(owner:$o,name:$r){pullRequest(number:$p){"
+                "assignees(first:20){nodes{login}} closingIssuesReferences(first:10){nodes{repository{nameWithOwner} "
+                "assignees(first:10){nodes{login}}}}}}}")
+
+
+def pr_people(repo, n):
+    """Logins who may command the bots on PR n (lower case): the responders, the PR's assignees and the
+    assignees of the issues it closes (the people responsible for the work). Owners always may.
+    A failed read falls back to the responders alone."""
+    found = set(RESPONDERS)
+    owner, name = repo.split("/")
+    try:
+        pull = gh("api", "graphql", "-f", f"query={PEOPLE_QUERY}", "-f", f"o={owner}", "-f", f"r={name}",
+                  "-F", f"p={n}")["data"]["repository"]["pullRequest"] or {}
+    except Exception:  # noqa: BLE001 — unknown assignees: owners and responders still count
+        return found
+    nodes = list((pull.get("assignees") or {}).get("nodes") or [])
+    for issue in (pull.get("closingIssuesReferences") or {}).get("nodes") or []:
+        # Only issues of this repository: "Closes someone/else#1" must not make its assignees people of the PR.
+        if ((issue.get("repository") or {}).get("nameWithOwner") or "").lower() == repo.lower():
+            nodes += (issue.get("assignees") or {}).get("nodes") or []
+    return found | {(a.get("login") or "").lower() for a in nodes if a and a.get("login")}
+
+
 def sweep_repo(repo, recs, reported):
     pulls = gh("pr", "list", "-R", repo, "--state", "open", "--limit", "100",
-               "--json", "number,title,headRefName,headRefOid,labels,isDraft,statusCheckRollup,mergeable,mergeStateStatus,baseRefName")
+               "--json", "number,title,headRefName,headRefOid,labels,isDraft,statusCheckRollup,mergeable,mergeStateStatus,"
+               "baseRefName,isCrossRepository")
     for pr in sorted(pulls, key=lambda p: p["number"]):
         n, head = pr["number"], pr["headRefOid"]
+        if pr.get("isCrossRepository"):
+            # A fork's branch: the bots never check it out, run its code or push to it (a person reviews it).
+            continue
         labels = [lbl["name"] for lbl in pr["labels"]]
         if any(name in LEGACY_LABELS for name in labels):
             labels = migrate_labels(repo, n, labels)
         label = state_label(labels)
-        comments = gh("api", f"repos/{repo}/issues/{n}/comments?per_page=100")
+        people_cache = []
+
+        def people(number=n, cache=people_cache):
+            if not cache:
+                cache.append(pr_people(repo, number))
+            return cache[0]
+        comments = trusted_comments(gh("api", f"repos/{repo}/issues/{n}/comments?per_page=100"), agent_logins(), people)
         reviews = gh("api", f"repos/{repo}/pulls/{n}/reviews?per_page=100")
         owner_name, repo_name = repo.split("/")
         try:
             threads = gh("api", "graphql", "-f", f"query={THREADS_QUERY}", "-f", f"o={owner_name}",
                          "-f", f"r={repo_name}", "-F", f"p={n}")["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-            open_threads = unanswered_threads(threads, agent_logins())
+            open_threads = unanswered_threads(threads, agent_logins(), lambda: OWNERS | people() | set(BOT_REVIEWERS))
         except Exception:  # noqa: BLE001 — unknown thread state never blocks the rest of the sweep
             open_threads = []
         vs = verdicts(comments)
@@ -939,7 +1054,8 @@ def sweep_repo(repo, recs, reported):
                 try:
                     set_state_label(repo, n, REVIEW_RUNNING)
                     rec["pid"], rec["tag"] = spawn("review", repo, pr, head, REVIEW_MODEL, REVIEW_REASONING, REVIEW_SKILLS,
-                                                   {"fix_loops": fix_loops, "fix_loop_cap": FIX_LOOP_CAP})
+                                                   {"fix_loops": fix_loops, "fix_loop_cap": FIX_LOOP_CAP,
+                                                    "trusted_logins": trusted_logins(people)})
                     if mention_review:
                         react(repo, mention_review["id"])
                 except Exception as e:  # noqa: BLE001 — recorded; retried next tick
@@ -1005,6 +1121,16 @@ def sweep_repo(repo, recs, reported):
                 out.append(f"{repo}#{n}: the fix bot failed {MAX_FAILS} times on this commit; it retries "
                            f"automatically in 6 hours (logs {LOGS}).")
             want_babysit = False
+        # Shared author limit: with PIPELINE_WIP author sessions live (fix rounds here plus the pipeline's work
+        # sessions), the round waits for a free slot; the PR does not count as idle meanwhile.
+        deferred = (want_babysit and not babysitter_running
+                    and len(pipeline_runtime.live_authors([STATE, PIPELINE_STATE], alive)) >= WIP)
+        if deferred:
+            want_babysit = False
+            if mention_babysit and f"deferred:{mention_babysit['id']}" not in reported:
+                reported.add(f"deferred:{mention_babysit['id']}")
+                out.append(f"{repo}#{n}: your fix request waits for a free bot: all {WIP} author slots are busy "
+                           f"(PIPELINE_WIP). It starts by itself when one frees up.")
         if want_babysit and not babysitter_running:
             rec = {"ts": time.time(), "kind": "babysit", "repo": repo, "pr": n, "head": head,
                    "comment_id": mention_babysit["id"] if mention_babysit else None,
@@ -1025,6 +1151,8 @@ def sweep_repo(repo, recs, reported):
                                                 "base_branch": base_branch, "base_sha": base_sha,
                                                 "integrate_strategy": integrate_strategy(mention_babysit, HANDLES) if owner_round else "merge",
                                                 "conflict_only": conflict_only,
+                                                "trusted_logins": trusted_logins(people),
+                                                "comment_id": mention_babysit["id"] if mention_babysit else "none",
                                                 "trigger": "owner request" if owner_round else ("merge conflict only" if conflict_only else "merge conflict" if conflict_round and not (fix_round or bot_round) else ("CI red" if ci_round else ("bot review" if bot_round else ("open review threads" if thread_round else "verdict"))))})
                 if mention_babysit:
                     react(repo, mention_babysit["id"])
@@ -1034,7 +1162,8 @@ def sweep_repo(repo, recs, reported):
 
         # Invariant: a bot state label must name a bot that will act. When none will, hand the PR to a
         # person with `needs-human:decision` and say exactly what to do.
-        idle = len(recs) == dispatched_before and not any(r.get("pid") and alive(r["pid"]) for r in mine)
+        idle = (len(recs) == dispatched_before and not deferred
+                and not any(r.get("pid") and alive(r["pid"]) for r in mine))
         url = f"https://github.com/{repo}/pull/{n}"
         if idle and label in BOT_STATES and not pr["isDraft"]:
             reason = key = headline = None
@@ -1134,6 +1263,10 @@ def main():
     if not REPOS:
         print("PR sweep error: set PR_SWEEP_REPOS")
         return 1
+    if not OWNERS:
+        # Without owners nobody may command the bots, and nothing tells a person's comment from a stranger's.
+        print("PR sweep error: set PIPELINE_OWNERS (the logins who command the bots)")
+        return 1
     if not agent_logins():
         # Without a bot login every bot-answered review thread looks open and READY PRs are demoted each tick.
         print("PR sweep error: no bot login: set PIPELINE_BOT_LOGINS (or an @ handle in PR_AGENT_HANDLE), "
@@ -1164,14 +1297,31 @@ def main():
                        f"{r.get('summary', '').strip()} {r.get('url', '')}".strip())
 
     errors = []
-    for repo in sorted(REPOS):
+    config_error = False
+    try:
+        quiet = pipeline_runtime.quiet_now(ENV, "pr")  # quiet hours: results still arrive, no session starts
+    except ValueError as e:
+        quiet = True
+        errors.append(f"PR sweep error: {e}")
+        config_error = True
+    for repo in sorted(REPOS) if not quiet else ():
         try:
             sweep_repo(repo, recs, reported)
         except Exception as e:  # noqa: BLE001 — one repo failing must not starve the others
             errors.append(f"PR sweep error ({repo}): {e}")
     if not DRY:
         save_reported(reported)
-    lines = out + errors
+    if DRY:
+        lines = out + errors
+    else:
+        # Every repository failing: one plain alert, repeated hourly, then one line when it runs again. A single
+        # failing repository repeats its line at most once per pipeline_runtime.DEDUPE_TTL.
+        health = STATE / "health"
+        # A configuration error stops every repository; a quiet tick ran nothing, so it proves no recovery.
+        down = config_error or (bool(errors) and len(errors) == len(REPOS))
+        status = (pipeline_runtime.job_down(health, "PR sweep", "; ".join(errors)) if down
+                  else [] if quiet else pipeline_runtime.job_up(health, "PR sweep"))
+        lines = status + out + ([] if down else pipeline_runtime.fresh_lines(health, "errors", errors))
     if lines:
         print("\n".join(lines))
     return 1 if errors else 0

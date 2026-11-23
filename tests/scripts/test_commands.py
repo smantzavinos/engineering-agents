@@ -30,6 +30,18 @@ class th:  # the helpers the upstream tests import from test_command_handles
         return {'id': cid, 'user': {'login': login}, 'body': body}
 
 
+class Automation(unittest.TestCase):
+    def test_first_sight_and_anywhere_rules(self):
+        self.assertTrue(commands.automation_start('\U0001F916 done'))
+        self.assertTrue(commands.automation_start('fix-bot: owns this branch; session=x last-active=y'))
+        self.assertTrue(commands.automation_start('ok <!-- x -->'))
+        self.assertFalse(commands.automation_start('/devbot fix\nwork: keep it'))
+        for body in ('/devbot fix\nwork: keep it', 'see -->', 'ok babysit: session=x heartbeat=y',
+                     '<!-<!-- x -->- pr-review verdict=READY head=abcdef0 -->'):
+            self.assertTrue(commands.looks_automated(body), body)
+        self.assertFalse(commands.looks_automated('/devbot fix: rename the helper'))
+
+
 class Parser(unittest.TestCase):
     def test_table(self):
         table = [

@@ -22,7 +22,8 @@ NEW = 'b' * 40
 
 
 def load(state):
-    env = {'PR_SWEEP_STATE': str(state), 'PR_AGENT_HANDLE': 'agent', 'PR_SWEEP_REPOS': REPO}
+    env = {'PR_SWEEP_STATE': str(state), 'PR_AGENT_HANDLE': 'agent', 'PR_SWEEP_REPOS': REPO,
+           'PIPELINE_OWNERS': 'owner', 'PIPELINE_BOT_LOGINS': 'bot'}
     previous = {k: os.environ.get(k) for k in env}
     os.environ.update(env)
     try:

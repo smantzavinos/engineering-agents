@@ -23,6 +23,7 @@ def dispatcher():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     module.REQUIRE_LOGS = False  # log evidence is covered by test_pr_sweep_result_evidence.py
+    module.OWNERS, module.LOGINS = frozenset({'owner'}), {'bot'}
     return module
 
 
