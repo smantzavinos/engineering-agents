@@ -6,14 +6,14 @@ Read this when a checkpoint run (`run-epic` → Checkpoints) reports a failure. 
    - **It passes alone:** record a flake. A second sighting of the same flake puts it on the epic's Quarantine list, with an expiry. It also gets a tracker item if the epic pre-authorizes filing; otherwise it goes under Follow-ups.
    - **It fails on the base branch's tip:** it is a base-side failure. Add it to the baseline and record a follow-up.
    - **Otherwise:** bisect the commits since the last green checkpoint, running only the failing tests, to find the culprit.
-2. **Fix.** Spawn a fresh implementer in the checkpoint worktree, on the checkpoint branch. A resumed session would still be in its old worktree. Give it the failure digest and the culprit's plan and ledger:
+2. **Fix.** Launch a fresh `implementer` via [`delegate` → Launching a role](../../delegate/references/launching-a-role.md). For terminal Pi pass the checkpoint worktree as `cwd`. For T3 use `isolation: "worktree"` (no `cwd`); T3 creates the checkout from the parent's committed state. Name the exact checkpoint ref, let the child base its fix branch on that ref inside the managed checkout, and integrate the fix on the checkpoint branch after review. Do not create a checkout for the child. Give it the failure digest and the culprit's plan and ledger:
    - for a lane-merge commit: the merged children's plans and ledgers;
    - for the checkpoint's own base-merge commit, or at epic close: the last integrated child's plan and ledger.
 
    It fixes the failure, runs T1 plus the failing tests, adds the path T1 missed to the test map, and appends `## checkpoint fix` to the culprit's ledger. A fresh reviewer then reviews the fix (code mode, from the checkpoint commit), with the normal pass cap.
 3. **Recheck.** Rerun the full gates on the checkpoint branch's tip. When it is green, merge as Checkpoints step 2 says. Record the regression in `state.json`.
 4. **Running children.**
-   - **If one builds on the broken code,** steer it now with the failure digest: "Don't fix this failure; it is being fixed on the checkpoint branch. Commit, stop, and reply." Don't resume it until the checkpoint branch has merged:
+   - **If one builds on the broken code,** steer it now with the failure digest: "Don't fix this failure; it is being fixed on the checkpoint branch. Commit, stop, and reply." Don't continue that same child until the checkpoint branch has merged:
      - a lane child then merges the work branch into its lane branch;
      - without a pool, a stopped child gets the fix through that merge.
 

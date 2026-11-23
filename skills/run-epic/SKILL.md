@@ -8,7 +8,7 @@ harnesses: [pi]
 
 You drive the work; you don't do it. Planners plan, implementers build, fresh reviewers judge, and the oracle breaks ties. You sequence them, keep state, bound them, and decide when to stop. Run until done or until a stop condition fires.
 
-Agents: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helper` and `researcher`. Launch them in the background and wait for completion.
+Roles: `plan-author`, `implementer`, `reviewer`, `oracle`, plus the fast `helper` and `researcher`. Follow [`delegate` → Launching a role](../delegate/references/launching-a-role.md) for background launches, continuation and completion.
 
 An epic is the rare case: distinct workstreams, each with its own plan and its own model. One plan is built with `run-plan`. This skill adds what crosses plans: units, lanes, checkpoints and integration. Each child is built by the **Build loop of `run-plan`**, run by you in the child's worktree; read that skill, and `architecture-model`, first.
 
@@ -23,7 +23,7 @@ An epic is the rare case: distinct workstreams, each with its own plan and its o
 Until the check takes a later base: tell the implementer, the code reviewer and the close helper that a result tracing to commits outside the child's own range (base to tip) is not theirs to fix. They list each in the ledger and change nothing to explain it. *(open)* If such a result is all that keeps the check from passing, stop for the human with the list.
 
 ## State
-`state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; every resume returns a new run id, so record it each time.
+`state.json` in the plan directory is your memory. Update it after every step, and commit it when Where work runs allows; record the launcher and its returned IDs on every launch and continuation (`delegate` → Launching a role).
 - **Per child:** status, lane, dependencies, estimate, budget, approvals (date, commit, who approved), plan-branch cut commit, base commit, `readyAt` (when its last dependency integrated), lane start, scout outcome, the latest planner and implementer run ids, per review pass its start, end, reviewed commit and majors by kind, `planPass2Skipped`, `codePass2Skipped`, each T1 run (commit, tree, command lines, workers, runs in flight, result, duration, log path), the start and end of each phase and of each checkpoint stop, and reported usage.
 - **At the root:** the baseline gate digest, checkpoints (commit, status, run), groups (members, worktree, base, merged members, T1 run, integrator and review runs, start and end), regressions (culprit, test, the tier that caught it, what T1 missed), flakes (test, sightings), stops (child, reason, time), and **launches**: every run when you launch it (run id, agent, child, phase, worktree, start), marked consumed when you have read its result.
 
@@ -35,8 +35,10 @@ Until the check takes a later base: tell the implementer, the code reviewer and 
 Never start a writer in a worktree whose last writer isn't confirmed stopped. Record each restart in `stops`.
 
 ## Where work runs
-One writer per worktree at any time.
-- **With a worktree pool, every child runs as a lane** (`references/lanes.md`): in its own pool worktree, on a lane branch cut from the work-branch tip. A child in no group is a group of one. The work-branch worktree holds only your own files, plan merges and integration merges.
+One writer per worktree at any time. Where the steps below say “with a pool,”
+T3-managed lanes count as a pool for scheduling and integration. Keep the
+orchestrator's own integration/checkpoint work separate from child checkouts.
+- **With lanes** (`references/lanes.md`), each child builds in an isolated worktree on a branch cut from the work-branch tip: a pool worktree in terminal Pi, a launcher-managed worktree in T3. A child in no group is a group of one. The work-branch worktree holds only your own files, plan merges and integration merges.
 - **Without a pool,** children run one at a time in the work-branch worktree, in child order. While a child's implementer, code reviewer or T1 helper is running there, write your own files but run no git commands; commit them between children or before a merge into a stopped child.
 - **Planning:** in the planning worktrees (see Planning).
 - **Your own files** (`state.json`, `epic.md`): the only current copy is in the work-branch worktree. Pass that path to every session, including those in other worktrees. Otherwise commit them as you go.
@@ -46,10 +48,10 @@ One writer per worktree at any time.
 - **Resumed sessions** keep their original worktree. Work that must happen elsewhere gets a fresh session, given the plan and ledger it needs.
 
 ## Per child
-1. **Plan** (see Planning). Spawn a `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md`, the path file, and the plans, models and ledgers of the children it depends on. It writes `NN_slug/plan.md` and `NN_slug/model.c4ish.json`, and replies. Set the child's provisional budget (`epic.md` → Budget). Then loop:
-   - Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
+1. **Plan** (see Planning). Launch role `plan-author` (`plan` skill) with the paths to `epic.md`, the child's entry, `PROTOTYPE.md`, the path file, and the plans, models and ledgers of the children it depends on. It writes `NN_slug/plan.md` and `NN_slug/model.c4ish.json`, and replies. Set the child's provisional budget (`epic.md` → Budget). Then loop:
+   - Launch a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
    - **Review approved:** go to Approving a child's plan. Once the approval is recorded, copy the plan's Follow-ups into `epic.md`, set the budget from the plan's estimate, and merge the plan branch into the work branch: with a pool, at once (or right after a running group integration); without one, between children, before this child's Start. The planning worktree is then free.
-   - **Changes needed after pass 1:** resume the same plan-author with the ledger path and pass number. Skip pass 2 only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract. Then append `approved after fixes, no pass 2` to the ledger, record it, and treat the plan as approved.
+   - **Changes needed after pass 1:** continue the same `plan-author` with the ledger path and pass number. Skip pass 2 only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract. Then append `approved after fixes, no pass 2` to the ledger, record it, and treat the plan as approved.
    - Otherwise resume the plan-author and review again.
 2. **Start**, once the child's unit may start (`references/lanes.md` → Starting lanes; without a pool, when the previous child has closed):
    1. Prepare the lane worktree at the work-branch tip (without a pool: the work-branch worktree at its HEAD). That commit is the child's base; record it.
@@ -80,7 +82,7 @@ A pattern a child proposes must be the one `epic.md` → Proposed patterns claim
 A child that uses a cross-plan contract copies it into its own model as reused. The owning child's copy wins: a change to it follows the owner's deviation class, and children that use it are refreshed.
 
 ## Planning
-- **Worktrees:** up to three planning worktrees, created once with `git worktree add`, with no install. For each child, switch a clean one to a new plan branch at the work-branch tip, and record that commit as the child's plan-branch cut commit. Plan-authors and plan reviewers launch there. Every child plans here, group members included.
+- **Worktrees:** up to three planning worktrees, with no install. In terminal Pi use a pre-created pool and switch a clean one to a new plan branch at the work-branch tip. In T3 let the launcher create an isolated worktree from that committed tip, and give fresh reviewers the plan branch and exact commit (`references/lanes.md`). Record the plan-branch cut commit. Every child plans in one of these worktrees, group members included.
 - **When:** a child's plan loop starts when every child it depends on has started implementing (at once if it has none). When more children qualify than worktrees are free, take the lowest-numbered.
 - **Inputs:** a dependency that isn't built yet is represented by its approved plan. Tell the plan-author and its reviewers so.
 - **Plan changes after approval** (refresh, resize, fixes from code review) go to a fresh plan-author in the child's worktree (its lane, or the work-branch worktree without a pool), not a resumed one: the old one's worktree has moved on.
@@ -106,10 +108,10 @@ A child that uses a cross-plan contract copies it into its own model as reused. 
 3. **Failures:** follow `references/checkpoint-failures.md`.
 
 ## Epic close
-1. Spawn a fresh reviewer on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger. If a green checkpoint is waiting, merge it before the fixes start. Start the final checkpoint on the work-branch tip as soon as the previous checkpoint has merged; it runs alongside the review and the fixes.
+1. Launch a fresh `reviewer` on the whole diff (`review` skill, epic-diff mode). Findings go to the epic-root ledger. If a green checkpoint is waiting, merge it before the fixes start. Start the final checkpoint on the work-branch tip as soon as the previous checkpoint has merged; it runs alongside the review and the fixes.
 2. The fixes go to the implementer of the last child integrated, in the work-branch worktree:
    - without a pool, resume it;
-   - with a pool, spawn a fresh implementer there, given that child's plan and ledger.
+   - with lanes, launch a fresh `implementer` for the work-branch tip, given that child's plan and ledger.
 
    It fixes the findings, runs the fast gates and records the rest of T1 for the fixes; another run follows. A review of the fixes checks the recorded command lines.
 3. Once the fixes are committed and no one is writing in the work-branch worktree, merge the green final checkpoint (Checkpoints step 2). A red one follows `references/checkpoint-failures.md`; the fixes go on meanwhile, and this step waits for the checkpoint fix to merge.
@@ -121,12 +123,12 @@ A child that uses a cross-plan contract copies it into its own model as reused. 
 - Every review is a new session. Every planner or implementer call resumes that child's session, except where this skill names a fresh one.
 - A loop not approved after pass 4 stops. `run-plan` → Bounds applies to each child's build.
 - **Escalation:** if `epic.md` names an escalation implementer, and a child's own code review isn't approved at pass 2, its fixes go to a fresh escalation implementer. It runs where the child's implementer ran, with the same plan, base commit and ledger. From then on it is the child's implementer: record its run id, and resume it for later passes. Integration and checkpoint fixes don't escalate.
-- Every launch gets a deadline: planner and implementer from the child's budget in `state.json`, reviewers and helpers shorter. The harness default is 30 minutes, which is far too short for an implementer.
+- Every launch gets a deadline: planner and implementer from the child's budget in `state.json`, reviewers and helpers shorter. Use the launcher's timeout if supported; otherwise record the deadline and enforce it when reconciling the run.
 - A child over its wall-time or cost budget stops. Its wall time is the sum of its active phases: plan loop, start (scout and refresh) and implement loop. Time spent waiting to start, or stopped for a checkpoint (from the steer to the resume), doesn't count.
 
 ## Recovery
 - If a run ends right after the child called `self_compact`, without a reply, treat it as a checkpoint. Resume it with "Continue from your note."
-- A child that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If resume is rejected, spawn a fresh session of the same role on the plan directory, and record the fallback.
+- A child that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If continuation is rejected, launch the same role fresh on the plan directory, and record the fallback.
 - A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself. Your own files are the exception: they're yours to commit, and never to discard.
 - An environment failure (service, port, disk, credentials) that survives the implementer's one retry is a stop, not a review pass.
 

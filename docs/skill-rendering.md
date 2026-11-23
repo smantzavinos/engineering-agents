@@ -6,7 +6,7 @@ This repository keeps **one canonical, harness-neutral source** for each skill a
 
 Skills define reusable process. The *process* is identical across harnesses, but the *implementation details* differ:
 
-- Delegation syntax: Pi uses `subagent({ agent, task, skill })`; OpenCode uses the `task` tool.
+- Delegation syntax: Pi's frontier skills name roles and link to `delegate` for the terminal and T3 launchers. OpenCode uses the `task` tool.
 - Delegation target: a role may map to a named subagent on one harness and a task **category** on another.
 - Skill-file paths and a few harness-specific UI phrases (e.g. "press Tab" vs. "start a Design session").
 - Frontmatter `compatibility`.
@@ -132,6 +132,21 @@ OpenCode team mode accepts category-backed members and eligible direct subagent 
 | planned complex implementation | `deep` | `openai/gpt-5.5` xhigh |
 | Strong rescue implementer | direct `hephaestus` | `openai/gpt-5.5` xhigh |
 | fresh final reviewer | external `deep` (escalate to `ultrabrain`) | `openai/gpt-5.5` xhigh |
+
+## Pi skill visibility
+
+Visible skills are listed in the model's prompt. Manual-only skills are still
+installed: use `/skill:name` or read their `SKILL.md` directly. Pi uses the
+`disable-model-invocation: true` frontmatter flag for this, not a load filter.
+
+- Process skills: keep the Pi renderer's `hiddenSkills` in `harnesses/pi.json`
+  limited to `configure-pi` and `create-skills`.
+- Managed packages: a declaration's `hiddenSkills` names the facade's manual-only
+  skills. The compiler writes a facade-local `SKILL.md`, preserves sibling
+  resources, and never rewrites the vendored source.
+- Home Manager's pinned `visual-explainer` is copied and marked manual-only at
+  build time. Turning off an extension with `-ne` does not by itself hide its
+  package skills.
 
 ## Renderer commands
 

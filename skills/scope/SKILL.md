@@ -12,7 +12,7 @@ You are the orchestrator, working with the human.
 
 The prototype defines the behavior. Every accepted demo behavior becomes an acceptance scenario. Your job is to find what the prototype skipped and agree how the real build handles it. That usually means error paths, permissions, lifecycle, data changes and docs.
 
-`architecture-model` holds the rules for the model, the approval lines and the commands. Read it first.
+`architecture-model` holds the rules for the model, the approval lines and the commands. Read it first. For every launch or continuation, follow [`delegate` → Launching a role](../delegate/references/launching-a-role.md) and record the returned launcher IDs in `state.json`.
 
 ## Before you start
 The project's agent guide must name a path file, and the catalog docs and the profile it lists must exist and be committed. If not, stop: `assess-repo` says what is missing, and `map-patterns` writes the catalog. A plan can't be approved without them.
@@ -20,14 +20,14 @@ The project's agent guide must name a path file, and the catalog docs and the pr
 A plan uses approved catalog entries. If it needs an entry that is still a draft (`proposed` in the profile), get the human's approval of that entry and commit it before the plan's approval.
 
 ## Steps
-1. Read `PROTOTYPE.md` and the prototype diff. Scout the codebase and research external dependencies through subagents (`delegate`).
+1. Read `PROTOTYPE.md` and the prototype diff. Launch `helper` for codebase scouting and `researcher` for external dependencies.
 2. Propose the scope: what's in, what's out, and the gaps the prototype skipped. Ask only questions whose answers change the plan, and batch them.
 3. Choose the shape:
    - **one plan** (the default), as large as the work needs. Never divide work to meet a size number: each extra plan adds a fixed cost, and cuts one design into pieces the human has to hold together;
    - an **epic**, only when the work holds genuinely distinct workstreams: parts with their own goal that could each be approved and shipped alone.
 4. Choose disposal: wipe-and-rebuild (default), or clean up the prototype in place when its structure is sound.
 5. Create the work branch (off the default branch, or off the prototype for clean-up in place) and copy `PROTOTYPE.md` into the plan directory. Plans and approvals are committed there. The branch must hold the path file, the catalog and the profile: if it was cut from an older commit, merge the default branch now. Record the branch and its worktree path in `state.json`.
-6. Start a `helper` running the full gates on that branch as the baseline, in the background. It writes nothing tracked. When it replies, write its digest and the commit it ran on into `state.json`.
+6. Launch `helper` to run the full gates on that branch as the baseline, in the background. It writes nothing tracked. When it replies, write its digest and the commit it ran on into `state.json`.
 7. Run the plan loop, then the approval gate.
 
 ## Code in submodules
@@ -40,17 +40,17 @@ Where the plan lives in one repository and the code in git submodules of it, rea
 
 ## Plan loop
 There is no `epic.md` for one plan, so the agreed scope, scenarios, gates, budget and autonomy limits go into `plan.md` itself.
-1. Spawn a `plan-author` (`plan` skill), writing `plan.md` and `model.c4ish.json` at the plan directory root. Its task carries the agreed scope, the path file, and:
+1. Launch role `plan-author` (`plan` skill), writing `plan.md` and `model.c4ish.json` at the plan directory root. Its task carries the agreed scope, the path file, and:
    - the full-gate and T1 commands with measured durations, the test map and the smoke set;
    - the budget: wall time and cost, from the implementer hours for the estimate × 1.5 plus a fixed cost;
    - the review-load estimate: the changed lines a reviewer can judge in one pass (default about 7k, not counting generated files). It is recorded, not a limit. Above it the code is reviewed in groups (`run-plan`);
    - autonomy: what the human wants to decide personally, and what the build may do without asking (push the branch, open the PR, file tracker items);
    - an escalation implementer, if the human names one.
-2. Spawn a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
-3. Changes needed: resume the same plan-author with the ledger path and pass number, then review again with a fresh reviewer. Skip the re-review only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract.
+2. Launch a fresh `reviewer` (`review` skill, plan mode) with the plan directory.
+3. Changes needed: continue the same `plan-author` with the ledger path and pass number, then review again with a fresh reviewer. Skip the re-review only when the reviewer replied `pass 2 needed: no`, and the plan-author fixed every major, rejected none, and reports that no fix changed a contract.
 4. Repeat until the review is clean, or the human explicitly accepts what remains, noted in the ledger. The human owns this gate, so the pass cap does not apply.
 
-Relay the human's feedback at any point by resuming the same plan-author.
+Relay the human's feedback at any point by continuing the same `plan-author`.
 
 ## Approval gate
 When the review is clean, generate the tour pages in a directory outside the repo (`c4ish tour <model> --out <dir>`) and give the human:
@@ -62,7 +62,7 @@ Approving the plan approves every proposed pattern and catalog change in it. Say
 
 The human:
 - **approves:** record it (below);
-- **approves with changes, or asks for changes:** resume the same plan-author, run one more review, and show the tour again;
+- **approves with changes, or asks for changes:** continue the same `plan-author`, launch one more fresh reviewer, and show the tour again;
 - **rejects:** go back to step 2 with what they said. The branch and the baseline stay: don't repeat steps 5 and 6.
 
 **Recording the approval.** You received it, so you write it; no subagent does.

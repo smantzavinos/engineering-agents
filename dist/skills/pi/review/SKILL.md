@@ -1,6 +1,6 @@
 ---
 name: review
-description: Fresh-context review of an epic, a plan with its model, or a code diff against the approved model. Finds what matters, checks earlier findings, owns the verdict on the model checks, and records results in the review ledger. Used by reviewer subagents; never by the author.
+description: Fresh-context review of an epic, a plan with its model, or a code diff against the approved model. Finds what matters, checks earlier findings, owns the verdict on the model checks, and records results in the review ledger. Used by the reviewer role; never by the author.
 compatibility: pi
 ---
 
@@ -125,7 +125,7 @@ Don't record nits. The work is approved when no blocker or major finding remains
 Reply with only the verdict (approved, or changes needed), the counts by severity and the ledger path. In code mode, add the `model-check` result and the approval lines you confirmed; if a re-approval difference is open, say `re-approval needed` first, with the differing items. In plan and code mode (not refresh), end with `pass 2 needed: yes` if any blocker or any major of a kind that needs a re-check is open, otherwise `pass 2 needed: no`.
 
 ## Do
-- On a large diff, gather context with subagents (`delegate`), but make every judgment yourself.
+- On a large diff, launch role `helper` for context gathering ([`delegate` → Launching a role](../delegate/references/launching-a-role.md)), but make every judgment yourself.
 - Judge the design from the model and the tour first. That is what the human approves from.
 - Be specific: name the line and say what to do.
 

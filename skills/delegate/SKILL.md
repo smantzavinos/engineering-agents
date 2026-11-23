@@ -8,6 +8,11 @@ harnesses: [pi]
 
 You are the expensive model. Spend your tokens on decisions, and hand the legwork to fast subagents. A fast subagent can read fifty files and return twenty lines.
 
+## Launching a role
+
+Use [Launching a role](references/launching-a-role.md) for Pi's T3 and terminal
+launchers, continuation, steering, and the IDs to save.
+
 ## Delegate when
 - The work is read-heavy or output-heavy.
 - You can check the result easily.

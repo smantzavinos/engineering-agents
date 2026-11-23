@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Build an entire approved plan and its model top to bottom, tag the code with its patterns, keep the model in line with what is built, pass the quality gates and the model checks, fix review findings, and hand back. Used by the implementer subagent.
+description: Build an entire approved plan and its model top to bottom, tag the code with its patterns, keep the model in line with what is built, pass the quality gates and the model checks, fix review findings, and hand back. Used by the implementer role.
 compatibility: pi
 ---
 
@@ -72,8 +72,8 @@ A failure that passes alone *and* lies outside what you changed is a flake: reco
 Processes: touch only processes bound to your worktree's ports, never others. Helpers stop the servers they start, unless you tell them to leave them warm for you.
 
 ## Offload
-Your context is the expensive part. Delegate scouting, log reading, claim checks and mechanical sweeps.
-- **Example:** once you've adopted a new component at one call site, hand the pattern, your example and the remaining sites to a fast subagent, then review its diff.
+Your context is the expensive part. Launch role `helper` for scouting, log reading, claim checks and mechanical sweeps ([`delegate` → Launching a role](../delegate/references/launching-a-role.md)).
+- **Example:** once you've adopted a new component at one call site, hand the pattern, your example and the remaining sites to a `helper`, then review its diff.
 - **Size:** delegate only errands worth about 5 minutes or more of your own time. Batch sweeps, and keep errand prompts short: point to the plan and your example rather than restating them.
 - **No bookkeeping:** skip task-list and other bookkeeping tools; the ledger is the record.
 

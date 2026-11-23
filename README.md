@@ -158,7 +158,7 @@ Retired skills (parallel execution, team mode) are archived under
 
 ### Agent Definitions (`agents/`)
 
-Pi subagents. The frontier pipeline uses the first six; the rest are older and still installed (ADR 0007, "Not done").
+Pi roles, shared by the terminal and T3 launchers. The frontier pipeline uses the first six; the rest are older and still installed (ADR 0007, "Not done").
 
 | Agent | Model Tier | Role |
 |-------|-----------|------|
@@ -181,8 +181,10 @@ Plus `preset.jsonc` defining three presets: **scope**, **run-plan** and **run-ep
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable Pi with all engineering-agents skills and agents |
-| `defaultProvider` | `"zai-coding-plan"` | Default model provider |
-| `defaultModel` | `"glm-5.2"` | Default model |
+| `modelSet` | `"direct"` | `"direct"` uses OpenAI Codex and optional GLM; `"copilot"` uses GitHub Copilot only |
+| `zai.enable` | `true` | Install z.ai model definitions and the MCP adapter/config; use Codex in GLM role slots when off |
+| `defaultProvider` | Set-selected | OpenAI Codex in `direct`, GitHub Copilot in `copilot` |
+| `defaultModel` | Set-selected | `gpt-5.6-sol` in `direct`, `claude-sonnet-5.5` in `copilot` |
 | `defaultThinkingLevel` | `"medium"` | Default thinking level |
 | `theme` | `"catppuccin-mocha"` | Pi theme |
 | `footer` | `"powerline"` | Exclusive footer/editor profile: `"powerline"` or `"zentui"` |
@@ -190,9 +192,14 @@ Plus `preset.jsonc` defining three presets: **scope**, **run-plan** and **run-ep
 | `powerline.shortcuts` | `Ctrl+Alt+U` / `Ctrl+Alt+D` | Powerline fixed-editor chat scroll bindings |
 | `powerline.nerdFonts` | `"force"` | Nerd Font detection: `"auto"`, `"force"`, or `"disable"` |
 | `powerline.theme` | *(see module default)* | Declarative Powerline `theme.json` color and icon override |
-| `enabledModels` | *(see default)* | Models for Ctrl+P cycling |
-| `enableAgentKit` | `true` | Install agent-kit extensions (direnv, ast-grep) |
-| `enableVisualExplainer` | `true` | Install visual-explainer skill (pinned via the `visualExplainer` flake input) |
+| `enabledModels` | Set-selected | Models for cycling |
+| `enableAgentKit` | `true` | Install the agent-kit direnv extension |
+| `enableVisualExplainer` | `true` | Install the pinned, manual-only visual-explainer skill |
+
+The NixOS service-user module exposes `modelSet` and `zai.enable` under
+`engineering-agents.pi-for-user`. Explicit session defaults still win over
+set defaults, and project role overrides still win at runtime. This
+repository's own `.pi/settings.json` assumes the `copilot` set.
 
 ### OpenCode Module (`engineering-agents.opencode`)
 
@@ -215,6 +222,15 @@ Plus `preset.jsonc` defining three presets: **scope**, **run-plan** and **run-ep
 | Simple Change | Trivial fixes, config | brief → implement → verify |
 
 ## Usage with Pi
+
+The wrapper selects the T3 profile only for T3 RPC launches with an installed
+`t3-profile.args`; other launches retain the terminal configuration. Both
+profiles include guardrails, code intelligence, checkpointing, web tools and
+task tracking. Only the terminal loads the footer, presets and Pi subagent
+launcher. T3 uses its own delegation tools, with the same installed role
+models and `.pi/settings.json` overrides. In T3, start the process with
+`/skill:scope`, `/skill:run-plan` or `/skill:run-epic` instead of `/preset`.
+See [ADR 0009](docs/adr/0009-delegation-through-t3.md).
 
 ```bash
 pi

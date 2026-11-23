@@ -55,13 +55,13 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 
 - **`resource-snapshot.mjs`** — Live Pi state snapshot from the filesystem and facade manifests (Pi >=0.80.8 ships as a compiled bundle with no importable module; schemaVersion 2 output unchanged)
 - **`assert-contract.sh`** — Proof-set contract assertions (facade, provenance, resources)
-- **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests
+- **`compiler-contract-spec.sh`** — Compile-managed-packages.mjs fixture tests, including per-package `hiddenSkills` (facade-local flagged copies; source untouched; unknown or non-array names fail with exit 3)
 - **`hermes-docs-spec.sh`** — Hermes-agent operations docs and sweep-monitor contract
 - **`pr-sweep-dispatch-spec.sh`** — dry-run of the reference PR sweep dispatcher against a fake `gh` (opt-in, dispatch, push demotion, drift mode, sweep-owned babysit rounds on bot reviews, bot-review cap)
 - **`pipeline-dispatch-spec.sh`** — dry-run of the delivery-pipeline dispatcher against a fake tracker and `gh` (triage selection, reply grammar and owner allowlist, consumed replies, discuss parking, reject, WIP limit, pickup order, dead-session retry bound, hygiene)
 - **`board-tools-spec.sh`** — the GitHub Project tracker adapter (`scripts/gh-project.py`), script-only board sync (`scripts/board-sync.py`) and command parser (`scripts/commands.py`): unit tests against an in-memory GitHub fake (`tests/scripts/fake_github.py`) plus CLI checks through it as `GH_BIN` (compare-and-set moves, Your turn comment, Waiting for, fields, labels, intake, close proposals)
 - **`model-check-spec.sh`** — runs `tools/model-check.test.mjs`: the model-to-code and approved-versus-shipped checks, by rule and against a small real repository (those cases skip when `c4ish` is not on PATH or has no `profile` command; the git submodule cases skip when it does not look inside submodules)
-- **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
+- **`proof-set.json`** — Representative proof-set expectations for the terminal Powerline profile (`pi-ding`, `pi-subagents`, `pi-powerline-footer`, `pi-ext-leader-key`); retired packages are not part of the proof set
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
 
 New tests specific to this repo:
@@ -70,16 +70,16 @@ New tests specific to this repo:
 - **`repo-readiness-docs-spec.sh`** — Root AGENTS routing and canonical contributor docs exist with required anchors
 - **`proof-set-runtime-spec.sh`** — Snapshot generator facade-manifest enumeration, deterministic ordering, missing-resource diagnostics, and environment-failure propagation
 - **`skill-content-spec.sh`** — Skill frontmatter, references, templates, key sections
-- **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`)
+- **`skill-render-spec.sh`** — Skill render pipeline drift + per-harness delegation checks (canonical sources × `harnesses/*.json` → `dist/`), the `delegate` launching-a-role reference, the visible/manual split, and the `role.mjs` resolver regression (project override, user settings, agent frontmatter, unknown role)
 - **`pi-module-content-spec.sh`** — Module skill/agent refs resolve, guardrails valid JSON, compile helper valid JS
 - **`pi-vendor-spec.sh`** — Build-time vendor contracts: git pins match declarations, spec/installSpec normalized, injected core not vendored, nested lock shape
 - **`pi-preset-refresh-contract-spec.sh`** — Paired `@richardgill/pi-preset` + `pi-config` 0.0.9 manifest, Nix declaration, and lockfile version alignment
 - **`pi-btw-refresh-contract-spec.sh`** — `pi-btw` 0.6.1 declaration/manifest/lock contract, its Pi core peer compatibility, `pi-subdir-context` as a pinned git source (outside the npm graph), no npm `overrides`, and a fully integrity-complete lock.
 - **`preset-spec.sh`** — The three modes (scope/run-plan/run-epic) defined, the retired modes absent, agent files present, every skill a preset names installed for Pi
-- **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works
+- **`flake-eval-spec.sh`** — All modules evaluate, docs package builds, dev shell works; S12 model sets (direct default, Copilot with z.ai off, direct with z.ai off), installed role-agent models, hidden package and visual-explainer skills, and removed `pi-hooks` / `pi-agent-guidance`
 - **`managed-package-install-state-spec.sh`** — Managed package install-state helper fixture tests
 - **`managed-package-status-spec.sh`** — Shared managed package status engine + `check-updates` fixture tests
-- **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests
+- **`pi-startup-wrapper-spec.sh`** — Repo-owned `pi` wrapper startup snapshot/env handoff tests, plus the T3 profile: under `T3_PI_MCP_EXTENSION_PATH` with `--mode rpc` (or `--mode=rpc`, normalized for Pi 1.5.2) the literal lines of `t3-profile.args` (from `PI_CODING_AGENT_DIR`, else `$HOME/.pi/agent`) are prepended; terminal, non-rpc and missing-file launches are unchanged
 - **`pi-dev-spec.sh`** — Repo-local Pi development sandbox isolation and credential-copy tests
 - **`startup-warning-extension-spec.sh`** — Startup notifier rendering, footer/status sync, and snapshot consumption tests
 - **`pi-tasks-bridge-spec.sh`** — pi-tasks `TaskExecute` → managed pi-subagents RPC bridge (fake event bus; no model)

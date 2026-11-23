@@ -4,16 +4,21 @@ This directory contains the Pi agent definitions and presets. Pi runs the fronti
 
 ## Setup
 
-### Presets (Pi preset extension)
+### Presets (terminal Pi only)
 
 Placed at `~/.pi/agent/preset.jsonc` (handled by Nix). A preset sets the session's model and tells it which skills to read first:
 - **scope** — agree the scope with the human, get the plan and its model written and reviewed, record the approval
 - **run-plan** — build one approved plan unattended
 - **run-epic** — run an approved epic of several plans
 
-### Agents (Pi subagents extension)
+### Roles (terminal and T3)
 
-Sub-agents do the work the orchestrating session hands out. Placed at `~/.pi/agent/agents/` (handled by Nix).
+Nix installs the role definitions at `~/.pi/agent/agents/`. The selected
+`engineering-agents.pi.modelSet` supplies every role's model and thinking level
+and the presets' model. Checked-in frontmatter describes the `direct` set with
+z.ai enabled. `direct` without z.ai uses Codex for the GLM roles, and `copilot`
+uses Copilot for every role. Both launchers use these definitions; see
+[Launching a role](../skills/delegate/references/launching-a-role.md).
 
 ## Agent Set
 

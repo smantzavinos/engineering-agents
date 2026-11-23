@@ -1,9 +1,9 @@
 # Lanes
 
-Read this when the repo has a worktree pool (`epic.md` Gates says which repo support exists). Then every child runs as a lane; a child in no group is a group of one. Without a pool, children run one at a time in the work-branch worktree.
+Read this when running isolated lanes (`epic.md` Gates says which repo support exists). A child in no group is a group of one. Without lanes, children run one at a time in the work-branch worktree. Use [`delegate` → Launching a role](../../delegate/references/launching-a-role.md).
 
 ## Starting lanes
-- **A unit** (a group, or a child in no group) **starts** when every child its members depend on is integrated, each member's plan is approved, and a pool worktree is free for each member. Its members start together, each in its own pool worktree, on its own lane branch off the same work-branch commit. Its implementer, reviewers and helpers all launch with their cwd in that worktree.
+- **A unit** (a group, or a child in no group) **starts** when every child its members depend on is integrated, each member's plan is approved, and a pool worktree is free for each member. Its members start together, each in its own worktree, on its own lane branch off the same work-branch commit. In terminal Pi pass that pool worktree as `cwd` for its implementer, reviewers and helpers. In T3 there is no `cwd` argument: commit the work-branch base, launch the lane implementer with `isolation: "worktree"`, and let T3 make the checkout from the parent's commit. Never create the child's checkout in the shell or in its task. Record the lane branch and tip reported by the child. Continue that child in its original checkout; give fresh reviewers and gate helpers the exact lane ref and commit to inspect in their own T3-managed worktree. The orchestrator integrates the lane branch.
 - **Order:** ready units start in child-number order. While the lowest-numbered ready unit waits for worktrees or lane capacity (count, memory), no later unit starts.
 - **Claims:** a unit whose claims overlap those of a running unit waits until that unit integrates.
 - **Running:** a lane counts as running until it is integrated, and holds its worktree until then.
@@ -14,8 +14,8 @@ Read this when the repo has a worktree pool (`epic.md` Gates says which repo sup
 - **E2E workers:** when a T1 or checkpoint run starts, give it an even share of the machine-wide budget (`epic.md`, default cores ÷ 4) across the runs then in flight, including it, but no more than the budget not already held, and at least 1. Pass that count in its task. An implementer that runs T1 itself (integration, checkpoint fix) gets its count at launch and holds it until it replies. Targeted checks while building use one worker.
 - **Rate limits:** on model rate-limit errors, drop one lane until the next unit starts, or until no lane is running.
 
-## The pool
-The pool is created once with the repo's worktree tooling, then reused.
+## The terminal pool
+The terminal pool is created once with the repo's worktree tooling, then reused. For T3 apply the same resource and environment checks to launcher-managed worktrees; do not create or reuse checkouts yourself for T3 children.
 - **Checks:** test-service ports outside the OS ephemeral range (or reserved from it), `GIT_OPTIONAL_LOCKS=0` in the dev environment, and merge-friendly files for anything every child edits (`assess-repo`). Missing ones go under `epic.md` Decisions as known risks.
 - **To reuse a worktree:**
   - switch it to a new branch at the base;

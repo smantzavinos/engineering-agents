@@ -166,13 +166,13 @@ Backlog system: Markdown
 Details: `docs/backlog.md`
 
 Rules:
-- New non-critical follow-ups go to `## Inbox` after approval unless pre-authorized by the worklog.
+- Finish in task: do current-task work now. List minor findings under “Considered and not done” and propose genuine out-of-scope defects under “Proposed new issues (need your OK)” after checking for duplicates. File nothing without explicit owner approval.
 - Stable IDs use `TASK-0001`.
 - Source backlink is required in both the backlog item and the source artifact.
 - `Up next` is human-controlled.
 - Critical/current-plan-affecting discoveries require stopping and asking.
 
-Required operations are documented in `docs/backlog.md`: create item, assign ID, reference item, capture source backlink, list Inbox, list Up next, mark Ready, mark Done, mark Canceled, defer/Icebox, mark Blocked, and handle critical items.
+Required operations are documented in `docs/backlog.md`: create item, assign ID, reference item, capture source backlink, list Inbox, list Up next, mark Ready, mark Done, mark Canceled, defer/Icebox, move to `Your turn` with `Waiting for`, and handle critical items.
 ```
 
 ### Good Requirements Documentation

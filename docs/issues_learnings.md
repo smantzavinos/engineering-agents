@@ -27,6 +27,12 @@ _No entries yet._
 
 ## Confirmed Learnings
 
+### Manual-only skills are not injected by the terminal role launcher
+- Date: 2026-11-23
+- Type: learning
+- Source: [ADR 0009](adr/0009-delegation-through-t3.md), Pi 1.5.2 / pi-subagents 0.77.0 source inspection.
+- Summary: pi-subagents silently drops a skill marked `disable-model-invocation: true` from an agent's `skill:` field. A Pi task starting with `/skill:name` still loads the manual-only skill. An explicit `SKILL.md` read also works.
+
 ### Parallel is one approach: DAG plus planned fences
 - Date: 2026-08-19
 - Type: learning

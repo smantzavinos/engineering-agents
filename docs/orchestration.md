@@ -546,12 +546,9 @@ Any agent can delegate to `vision` when visual analysis is needed:
 - **During review:** Compare before/after screenshots for visual regression
 - **During design:** Analyze mockups or design comps to inform the approach
 
-```
-subagent({
-  agent: "vision",
-  task: "Analyze this screenshot of the current dashboard. Describe the layout, components, and visual hierarchy. Note any accessibility concerns."
-})
-```
+Launch role `vision` using [Launching a role](../skills/delegate/references/launching-a-role.md).
+For example: “Analyze this screenshot of the current dashboard. Describe the
+layout, components, and visual hierarchy. Note any accessibility concerns.”
 
 ### Cost Optimization Strategy
 

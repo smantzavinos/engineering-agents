@@ -8,7 +8,7 @@ harnesses: [pi]
 
 You drive the build; you don't do it. The implementer builds, fresh reviewers judge, helpers run gates and checks, and the oracle breaks ties. You sequence them, keep state, bound them, and decide when to stop. Run until the PR is ready or a stop condition fires.
 
-Agents: `implementer`, `reviewer`, `oracle`, plus the fast `helper`. Launch them in the background and wait for completion.
+Roles: `implementer`, `reviewer`, `oracle`, plus the fast `helper`. Follow [`delegate` → Launching a role](../delegate/references/launching-a-role.md) for background launches, continuation and completion.
 
 `architecture-model` holds the rules for the model, the checks, deviation classes, approval lines and the commands. Read it first.
 
@@ -29,21 +29,21 @@ Where the plan lives in one repository and the code in git submodules of it, rea
 - **Close:** the final state is one root commit that pins every changed submodule. With the plan's pre-authorization, push every branch and hand the set to `pull-request` (one PR per changed submodule and one in the root; submodules merged first, by each repository's own method, squash included). Record each repository's branch and pinned commit for it.
 
 ## State
-`state.json` in the plan directory is your memory. Update it after every step, and commit it between steps, when no one is writing in the worktree. Every resume returns a new run id, so record it each time. It holds:
+`state.json` in the plan directory is your memory. Update it after every step, and commit it between steps, when no one is writing in the worktree. Record the launcher and the IDs it returns on every launch and continuation (`delegate` → Launching a role). It holds:
 - the approvals (date, commit, what a re-approval changed), the base commit, the estimate and the budget;
 - the latest implementer run id; per review pass its start, end, reviewed commit, majors by kind, and the `model-check` result the reviewer reported;
 - each T1 run (commit, tree, command lines, workers, result, duration, log path), `codePass2Skipped`, the baseline gate digest, flakes, the start and end of each phase;
 - stops (reason, time, what the human decided), and **launches**: every run when you launch it (run id, agent, phase, start), marked consumed when you have read its result.
 
 ## Build loop
-1. **Implement.** Spawn an `implementer` (`implement` skill) with the plan directory, the path file and the base commit. It builds everything, tags the code, brings the model in line, runs the model checks and the fast gates, records the rest of T1, commits, writes its ledger entry and replies. A reply that says it stopped for re-approval goes to Re-approval.
+1. **Implement.** Launch role `implementer` (`implement` skill) with the plan directory, the path file and the base commit. It builds everything, tags the code, brings the model in line, runs the model checks and the fast gates, records the rest of T1, commits, writes its ledger entry and replies. A reply that says it stopped for re-approval goes to Re-approval.
 2. **Review and T1,** launched together on the implementer's commit:
    - a fresh `reviewer` (`review` skill, code mode) with the plan directory, the path file, the base commit, the approvals from `state.json` and, after pass 1, the range from the commit the previous pass reviewed to the implementer's tip;
    - a T1 `helper` with the ledger's recorded command lines and an E2E worker count. It boots and stops its own services, and reruns each failure alone: one that passes alone and lies outside the diff is a flake; one in the baseline digest is baseline; anything else is red. It writes nothing tracked, and replies with a digest and the log path.
 3. Record both results. Then:
    - the reviewer replied `re-approval needed` → Re-approval;
    - review approved and T1 green → Close;
-   - otherwise resume the same implementer with the ledger path, the pass number and, if T1 is red, the digest and log path.
+   - otherwise continue the same `implementer` with the ledger path, the pass number and, if T1 is red, the digest and log path.
 4. Every fix pass counts toward the pass cap, including one for T1 failures alone. After a fix pass the next review runs, unless all of these hold: the reviewer replied `pass 2 needed: no`; the implementer fixed every major and rejected none; every T1 fix touched only tests or fixtures; and the fixes changed no model, tag or deviation record. Then only the T1 helper runs; green means approved, and a red T1 means another fix pass. Append `approved after fixes, no pass 2` to the ledger and record `codePass2Skipped`.
 
 **A diff above the plan's review-load estimate** is reviewed in groups. Divide the changed files by container, from the model's code references: a file whose definitions belong to one container goes to that group; shared files, unaccounted lines, tests and docs form a last group. Launch one fresh reviewer per group, one after another, each adding its own section to the ledger. A last fresh reviewer reads the joins and gives the single verdict (`review` → A large diff). Later passes are not grouped: one fresh reviewer reads the fix range. This is untested: record in `state.json` how it went.
@@ -70,14 +70,14 @@ The implementer, or a code review, found a difference only the human can accept 
 - Every review is a new session. Every implementer call resumes the same session, except an escalation.
 - A loop not approved after pass 4 stops.
 - **Escalation:** if the plan names an escalation implementer and the code review isn't approved at pass 2, the fixes go to a fresh escalation implementer with the same plan, base commit and ledger. From then on it is the implementer: record its run id.
-- Every launch gets a deadline: the implementer from the budget in `state.json`, reviewers and helpers shorter. The harness default of 30 minutes is far too short for an implementer.
+- Every launch gets a deadline: the implementer from the budget in `state.json`, reviewers and helpers shorter. Use the launcher's timeout if supported; otherwise record the deadline and enforce it when reconciling the run.
 - A build over its wall-time or cost budget stops. Time stopped for the human doesn't count.
 
 ## Recovery
 - **On start, after compaction, or after a crash,** reconcile: read `state.json`, `git status` and `git log`, then check every launch not yet consumed. Finished: consume its result. Still running: wait. Dead: resume an implementer; for a reviewer or helper, discard its uncommitted ledger edit and relaunch it fresh.
 - Never start a writer while the last writer isn't confirmed stopped.
 - A run that ends right after the implementer called `self_compact`, without a reply: resume it with "Continue from your note."
-- An implementer that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If resume is rejected, spawn a fresh implementer on the plan directory, and record the fallback. Record each restart in `stops`.
+- An implementer that times out, crashes or hangs: resume it with "you were interrupted; check `git status` and the ledger, then continue". If continuation is rejected, launch a fresh `implementer` on the plan directory, and record the fallback. Record each restart in `stops`.
 - A dirty tree at the start of a step belongs to an interrupted session. Resume that session to commit or discard. Never commit code yourself. Your own files are yours to commit, and never to discard.
 - An environment failure (service, port, disk, credentials, a missing `c4ish`) that survives the implementer's one retry is a stop, not a review pass.
 

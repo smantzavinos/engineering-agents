@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Write the plan for one piece of work — a short plan.md and a diagram model built from the project's pattern catalog — revise it from review findings, and hand back. Used by the plan-author subagent.
+description: Write the plan for one piece of work — a short plan.md and a diagram model built from the project's pattern catalog — revise it from review findings, and hand back. Used by the plan-author role.
 harnesses: [pi]
 ---
 
@@ -16,7 +16,7 @@ Write what a strong engineer needs to build this in one session without guessing
 - the project's path file, its catalog docs and profile (`architecture-model` → The files);
 - the repo's docs and rules, and the code that will change.
 
-Scout widely with subagents (`delegate`), and read the critical paths yourself.
+Launch role `helper` for scouting and `researcher` for external research ([`delegate` → Launching a role](../delegate/references/launching-a-role.md)); read the critical paths yourself.
 
 ## The model
 `model.c4ish.json` beside `plan.md`, written as `c4ish guide` says, against the project's profile: set the model's `profile` to the profile's path relative to the model, so that `validate` and the checks judge it by the same one.

@@ -98,10 +98,10 @@ For documents that exist, evaluate:
 - **AGENTS.md:** Does it route to deeper docs, or dump everything in one file?
 - **Architecture:** Does it describe boundaries and relationships, or just list technologies?
 - **Per-directory AGENTS.md:** Do they include patterns AND anti-patterns, or just brief descriptions?
-- **Agent config:** Do model choices match the repo's domain? (Frontend repo should have UI-strong workers) Is there a distinct agent per implementer tier (`worker-high`, `worker-low`) so tier routing needs no per-dispatch model? Do override model IDs exist in the provider catalog of the deployments that run this repo? Do critical agents state a manual fallback order for the providers this repo uses (`fallbackModels` is unsupported)? Settings-level `subagents.agentOverrides` replace agent-file values; see the agent configuration guide.
+- **Agent config:** Do model choices match the repo's domain? (Frontend repo should have UI-strong workers) Is there a distinct agent per implementer tier (`worker-high`, `worker-low`) so tier routing needs no per-dispatch model? Does every override name a model available in the machine's selected model set, or does the repo document which set its overrides assume? Do critical agents state a manual fallback order for the providers this repo uses (`fallbackModels` is unsupported)? Settings-level `subagents.agentOverrides` replace agent-file values; see the agent configuration guide.
 - **Operational hooks:** For each task-tracking and requirements hook, is the implementation agent-executable? A good hook names the exact file/command, ID rule, required fields, safe read operations, mutating operations, approval boundary, and fallback. A vague concept is not enough.
 - **Task tracking:** Does the repo define every required task-tracking hook from `references/task-tracking.md`: backlog store, create item, stable ID, reference format, source backlink format, list inbox/untriaged, list `Up next`, mark ready/done/canceled/deferred/blocked, and critical/blocking policy? Is `Up next` human-controlled or explicitly delegated? Are agents allowed to create items directly or must they ask?
-- **Delivery pipeline (if adopted):** Does the task-tracking doc also map the pipeline hooks from `references/task-tracking.md` (Awaiting approval, Stage/Autonomy, claim, gate comment, item–PR link), and does the repo record which scheduled jobs run?
+- **Delivery pipeline (if adopted):** Does the task-tracking doc also map the pipeline hooks from `references/task-tracking.md` (`Your turn` with `Waiting for`, Stage/Autonomy, claim, gate comment, item–PR link, PR label families), and does the repo record which scheduled jobs run?
 - **Requirements posture:** Is the repo's requirements posture explicit? Report one of: maintains requirements, explicitly no separate requirements system, unclear, or likely needed but missing.
 - **Requirements:** If the repo maintains requirements, does it define every required requirements hook from `references/requirements.md`: requirements store, actor/persona definitions, use case definitions, workflow/scenario definitions, functional requirements, non-functional requirements, operational requirements, stable IDs, reference format, test citation format, traceability rules, apply approved requirement changes, retire/change requirements, validation/query commands if any, and approval policy? Are mutating operations and human approval boundaries clear?
 - **PR review process:** Does the repo have a `pr-review-hooks.md` manifest at its root answering the required hooks from `references/pr-review.md`: review inputs, local review rules, verification commands, evidence captures, PR tracking, and merge gate? Are the verification rows runnable commands and is the merge gate explicit?
@@ -162,7 +162,7 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 
 | Operation | How to do it |
 |-----------|--------------|
-| Create backlog item | Add `### TASK-XXXX — Title` under `## Inbox` |
+| Create backlog item | After explicit owner approval, add `### TASK-XXXX — Title` under `## Inbox` |
 | Assign stable ID | Find the highest existing `TASK-XXXX`, then use the next number |
 | Reference item | Use `TASK-XXXX` in worklogs, reviews, TODOs, commits, and summaries |
 | Capture source backlink | Add `- Source: <plan/worklog/review>, <task/finding>` to the item and write the ID back to the source artifact |
@@ -173,7 +173,7 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 | Mark Done | Move the whole item under `## Done` and add a completion note |
 | Mark Canceled | Move the whole item under `## Canceled` and add a reason |
 | Defer | Move the whole item under `## Icebox` |
-| Mark Blocked | Move the whole item under `## Blocked` and add blocker details |
+| Your turn | Move the item under `## Your turn`; set `Waiting for` and record the question, gate, or blocker |
 | Critical item | Stop and ask before continuing current-plan execution |
 
 ## Item Template
@@ -187,6 +187,7 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 - Source: <artifact and task/finding>
 - Created: <YYYY-MM-DD>
 - Created by: <human|agent>
+- Waiting for: <answer|approve|unblock|decide on PR|merge PR; only in Your turn>
 - Acceptance:
   - [ ] <criterion>
 - Notes:
@@ -198,13 +199,11 @@ This repo uses this single Markdown file as the canonical backlog. The section c
 
 ## Inbox
 
-## Clarification needed
-
 ## In progress
 
 ## In review
 
-## Blocked
+## Your turn
 
 ## Icebox
 
@@ -221,7 +220,7 @@ Backlog system: Markdown
 Details: `docs/backlog.md`
 
 Rules:
-- New agent-discovered non-critical follow-ups go under `## Inbox` after approval unless a plan/worklog pre-authorizes capture.
+- Finish in task: agents add no backlog item without explicit owner approval. Do work that belongs to this task now; put minor findings left undone under “Considered and not done”; propose genuine out-of-scope defects under “Proposed new issues (need your OK)” after checking for duplicates.
 - Stable IDs use `TASK-0001`, `TASK-0002`, etc.
 - Source backlink is required in both the backlog item and the source artifact.
 - `Up next` is human-controlled unless explicitly delegated.
@@ -234,7 +233,10 @@ Use for team repos or repos already centered on GitHub.
 
 Document:
 - Issues are canonical backlog items
-- Project `Status` values map to Inbox, Ready, Up next, In progress, In review, Blocked, Done, Canceled, Icebox
+- Project `Status` values map to Inbox, Ready, Up next, In progress, In review, Your turn, Done, Canceled, Icebox
+- `Your turn` replaces separate clarification, approval and blocked columns. Set the display-only `Waiting for` field (`answer`, `approve`, `unblock`, `decide on PR`, `merge PR`); bots act on state and markers, not on this field
+- PR workflow labels use `review-bot:*`, `fix-bot:*` and `needs-human:*`; follow `references/delivery-pipeline.md`
+- Apply the same Finish in task capture policy as the Markdown option
 - Project `Track` maps to Fast path, Standard implementation, Analysis / spike, Docs / process
 - Project `Priority` maps to P0–P3
 - Labels capture kind/origin/area/risk metadata
@@ -378,7 +380,7 @@ When setting up or updating agent models for a repo, use `.pi/settings.json` →
 
 Only override agents where the model should differ from the global default.
 
-Precedence: Settings-level `subagents.agentOverrides` fields replace the agent file's frontmatter values. Project overrides beat user overrides. Do not set `fallbackModels`: it is unsupported, and an agent or override that declares it fails to load.
+Precedence: Settings-level `subagents.agentOverrides` fields replace the agent file's frontmatter values. Project overrides beat user overrides. Use models available in the machine's selected set; if the repo assumes one set, document which. Do not set `fallbackModels`: it is unsupported, and an agent or override that declares it fails to load.
 
 Ask the user about:
 - Preferred providers (cost constraints, API access)
@@ -475,7 +477,7 @@ Use severities consistently:
 | Mark Done | <command/procedure> | ✅/❌ | ✅/❌ |
 | Mark Canceled | <command/procedure> | ✅/❌ | ✅/❌ |
 | Defer/Icebox | <command/procedure> | ✅/❌ | ✅/❌ |
-| Mark Blocked | <command/procedure> | ✅/❌ | ✅/❌ |
+| Move to Your turn and set Waiting for | <command/procedure> | ✅/❌ | ✅/❌ |
 | Agent capture policy | <ask/pre-authorized rule> | ✅/❌ | ✅/❌ |
 | Critical/blocking policy | <stop/fix/re-plan/backlog policy> | ✅/❌ | ✅/❌ |
 | Tool/auth requirements | <gh/tracker CLI/access/fallback> | ✅/❌/N/A | ✅/❌/N/A |

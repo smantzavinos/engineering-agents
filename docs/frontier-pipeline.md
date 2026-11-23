@@ -33,6 +33,10 @@ A plan's design is a model: a JSON file the diagram tool (`c4ish`) validates and
 
 ## Roles
 
+The same role definitions serve terminal Pi and T3. See
+[Launching a role](../skills/delegate/references/launching-a-role.md) for launch,
+continuation and launcher IDs.
+
 | Agent | Does | Session |
 |---|---|---|
 | orchestrator | Sequences the work, keeps `state.json`, shows the tour, records approvals, decides; never plans, builds or reviews | `scope`, then `run-plan` (or `run-epic`); self-compacts at clean points |

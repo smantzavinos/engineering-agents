@@ -16,7 +16,8 @@ Read this file before adding, renaming, or materially editing files in `agents/`
 - When changing one agent's scope, check adjacent agent files so boundaries still line up.
 
 ## Override Guidance
-- For repo-local model or thinking overrides, use `.pi/settings.json` → `subagents.agentOverrides`.
+- Keep checked-in role models and thinking aligned with the `direct` set with z.ai enabled. Nix applies the selected machine set at build time, including legacy roles and the presets' model.
+- For repo-local model or thinking overrides, use `.pi/settings.json` → `subagents.agentOverrides`. Choose models available in the machine's set or document the set the repo assumes.
 - Do not create repo-local `.pi/agents/` copies just to tweak models or thinking levels; that duplicates canonical agent content and drifts quickly.
 - Only edit the checked-in agent Markdown when the actual role, instructions, or durable contract should change for everyone.
 

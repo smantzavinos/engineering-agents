@@ -22,22 +22,16 @@ Agent overrides live in `.pi/settings.json` at the project root under `subagents
 
 ### `.pi/settings.json` — Project-level overrides
 
+Nix installs roles from the machine's `engineering-agents.pi.modelSet` (`direct` or
+`copilot`). Every model override must be available in that set on the machines
+that run the repo; document the assumed set if the override is set-specific.
+For example, this repository-local override assumes `copilot`:
+
 ```json
 {
   "subagents": {
     "agentOverrides": {
-      "worker": {
-        "model": "anthropic/claude-sonnet-4",
-        "thinking": "high"
-      },
-      "ui-worker": {
-        "model": "anthropic/claude-sonnet-4",
-        "thinking": "high"
-      },
-      "code-reviewer": {
-        "model": "anthropic/claude-opus-4",
-        "thinking": "high"
-      }
+      "implementer": { "model": "github-copilot/claude-sonnet-5.5", "thinking": "high" }
     }
   }
 }
@@ -59,9 +53,7 @@ Agent overrides live in `.pi/settings.json` at the project root under `subagents
 
 ### Priority
 
-Project overrides (`.pi/settings.json`) beat user overrides (`~/.pi/agent/settings.json`).
-
-Override fields replace the agent file's frontmatter values.
+Project overrides (`.pi/settings.json`) beat user overrides (`~/.pi/agent/settings.json` or `$PI_CODING_AGENT_DIR/settings.json`) field by field, then the installed role's frontmatter applies. See `delegate` → Launching a role for the fields forwarded to T3.
 
 `fallbackModels` is unsupported: an agent file or override that sets it fails to load. Configure one model per agent.
 
@@ -82,59 +74,11 @@ Override fields replace the agent file's frontmatter values.
 
 ## Common Configurations
 
-### Budget-conscious
-```json
-{
-  "subagents": {
-    "agentOverrides": {
-      "worker": { "model": "fireworks/accounts/fireworks/models/deepseek-v4-pro" },
-      "ui-worker": { "model": "fireworks/accounts/fireworks/models/deepseek-v4-pro" },
-      "planner": { "model": "openai-codex/gpt-5.4", "thinking": "high" },
-      "plan-reviewer": { "model": "openai-codex/gpt-5.4", "thinking": "high" },
-      "code-reviewer": { "model": "openai-codex/gpt-5.4", "thinking": "high" }
-    }
-  }
-}
-```
-
-### Quality-maximized
-```json
-{
-  "subagents": {
-    "agentOverrides": {
-      "worker": { "model": "anthropic/claude-sonnet-4", "thinking": "high" },
-      "ui-worker": { "model": "anthropic/claude-sonnet-4", "thinking": "high" },
-      "planner": { "model": "anthropic/claude-opus-4", "thinking": "high" },
-      "plan-reviewer": { "model": "anthropic/claude-opus-4", "thinking": "high" },
-      "code-reviewer": { "model": "anthropic/claude-opus-4", "thinking": "high" }
-    }
-  }
-}
-```
-
-### Frontend-focused repo
-```json
-{
-  "subagents": {
-    "agentOverrides": {
-      "ui-worker": { "model": "anthropic/claude-sonnet-4", "thinking": "high" },
-      "code-reviewer": { "model": "anthropic/claude-opus-4", "thinking": "high" }
-    }
-  }
-}
-```
-
-### Python/ML repo
-```json
-{
-  "subagents": {
-    "agentOverrides": {
-      "worker": { "model": "openai-codex/gpt-5.4", "thinking": "high" },
-      "planner": { "model": "openai-codex/gpt-5.5", "thinking": "high" }
-    }
-  }
-}
-```
+- **Budget-conscious, direct set:** override `implementer.model` to
+  `openai-codex/gpt-5.6-luna`.
+- **Portable thinking-only override:** omit `model` so the installed role
+  definition still selects it. For example, set `implementer.thinking` to
+  `high` if the repo needs more reasoning on either model set.
 
 ## Key Advantages of This Approach
 

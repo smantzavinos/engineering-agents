@@ -344,6 +344,143 @@ if grep -rh '^pi -p ' "$H" | grep -v -- '--model <model-for-' | grep -q .; then 
 if grep -rh '^pi -p .*--name "[a-z-]*reviewer"' "$H" | grep -v -- '-review-<N>' | grep -q .; then fail "a hermes review delegation reuses a non-review session id"; else pass "hermes review delegations get -review-<N> session ids"; fi
 
 printf '\n'
+# ============================================================
+# S12 delegation through T3: one launcher reference in delegate, a role
+# resolver, process skills that say "launch role X", and the visibility split.
+# Requirement: FR-008
+
+DELEGATE_DIST="$REPO_ROOT/dist/skills/pi/delegate"
+if [[ -f "$DELEGATE_DIST/references/launching-a-role.md" ]] \
+  && grep -Fq 'delegate_task' "$DELEGATE_DIST/references/launching-a-role.md" \
+  && grep -Fq 't3_thread_send' "$DELEGATE_DIST/references/launching-a-role.md" \
+  && grep -Fq 'task_cancel' "$DELEGATE_DIST/references/launching-a-role.md" \
+  && grep -Fq 'childThreadId' "$DELEGATE_DIST/references/launching-a-role.md" \
+  && grep -Fq 'role.mjs' "$DELEGATE_DIST/references/launching-a-role.md" \
+  && grep -Fq 'subagent' "$DELEGATE_DIST/references/launching-a-role.md"; then
+  pass "delegate ships references/launching-a-role.md with both launcher forms and run ids"
+else
+  fail "delegate/references/launching-a-role.md is missing or lacks the T3 and terminal launcher forms"
+fi
+if [[ -f "$DELEGATE_DIST/role.mjs" ]]; then
+  pass "delegate renders role.mjs next to its SKILL.md"
+else
+  fail "delegate does not render role.mjs"
+fi
+if grep -Eq '^#+ Launching a role$' "$DELEGATE_DIST/SKILL.md" \
+  && grep -Fq 'references/launching-a-role.md' "$DELEGATE_DIST/SKILL.md"; then
+  pass "delegate SKILL.md has a Launching a role section pointing at the reference"
+else
+  fail "delegate SKILL.md lacks the Launching a role section"
+fi
+
+for process in scope run-plan run-epic plan implement review map-patterns; do
+  f="$REPO_ROOT/dist/skills/pi/${process}/SKILL.md"
+  if [[ -f "$f" ]] && grep -Fqi 'launch role' "$f" && grep -Fq 'Launching a role' "$f" \
+     && ! grep -Eq '`subagent`|subagent\(|pi-subagents' "$f"; then
+    pass "${process} launches roles through delegate, not the subagent tool"
+  else
+    fail "${process} must say 'launch role X' pointing at delegate → Launching a role, and name no subagent tool"
+  fi
+done
+
+# Visibility split (S12 decision 3): process skills stay visible; the hidden
+# list in harnesses/pi.json stays exactly the two authoring skills.
+if node -e 'const h=require(process.argv[1]);process.exit(JSON.stringify(h.hiddenSkills)==="[\"configure-pi\",\"create-skills\"]"?0:1)' "$REPO_ROOT/harnesses/pi.json"; then
+  pass "harnesses/pi.json hiddenSkills is exactly configure-pi and create-skills"
+else
+  fail "harnesses/pi.json hiddenSkills must stay exactly configure-pi and create-skills"
+fi
+for visible in scope run-plan run-epic prototype map-patterns assess-repo delegate backlog \
+               triage-backlog pull-request babysit-pr plan implement review architecture-model test-quality; do
+  if [[ -f "$REPO_ROOT/dist/skills/pi/${visible}/SKILL.md" ]] \
+     && ! grep -Fq 'disable-model-invocation' "$REPO_ROOT/dist/skills/pi/${visible}/SKILL.md"; then
+    pass "${visible} stays visible to the model in Pi"
+  else
+    fail "${visible} must stay visible to the model in Pi"
+  fi
+done
+
+# ------------------------------------------------------------
+# role.mjs resolver regression. Run as `node skills/delegate/role.mjs <role>`
+# from a project directory, with PI_CODING_AGENT_DIR pointing at the user
+# config. Precedence: project .pi/settings.json subagents.agentOverrides, then
+# the user's settings.json, then the agents/<role>.md frontmatter.
+ROLE_TMP="$(mktemp -d)"
+trap 'rm -rf "$ROLE_TMP"' EXIT
+ROLE_PROJECT="$ROLE_TMP/project"
+ROLE_AGENT_DIR="$ROLE_TMP/agent"
+mkdir -p "$ROLE_PROJECT/.pi" "$ROLE_PROJECT/skills/delegate" "$ROLE_AGENT_DIR/agents"
+ln -s "$REPO_ROOT/skills/delegate/role.mjs" "$ROLE_PROJECT/skills/delegate/role.mjs"
+cat >"$ROLE_PROJECT/.pi/settings.json" <<'JSON'
+{"subagents":{"agentOverrides":{"reviewer":{"model":"zai-coding-plan/glm-5.3","thinking":"low"}}}}
+JSON
+cat >"$ROLE_AGENT_DIR/settings.json" <<'JSON'
+{"subagents":{"agentOverrides":{"planner":{"model":"openai-codex/gpt-5.6-sol","thinking":"high"},"reviewer":{"model":"openai-codex/gpt-5.6-luna","thinking":"medium"}}}}
+JSON
+cat >"$ROLE_AGENT_DIR/agents/reviewer.md" <<'MD'
+---
+name: reviewer
+description: fixture reviewer
+model: github-copilot/claude-opus-5.5
+thinking: high
+skill: review, test-quality
+---
+Fixture body.
+MD
+cat >"$ROLE_AGENT_DIR/agents/planner.md" <<'MD'
+---
+name: planner
+description: fixture planner
+model: github-copilot/gpt-6.1-sol
+thinking: medium
+---
+Fixture body.
+MD
+cat >"$ROLE_AGENT_DIR/agents/helper.md" <<'MD'
+---
+name: helper
+description: fixture helper
+model: zai-coding-plan/glm-5.3-flash
+thinking: low
+skill: test-quality
+---
+Fixture body.
+MD
+
+role_json() {
+  (cd "$ROLE_PROJECT" && PI_CODING_AGENT_DIR="$ROLE_AGENT_DIR" node skills/delegate/role.mjs "$1" 2>/dev/null) || true
+}
+
+json_expect() {
+  local description="$1" json="$2" expression="$3"
+  if printf '%s' "$json" | node -e 'const j = JSON.parse(require("fs").readFileSync(0, "utf8")); process.exit((('"$expression"')) ? 0 : 1);' 2>/dev/null; then
+    pass "$description"
+  else
+    printf '    resolver output: %s\n' "${json:-<empty>}" >&2
+    fail "$description"
+  fi
+}
+
+REVIEWER_JSON="$(role_json reviewer)"
+json_expect 'role.mjs: project override beats user settings and frontmatter' "$REVIEWER_JSON" \
+  'j.role === "reviewer" && j.model === "zai-coding-plan/glm-5.3" && j.thinking === "low"'
+json_expect 'role.mjs: frontmatter skills and skill paths are reported' "$REVIEWER_JSON" \
+  'JSON.stringify(j.skills) === JSON.stringify(["review", "test-quality"]) && j.skillPaths.length === 2 && j.skillPaths.every((p) => p.endsWith("/SKILL.md"))'
+
+PLANNER_JSON="$(role_json planner)"
+json_expect 'role.mjs: user settings override beats frontmatter when no project entry exists' "$PLANNER_JSON" \
+  'j.model === "openai-codex/gpt-5.6-sol" && j.thinking === "high"'
+
+HELPER_JSON="$(role_json helper)"
+json_expect 'role.mjs: frontmatter is used when no override exists' "$HELPER_JSON" \
+  'j.model === "zai-coding-plan/glm-5.3-flash" && j.thinking === "low" && JSON.stringify(j.skills) === JSON.stringify(["test-quality"])'
+
+if (cd "$ROLE_PROJECT" && PI_CODING_AGENT_DIR="$ROLE_AGENT_DIR" node skills/delegate/role.mjs no-such-role >/dev/null 2>&1); then
+  fail 'role.mjs must exit non-zero for a role with no agent file or override'
+else
+  pass 'role.mjs exits non-zero for an unknown role'
+fi
+
 printf 'Results: %d passed, %d failed\n' "$PASS" "$FAIL"
 if [[ "$FAIL" -gt 0 ]]; then
   exit 1
