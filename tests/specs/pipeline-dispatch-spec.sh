@@ -25,6 +25,7 @@ case "$*" in
   *"issues/"*"/comments"*) n="$(sed -E 's#.*issues/([0-9]+)/comments.*#\1#' <<<"$*")"; printf '['; cat "$d/c$n.json" 2>/dev/null || printf '[]'; printf ']\n' ;;
   *"issues/"*"/labels"*)   n="$(sed -E 's#.*issues/([0-9]+)/labels.*#\1#' <<<"$*")";   cat "$d/l$n.json" 2>/dev/null || echo '[]' ;;
   "pr list"*) cat "$d/prs.json" 2>/dev/null || echo '[]' ;;
+  *"repos/o/r/issues/"[0-9]*) n="$(sed -E 's#.*issues/([0-9]+).*#\1#' <<<"$*")"; cat "$d/i$n.json" 2>/dev/null || echo '{}' ;;
   *) echo '[]' ;;
 esac
 EOF
@@ -72,6 +73,16 @@ check  "$OUT" "would label #23 needs-human:discussion" "reply: discuss parks the
 refute "$OUT" "for #23" "reply: discuss starts no session"
 check  "$OUT" "would move #24 to Canceled with comment" "reply: reject cancels with the reason"
 check  "$OUT" "would spawn work for #25 (unblock)" "reply: owner unblock resumes a Your turn (unblock) item"
+
+# assignees answer and unblock, but gate decisions are the owners' alone
+echo "[$(item 26 'Your turn' Design standard-implementation),$(item 27 'Your turn' Execute standard-implementation)]" > "$TMP/items2b.json"
+echo '{"assignees":[{"login":"dev"}]}' > "$TMP/i26.json"; cp "$TMP/i26.json" "$TMP/i27.json"
+echo "[$GATE,{\"id\":101,\"user\":{\"login\":\"dev\"},\"body\":\"@agent approve\"}]" > "$TMP/c26.json"
+echo '[{"id":49,"user":{"login":"agent"},"body":"stuck <!-- blocked reason=token -->"},{"id":50,"user":{"login":"dev"},"body":"@agent unblock: token rotated"}]' > "$TMP/c27.json"
+OUT="$(run work ITEMS="$TMP/items2b.json" PIPELINE_WIP=5)"
+refute "$OUT" "would spawn work for #26" "reply: an assignee's approve does not pass a gate"
+check  "$OUT" "would spawn work for #27 (unblock)" "reply: an assignee's unblock resumes the item"
+rm -f "$TMP"/i*.json
 
 # consumed reply: a recorded reply_id is not acted on again
 mkdir -p "$TMP/state"; echo '{"kind":"work","item":20,"reply_id":101,"ts":0,"tag":"work-item20-0","pid":0,"stage":"Design","reason":"resume"}' > "$TMP/state/dispatches.jsonl"
@@ -158,8 +169,9 @@ rm -rf "$TMP/state" "$TMP"/c*.json
 # --- shared account: the owner replies from the agent's login
 echo "[$(item 70 'Your turn' Design standard-implementation)]" > "$TMP/items13.json"
 echo "[$GATE,{\"id\":101,\"user\":{\"login\":\"agent\"},\"body\":\"@agent approve\"}]" > "$TMP/c70.json"
-OUT="$(run work ITEMS="$TMP/items13.json" PIPELINE_OWNERS=agent)"
+OUT="$(run work ITEMS="$TMP/items13.json" PIPELINE_OWNERS=agent || true)"
 refute "$OUT" "would spawn work for #70" "shared: without the flag a self-authored reply is ignored"
+check  "$OUT" "set PIPELINE_SHARED_ACCOUNT=1" "shared: the bot posting as an owner without the flag is a config error"
 OUT="$(run work ITEMS="$TMP/items13.json" PIPELINE_OWNERS=agent PIPELINE_SHARED_ACCOUNT=1)"
 check  "$OUT" "would spawn work for #70 (resume)" "shared: a marker-free reply from the shared login counts"
 echo "[$GATE,{\"id\":101,\"user\":{\"login\":\"agent\"},\"body\":\"@agent approve\n<!-- triage outcome=ready -->\"}]" > "$TMP/c70.json"

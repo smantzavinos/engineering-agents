@@ -1142,6 +1142,12 @@ def main(argv):
         print("Pipeline dispatch error: no bot login: set PIPELINE_BOT_LOGINS (or an @ handle in "
               "PR_AGENT_HANDLE), or log gh in as the bot account")
         return 1
+    if not SHARED and set(_logins(HANDLES)) & set(OWNERS):
+        # The bot posts as an owner: without the shared-account rule every owner reply would be read as the bot's.
+        print("Pipeline dispatch error: the bot posts as an owner login ("
+              + ", ".join(sorted(set(_logins(HANDLES)) & set(OWNERS)))
+              + "): set PIPELINE_SHARED_ACCOUNT=1, or give the bot its own account")
+        return 1
     for d in (STATE, RESULTS, LOGS):
         d.mkdir(parents=True, exist_ok=True)
     recs = load_records()

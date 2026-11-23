@@ -291,9 +291,13 @@ def integrate_strategy(comment, handles):
 
 # ---------------------------------------------------------------- side effects
 
+_WHOAMI_TRIED: list = []
+
+
 def agent_logins():
-    """LOGINS, or the login `gh` is logged in as when none is configured (resolved once per run)."""
-    if not LOGINS:
+    """LOGINS, or the login `gh` is logged in as when none is configured (asked once per run, even on failure)."""
+    if not LOGINS and not _WHOAMI_TRIED:
+        _WHOAMI_TRIED.append(True)
         try:
             me = ((gh("api", "user") or {}).get("login") or "").lower()
         except (RuntimeError, OSError, ValueError, AttributeError):
@@ -1129,6 +1133,11 @@ def load_dispatch():
 def main():
     if not REPOS:
         print("PR sweep error: set PR_SWEEP_REPOS")
+        return 1
+    if not agent_logins():
+        # Without a bot login every bot-answered review thread looks open and READY PRs are demoted each tick.
+        print("PR sweep error: no bot login: set PIPELINE_BOT_LOGINS (or an @ handle in PR_AGENT_HANDLE), "
+              "or log gh in as the bot account")
         return 1
     for d in (STATE, RESULTS, LOGS):
         d.mkdir(parents=True, exist_ok=True)

@@ -213,7 +213,10 @@ apart by their content: every bot comment starts with `🤖 ` and carries a
 hidden marker (`<!-- babysit-reply -->`, the verdict marker, a claim line),
 and never starts with the command handle. A comment authored by an `@` handle
 login is never a command. Use a `/` handle (default `/devbot`) when people and
-bots share an account.
+bots share an account, and set `PIPELINE_SHARED_ACCOUNT=1`: an owner comment
+from the shared login then counts as a reply only when it carries no bot
+marker. Without the flag, the backlog dispatcher refuses to run when the bot
+login is also an owner, because it could not tell their replies apart.
 
 ### Escalation and review threads
 
