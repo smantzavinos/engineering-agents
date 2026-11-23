@@ -41,7 +41,7 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   - lists under Changes outside the model every change with no place in the picture;
   - stays inside the child's entry. Work beyond it that isn't on the plan's Follow-ups line is a major finding;
   - where a dependency isn't built yet, judge references to its work against its approved plan, not the code;
-  - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean. Judge each contract, not its mechanics: what it proves, at which layer, and whether another test already owns it. Locators, assertion construction, fixture detail and whether a planned test can fail are for code review; here they are minors for the implementer;
+  - names the contracts to prove, at sensible layers (`test-quality`). The list is the test budget, so check that it is complete and lean. Judge each contract, not its mechanics: what it proves, at which layer, and whether another test already owns it. Each planned test says the regression it catches and what it asserts on. One that names no regression, asserts on markup, styling hooks or implementation, repeats a contract another test or a gate owns, or pins a known defect the plan could fix, is a major (`tests`): reject it here, before code exists. The exact locator, assertion construction, fixture detail and whether a planned test can fail are for code review; here they are minors for the implementer;
   - fits the codebase;
   - has a T1 selection, widening or escalation that fits what changes;
   - claims that stay inside its `epic.md` claim; for a group member, they don't overlap its siblings'.
@@ -81,6 +81,13 @@ A plan's design is a model built from the project's pattern catalog. `architectu
   **A large diff** (above the plan's review-load estimate) is read in groups when your task says so: you are given one container's files, or the last group (shared files, unaccounted lines, tests, docs), and add your own section to the ledger. The last reviewer reads the joins: the contracts between groups, the deviations and the model checks, and gives the single verdict. This is untested; say in your reply what the grouping hid.
 
   Apply `test-quality` to every new or changed test, with its severities. Every new test proves a contract: one in the plan's Tests, or one the ledger records with a reason. That includes regression tests for bugs found while building, and independent contracts the plan's list doesn't reach, such as config, defaults or migrations (`test-quality` → Keep). A test moved, split or rewritten because its contract changed isn't new. A test with no contract is a major finding. A test whose contract is missing only from the ledger is a minor: record it, don't delete the test. A test-to-production ratio well above earlier children's means look closer; it isn't a finding by itself.
+
+  Read the test files themselves; a green run and a matching contract are not enough. In every new or changed test, look for:
+  - **locators:** a query by class, style or `querySelector` on a styling hook, or on exact markup. Each is a change detector (major) unless nothing accessible can exist and the test says why. The fix is usually an accessible name on the element;
+  - **call order:** assertions on the order or shape of calls, or mock queues ordered by call (major);
+  - **fixtures:** data the real path never writes (minor), or a fixture that supplies the behaviour asserted (major, tautological);
+  - **known defects:** an assertion of behaviour the plan or ledger calls wrong. Unlabelled, unlinked to a follow-up, or asserted in a second layer, it is a major;
+  - **small duplicates:** what a gate already proves, a table case with no new class of input, something another unit owns.
 
   Tag every major with its kind. A major is `tests`, `T1` or `wording` only if its fix can't change production behaviour. Tag every other one (wrong behaviour, a missing deliverable, docs, design, boundaries, claims, scope, a merge error) `design`, `boundary`, `claims`, `scope` or `cohesion`: its fix needs a re-check.
 

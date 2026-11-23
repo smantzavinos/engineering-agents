@@ -29,7 +29,14 @@ A test earns its place by catching a credible regression that nothing else catch
 Each of these is a *major* review finding:
 - **Tautological:** the expected value is produced by the code under test, a mock supplies the behavior being asserted, or the test asserts what it set up itself.
 - **Change detector:** assertions on implementation or call shape, call-order mock queues, exact class names or computed styles, copied inventories, source greps, re-export identity. A refactor that preserves behavior must not break a test.
-- **Duplicate:** a contract already owned at the same layer or another one.
+  - In a UI test, find an element as a user does: by role and accessible name, label or visible text. A query on a styling hook (a class, a style, a `querySelector` on either) or on exact markup is a change detector.
+  - When the element has no accessible name, give it one in production code. That is a fix, not a test-only seam.
+  - A styling hook is allowed only when nothing accessible can exist, and the test says why.
+- **Duplicate:** a contract already owned at the same layer or another one. Small ones count:
+  - a test that repeats what a gate already proves, such as linting files the lint gate covers;
+  - a table case that adds no new class of input;
+  - an assertion on something another unit owns, such as the order of rows its caller sorts.
+- **Pinned defect in two layers:** known-wrong behavior asserted in more than one layer (see Integrity).
 - **Test-only seam:** production code that exists only for the test.
 - **False negative control:** a "rejects X" test that would pass without the guard it claims to prove.
 
@@ -48,6 +55,10 @@ These are *minor*:
   - Write one test, at the owning layer.
 - Don't edit an existing assertion or fixture to get green unless the plan changes that contract. Say so in the ledger.
 - Don't delete a test without naming what it protected and where that proof now lives.
+- **Known defects:**
+  - Don't assert behavior you know is wrong. Fix the defect in the plan, or leave that behavior unasserted.
+  - If it must be pinned (something else depends on it until the fix), the test's name or a comment says "known defect" and links the follow-up item. Without both, it is a major.
+  - Pin it once, at the owning layer.
 
 ## Auditing existing tests
 Audit only as a separate work item, never inside a feature child. The method is in `references/audit.md`.
