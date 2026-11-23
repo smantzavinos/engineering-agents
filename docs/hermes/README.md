@@ -98,7 +98,10 @@ An agent being handed ownership of one or more repos runs this once:
    - confirm the repo documents the pipeline hooks in its task-tracking doc.
 3. **Register the trigger surface**: confirm the command handle
    (`PR_AGENT_HANDLE`, default `/devbot`; first line `<handle> <command>`)
-   and the owner logins (`PIPELINE_OWNERS`), and check the repo's
+   and the owner logins (`PIPELINE_OWNERS`). With a `/` handle only, set
+   `PIPELINE_BOT_LOGINS` to the account the bots post as (otherwise the
+   dispatchers use the account `gh` is logged in as, and refuse to run when
+   none resolves). Check the repo's
    `pr-tracking` manifest row documents them.
 4. **Agree the execution mode** (Pi subprocesses / Hermes subagents / single
    session) with the human when a plan is approved for execution — see

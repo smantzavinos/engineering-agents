@@ -317,11 +317,12 @@ gaps found by the design scan and the review findings of every severity.
   test, roughly under 30 lines); otherwise dropped with one line under
   `## Considered and not done` in the PR body. Minors are never filed and
   never listed as follow-ups.
-- **Related repositories are in scope.** A change the item needs in another
-  repository (dependency, consumer, shared library, schema or API) is made
-  as a companion PR there, cross-linked with this item's PR; never merged
-  by an agent. "It lives in another repository" is never a reason to stop,
-  ask, or file a follow-up.
+- **Related repositories.** A change the item needs in another repository
+  (dependency, consumer, shared library, schema or API) is made as a
+  companion PR there, cross-linked with this item's PR and never merged by
+  an agent, when the approved plan or design names it. Otherwise it is an
+  owner-list question (an externally visible action), asked at the next
+  gate; it is never filed as a follow-up.
 - **Nice-to-haves** outside the item's problem are dropped and listed under
   "Considered and not done", not filed.
 - The PR body's follow-ups section lists only issues that already exist

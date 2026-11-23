@@ -296,8 +296,8 @@ flowchart LR
 | Job | Interval | Acts on | Dispatches | Notifies the human on |
 |-----|----------|---------|------------|----------------------|
 | triage | 15 min | `Inbox` items, including recovery of an incomplete move or historical `left`; `Your turn` items waiting for an answer, with a real owner `answer:` comment newer than the last triage marker | One triage session per batch | Questions/owner decisions and failures |
-| dispatch | 2–5 min | Gate and unblock replies, stale claims, `Up next` under the WIP limit, worktrees of `Done`/`Canceled` items | One work session per item | Gate reached (digest), repeated session failures |
-| pr-sweep | 1–2 min | PR labels, verdicts, pushes, mentions, merges | Reviewer and babysitter sessions | READY, BLOCKED/ESCALATE, stuck |
+| dispatch | 3 min | Gate and unblock replies, dead sessions, `Up next` under the WIP limit, worktrees of `Done`/`Canceled` items | One work session per item | Gate reached (digest), repeated session failures |
+| pr-sweep | 2 min | PR labels, verdicts, pushes, mentions, merges | Reviewer and babysitter sessions | READY, BLOCKED/ESCALATE, stuck |
 | board-sync | 5 min | Off-board issues, `Waiting for` drift, close proposals past their deadline, merged PRs | None (script only) | Moves and closes it made |
 | hygiene | Weekly | Whole board and open PRs | None | Stale `Your turn` cards, parked `discuss` items, PRs outside the review flow |
 
@@ -359,8 +359,14 @@ Everything a deterministic dispatcher needs to decide the next action from
 tracker state alone. Sessions and scripts both follow it.
 
 **People.** The *owner* is the allowlist of tracker logins the repo names
-(hook). Only owner comments count as gate replies, unblock replies or
-clarification answers. The agent's own account never counts, even if listed.
+(hook). Gate decisions (`approve`, `revise:`, `discuss`, `reject`) count
+only from an owner. Answers (`answer:`), unblock replies (`unblock:`) and
+close-proposal replies (`close`, `keep`) also count from the item's
+assignees and the configured responders (`PIPELINE_RESPONDERS`). The bot's
+own logins never count, even if listed: `PIPELINE_BOT_LOGINS`, the `@`
+handles, or else the account `gh` is logged in as (a `/` handle names no
+account). On a shared account an owner comment counts only without a
+pipeline marker.
 
 **Reply grammar.** A reply is an owner comment whose first non-empty line is
 `<handle> <verb>[:] <body>`, where `<handle>` is one of the agent's handles

@@ -343,7 +343,9 @@ Env:      PR_SWEEP_REPOS="owner/repo-a owner/repo-b"   PR_AGENT_HANDLE="/devbot 
           PR_SESSION_PROVIDER, PR_SWEEP_CHECKOUT_ROOT (local checkouts, default ~/repos)
           PR_FIX_LOOP_CAP (2), PR_BOT_REVIEWERS, PR_BOT_REVIEW_CAP (5), PR_HUMAN_CHECKS
           PR_BABYSIT_STALE_MIN (60), PR_REVIEW_STUCK_MIN (90), PR_STALL_NOTIFY_MIN (60)
-          PR_REQUIRE_VERIFICATION_LOGS (1), PR_SWEEP_STATE
+          PIPELINE_BOT_LOGINS (bot accounts whose thread replies answer a thread;
+          default: the @ handles, else the account gh is logged in as)
+          PR_REQUIRE_VERIFICATION_LOGS (1; logs must sit in the round's artifacts dir), PR_SWEEP_STATE
           HERMES_BIN / GH_BIN / GH_TOKEN_FILE as the host needs
           COMMENT_STYLE_ENFORCE_FROM (ISO date; post-comment.py only warns before it)
 Deliver:  the channel where the human wants READY / BLOCKED / ESCALATE digests

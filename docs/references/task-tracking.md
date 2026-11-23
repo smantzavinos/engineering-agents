@@ -543,7 +543,7 @@ This repo uses GitHub Issues as canonical backlog items and the `<Project Name>`
 | Field | Purpose |
 |-------|---------|
 | `Status` | Workflow state: Backlog, Inbox, Ready, Up next, In progress, Your turn, In review, Done, Canceled, Icebox (board name `Later`) |
-| `Waiting for` | Display only, on cards in `Your turn`: `💬 answer`, `👍 approve`, `🛠️ unblock`, `⚖️ decide on PR`, `🔀 merge PR`. Set best-effort when a card enters `Your turn`, cleared when it leaves, corrected by board sync. Never an input to any decision |
+| `Waiting for` | Display only, on cards in `Your turn`: `💬 answer`, `👍 approve`, `🛠️ unblock`, `⚖️ decide on PR`, `🔀 merge PR`, or `⏳ Bot's turn` once a valid reply waits for the dispatcher. Set best-effort when a card enters `Your turn`, cleared when it leaves, corrected by board sync. Never an input to any decision |
 | `Stage` | Pipeline repos: `Design`, `Plan`, `Execute`, `Research`, `PR` (see [Delivery Pipeline](delivery-pipeline.md#item-fields)) |
 | `Autonomy` | Optional; `gated` (default; one Design gate, Plan gate only when the plan departs from the design) or `auto` (never a Plan gate) |
 | `Track` | Process depth: `fast-path`, `standard-implementation`, `analysis-spike`, `docs-process` (use these exact values; routers match on them) |

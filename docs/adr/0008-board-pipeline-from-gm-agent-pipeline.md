@@ -73,5 +73,12 @@ publish with git (fast-forward push; merge by default, rebase only on
 
 - Following PR cards on the board, cleaning workflow labels off merged PRs and
   assigning PRs automatically (board-sync features tied to his setup).
+- Commands in inline review-thread comments: the sweep reads owner commands
+  from PR conversation comments only. The shared-account mention mode is
+  replaced by a `/` handle, which a human and a bot on one account can both
+  type without the bot's own comments reading as commands.
+- Unattended companion PRs in other repositories: a work session opens one
+  only when the approved plan or design names it; otherwise it is an owner
+  question.
 - Required-vs-advisory checks stay `TASK-0006`; `PR_HUMAN_CHECKS` covers only
   checks a person satisfies.
