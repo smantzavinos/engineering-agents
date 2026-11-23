@@ -15,7 +15,7 @@ Use the commands documented there instead of inventing new top-level verificatio
 - Use the repo's documented command surface: `bash tests/specs/<spec>.sh` for fast feedback and `./tests/run-tests.sh fast|all|full` for broader gates.
 - Do not invent a second canonical source for verification, backlog, or requirements policy; route to `docs/testing-strategy.md`, `docs/backlog.md`, and `docs/requirements.md`.
 - When a plan introduces or changes repo-operating docs, update the touched readiness spec, the canonical doc, and the root `AGENTS.md` route together.
-- Keep non-critical follow-up work out of the active task list; capture accepted follow-ups in `docs/backlog.md` with `TASK-XXXX` IDs.
+- Finish in task: do work that belongs to the current task now, and list minor findings left undone under "Considered and not done". Propose genuine out-of-scope defects under "Proposed new issues (need your OK)" after a duplicate search; capture only owner-approved follow-ups in `docs/backlog.md` with `TASK-XXXX` IDs. Add no new TODOs for future work.
 - Cite requirement IDs from `docs/requirements.md` when tasks implement or verify durable repo behavior, and keep test citations in the documented `Requirement: <ID>` format.
 - Keep execution logs operational: sequential `worklog.md` uses one current `NEXT STEP`.
 

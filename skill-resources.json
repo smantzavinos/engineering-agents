@@ -23,6 +23,10 @@
     {
       "source": "docs/references/pr-review.md",
       "target": "docs/references/pr-review.md"
+    },
+    {
+      "source": "docs/references/comment-style.md",
+      "target": "docs/references/comment-style.md"
     }
   ],
   "backlog": [
@@ -33,6 +37,10 @@
     {
       "source": "docs/references/delivery-pipeline.md",
       "target": "docs/references/delivery-pipeline.md"
+    },
+    {
+      "source": "docs/references/comment-style.md",
+      "target": "docs/references/comment-style.md"
     }
   ],
   "triage-backlog": [
@@ -43,6 +51,10 @@
     {
       "source": "docs/references/delivery-pipeline.md",
       "target": "docs/references/delivery-pipeline.md"
+    },
+    {
+      "source": "docs/references/comment-style.md",
+      "target": "docs/references/comment-style.md"
     }
   ],
   "work-item": [
@@ -53,6 +65,10 @@
     {
       "source": "docs/references/delivery-pipeline.md",
       "target": "docs/references/delivery-pipeline.md"
+    },
+    {
+      "source": "docs/references/comment-style.md",
+      "target": "docs/references/comment-style.md"
     }
   ],
   "software-development": [
@@ -119,6 +135,12 @@
     {
       "source": "docs/references/pattern-catalog.md",
       "target": "references/pattern-catalog.md"
+    }
+  ],
+  "babysit-pr": [
+    {
+      "source": "docs/references/comment-style.md",
+      "target": "docs/references/comment-style.md"
     }
   ]
 }

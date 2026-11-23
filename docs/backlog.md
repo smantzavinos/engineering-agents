@@ -4,7 +4,7 @@
 
 This file is the canonical backlog for this repo. Record durable follow-up work here instead of leaving it only in chat, ephemeral notes, or plan discussions.
 
-Use this backlog for non-critical work that is accepted but does not belong in the current task. Critical discoveries that affect correctness, safety, scope, or verification are not backlog-only items: raise them immediately so the current plan can be adjusted.
+Use this backlog for non-critical work that the owner accepted but that does not belong in the current task. Agents add no item without the owner's explicit approval ("Finish in task"): work that belongs to the current task is done there, minor findings not fixed are listed under "Considered and not done", and genuine out-of-scope defects are proposed under "Proposed new issues (need your OK)" after a duplicate search. Critical discoveries that affect correctness, safety, scope, or verification are not backlog-only items: raise them immediately so the current plan can be adjusted.
 
 ## Required Operations
 
@@ -20,7 +20,7 @@ Use this backlog for non-critical work that is accepted but does not belong in t
 | Mark Done | Move an item into `## Done` when the work is finished and the durable record should remain visible. |
 | Mark Canceled | Move an item into `## Canceled` when it will not be pursued; keep the ID and reason. |
 | Defer / Icebox | Move an item into `## Icebox` when it is intentionally deferred with no near-term execution slot. |
-| Mark Blocked | Move an item into `## Blocked` when progress is waiting on another decision, task, or dependency. |
+| Your turn | Move an item into `## Your turn` when a person has to act (answer, approve, unblock), and say which in the item's Notes. |
 | Critical item policy | If the discovery could change the current task or plan correctness, safety, scope, or verification, stop and raise it immediately instead of quietly adding it to the backlog. |
 
 ## Item Template
@@ -75,19 +75,15 @@ The `TASK-XXXX` placeholder describes the required stable ID format. Replace `XX
 
 ### TASK-0006 — Plumb required-vs-advisory checks into the sweep engine
 - Status: Inbox
-- Summary: The sweep engine demotes `pr:ready-merge` on ANY completed failing check (engine-level red); the required-vs-advisory split lives in each repo's `merge-gate` manifest row and binds only the Reviewer's verdict (contracted in `docs/references/pr-review.md`, Merge). Once a real advisory check lands on a swept repo, add an engine input (e.g. `PR_SWEEP_REQUIRED_CHECKS`, repo→check-names map, default all = current behavior) consumed by `ci_round_due`.
+- Summary: The sweep engine demotes `needs-human:merge` on ANY completed failing check (engine-level red); the required-vs-advisory split lives in each repo's `merge-gate` manifest row and binds only the Reviewer's verdict (contracted in `docs/references/pr-review.md`, Merge). Once a real advisory check lands on a swept repo, add an engine input (e.g. `PR_SWEEP_REQUIRED_CHECKS`, repo→check-names map, default all = current behavior) consumed by `ci_round_due`.
 - Source: Independent review of PR #24 (finding F1, 2026-09-30); contract note added in the same PR.
-- Notes: Deliberately deferred — no swept repo currently runs an advisory check, so the env would be dead config. Revisit when the first advisory check appears.
+- Notes: Deliberately deferred — no swept repo currently runs an advisory check, so the env would be dead config. Revisit when the first advisory check appears. Checks only a person can satisfy are already excluded with `PR_HUMAN_CHECKS`; this item is about advisory code checks.
 
-### TASK-0007 — Unit-test the pipeline-dispatch.py copy of the shared sweep helpers
+### TASK-0009 — Unit-test the pipeline-dispatch.py copy of the shared sweep helpers
 - Status: Inbox
 - Summary: `scripts/pipeline-dispatch.py` carries duplicated copies of the `reported.json` / `dispatches.jsonl` helpers from `scripts/pr-sweep-dispatch.py` (the repo's copy-one-file install model, documented in each script header). The Python unit suite imports only `pr-sweep-dispatch.py`; the pipeline copy is covered only where `tests/specs/pipeline-dispatch-spec.sh` happens to exercise it (now including the corrupt-ledger rebuild case from PR #38). Add direct unit coverage for the pipeline copy so future drift between the two files fails a test instead of surviving silently.
 - Source: Independent review of PR #38 (finding F3, 2026-10-09); https://github.com/smantzavinos/engineering-agents/pull/38
-- Notes: Either import the pipeline script the same way the unit suite imports `pr-sweep-dispatch.py`, or (better, if the duplication is ever consolidated) extract a shared module both scripts embed at install time.
-
-## Clarification needed
-
-_No items yet._
+- Notes: Either import the pipeline script the same way the unit suite imports `pr-sweep-dispatch.py`, or (better, if the duplication is ever consolidated) extract a shared module both scripts embed at install time. Renumbered from a duplicate `TASK-0007` (the Done item keeps that ID). Since the board-pipeline adoption the scripts already share `scripts/commands.py` and `scripts/comment_style.py` from their own directory, and `tests/scripts/test_pipeline_triage_markers.py` imports `pipeline-dispatch.py` directly, so a shared ledger module is now the natural fix.
 
 ## In progress
 
@@ -97,7 +93,7 @@ _No items yet._
 
 _No items yet._
 
-## Blocked
+## Your turn
 
 _No items yet._
 

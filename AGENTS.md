@@ -33,7 +33,8 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 
 ## Task Tracking
 - `docs/backlog.md` — canonical backlog and task-tracking contract for durable non-critical follow-up work.
-- Non-critical follow-up work belongs in the backlog with a stable `TASK-XXXX` ID and a source backlink.
+- Finish in task: agents add no backlog item without the owner's explicit approval. Work that belongs to the task is done there; minor findings left undone go under "Considered and not done"; genuine out-of-scope defects are proposed under "Proposed new issues (need your OK)".
+- Owner-approved follow-up work belongs in the backlog with a stable `TASK-XXXX` ID and a source backlink.
 - Critical discoveries that affect correctness, safety, scope, or verification must be raised immediately instead of being deferred into backlog-only tracking.
 
 ## Requirements

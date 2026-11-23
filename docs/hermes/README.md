@@ -21,6 +21,7 @@ If this section and a canonical doc disagree, the canonical doc wins.
 | [Execution modes](execution-modes.md) | Deciding HOW Hermes drives the pipeline: Pi subprocesses vs Hermes subagents vs single session |
 | [PR automation](pr-automation.md) | Setting up an agent to detect and review PRs automatically (no-agent cron sweep, labels, triggers, detached review sessions) |
 | [Delivery pipeline](../references/delivery-pipeline.md) | Wiring triage, work dispatch and gate replies around the PR sweep (item state machine, WIP limit, human gates) |
+| [Comment style](../references/comment-style.md) | Writing or checking any comment a bot posts (first line, sections, budgets, reply menus, board names) |
 
 ## How Hermes consumes this repo
 
@@ -79,13 +80,26 @@ An agent being handed ownership of one or more repos runs this once:
    [Software development process](dev-process.md), then create the sweep cron
    from the template in [PR automation](pr-automation.md) — one job covering
    all owned repos. If the repo runs the
-   [Delivery pipeline](../references/delivery-pipeline.md), also create its
-   triage, work and hygiene jobs from `scripts/pipeline-dispatch.py` (install
-   notes in its header; run each once with `PIPELINE_DRY=1` first), and confirm
-   the repo documents the pipeline hooks in its task-tracking doc.
-3. **Register the trigger surface**: confirm which GitHub handle mentions
-   should trigger this agent, and check the repo's `pr-tracking` manifest
-   row documents it.
+   [Delivery pipeline](../references/delivery-pipeline.md), also:
+   - install `scripts/*.py` with the prompt directories into
+     `$HERMES_HOME/scripts/`;
+   - set up the board once: `python3 scripts/gh-project.py fields` (Status,
+     Waiting for and the other fields, with their board names) and
+     `python3 scripts/gh-project.py labels`; on a board that used the older
+     columns, run `python3 scripts/gh-project.py migrate-your-turn --dry`, then
+     without `--dry`;
+   - create the triage (every 15m), work (every 3m) and hygiene (every 7d) jobs
+     from `scripts/pipeline-dispatch.py`, with
+     `PIPELINE_LIST_CMD="python3 <scripts>/gh-project.py list"` and
+     `PIPELINE_MOVE_CMD="python3 <scripts>/gh-project.py move {number} {status}"`
+     (install notes in its header; run each once with `PIPELINE_DRY=1` first);
+   - create the board-sync job (every 5m) from `scripts/board-sync.py` (run
+     once with `--dry` first);
+   - confirm the repo documents the pipeline hooks in its task-tracking doc.
+3. **Register the trigger surface**: confirm the command handle
+   (`PR_AGENT_HANDLE`, default `/devbot`; first line `<handle> <command>`)
+   and the owner logins (`PIPELINE_OWNERS`), and check the repo's
+   `pr-tracking` manifest row documents them.
 4. **Agree the execution mode** (Pi subprocesses / Hermes subagents / single
    session) with the human when a plan is approved for execution — see
    [Execution modes](execution-modes.md).

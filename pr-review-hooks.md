@@ -60,7 +60,7 @@ Run from the repo root. Rows must pass as written on the branch under review.
 | agent handle    | `@smantzavinos` (agent operates under the owner account until a dedicated handle exists)                              |
 | sweep           | Dean's Hermes cron, every 2 minutes, repos: `smantzavinos/engineering-agents` + `laminar-logic-systems/clarity_lens`   |
 | dispatch record | agent-side `dispatches.jsonl` (idempotency per head SHA)                                                             |
-| never-merge     | agents never merge; `pr:ready-merge` is the human decision surface                                                    |
+| never-merge     | agents never merge; `needs-human:merge` is the human decision surface                                                  |
 
 ## merge-gate
 
