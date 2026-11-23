@@ -46,6 +46,7 @@ bash tests/specs/pi-dev-spec.sh
 bash tests/specs/startup-warning-extension-spec.sh
 bash tests/specs/pi-tasks-bridge-spec.sh
 bash tests/specs/pi-startup-warning-contract-spec.sh
+bash tests/specs/board-tools-spec.sh
 ```
 
 ## Test Adaptation
@@ -58,6 +59,7 @@ This suite is adapted from `dotfiles/nix/tests/pi/`. The following were ported:
 - **`hermes-docs-spec.sh`** — Hermes-agent operations docs and sweep-monitor contract
 - **`pr-sweep-dispatch-spec.sh`** — dry-run of the reference PR sweep dispatcher against a fake `gh` (opt-in, dispatch, push demotion, drift mode, sweep-owned babysit rounds on bot reviews, bot-review cap)
 - **`pipeline-dispatch-spec.sh`** — dry-run of the delivery-pipeline dispatcher against a fake tracker and `gh` (triage selection, reply grammar and owner allowlist, consumed replies, discuss parking, reject, WIP limit, pickup order, dead-session retry bound, hygiene)
+- **`board-tools-spec.sh`** — the GitHub Project tracker adapter (`scripts/gh-project.py`), script-only board sync (`scripts/board-sync.py`) and command parser (`scripts/commands.py`): unit tests against an in-memory GitHub fake (`tests/scripts/fake_github.py`) plus CLI checks through it as `GH_BIN` (compare-and-set moves, Your turn comment, Waiting for, fields, labels, intake, close proposals)
 - **`model-check-spec.sh`** — runs `tools/model-check.test.mjs`: the model-to-code and approved-versus-shipped checks, by rule and against a small real repository (those cases skip when `c4ish` is not on PATH or has no `profile` command; the git submodule cases skip when it does not look inside submodules)
 - **`proof-set.json`** — Representative proof-set expectations for the default Powerline profile (pi-ding, pi-subagents, pi-powerline-footer, catppuccin-mocha, pi-ext-leader-key, pi-ext-review)
 - **Spec fixture directories** — Compiler declarations, resource-snapshot snapshots
@@ -119,6 +121,7 @@ tests/
 │   ├── pi-btw-refresh-contract-spec.sh # pi-btw 0.6.1 + Pi core peer resolution contract
 │   ├── startup-warning-extension-spec.sh # Startup notifier contract tests
 │   ├── pi-tasks-bridge-spec.sh # pi-tasks -> pi-subagents bridge contract
+│   ├── board-tools-spec.sh  # gh-project.py / board-sync.py / commands.py contract
 │   └── pi-startup-warning-contract-spec.sh # Startup warning/helper/docs contract tests
 ├── test-fast.sh                     # Read-only Pi proof-set verification
 └── run-tests.sh                     # Main test runner (fast/all/full)

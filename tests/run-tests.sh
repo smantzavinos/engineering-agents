@@ -66,6 +66,7 @@ run_specs() {
               "$SCRIPT_DIR/specs/hermes-docs-spec.sh" \
               "$SCRIPT_DIR/specs/pr-sweep-dispatch-spec.sh" \
               "$SCRIPT_DIR/specs/pipeline-dispatch-spec.sh" \
+              "$SCRIPT_DIR/specs/board-tools-spec.sh" \
               "$SCRIPT_DIR/specs/startup-warning-extension-spec.sh" \
               "$SCRIPT_DIR/specs/pi-tasks-bridge-spec.sh" \
               "$SCRIPT_DIR/specs/pi-startup-warning-contract-spec.sh" \
