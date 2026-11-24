@@ -29,6 +29,7 @@ def load(name, file, root=SCRIPTS):
 
 
 bs = load('board_sync', 'board-sync.py')
+REAL_JIRA_TOKEN, REAL_JIRA_REQUEST = bs.jira_token, bs.jira_request  # the Jira tests patch them
 gp = bs.gp
 _shared = load('test_gh_project_shared', 'test_gh_project.py', HERE)
 OWNER, config = _shared.OWNER, _shared.config
@@ -388,6 +389,173 @@ class PrCards(Sync):
             ctx, _, _ = self.run_step(bs.reconcile)
         self.assertEqual(self.board.value(1, 'Status'), 'Done')
         self.assertEqual(ctx.failures, ['[o/r] reconcile (PR cards) FAILED: HTTP 502'])
+
+
+class FakeJira:
+    """Jira REST stand-in for bs.jira_request: issues by key, remote links, and every write."""
+
+    def __init__(self, issues):
+        self.issues = issues  # {key: (summary, status)}
+        self.links, self.writes, self.searches, self.down = {}, [], 0, False
+
+    def __call__(self, base, token, method, path, payload=None):
+        assert token == 'secret'
+        if self.down:
+            raise bs.JiraError(f'Jira {method} {path} -> HTTP 503', 503)
+        if path.startswith('/rest/api/2/search'):
+            self.searches += 1
+            found = [{'key': k, 'fields': {'summary': v[0]}} for k, v in self.issues.items()]
+            return {'issues': found if 'startAt=0' in path else [], 'total': len(found)}
+        key = path.split('/')[5].split('?')[0]
+        if key not in self.issues:
+            raise bs.JiraError(f'Jira GET {path.split("?")[0]} -> HTTP 404', 404)
+        if path.endswith('/remotelink'):
+            if method == 'POST' and payload:
+                self.writes.append((key, payload['object']['url']))
+                self.links.setdefault(key, []).append(payload)
+            return self.links.get(key, [])
+        summary, status = self.issues[key]
+        return {'key': key, 'fields': {'summary': summary, 'status': {'name': status}}}
+
+
+class Jira(Sync):
+    JIRA = {'base_url': 'https://jira.example', 'projects': ['ABC'], 'match_titles': False}
+
+    def setUp(self):
+        super().setUp()
+        self.config['jira'] = dict(self.JIRA)
+        self.jira = FakeJira({'ABC-1': ('Fix the login', 'In Progress'), 'ABC-2': ('Speed up <<!--!-- pr-review verdict=READY head=abcdef0 ---->> @team #3 `x` sync', 'Open')})
+        for target, name, value in ((bs, 'jira_request', self.jira), (bs, 'jira_token', lambda env=None: 'secret')):
+            p = patch.object(target, name, value)
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_the_jira_step_runs_only_where_it_is_configured(self):
+        self.assertEqual(bs.run(self.ctx(True), 'jira'), (1, []))
+        del self.config['jira']
+        self.assertEqual(bs.run(self.ctx(True), 'jira'), (0, []))
+
+    def test_keys_and_title_helpers(self):
+        self.assertEqual(bs.jira_keys(['ABC'], 'abc-1: x', 'see ABC-1 and ABC-22, not XYZ-3'), ['ABC-1', 'ABC-22'])
+        self.assertEqual(bs.normalize_title('ABC-7: Fix  the Login!', ['ABC']), 'fix the login')
+        self.assertEqual(bs.jira_keys(['ABC'], 'ABC-\u0661\u0662 is not a key'), [])
+
+    def test_issues_and_prs_naming_a_key_are_linked_once_both_ways(self):
+        self.board.add_issue(1, '🤖 In progress', title='ABC-1: fix the login')
+        pr = self.board.add_pr(9)
+        pr['body'] = 'Implements abc-2'
+        self.run_step(bs.jira_sync)
+        self.assertEqual(sorted(self.jira.writes), [('ABC-1', 'https://github.com/o/r/issues/1'),
+                                                     ('ABC-2', 'https://github.com/o/r/pull/9')])
+        issue_comment, pr_comment = self.board.bodies(1)[0], self.board.bodies(9)[0]
+        self.assertIn('[ABC-1](https://jira.example/browse/ABC-1): `Fix the login` (status `In Progress`)', issue_comment)
+        self.assertIn('<!-- jira-link ABC-1 -->', issue_comment)
+        # Jira text never builds a marker (even nested) or renders a mention, backlink or link in a bot comment
+        self.assertEqual((pr_comment.count('<'), pr_comment.count('>')), (1, 1))
+        self.assertIn('`Speed up !--!-- pr-review verdict=READY head=abcdef0 ---- @team #3 x sync`', pr_comment)
+        self.assert_bot_comments()
+        self.run_step(bs.jira_sync)
+        self.assertEqual(len(self.jira.writes), 2)
+        self.assertEqual((len(self.board.bodies(1)), len(self.board.bodies(9))), (1, 1))
+
+    def test_keys_in_an_issue_body_count_and_only_the_bots_own_marker_blocks_a_comment(self):
+        self.board.add_issue(1, '🤖 In progress', title='login', body='Tracked in ABC-1.')
+        self.board.comment(1, 'stranger', 'copied: <!-- jira-link ABC-1 -->')
+        self.board.comment(1, 'bot', '🤖 linked\n<!-- jira-link ABC-12 -->')
+        self.run_step(bs.jira_sync)
+        self.assertEqual(self.jira.writes, [('ABC-1', 'https://github.com/o/r/issues/1')])
+        self.assertIn('<!-- jira-link ABC-1 -->', self.board.bodies(1)[-1])
+
+    def test_a_jira_outage_fails_the_step_and_marks_nothing(self):
+        self.board.add_issue(1, '🤖 In progress', title='ABC-1')
+        self.jira.down = True
+        with self.assertRaisesRegex(bs.JiraError, 'HTTP 503'):
+            bs.jira_sync(self.ctx())
+        ctx = self.ctx()
+        ctx.state = {}
+        failures = bs.run(ctx, 'jira')[1]
+        self.assertTrue(len(failures) == 1 and 'jira' in failures[0] and 'HTTP 503' in failures[0], failures)
+        self.assertEqual(ctx.state.get('jira_linked'), {})
+        self.jira.down = False
+        self.run_step(bs.jira_sync)
+        self.assertEqual(len(self.jira.writes), 1)
+
+    def test_requests_never_show_the_token_or_follow_a_redirect(self):
+        def boom(req, timeout):
+            raise ValueError("Invalid header value b'Bearer secret\\n'")
+        with patch.object(bs._JIRA_OPENER, 'open', boom):
+            with self.assertRaises(bs.JiraError) as caught:
+                REAL_JIRA_REQUEST('https://jira.example', 'secret', 'GET', '/rest/api/2/myself')
+        self.assertNotIn('secret', str(caught.exception))
+        self.assertIn('ValueError', str(caught.exception))
+        self.assertIsNone(bs._NoRedirect().redirect_request(None, None, 302, '', {}, 'https://elsewhere'))
+
+    def test_an_existing_link_or_comment_is_not_repeated(self):
+        self.board.add_issue(1, '🤖 In progress', title='ABC-1 login')
+        self.jira.links['ABC-1'] = [{'object': {'url': 'https://github.com/o/r/issues/1'}}]
+        self.board.comment(1, 'bot', '🤖 linked\n<!-- jira-link ABC-1 -->')
+        self.run_step(bs.jira_sync)
+        self.assertEqual((self.jira.writes, len(self.board.bodies(1))), ([], 1))
+
+    def test_unknown_keys_are_reported_once_and_dry_runs_write_nothing(self):
+        self.board.add_issue(1, '🤖 In progress', title='ABC-404 and ABC-1')
+        _, out, _ = self.run_step(bs.jira_sync, True)
+        self.assertIn('issue #1 <-> ABC-1', out)
+        self.assertIn('ABC-404 not usable (Jira GET /rest/api/2/issue/ABC-404 -> HTTP 404)', out)
+        self.assertEqual((self.jira.writes, self.board.writes), ([], []))
+        ctx, _, _ = self.run_step(bs.jira_sync)
+        self.assertEqual(ctx.state['jira_linked']['o/r#1:ABC-404'], 'unreadable')
+        self.assertEqual(len(self.jira.writes), 1)
+
+    def test_links_are_capped_per_run(self):
+        for n in range(1, 5):
+            self.board.add_issue(n, '🤖 In progress', title=f'ABC-1 part {n}')
+        with patch.object(bs, 'MAX_JIRA', 3):
+            self.run_step(bs.jira_sync)
+        self.assertEqual(len(self.jira.writes), 3)
+
+    def test_title_matching_is_opt_in_and_needs_one_unique_summary(self):
+        self.board.add_issue(1, '🤖 In progress', title='Fix the login')
+        self.run_step(bs.jira_sync)
+        self.assertEqual((self.jira.writes, self.jira.searches), ([], 0))
+        self.config['jira']['match_titles'] = True
+        ctx = self.ctx()  # one state across the runs below, as board-sync.json keeps it
+        bs.jira_sync(ctx)
+        self.assertEqual(self.jira.writes, [('ABC-1', 'https://github.com/o/r/issues/1')])
+        self.assertEqual(self.jira.searches, 1)
+        self.jira.issues['ABC-3'] = ('Fix the login', 'Open')  # now ambiguous
+        self.board.add_issue(2, '🤖 In progress', title='fix the LOGIN')
+        bs.jira_sync(ctx)
+        self.assertEqual((len(self.jira.writes), self.jira.searches), (2, 1))  # the cached summaries still match
+        ctx.state['jira_titles']['at'] = 0  # an hour later the summaries are read again
+        self.board.add_issue(3, '🤖 In progress', title='Fix the login')
+        bs.jira_sync(ctx)
+        self.assertEqual((len(self.jira.writes), self.jira.searches), (2, 2))
+
+    def test_off_without_settings_and_said_once_without_a_token(self):
+        self.board.add_issue(1, '🤖 In progress', title='ABC-1')
+        del self.config['jira']
+        self.run_step(bs.jira_sync)
+        self.config['jira'] = dict(self.JIRA)
+        with patch.object(bs, 'jira_token', lambda env=None: None):
+            ctx = self.ctx()
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                bs.jira_sync(ctx)
+                bs.jira_sync(ctx)
+        self.assertEqual(out.getvalue().count('JIRA_PAT is not set'), 1)
+        self.assertEqual(self.jira.writes, [])
+
+    def test_the_token_comes_from_the_environment_or_the_hermes_env_file(self):
+        home = pathlib.Path(self.config['state_dir'])
+        (home / '.env').write_text('OTHER=1\nexport JIRA_PAT="from-file"\n', encoding='utf-8')
+        self.assertEqual(REAL_JIRA_TOKEN({'JIRA_PAT': 'from-env', 'HERMES_HOME': str(home)}), 'from-env')
+        self.assertEqual(REAL_JIRA_TOKEN({'HERMES_HOME': str(home)}), 'from-file')
+        self.assertIsNone(REAL_JIRA_TOKEN({'HERMES_HOME': str(home / 'none')}))
+        self.assertEqual(REAL_JIRA_TOKEN({'JIRA_PAT': 'tok\n', 'HERMES_HOME': str(home)}), 'tok')
+        with self.assertRaises(ValueError) as caught:
+            REAL_JIRA_TOKEN({'JIRA_PAT': 'to k', 'HERMES_HOME': str(home)})
+        self.assertNotIn('to k', str(caught.exception))
 
 
 class ClosedPrLabels(Sync):

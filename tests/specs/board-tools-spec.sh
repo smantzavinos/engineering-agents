@@ -95,6 +95,8 @@ gp board-sync.py >/dev/null
 OUT="$(gp gh-project.py list)"
 check "$OUT" '"waiting_for": "👍 approve"' "board-sync sets Waiting for on a Your turn card"
 check "$OUT" '"number": 7' "board-sync adds the bot-created issue to the board"
+OUT="$(gp board-sync.py --jira-check || true)"
+check "$OUT" "jira: not configured" "board-sync --jira-check says when Jira is not configured"
 OUT="$(gp board-sync.py --digest)"
 check "$OUT" "item(s) waiting on you" "board-sync --digest lists what waits on a person"
 check "$OUT" "#6 " "board-sync --digest names the waiting card"

@@ -57,7 +57,7 @@ MARKER = '<!-- unheard comment={ids} -->'
 MARKER_RE = re.compile(r'<!--\s*unheard comment=([\d,]+)\s*-->')
 BOT_PREFIX = '🤖 '
 # Automation comments that do not read the thread: a human comment after them is still pending.
-NON_READING = re.compile(r'<!--\s*(pr-link|sync closed|unheard)\b')
+NON_READING = re.compile(r'<!--\s*(pr-link|jira-link|sync closed|unheard)\b')
 ISSUE_VERBS = ('approve', 'revise', 'discuss', 'reject', 'unblock', 'answer', 'close', 'keep')
 GATE_VERBS = ('approve', 'revise', 'discuss', 'reject')
 PR_VERBS = ('review', 'fix', 'babysit')

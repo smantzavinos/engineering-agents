@@ -79,6 +79,18 @@ contract is `plans/2026_11_23_board_pipeline_adoption/plan.md`.
     items within it). Quiet hours (`PIPELINE_QUIET_*`) start no session at
     night or on weekends. A triage that asks the owner something always
     notifies. The helpers live in `scripts/pipeline_runtime.py`.
+11. **Jira links (optional).** With Jira configured, board sync links open
+    issues and PRs to the Jira issues they name, one way: an "implemented by"
+    link on the Jira issue and one comment on the GitHub item. Unlike his
+    version, Jira text enters a bot comment as one line of inline code without
+    `<`, `>` or backticks (a bot comment's markers are trusted, and a summary
+    must not mention people or link issues); a Jira outage fails the step
+    instead of marking keys unreadable; the base URL must be https and
+    redirects are refused (the token must not leave Jira); and matching by
+    title is opt-in (`JIRA_MATCH_TITLES`, summaries cached for an hour), since
+    it reads every issue of the projects. It uses a Jira Server or Data Center
+    token; Jira Cloud would need email plus API token and its newer search
+    endpoint.
 
 Left out: everything specific to his company (listed above), the Hermes-only
 runner scripts, and his instance and runtime modules. Babysit rounds still
@@ -101,8 +113,8 @@ publish with git (fast-forward push; merge by default, rebase only on
 
 ## Not done
 
-- Onboarding new repositories, Jira, Telegram delivery, multiple instances
-  and Sonar: specific to his setup. Here one board serves one repository and
+- Onboarding new repositories, Telegram delivery, multiple instances and
+  Sonar: specific to his setup. Here one board serves one repository and
   is set up by hand; the cron output is the delivery.
 - Commands in inline review-thread comments: the sweep reads owner commands
   from PR conversation comments only. The shared-account mention mode is

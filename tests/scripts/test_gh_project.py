@@ -82,6 +82,23 @@ class Config(unittest.TestCase):
         self.assertEqual((cfg['repo'], cfg['handles']), ('c/d', ('/x', '@y')))
         pathlib.Path(handle.name).unlink()
 
+    def test_jira_settings_are_optional_and_checked(self):
+        env = {'PIPELINE_REPO': 'o/r', 'GH_PROJECT_NUMBER': '3'}
+        self.assertIsNone(gp.load_config(env)['jira'])
+        cfg = gp.load_config({**env, 'JIRA_BASE_URL': 'https://jira.example/', 'JIRA_PROJECTS': 'abc, OPS'})
+        self.assertEqual(cfg['jira'], {'base_url': 'https://jira.example', 'projects': ['ABC', 'OPS'], 'match_titles': False})
+        with tempfile.NamedTemporaryFile('w', suffix='.json', delete=False) as handle:
+            json.dump({'repo': 'a/b', 'project_number': 7,
+                       'jira': {'base_url': 'https://j', 'projects': ['ABC'], 'match_titles': True}}, handle)
+        self.assertTrue(gp.load_config({'GH_PROJECT_CONFIG': handle.name})['jira']['match_titles'])
+        pathlib.Path(handle.name).unlink()
+        with self.assertRaisesRegex(ValueError, 'JIRA_PROJECTS'):
+            gp.load_config({**env, 'JIRA_BASE_URL': 'https://j'})
+        with self.assertRaisesRegex(ValueError, 'JIRA_BASE_URL'):
+            gp.load_config({**env, 'JIRA_BASE_URL': 'jira.example', 'JIRA_PROJECTS': 'ABC'})
+        with self.assertRaisesRegex(ValueError, 'https'):
+            gp.load_config({**env, 'JIRA_BASE_URL': 'http://jira.example', 'JIRA_PROJECTS': 'ABC'})
+
     def test_project_id_is_resolved_from_owner_and_number(self):
         board = FakeBoard()
         with patch.object(gp, 'graphql', board.graphql):

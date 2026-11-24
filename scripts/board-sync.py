@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Board sync: deterministic tracker hygiene for one repository's GitHub Project. Script-only cron entry, no LLM.
 
-    board-sync.py [--dry] [--only reconcile|intake|waiting]
+    board-sync.py [--dry] [--only reconcile|intake|waiting|jira]
     board-sync.py --digest          (owner digest: everything waiting on a person; read-only; daily cron)
+    board-sync.py --jira-check      (Jira settings, token and project access; read-only)
 
 Generic subset of gm-agent-pipeline `pipeline/board_sync.py` (Daniel Gehriger). Configuration and board access come
 from gh-project.py beside it (same environment / GH_PROJECT_CONFIG; owners are required here).
@@ -20,6 +21,9 @@ Steps, in this order (`--only` runs one):
              gets a close proposal (closing keyword: auto-closes after 48 h).
   waiting    `Waiting for` follows the card: in Your turn it shows the kind of wait (newest bot marker or PR
              labels), or `⏳ Bot's turn` once a valid reply waits for the dispatcher; it is cleared everywhere else.
+  jira       only with JIRA_BASE_URL + JIRA_PROJECTS (or "jira" in GH_PROJECT_CONFIG) and JIRA_PAT (Jira Server /
+             Data Center token): open issues and PRs that name a Jira key (or, with JIRA_MATCH_TITLES, share one
+             Jira summary) get an "implemented by" link on the Jira issue and one comment with the Jira link.
 
 Authority: it never moves a card into Up next or Later, never sets Bot approvals, never merges. Every comment it
 writes starts with 🤖 and carries an HTML marker, so on a shared owner/agent account none of them counts as a
@@ -36,6 +40,9 @@ import re
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -58,10 +65,11 @@ MAX_MOVES = 10       # status / Waiting for changes per run
 MAX_COMMENTS = 8     # PR-link and close-proposal comments per run
 MAX_INTAKE = 40      # issues added per run; Inbox and Backlog additions count together
 MAX_LABEL_CLEANUPS = 20  # merged/closed PRs whose workflow labels are removed per run
+MAX_JIRA = 20       # Jira links per run
 PR_HUMAN_LABELS = ('needs-human:merge', 'needs-human:decision')
 SYNC_LOCK_WAIT = 120
 AUTO_CLOSE_HOURS = 48
-STEPS = ('intake', 'reconcile', 'waiting')
+STEPS = ('intake', 'reconcile', 'waiting', 'jira')
 
 CLOSING = re.compile(r'(?i)\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s*:?\s+((?:[\w.-]+/[\w.-]+)?)#(\d+)')
 MENTION = re.compile(r'(?<![\w/&])((?:[\w.-]+/[\w.-]+)?)#(\d+)\b')
@@ -148,7 +156,7 @@ class Context:
             self.state = json.loads(self.state_file.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             self.state = {}
-        self.moves = self.comments = self.intake_added = 0
+        self.moves = self.comments = self.intake_added = self.jira_links = 0
         self.lines = []
         self.failures = []  # failed parts of a step that still ran the rest (main reports them)
 
@@ -734,12 +742,219 @@ def digest(ctx, weekly=None):
 
 # ---------------------------------------------------------------- entry point
 
+# ---------------------------------------------------------------- Jira links (optional)
+
+def jira_keys(projects, *texts):
+    """Jira keys of the configured projects (ABC-123) in the texts, upper case, in order, without repeats."""
+    pattern = r'\b(?:' + '|'.join(re.escape(p) for p in projects) + r')-[0-9]+\b'
+    found = []
+    for text in texts:
+        for key in re.findall(pattern, text or '', re.I | re.ASCII):
+            if key.upper() not in found:
+                found.append(key.upper())
+    return found
+
+
+def normalize_title(text, projects=()):
+    """A title reduced for matching: Jira key prefixes removed, lower case, words only."""
+    text = text or ''
+    for project in projects:
+        text = re.sub(r'(?ai)\b' + re.escape(project) + r'-[0-9]+\s*[:\-]?\s*', '', text)
+    return re.sub(r'[^a-z0-9]+', ' ', text.lower()).strip()
+
+
+class JiraError(RuntimeError):
+    """A failed Jira call; `status` is the HTTP status, or None when Jira was not reached. Never holds the token."""
+
+    def __init__(self, text, status=None):
+        super().__init__(text)
+        self.status = status
+
+
+def jira_token(env=None):
+    """JIRA_PAT from the environment, else from $HERMES_HOME/.env (a cron job may not export it), stripped.
+    Never logged: a value a token cannot hold (spaces, control characters) raises without showing it."""
+    env = os.environ if env is None else env
+    token = (env.get('JIRA_PAT') or '').strip()
+    env_file = pathlib.Path(env.get('HERMES_HOME') or pathlib.Path.home() / '.hermes') / '.env'
+    if not token and env_file.is_file():
+        for line in env_file.read_text(encoding='utf-8', errors='replace').splitlines():
+            m = re.match(r'\s*(?:export\s+)?JIRA_PAT\s*=\s*(.*)$', line)
+            if m:
+                token = m.group(1).strip().strip('"\'').strip()
+                break
+    if token and not re.fullmatch(r'[\x21-\x7e]+', token):
+        raise ValueError('JIRA_PAT holds characters a token cannot contain (spaces, quotes or control characters)')
+    return token or None
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Jira calls never follow a redirect: urllib would resend the Authorization header to the new host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_JIRA_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def jira_request(base, token, method, path, payload=None):
+    """One Jira REST call (Jira Server / Data Center personal access token). Errors never include the token."""
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(base + path, data=data, method=method, headers={
+        'Authorization': 'Bearer ' + token, 'Accept': 'application/json', 'Content-Type': 'application/json'})
+    where = f'Jira {method} {path.split("?")[0]}'
+    try:
+        with _JIRA_OPENER.open(req, timeout=30) as response:
+            text = response.read().decode('utf-8', 'replace')
+            return json.loads(text) if text.strip() else None
+    except urllib.error.HTTPError as exc:
+        raise JiraError(f'{where} -> HTTP {exc.code}', exc.code) from None
+    except urllib.error.URLError as exc:
+        raise JiraError(f'{where}: Jira unreachable ({exc.reason})') from None
+    except Exception as exc:  # anything else (a bad header value, bad JSON) may quote the request: drop its text
+        raise JiraError(f'{where} failed ({type(exc).__name__})') from None
+
+
+def jira_check(ctx):
+    """`--jira-check`: is Jira configured, is the token valid, are the projects readable? Read-only."""
+    jira = ctx.config.get('jira')
+    if not jira:
+        print('jira: not configured (set JIRA_BASE_URL and JIRA_PROJECTS, or "jira" in GH_PROJECT_CONFIG)')
+        return 1
+    token = jira_token()
+    if not token:
+        print(f'jira: {jira["base_url"]} configured for {jira["projects"]}, but no JIRA_PAT in the environment '
+              'or $HERMES_HOME/.env')
+        return 1
+    me = jira_request(jira['base_url'], token, 'GET', '/rest/api/2/myself') or {}
+    print(f'jira: authenticated as {me.get("name") or me.get("displayName")}')
+    for project in jira['projects']:
+        info = jira_request(jira['base_url'], token, 'GET', f'/rest/api/2/project/{project}') or {}
+        print(f'jira: project {project} readable ({info.get("name")})')
+    return 0
+
+
+def jira_titles(base, token, projects):
+    """{normalized summary: key} of every issue in the projects; a summary used twice never matches."""
+    out, start = {}, 0
+    jql = 'project in (' + ','.join(projects) + ') ORDER BY key'
+    while True:
+        page = jira_request(base, token, 'GET', '/rest/api/2/search?fields=summary&maxResults=100&startAt=%d&jql=%s' % (
+            start, urllib.parse.quote(jql))) or {}
+        issues = page.get('issues') or []
+        for issue in issues:
+            norm = normalize_title(issue['fields']['summary'], projects)
+            out[norm] = None if norm in out else issue['key']
+        start += len(issues)
+        if not issues or start >= page.get('total', 0):
+            return {k: v for k, v in out.items() if v}
+
+
+JIRA_TITLES_TTL = 3600  # seconds the Jira summaries for title matching are reused
+
+
+def cached_titles(ctx, base, token, projects):
+    """jira_titles, kept in state for JIRA_TITLES_TTL so a keyless item does not re-read Jira on every run."""
+    cache = ctx.state.get('jira_titles') or {}
+    if cache.get('projects') == list(projects) and time.time() - cache.get('at', 0) < JIRA_TITLES_TTL:
+        return cache.get('titles') or {}
+    titles = jira_titles(base, token, projects)
+    ctx.state['jira_titles'] = {'projects': list(projects), 'at': time.time(), 'titles': titles}
+    return titles
+
+
+def plain(text, limit=200):
+    """Untrusted Jira or GitHub text for a link title or a bot comment: one line, at most `limit` characters, no
+    `<`, `>` or backticks. Without `<` and `>` no hidden marker can be built (a bot comment's markers are trusted by
+    every script); without backticks it fits in a code span (see `code`)."""
+    text = re.sub(r'[<>`]', '', text or '')
+    return re.sub(r'\s+', ' ', text).strip()[:limit]
+
+
+def code(text, limit=200):
+    """Untrusted text shown in a bot comment as inline code: no @mention, #N backlink, link or image renders."""
+    text = plain(text, limit)
+    return f'`{text}`' if text else '(none)'
+
+
+def jira_sync(ctx):
+    """Link open board issues and open PRs of this repository to the Jira issues they name, one way: the Jira issue
+    gets an "implemented by" link to the GitHub item, the GitHub item one comment with the Jira link and status.
+    Keys come from the title and body; with match_titles (summaries cached for an hour), an item without a key is matched to the one Jira issue
+    with the same summary. Each link is made once (state `jira_linked`), at most MAX_JIRA per run. Statuses are
+    not synced. Off unless Jira is configured; inactive (said once) without JIRA_PAT."""
+    jira = ctx.config.get('jira')
+    if not jira:
+        return
+    base, projects = jira['base_url'], jira['projects']
+    token = jira_token()
+    if not token:
+        if not ctx.state.get('jira_unconfigured_reported'):
+            ctx.say(f'jira: {base} is configured for {", ".join(projects)} but JIRA_PAT is not set; '
+                    'Jira links are off until it is', loud=True)
+            ctx.state['jira_unconfigured_reported'] = True
+        return
+    ctx.state.pop('jira_unconfigured_reported', None)
+    done = ctx.state.setdefault('jira_linked', {})
+    bodies = {i['number']: i.get('body') or '' for i in ctx.gh(
+        'issue', 'list', '-R', ctx.repo, '--state', 'open', '--limit', '1000', '--json', 'number,body') or []}
+    items = [(i['number'], i['title'], bodies.get(i['number'], ''),
+              f'https://github.com/{ctx.repo}/issues/{i["number"]}', 'issue')
+             for i in gp.snapshot(ctx.config)[0] if i.get('state') == 'OPEN']
+    for pr in ctx.gh('pr', 'list', '-R', ctx.repo, '--state', 'open', '--limit', '100',
+                     '--json', 'number,title,body,url') or []:
+        items.append((pr['number'], pr['title'], pr.get('body') or '', pr['url'], 'PR'))
+    titles = None
+    logins = gp.bot_logins(ctx.config)
+    for number, title, body, url, kind in items:
+        keys = jira_keys(projects, title, body)
+        if not keys and jira.get('match_titles'):
+            titles = titles if titles is not None else cached_titles(ctx, base, token, projects)
+            match = titles.get(normalize_title(title, projects))
+            keys = [match] if match else []
+        for key in keys:
+            marker = f'{ctx.repo}#{number}:{key}'
+            if marker in done:
+                continue
+            if ctx.jira_links >= MAX_JIRA:
+                return
+            try:
+                issue = jira_request(base, token, 'GET', f'/rest/api/2/issue/{key}?fields=summary,status') or {}
+            except JiraError as exc:
+                if exc.status != 404:  # an outage or a bad token fails the step; the next run tries again
+                    raise
+                ctx.say(f'{kind} #{number}: {key} not usable ({exc})')
+                done[marker] = 'unreadable'
+                continue
+            ctx.say(f'{kind} #{number} <-> {key}')
+            ctx.jira_links += 1
+            if ctx.dry:
+                continue
+            links = jira_request(base, token, 'GET', f'/rest/api/2/issue/{key}/remotelink') or []
+            if not any((link.get('object') or {}).get('url') == url for link in links):
+                jira_request(base, token, 'POST', f'/rest/api/2/issue/{key}/remotelink', {
+                    'globalId': f'github:{url}', 'relationship': 'implemented by',
+                    'object': {'url': url, 'title': f'GitHub {ctx.repo}#{number}: {plain(title)}'}})
+            own = re.compile(r'<!--\s*jira-link\s+' + re.escape(key) + r'\s*-->')
+            if not any(gp.by_agent(c, logins) and own.search(c.get('body') or '')
+                       for c in gp.comments_of(ctx.config, number)):
+                fields = issue.get('fields') or {}
+                post_comment(ctx, number, f'🤖 **No action needed: linked Jira issue {key}**\n\n'
+                             f'- [{key}]({base}/browse/{key}): {code(fields.get("summary"))} '
+                             f'(status {code((fields.get("status") or {}).get("name"), 40)})\n\n'
+                             f'<!-- jira-link {key} -->')
+            done[marker] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+
+
 def run(ctx, only=None):
     """All steps (or one); returns (steps run, failure lines). A failure is logged here and printed by main."""
     failures, ran = [], 0
     moved = {}
     plan = [('intake', lambda: intake(ctx, only='inbox')), ('intake', lambda: intake(ctx, only='backlog')),
             ('reconcile', lambda: moved.update(reconcile(ctx) or {})), ('waiting', lambda: waiting_for(ctx, moved))]
+    if ctx.config.get('jira'):  # an optional step only counts (for the stopped alert) where it is configured
+        plan.append(('jira', lambda: jira_sync(ctx)))
     for name, step in plan:
         if only not in (None, name):
             continue
@@ -775,6 +990,8 @@ def main(argv=None, config=None):
     parser.add_argument('--only', choices=STEPS)
     parser.add_argument('--digest', action='store_true',
                         help='print the owner digest (everything waiting on a person) instead of syncing; read-only')
+    parser.add_argument('--jira-check', action='store_true',
+                        help='check the Jira settings, token and projects instead of syncing; read-only')
     args = parser.parse_args(argv)
     config = gp.resolve_project(dict(gp.load_config() if config is None else config))
     gp.require_owners(config)
@@ -782,6 +999,8 @@ def main(argv=None, config=None):
     if args.digest:
         digest(ctx)
         return 0
+    if args.jira_check:
+        return jira_check(ctx)
     started = time.time()
     try:
         with gp.file_lock(gp.lock_path(config), wait=0 if args.dry else SYNC_LOCK_WAIT):

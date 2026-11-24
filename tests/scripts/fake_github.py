@@ -249,7 +249,8 @@ class FakeBoard:
             return sorted(out, key=lambda i: -i['number'])
         if rest[:2] == ['pr', 'list']:
             label = (flags.get('--label') or [None])[0]
-            return [{'number': p['number'], 'title': p['title'], 'url': f'https://github.com/{self.repo}/pull/{p["number"]}',
+            return [{'number': p['number'], 'title': p['title'], 'body': p.get('body') or '',
+                     'url': f'https://github.com/{self.repo}/pull/{p["number"]}',
                      'labels': p['labels'], 'updatedAt': p.get('updatedAt', ''), 'isCrossRepository': p.get('fork', False)}
                     for p in self.issues.values()
                     if p['state'] == 'pr' and (label is None or label in {lab['name'] for lab in p['labels']})]

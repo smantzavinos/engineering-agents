@@ -238,7 +238,26 @@ def load_config(env=None):
         'state_dir': str(pathlib.Path(str(pick('state_dir', 'BOARD_SYNC_STATE', home / 'state' / 'board-sync')))
                          .expanduser()),
         'intake': str(pick('intake', 'BOARD_SYNC_INTAKE', 'bot-created')),
+        'jira': jira_config(pick('jira_base_url', 'JIRA_BASE_URL', (data.get('jira') or {}).get('base_url')),
+                            pick('jira_projects', 'JIRA_PROJECTS', (data.get('jira') or {}).get('projects')),
+                            pick('jira_match_titles', 'JIRA_MATCH_TITLES', (data.get('jira') or {}).get('match_titles'))),
     }
+
+
+def jira_config(base_url, projects, match_titles=None):
+    """The optional Jira link settings (board-sync.py, Jira links), or None when no Jira is configured.
+    The token is never configuration: board sync reads JIRA_PAT from the environment."""
+    if not base_url:
+        return None
+    if not re.fullmatch(r'https://[^\s/?#]+(/[^\s?#]*)?', str(base_url)):
+        raise ValueError('JIRA_BASE_URL (or "jira.base_url" in GH_PROJECT_CONFIG) must be an https URL '
+                         '(the token must not travel in clear text)')
+    keys = re.split(r'[\s,]+', projects.strip()) if isinstance(projects, str) else list(projects or ())
+    keys = [str(k).strip().upper() for k in keys if str(k).strip()]
+    if not keys or not all(re.fullmatch(r'[A-Z][A-Z0-9_]+', k) for k in keys):
+        raise ValueError('JIRA_PROJECTS (or "jira.projects") must list Jira project keys, e.g. "ABC, OPS"')
+    flag = match_titles if isinstance(match_titles, bool) else _flag(match_titles)
+    return {'base_url': str(base_url).rstrip('/'), 'projects': keys, 'match_titles': flag}
 
 
 def require_owners(config):

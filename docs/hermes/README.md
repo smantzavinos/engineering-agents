@@ -98,6 +98,10 @@ An agent being handed ownership of one or more repos runs this once:
      --digest`: everything waiting on a person, silent when nothing waits)
      and the unheard job (every 5m, `scripts/unheard.py`: one reply to
      comments no bot will act on; run once with `--dry` first);
+   - optional Jira links: set `JIRA_BASE_URL` and `JIRA_PROJECTS` for the
+     board-sync job and store `JIRA_PAT` (a Jira Server or Data Center
+     token) in the job's environment or `$HERMES_HOME/.env`; run
+     `board-sync.py --jira-check` once;
    - agree the limits with the human: `PIPELINE_WIP` (author sessions at
      once, shared by work sessions and fix-bot rounds; set it on both
      dispatchers), `PIPELINE_WIP_CODING` (new items within it), and quiet

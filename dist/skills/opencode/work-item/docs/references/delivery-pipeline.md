@@ -327,6 +327,13 @@ owner), moves PR cards a person put on the board with their PR (merged →
 `Later`), removes workflow labels from merged and closed PRs, proposes closing
 items a merged PR implemented, and closes close proposals nobody answered
 within 48 hours. `board-sync.py --digest` is the daily owner digest.
+With Jira configured (an https `JIRA_BASE_URL`, `JIRA_PROJECTS` and the secret
+`JIRA_PAT`, a Jira Server or Data Center token), board sync also links open
+issues and PRs to the Jira issues they name (`ABC-123` in the title or body):
+the Jira issue gets an "implemented by" link and the GitHub item one comment.
+Statuses are not synced. `JIRA_MATCH_TITLES=1` also matches an item without a
+key to the one Jira issue with the same summary. `board-sync.py --jira-check`
+tests the settings.
 `scripts/unheard.py` replies once per batch to comments no bot will act on (a
 card no bot reads, a mistyped handle, a command in the wrong place or from
 someone the bots do not take instructions from) and says what to do instead.
