@@ -241,7 +241,7 @@ NEGATIVE_CASE_DIR="$(assert_compile_status \
 : "$NEGATIVE_CASE_DIR"
 printf 'PASS: overlapping selected resources return exit code 3\n'
 
-# S12: per-package hiddenSkills. A hidden skill's facade gets a facade-local
+# ADR 0009: per-package hiddenSkills. A hidden skill's facade gets a facade-local
 # copy of SKILL.md with disable-model-invocation: true; the shared source is
 # never edited, and the copy's sibling files stay reachable.
 if grep -RFq 'disable-model-invocation' "$SUCCESS_OUTPUT_DIR"; then

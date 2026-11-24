@@ -345,7 +345,7 @@ if grep -rh '^pi -p .*--name "[a-z-]*reviewer"' "$H" | grep -v -- '-review-<N>' 
 
 printf '\n'
 # ============================================================
-# S12 delegation through T3: one launcher reference in delegate, a role
+# Delegation through T3 (ADR 0009): one launcher reference in delegate, a role
 # resolver, process skills that say "launch role X", and the visibility split.
 # Requirement: FR-008
 
@@ -383,7 +383,7 @@ for process in scope run-plan run-epic plan implement review map-patterns; do
   fi
 done
 
-# Visibility split (S12 decision 3): process skills stay visible; the hidden
+# Visibility split (ADR 0009): process skills stay visible; the hidden
 # list in harnesses/pi.json stays exactly the two authoring skills.
 if node -e 'const h=require(process.argv[1]);process.exit(JSON.stringify(h.hiddenSkills)==="[\"configure-pi\",\"create-skills\"]"?0:1)' "$REPO_ROOT/harnesses/pi.json"; then
   pass "harnesses/pi.json hiddenSkills is exactly configure-pi and create-skills"

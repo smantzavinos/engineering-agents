@@ -29,7 +29,7 @@ store_file_from_activate() {
   grep -o "/nix/store/[^\" ]*-${suffix}" "$activate_path" | head -1 || true
 }
 
-# S12 helpers. package_skill_visibility prints {skillName: hidden} for the
+# Model-set and skill-visibility helpers (ADR 0009). package_skill_visibility prints {skillName: hidden} for the
 # skills each managed package facade exposes (hidden = disable-model-invocation).
 package_skill_visibility() {
   node - "$@" <<'JS'
@@ -179,7 +179,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   else
     fail "Pi module vendor @tintinweb/pi-tasks is not the locked npm 0.4.3 (git fork overwrote it?)"
   fi
-  # S12: pi-hooks (the whole git package) and pi-agent-guidance are removed from
+  # ADR 0009: pi-hooks (the whole git package) and pi-agent-guidance are removed from
   # every profile: no declaration, no settings entry, no installed package.
   if jq -e 'all(.packages[]; .packageId != "pi-hooks" and .packageId != "pi-agent-guidance")' "$PI_MANAGED_PACKAGES_JSON" >/dev/null 2>&1 \
     && jq -e 'all(.packages[]; test("pi-hooks|pi-agent-guidance") | not)' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
@@ -189,7 +189,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "Pi module still declares, configures or installs pi-hooks or pi-agent-guidance"
   fi
   # pi-lens owns LSP: narrow facade, managed config, in-process install policy.
-  # S12: the two write-rule skills are hidden per package; the LSP and ast-grep
+  # ADR 0009: the two write-rule skills are hidden per package; the LSP and ast-grep
   # skills stay visible.
   PI_LENS_VISIBILITY="$(package_skill_visibility "$PI_MANAGED_AGENT/packages/pi-lens")"
   if jq -e '. == {"pi-lens-ast-grep": false, "pi-lens-lsp-navigation": false, "pi-lens-write-ast-grep-rule": true, "pi-lens-write-tree-sitter-rule": true}' <<<"$PI_LENS_VISIBILITY" >/dev/null 2>&1 \
@@ -477,7 +477,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
     fail "models.json replaces Pi's Copilot catalog entries by default"
   fi
 
-  # S12 model set, direct (default): OpenAI Codex, plus GLM while z.ai is on.
+  # Model set (ADR 0009), direct (default): OpenAI Codex, plus GLM while z.ai is on.
   # The installed role agents carry the approved table's models and thinking.
   if jq -e '.defaultProvider == "openai-codex" and .defaultModel == "gpt-5.6-sol" and .defaultThinkingLevel == "medium"' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1 \
     && jq -e 'all(.enabledModels[]; test("^(openai-codex|zai-coding-plan)/")) and (.enabledModels | index("zai-coding-plan/glm-5.3") != null)' "$PI_SETTINGS_STORE_JSON" >/dev/null 2>&1; then
@@ -506,7 +506,7 @@ if [[ -n "$PI_OUT" && -d "$PI_OUT" ]]; then
   else
     fail "preset.jsonc must take the direct set's plan-author model"
   fi
-  # S12 hidden skills: pi-subagents, council-mode, btw and librarian are manual-only;
+  # Hidden skills (ADR 0009): pi-subagents, council-mode, btw and librarian are manual-only;
   # visual-explainer is hidden by a build-time copy.
   PI_HIDDEN_SKILLS="$(package_skill_visibility "$PI_MANAGED_AGENT/packages/pi-subagents" "$PI_MANAGED_AGENT/packages/pi-btw" "$PI_MANAGED_AGENT/packages/pi-web-access")"
   if jq -e '[.["pi-subagents"], .["council-mode"], .["btw"], .["librarian"]] | all(. == true)' <<<"$PI_HIDDEN_SKILLS" >/dev/null 2>&1; then
@@ -536,7 +536,7 @@ else
   printf '  Output: %s\n' "$PI_OUT" >&2
 fi
 
-# S12 model sets. pi-copilot-module is the g3660 machine: modelSet copilot with
+# Model sets (ADR 0009). pi-copilot-module is a machine on the Copilot set: modelSet copilot with
 # zai.enable = false. pi-direct-no-zai-module is the direct set with z.ai off.
 # Each names only its own providers; z.ai off drops GLM and the adapter.
 printf '\nBuilding Copilot model-set activation package (z.ai off)...\n'

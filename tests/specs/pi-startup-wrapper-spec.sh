@@ -290,7 +290,7 @@ else
 fi
 
 # ============================================================
-# T3 profile (S12): under T3 (T3_PI_MCP_EXTENSION_PATH set and --mode rpc),
+# T3 profile (ADR 0009): under T3 (T3_PI_MCP_EXTENSION_PATH set and --mode rpc),
 # the wrapper prepends the literal arguments in t3-profile.args (one argument
 # per line, read from ${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}) before the
 # caller's arguments. Everything else is unchanged.
