@@ -13,7 +13,9 @@ $HERMES_HOME/scripts/, then
   hermes cron create "every 2m" --no-agent --script pr-sweep-dispatch.py --name pr-sweep
 
 Environment:
-  PR_SWEEP_REPOS          space-separated owner/repo list (required; PR_SWEEP_REPO also accepted)
+  PR_SWEEP_REPOS          space-separated owner/repo list (PR_SWEEP_REPO also accepted); default: the board's
+                          repositories (PIPELINE_REPOSITORIES or "repositories" in GH_PROJECT_CONFIG, else PIPELINE_REPO),
+                          whose "checkout" settings are used, and whose pipeline states count toward PIPELINE_WIP
   PR_AGENT_HANDLE         handles whose mentions trigger: `<h> review`, `<h> fix` / `<h> babysit` (<h> is a full token: /devbot, @name)
                           (space/comma-separated list: the account handle AND its natural aliases)
   PR_SWEEP_CHECKOUT_ROOT  directory holding local checkouts named by repo (default ~/repos)
@@ -78,6 +80,12 @@ LOGINS = set(commands.bot_logins(ENV.get("PIPELINE_BOT_LOGINS", ""), HANDLES))
 OWNERS = frozenset(o.lstrip("@").lower() for o in ENV.get("PIPELINE_OWNERS", "").replace(",", " ").split())
 RESPONDERS = frozenset(o.lstrip("@").lower() for o in ENV.get("PIPELINE_RESPONDERS", "").replace(",", " ").split())
 CHECKOUT_ROOT = pathlib.Path(ENV.get("PR_SWEEP_CHECKOUT_ROOT", str(pathlib.Path.home() / "repos")))
+CHECKOUTS: dict = {}  # owner/repo -> checkout, from the board's repositories map (main fills it)
+BOARD_STATES: list = []  # every repository's pipeline state dir (main fills it): their work sessions share PIPELINE_WIP
+
+
+def checkout_of(repo):
+    return str(CHECKOUTS.get(repo) or CHECKOUT_ROOT / repo.split("/")[-1])
 REVIEW_MODEL = ENV.get("PR_REVIEW_MODEL", "")
 REVIEW_REASONING = ENV.get("PR_REVIEW_REASONING", "medium")
 REVIEW_SKILLS = ENV.get("PR_REVIEW_SKILLS", "pull-request")
@@ -714,7 +722,7 @@ def spawn(kind, repo, pr, head, model, reasoning, skills, extra=None):
              "trusted_logins": ", ".join(sorted(OWNERS)) or "none", "comment_id": "none", **(extra or {})}
     prompt = (PROMPTS / f"{kind}.md").read_text().format(
         repo=repo, number=n, head=head, short_head=head[:7], title=pr["title"], branch=pr["headRefName"],
-        checkout=str(CHECKOUT_ROOT / repo.split("/")[-1]), hermes=HERMES, handle=HANDLE,
+        checkout=checkout_of(repo), hermes=HERMES, handle=HANDLE,
         result_file=(RESULTS / f"{tag}.json").as_posix(), tag=tag, artifacts_dir=artifacts_dir.as_posix(),
         scripts_dir=str(pathlib.Path(__file__).resolve().parent), **extra)
     pfile = LOGS / f"{tag}.prompt.md"
@@ -1124,7 +1132,7 @@ def sweep_repo(repo, recs, reported):
         # Shared author limit: with PIPELINE_WIP author sessions live (fix rounds here plus the pipeline's work
         # sessions), the round waits for a free slot; the PR does not count as idle meanwhile.
         deferred = (want_babysit and not babysitter_running
-                    and len(pipeline_runtime.live_authors([STATE, PIPELINE_STATE], alive)) >= WIP)
+                    and len(pipeline_runtime.live_authors([STATE, *(BOARD_STATES or [PIPELINE_STATE])], alive)) >= WIP)
         if deferred:
             want_babysit = False
             if mention_babysit and f"deferred:{mention_babysit['id']}" not in reported:
@@ -1260,8 +1268,17 @@ def load_dispatch():
 
 
 def main():
+    try:
+        _, mapped = pipeline_runtime.repositories(ENV)
+        BOARD_STATES[:] = pipeline_runtime.board_states(ENV, PIPELINE_STATE)
+    except ValueError as e:
+        print(f"PR sweep error: {e}")
+        return 1
+    CHECKOUTS.update({repo: settings["checkout"] for repo, settings in mapped.items() if settings.get("checkout")})
     if not REPOS:
-        print("PR sweep error: set PR_SWEEP_REPOS")
+        REPOS.extend(mapped)
+    if not REPOS:
+        print("PR sweep error: set PR_SWEEP_REPOS (or PIPELINE_REPOSITORIES / PIPELINE_REPO)")
         return 1
     if not OWNERS:
         # Without owners nobody may command the bots, and nothing tells a person's comment from a stranger's.

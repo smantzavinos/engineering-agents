@@ -512,31 +512,47 @@ def main(argv=None, config=None):
     args = parser.parse_args(argv)
     config = gp.resolve_project(dict(gp.load_config() if config is None else config))
     gp.require_owners(config)
-    run = Run(config, args.dry)
-    failed = []
+    # One board, several repositories: each is checked in turn, with its own state (the primary first).
+    runs = [Run(gp.repo_config(config, repo), args.dry) for repo in gp.board_repos(config)]
+    results = []
     try:
         with gp.file_lock(pathlib.Path(config['state_dir']) / 'unheard.lock', wait=0):
-            for name, step in (('issues', run.issues), ('prs', run.prs)):
-                if args.only not in (None, name):
-                    continue
-                try:
-                    step()
-                except (RuntimeError, ValueError, KeyError, TypeError, AttributeError, OSError,
-                        subprocess.SubprocessError) as exc:
-                    failed.append(f'[{config["repo"]}] unheard {name} FAILED: {exc}')
-            run.save()
+            for run in runs:
+                results.append(run_steps(run, args.only))
     except gp.LockBusy:
         return 0  # the previous run is still going; the next one catches up
+    code = 0
+    for run, failed in zip(runs, results):
+        code = report(run, failed, args) or code
+    return code
+
+
+def run_steps(run, only):
+    """Run the steps for one repository; the failure lines of whole steps."""
+    failed = []
+    for name, step in (('issues', run.issues), ('prs', run.prs)):
+        if only not in (None, name):
+            continue
+        try:
+            step()
+        except (RuntimeError, ValueError, KeyError, TypeError, AttributeError, OSError,
+                subprocess.SubprocessError) as exc:
+            failed.append(f'[{run.repo}] unheard {name} FAILED: {exc}')
+    run.save()
+    return failed
+
+
+def report(run, failed, args):
     if args.dry:
         lines = failed + run.failures
     else:
         # Every step failing: one alert, repeated at most hourly, then one line when it runs again. Other
         # failures (one step, single items) repeat their line at most once per 6 hours.
-        health = pathlib.Path(config['state_dir']) / 'health-unheard'
+        health = run.state_dir / 'health-unheard'
         steps = 1 if args.only else 2
         down = len(failed) == steps
-        status = (pipeline_runtime.job_down(health, f'Unheard replies ({config["repo"]})', '; '.join(failed)) if down
-                  else pipeline_runtime.job_up(health, f'Unheard replies ({config["repo"]})'))
+        status = (pipeline_runtime.job_down(health, f'Unheard replies ({run.repo})', '; '.join(failed)) if down
+                  else pipeline_runtime.job_up(health, f'Unheard replies ({run.repo})'))
         lines = status + pipeline_runtime.fresh_lines(health, 'errors', ([] if down else failed) + run.failures)
     if lines:
         print('\n'.join(lines), flush=True)

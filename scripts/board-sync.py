@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Board sync: deterministic tracker hygiene for one repository's GitHub Project. Script-only cron entry, no LLM.
+"""Board sync: deterministic tracker hygiene for a GitHub Project and its repositories. Script-only cron entry, no LLM.
 
     board-sync.py [--dry] [--only reconcile|intake|waiting|jira]
     board-sync.py --digest          (owner digest: everything waiting on a person; read-only; daily cron)
@@ -157,6 +157,7 @@ class Context:
         except (OSError, ValueError):
             self.state = {}
         self.moves = self.comments = self.intake_added = self.jira_links = 0
+        self.seen_repos = set()  # repositories with cards on the board (reconcile records them)
         self.lines = []
         self.failures = []  # failed parts of a step that still ran the rest (main reports them)
 
@@ -591,6 +592,8 @@ def link_prs(ctx, issues):
 
 def reconcile(ctx):
     issues, _, nodes = gp.snapshot(ctx.config)
+    ctx.seen_repos = {((n.get('content') or {}).get('repository') or {}).get('nameWithOwner')
+                      for n in nodes if not n.get('isArchived')} - {None}
     by_number = {i['number']: i for i in issues}
     moved = {}
     # The PR features are extras: their failure is reported but never holds up the issue cards.
@@ -983,6 +986,21 @@ def report(ctx, ran, failures):
         print('\n'.join(lines), flush=True)
 
 
+def roster(ctxs):
+    """One line a day while the board has cards from a repository no pipeline job serves: nothing moves them."""
+    served = {ctx.repo for ctx in ctxs}
+    strays = sorted(set().union(*(ctx.seen_repos for ctx in ctxs)) - served)
+    if not strays:
+        return []
+    if ctxs[0].dry:
+        return [f'board has cards from {", ".join(strays)}, which this pipeline does not serve (DRY)']
+    return pipeline_runtime.fresh_lines(
+        ctxs[0].state_dir / 'health', 'roster',
+        [f'⚠️ The board has cards from {", ".join(strays)}, which this pipeline does not serve: no bot picks them '
+         f'up. Add the repository to "repositories" in the board config (the assess-repo skill does this), or '
+         f'move the cards to another board.'], ttl=24 * 3600)
+
+
 def main(argv=None, config=None):
     import argparse
     parser = argparse.ArgumentParser(prog='board-sync.py', description=(__doc__ or '').split('\n')[0])
@@ -995,27 +1013,42 @@ def main(argv=None, config=None):
     args = parser.parse_args(argv)
     config = gp.resolve_project(dict(gp.load_config() if config is None else config))
     gp.require_owners(config)
-    ctx = Context(config, args.dry)
+    # One board, several repositories: every step runs per repository, each with its own state; the primary first.
+    ctxs = [Context(gp.repo_config(config, repo), args.dry) for repo in gp.board_repos(config)]
     if args.digest:
-        digest(ctx)
-        return 0
+        code = 0
+        for ctx in ctxs:  # one repository's failure must not hide the others' lists
+            try:
+                digest(ctx)
+            except (RuntimeError, ValueError, KeyError, OSError, subprocess.SubprocessError) as exc:
+                print(f'[{ctx.repo}] digest FAILED: {exc}', flush=True)
+                code = 1
+        return code
     if args.jira_check:
-        return jira_check(ctx)
+        return jira_check(ctxs[0])
     started = time.time()
+    results = []
     try:
         with gp.file_lock(gp.lock_path(config), wait=0 if args.dry else SYNC_LOCK_WAIT):
-            try:
-                ran, failures = run(ctx, args.only)
-            finally:
-                ctx.save_state()
+            for ctx in ctxs:
+                try:
+                    results.append(run(ctx, args.only))
+                finally:
+                    ctx.save_state()
     except gp.LockBusy:
         print(f'[{config["repo"]}] board sync FAILED to start: another run held the board lock for over '
               f'{SYNC_LOCK_WAIT} s. Nothing changed; the next run retries.', flush=True)
         return 1
-    report(ctx, ran, failures)
-    ctx.log(f'[{config["repo"]}] run done in {time.time() - started:.0f} s'
-            + ('; FAILED steps above' if failures else ''))
-    return 1 if failures else 0
+    failed = False
+    for ctx, (ran, failures) in zip(ctxs, results):
+        report(ctx, ran, failures)
+        ctx.log(f'[{ctx.repo}] run done in {time.time() - started:.0f} s' + ('; FAILED steps above' if failures else ''))
+        failed = failed or bool(failures)
+    if args.only in (None, 'reconcile'):
+        lines = roster(ctxs)
+        if lines:
+            print('\n'.join(lines), flush=True)
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':

@@ -91,6 +91,22 @@ contract is `plans/2026_11_23_board_pipeline_adoption/plan.md`.
     it reads every issue of the projects. It uses a Jira Server or Data Center
     token; Jira Cloud would need email plus API token and its newer search
     endpoint.
+12. **One board, several repositories.** A `repositories` map (in the board
+    config, or `PIPELINE_REPOSITORIES`) lists the repositories one board
+    serves, each with its checkout and optional base branch, branch template
+    and worktree root. The pipeline dispatcher runs itself once per
+    repository, in turn, with that repository's settings and its own state
+    directory (the primary repository keeps its state directory and
+    worktree root, so nothing moves when a second joins); the PR sweep,
+    board sync, the digest and the unheard job loop over the same list.
+    `PIPELINE_WIP` holds across the board: live sessions of every repository
+    count. Board sync says once a day when the board has cards from a
+    repository nobody serves; this, and the repository in session names, are
+    the only changes a one-repository install sees. His
+    version is a separate runtime that loads the dispatchers and replaces
+    their functions at run time, mixed with his instance, Sonar and
+    onboarding code; ours is the same design inside the scripts we already
+    have, so the dispatchers stay the only code that acts on an item.
 
 Left out: everything specific to his company (listed above), the Hermes-only
 runner scripts, and his instance and runtime modules. Babysit rounds still
@@ -114,8 +130,9 @@ publish with git (fast-forward push; merge by default, rebase only on
 ## Not done
 
 - Onboarding new repositories, Telegram delivery, multiple instances and
-  Sonar: specific to his setup. Here one board serves one repository and
-  is set up by hand; the cron output is the delivery.
+  Sonar: specific to his setup. A repository joins a board by hand (or with
+  the assess-repo skill) by adding it to `repositories`; the cron output is
+  the delivery.
 - Commands in inline review-thread comments: the sweep reads owner commands
   from PR conversation comments only. The shared-account mention mode is
   replaced by a `/` handle, which a human and a bot on one account can both

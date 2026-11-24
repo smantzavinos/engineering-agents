@@ -98,6 +98,13 @@ An agent being handed ownership of one or more repos runs this once:
      --digest`: everything waiting on a person, silent when nothing waits)
      and the unheard job (every 5m, `scripts/unheard.py`: one reply to
      comments no bot will act on; run once with `--dry` first);
+   - several repositories on one board: list them in `repositories` in the
+     board config (`GH_PROJECT_CONFIG`), e.g. `{"repo": "o/app",
+     "repositories": {"o/app": {"checkout": "/srv/app"}, "o/lib":
+     {"checkout": "/srv/lib", "base": "develop"}}}`, or in
+     `PIPELINE_REPOSITORIES`; the same jobs then serve every listed
+     repository, and the PR sweep needs no `PR_SWEEP_REPOS`. Adding a
+     repository to the board means adding it there;
    - optional Jira links: set `JIRA_BASE_URL` and `JIRA_PROJECTS` for the
      board-sync job and store `JIRA_PAT` (a Jira Server or Data Center
      token) in the job's environment or `$HERMES_HOME/.env`; run

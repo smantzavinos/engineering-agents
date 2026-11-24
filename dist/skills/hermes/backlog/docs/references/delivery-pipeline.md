@@ -334,6 +334,21 @@ the Jira issue gets an "implemented by" link and the GitHub item one comment.
 Statuses are not synced. `JIRA_MATCH_TITLES=1` also matches an item without a
 key to the one Jira issue with the same summary. `board-sync.py --jira-check`
 tests the settings.
+One board can serve several repositories: list them in `repositories` in the
+board config (or `PIPELINE_REPOSITORIES`), each with its `checkout` and
+optional `base`, `branch_template` and `worktree_root`. A repository without
+its own `base` or `branch_template` uses `PIPELINE_BASE` and
+`PIPELINE_BRANCH_TEMPLATE`. The primary repository (`PIPELINE_REPO`, or
+`repo` in the board config) keeps its state directory and worktree root;
+each other repository gets its own state directory and, by default,
+`<checkout>-worktrees`. No two repositories may share a checkout or worktree
+root. The pipeline, board sync, the digest and the unheard job then work on
+each repository in turn, each with its own state; the PR sweep keeps one
+state for all of them. Output lines name the repository, and limits on moves
+and replies per run apply to each repository. The WIP limits hold across the
+board. Every job needs the same `PIPELINE_REPO` and board config, so they
+agree which repository is primary. Board sync says once a day when the board
+has cards from a repository that is not listed: no bot moves them.
 `scripts/unheard.py` replies once per batch to comments no bot will act on (a
 card no bot reads, a mistyped handle, a command in the wrong place or from
 someone the bots do not take instructions from) and says what to do instead.

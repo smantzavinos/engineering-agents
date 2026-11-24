@@ -9,10 +9,14 @@ Ported from gm-agent-pipeline `pipeline/runtime.py` (Daniel Gehriger); generic s
 - quiet_now     quiet hours: no new bot sessions at night or on weekends (PIPELINE_QUIET_*).
 - live_authors  author sessions (work sessions and fix-bot rounds) that are running now, from both dispatchers'
                 dispatch records, so both share one PIPELINE_WIP limit.
+- repositories  the repositories one board serves (one pipeline, several repositories), each with its own
+                checkout, base branch and state directory; board_states lists every repository's pipeline state
+                so the WIP limit holds across the board.
 
 Install: copy beside pipeline-dispatch.py, pr-sweep-dispatch.py and board-sync.py.
 """
 import datetime
+import re
 import hashlib
 import json
 import os
@@ -157,3 +161,83 @@ def live_authors(state_dirs, alive):
                 live.setdefault(int(rec['pid']), 'coding' if rec['kind'] == 'work' and rec.get('reason') == 'start'
                                 else 'maintenance')
     return live
+
+
+# ---------------------------------------------------------------- one board, several repositories
+
+REPO_RE = re.compile(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+')
+REPO_KEYS = ('checkout', 'base', 'branch_template', 'worktree_root')
+
+
+def _config_file(env):
+    path = (env.get('GH_PROJECT_CONFIG') or '').strip()
+    if not path:
+        return {}
+    try:
+        data = json.loads(pathlib.Path(path).expanduser().read_text(encoding='utf-8'))
+    except (OSError, ValueError) as exc:
+        raise ValueError(f'GH_PROJECT_CONFIG {path} is unreadable: {exc}') from None
+    if not isinstance(data, dict):
+        raise ValueError('GH_PROJECT_CONFIG must hold a JSON object')
+    return data
+
+
+def repositories(env):
+    """(primary, {owner/repo: settings}) for the board, in order.
+
+    The map comes from PIPELINE_REPOSITORIES (a JSON object) or "repositories" in GH_PROJECT_CONFIG:
+    {"owner/repo": {"checkout": "/path", "base": "main", "branch_template": "item/{n}", "worktree_root": "/path"}}
+    (every key optional except where a job needs it). Without one, the board serves PIPELINE_REPO alone (or "repo"
+    in GH_PROJECT_CONFIG) with an empty settings object. The primary repository is PIPELINE_REPO (or "repo"); it
+    must be in the map, and its state stays where a one-repository install keeps it. Raises ValueError."""
+    data = _config_file(env)
+    raw = env.get('PIPELINE_REPOSITORIES')
+    try:
+        mapping = json.loads(raw) if (raw or '').strip() else data.get('repositories')
+    except ValueError as exc:
+        raise ValueError(f'PIPELINE_REPOSITORIES is not JSON: {exc}') from None
+    primary = (env.get('PIPELINE_REPO') or data.get('repo') or '').strip()
+    if not mapping:
+        return primary, ({primary: {}} if primary else {})
+    if not isinstance(mapping, dict) or not all(isinstance(v, dict) for v in mapping.values()):
+        raise ValueError('PIPELINE_REPOSITORIES (or "repositories") must map owner/repo to an object of settings')
+    for repo, settings in mapping.items():
+        if not REPO_RE.fullmatch(repo):
+            raise ValueError(f'repositories: {repo!r} is not owner/repo')
+        unknown = sorted(set(settings) - set(REPO_KEYS))
+        if unknown:
+            raise ValueError(f'repositories: {repo} has unknown settings {", ".join(unknown)} '
+                             f'(known: {", ".join(REPO_KEYS)})')
+        for key, value in settings.items():
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f'repositories: {repo} {key} must be a non-empty string')
+        if 'branch_template' in settings and settings['branch_template'].count('{n}') != 1:
+            raise ValueError(f'repositories: {repo} branch_template must contain {{n}} exactly once')
+    # Worktrees are named item-<n>: two repositories sharing a checkout or worktree root would mix their items.
+    for key in ('checkout', 'worktree_root'):
+        paths = [os.path.normpath(os.path.expanduser(s[key])) for s in mapping.values() if key in s]
+        if len(set(paths)) != len(paths):
+            raise ValueError(f'repositories: two repositories share a {key}')
+    primary = primary or next(iter(mapping))
+    if primary not in mapping:
+        raise ValueError(f'repositories: the primary repository {primary} (PIPELINE_REPO / "repo") is not listed')
+    return primary, {repo: {key: (os.path.expanduser(value) if key in ('checkout', 'worktree_root') else value)
+                            for key, value in settings.items()} for repo, settings in mapping.items()}
+
+
+def repo_state(base, repo, primary):
+    """A repository's state directory under a job's state root: the primary keeps the root itself (so a
+    one-repository install keeps its state when more repositories join); the others get repositories/<owner>__<name>."""
+    base = pathlib.Path(base)
+    return base if repo == primary else base / 'repositories' / repo.replace('/', '__')
+
+
+def board_states(env, base):
+    """Every repository's pipeline state directory: PIPELINE_BOARD_STATES (os.pathsep-separated; the dispatcher
+    sets it for the per-repository runs it starts) or, from the repositories map, each repository's directory
+    under `base` (the pipeline state root)."""
+    given = (env.get('PIPELINE_BOARD_STATES') or '').strip()
+    if given:
+        return [pathlib.Path(p) for p in given.split(os.pathsep) if p]
+    primary, repos = repositories(env)
+    return [repo_state(base, repo, primary) for repo in repos] or [pathlib.Path(base)]

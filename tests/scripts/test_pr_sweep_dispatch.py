@@ -354,5 +354,19 @@ class ReportedLedger(unittest.TestCase):
                          "synthetic one-shot keys must not be reconstructible from result files")
 
 
+class BoardRepositories(unittest.TestCase):
+    def test_without_pr_sweep_repos_the_boards_repositories_and_checkouts_are_swept(self):
+        env = {'PIPELINE_REPO': 'o/a',
+               'PIPELINE_REPOSITORIES': json.dumps({'o/a': {}, 'o/b': {'checkout': '/co/b'}})}
+        repos, checkouts, states = [], {}, []
+        with mock.patch.object(d, 'ENV', env), mock.patch.object(d, 'REPOS', repos), \
+                mock.patch.object(d, 'CHECKOUTS', checkouts), mock.patch.object(d, 'BOARD_STATES', states), \
+                mock.patch.object(d, 'OWNERS', frozenset()), mock.patch('builtins.print'):
+            d.main()  # stops at the missing owners, after reading the repositories
+            self.assertEqual((repos, d.checkout_of('o/b'), d.checkout_of('o/a')),
+                             (['o/a', 'o/b'], '/co/b', str(d.CHECKOUT_ROOT / 'a')))
+        self.assertEqual(states, [d.PIPELINE_STATE, d.PIPELINE_STATE / 'repositories' / 'o__b'])
+
+
 if __name__ == "__main__":
     unittest.main()

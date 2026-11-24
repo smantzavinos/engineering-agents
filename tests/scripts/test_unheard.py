@@ -302,6 +302,16 @@ class Runs(unittest.TestCase):
         self.assertEqual(sum(len(self.board.bodies(n)) for n in (1, 2, 3)), 3)
 
 
+    def test_each_repository_of_the_board_is_checked_with_its_own_state(self):
+        self.config = {**self.config, 'primary': 'o/r', 'repositories': {'o/r': {}, 'o/s': {}}}
+        seen = []
+        with patch.object(uh.Run, 'issues', lambda run: seen.append((run.repo, run.state_dir))), \
+                patch.object(uh.Run, 'prs', lambda run: None):
+            self.assertEqual(uh.main([], config=self.config), 0)
+        root = pathlib.Path(self.config['state_dir'])
+        self.assertEqual(seen, [('o/r', root), ('o/s', root / 'repositories' / 'o__s')])
+
+
 class Main(unittest.TestCase):
     def test_owners_are_required(self):
         with self.assertRaises(ValueError):

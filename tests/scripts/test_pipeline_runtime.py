@@ -100,5 +100,37 @@ class LiveAuthors(unittest.TestCase):
         self.assertEqual(live, {11: 'coding', 12: 'maintenance', 21: 'maintenance'})
 
 
+class Repositories(unittest.TestCase):
+    def test_one_repository_without_a_map(self):
+        self.assertEqual(rt.repositories({'PIPELINE_REPO': 'o/a'}), ('o/a', {'o/a': {}}))
+        self.assertEqual(rt.board_states({'PIPELINE_REPO': 'o/a'}, '/s'), [pathlib.Path('/s')])
+
+    def test_map_from_env_or_config_file_with_per_repo_state(self):
+        repos = {'o/a': {'checkout': '/a'}, 'o/b': {'checkout': '/b', 'base': 'develop'}}
+        env = {'PIPELINE_REPO': 'o/a', 'PIPELINE_REPOSITORIES': json.dumps(repos)}
+        self.assertEqual(rt.repositories(env), ('o/a', repos))
+        self.assertEqual(rt.board_states(env, '/s'), [pathlib.Path('/s'), pathlib.Path('/s/repositories/o__b')])
+        path = tmp() / 'board.json'
+        path.write_text(json.dumps({'repo': 'o/b', 'repositories': repos}), encoding='utf-8')
+        primary, found = rt.repositories({'GH_PROJECT_CONFIG': str(path)})
+        self.assertEqual((primary, list(found)), ('o/b', ['o/a', 'o/b']))
+        self.assertEqual(rt.repo_state('/s', 'o/a', 'o/b'), pathlib.Path('/s/repositories/o__a'))
+
+    def test_given_board_states_win(self):
+        import os
+        env = {'PIPELINE_REPO': 'o/a', 'PIPELINE_BOARD_STATES': os.pathsep.join(['/x', '/y'])}
+        self.assertEqual(rt.board_states(env, '/s'), [pathlib.Path('/x'), pathlib.Path('/y')])
+
+    def test_bad_maps_are_refused(self):
+        for raw, error in (('[1]', 'must map'), ('{"bad": {}}', 'not owner/repo'), ('{"o/a": {"chekout": 1}}', 'chekout'),
+                           ('{"o/b": {}}', 'primary repository o/a'), ('{', 'not JSON'),
+                           ('{"o/a": {"checkout": 1}}', 'non-empty string'),
+                           ('{"o/a": {"branch_template": "item"}}', 'exactly once'),
+                           ('{"o/a": {"checkout": "/c"}, "o/b": {"checkout": "/c/"}}', 'share a checkout'),
+                           ('{"o/a": {"worktree_root": "/w"}, "o/b": {"worktree_root": "/w"}}', 'share a worktree_root')):
+            with self.assertRaisesRegex(ValueError, error):
+                rt.repositories({'PIPELINE_REPO': 'o/a', 'PIPELINE_REPOSITORIES': raw})
+
+
 if __name__ == '__main__':
     unittest.main()

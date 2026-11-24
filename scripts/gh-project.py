@@ -18,6 +18,10 @@ Statuses, fields and options have an internal name (used by the dispatcher, skil
 
 Configuration: environment variables override the JSON file named by GH_PROJECT_CONFIG (keys in brackets).
   PIPELINE_REPO            owner/repo whose issues are the backlog [repo] (required)
+  PIPELINE_REPOSITORIES    one board, several repositories [repositories]: a JSON object
+                           {"owner/repo": {"checkout", "base", "branch_template", "worktree_root"}} that includes
+                           PIPELINE_REPO (the primary); board sync, the digest and unheard work on each in turn, each
+                           with its own state under <state_dir>/repositories/ (the primary keeps <state_dir>)
   GH_PROJECT_OWNER         user or organization that owns the project [project_owner] (default: repo owner)
   GH_PROJECT_NUMBER        project number [project_number] (required)
   GH_PROJECT_ID            project node id [project_id] (optional; resolved from owner + number otherwise)
@@ -56,6 +60,7 @@ from typing import Any
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import commands  # noqa: E402  (scripts/commands.py, the shared command parser)
+import pipeline_runtime  # noqa: E402  (the repositories one board serves: scripts/pipeline_runtime.py)
 
 # ---------------------------------------------------------------- vocabulary (internal names)
 
@@ -220,8 +225,11 @@ def load_config(env=None):
     template = str(pick('branch_template', 'PIPELINE_BRANCH_TEMPLATE', 'item/{n}'))
     if template.count('{n}') != 1:
         raise ValueError('PIPELINE_BRANCH_TEMPLATE must contain {n} exactly once')
+    primary, repos = pipeline_runtime.repositories({**env, 'PIPELINE_REPO': repo})
     return {
         'repo': repo,
+        'primary': primary,
+        'repositories': repos,  # {owner/repo: settings}, the primary included
         'project_owner': str(pick('project_owner', 'GH_PROJECT_OWNER', repo.split('/')[0])),
         'project_number': int(str(number)),
         'project_id': pick('project_id', 'GH_PROJECT_ID'),
@@ -902,6 +910,21 @@ def file_lock(path, wait=0.0):
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def board_repos(config):
+    """The repositories this board serves (one board, several repositories), the primary first."""
+    primary = config.get('primary') or config['repo']
+    return [primary, *(r for r in (config.get('repositories') or ()) if r != primary)]
+
+
+def repo_config(config, repo):
+    """The board config for one of its repositories: its own state dir (the primary keeps the root, so a
+    one-repository install keeps its state when more join) and branch template."""
+    settings = (config.get('repositories') or {}).get(repo) or {}
+    primary = config.get('primary') or config['repo']
+    return {**config, 'repo': repo, 'branch_template': settings.get('branch_template') or config.get('branch_template'),
+            'state_dir': str(pipeline_runtime.repo_state(config['state_dir'], repo, primary))}
 
 
 def lock_path(config):

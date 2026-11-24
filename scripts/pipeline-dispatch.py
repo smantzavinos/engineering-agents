@@ -58,9 +58,20 @@ Environment:
   PIPELINE_WORK_MODEL, PIPELINE_WORK_SKILLS (backlog,work-item), PIPELINE_REASONING (medium)
   PIPELINE_SESSION_PROVIDER, PIPELINE_STALE_DAYS (hygiene, default 3)
   PIPELINE_STATE          state dir (default $HERMES_HOME/state/pipeline); PR_SWEEP_STATE (the PR sweep's, for WIP)
+  PIPELINE_REPOSITORIES   one board, several repositories: a JSON object (or "repositories" in GH_PROJECT_CONFIG)
+                          {"owner/repo": {"checkout": "/path", "base": "main", "branch_template": "item/{n}",
+                          "worktree_root": "/path"}}. With more than one (or one with settings), each tick runs this
+                          script once per repository, in turn, with that repository's PIPELINE_REPO, PIPELINE_CHECKOUT,
+                          base and branch template (unset: PIPELINE_BASE / PIPELINE_BRANCH_TEMPLATE), worktree root and
+                          state dir (PIPELINE_REPO, the primary, keeps PIPELINE_STATE and PIPELINE_WORKTREE_ROOT; the
+                          others use PIPELINE_STATE/repositories/<owner>__<name> and <checkout>-worktrees), and prefixes
+                          its output with [owner/repo]. Every job needs the same PIPELINE_REPO and board config.
+                          PIPELINE_WIP and PIPELINE_WIP_CODING then hold across the board: live sessions of the other
+                          repositories count. (PIPELINE_ONE_REPO and PIPELINE_BOARD_STATES are set for those runs.)
   HERMES_BIN, GH_BIN, GH_TOKEN_FILE (token file used when GH_TOKEN is unset)
   PIPELINE_DRY=1          print intended actions; mutate nothing, record nothing
 """
+import fcntl
 import json
 import os
 import pathlib
@@ -672,7 +683,9 @@ def spawn(kind, n, title, extra):
         scripts_dir=str(pathlib.Path(__file__).resolve().parent), **extra)
     pfile = LOGS / f"{tag}.prompt.md"
     pfile.write_text(prompt)
-    name = f"Item #{n} {extra.get('reason', kind)} {tag} — {title[:50]}" if kind == "work" else f"Backlog triage {tag}"
+    # The repository is in the name: two repositories of one board may start a session in the same second.
+    name = (f"{REPO} item #{n} {extra.get('reason', kind)} {tag} — {title[:50]}" if kind == "work"
+            else f"Backlog triage {REPO} {tag}")
     model, skills = (WORK_MODEL, WORK_SKILLS) if kind == "work" else (TRIAGE_MODEL, TRIAGE_SKILLS)
     with open(LOGS / f"{tag}.log", "w") as log:
         p = subprocess.Popen(
@@ -831,8 +844,12 @@ def job_work(items, recs, reported):
     last = load_last_status()
     slots = free_slots(items)
     # Fix-bot rounds of the PR sweep share PIPELINE_WIP with work sessions (the In progress cards).
-    slots = max(0, slots - len(pipeline_runtime.live_authors([PR_STATE], alive)))
-    coding = sum(1 for kind in pipeline_runtime.live_authors([STATE], alive).values() if kind == "coding")
+    # One board, several repositories: the other repositories' live sessions count too (their cards are not listed
+    # here), and new-item sessions are counted across the board.
+    board = pipeline_runtime.board_states(ENV, STATE)
+    others = [d for d in board if pathlib.Path(d).resolve() != STATE.resolve()]
+    slots = max(0, slots - len(pipeline_runtime.live_authors([PR_STATE, *others], alive)))
+    coding = sum(1 for kind in pipeline_runtime.live_authors([STATE, *others], alive).values() if kind == "coding")
     errors = []
     h = HANDLES[0]
 
@@ -1145,11 +1162,108 @@ def deliver(reported):
             out.append(("Needs your answer: " if asks else "") + line)
 
 
+def repo_env(repo, settings, primary, board):
+    """The environment of one repository's run (one board, several repositories)."""
+    checkout = settings.get("checkout") or (ENV.get("PIPELINE_CHECKOUT") if repo == primary else "")
+    if not checkout:
+        raise ValueError(f"repositories: {repo} needs a checkout")
+    env = {**ENV, "PIPELINE_ONE_REPO": "1", "PIPELINE_REPO": repo, "PIPELINE_CHECKOUT": checkout,
+           "PIPELINE_STATE": str(pipeline_runtime.repo_state(STATE, repo, primary)),
+           "PIPELINE_BOARD_STATES": os.pathsep.join(str(d) for d in board)}
+    # A repository without its own base or branch template uses PIPELINE_BASE / PIPELINE_BRANCH_TEMPLATE.
+    for key, name in (("base", "PIPELINE_BASE"), ("branch_template", "PIPELINE_BRANCH_TEMPLATE")):
+        if settings.get(key):
+            env[name] = settings[key]
+    # Worktrees are named item-<n>: a root shared by two repositories would mix their items. The primary keeps
+    # PIPELINE_WORKTREE_ROOT (its items in progress live there); the others default to <checkout>-worktrees.
+    if repo != primary:
+        env.pop("PIPELINE_WORKTREE_ROOT", None)
+    if settings.get("worktree_root"):
+        env["PIPELINE_WORKTREE_ROOT"] = settings["worktree_root"]
+    return env
+
+
+def worktree_root(env):
+    root = env.get("PIPELINE_WORKTREE_ROOT") or env["PIPELINE_CHECKOUT"] + "-worktrees"
+    return os.path.normpath(os.path.expanduser(root))
+
+
+CHILD_TIMEOUT = 900  # one repository's tick; a hung one must not hold the board for long
+LOCK_STUCK = 1800
+
+
+def lock_busy(job, path):
+    """The previous tick still runs: silent, unless it has held the board for LOCK_STUCK (then once an hour)."""
+    try:
+        held = time.time() - float(path.read_text(encoding="utf-8") or time.time())
+    except (OSError, ValueError):
+        held = 0
+    if held < LOCK_STUCK:
+        return 0
+    lines = pipeline_runtime.fresh_lines(STATE / "health" / job, "board-lock", [
+        f"Pipeline dispatch ({job}): the previous run has held the board for {pipeline_runtime.duration(held)}; "
+        f"nothing starts until it ends (lock {path})."], ttl=3600)
+    if lines:
+        print("\n".join(lines))
+    return 1
+
+
+def fan_out(job, primary, repos):
+    """Run this job once per repository, in turn (so each run sees the sessions the previous ones started)."""
+    try:
+        board = pipeline_runtime.board_states(ENV, STATE)
+        envs = [(repo, repo_env(repo, settings, primary, board)) for repo, settings in repos.items()]
+        roots = [worktree_root(env) for _, env in envs]
+        if len(set(roots)) != len(roots):
+            raise ValueError("two repositories share a worktree root (set worktree_root for each)")
+    except ValueError as e:
+        print(f"Pipeline dispatch error: {e}")
+        return 1
+    code, lines = 0, []
+    path = STATE / f"board-{job}.lock"
+    try:
+        STATE.mkdir(parents=True, exist_ok=True)
+        with open(path, "a+", encoding="utf-8") as lock:  # held for the whole run; holds the time it was taken
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return lock_busy(job, path)
+            lock.seek(0)
+            lock.truncate()
+            lock.write(str(time.time()))
+            lock.flush()
+            for repo, env in envs:
+                try:
+                    r = subprocess.run([sys.executable, str(pathlib.Path(__file__).resolve()), job], capture_output=True,
+                                       text=True, encoding="utf-8", errors="replace", env=env, timeout=CHILD_TIMEOUT)
+                    text, rc = r.stdout, r.returncode
+                    if rc:  # a crash says why on stderr; a warning on a good run is not news
+                        text = (text + "\n" + r.stderr.strip()[-600:]).strip() or f"exited with {rc}"
+                except (OSError, ValueError, TypeError, subprocess.SubprocessError) as e:
+                    text, rc = f"Pipeline dispatch error ({job}): {e}", 1
+                code = code or (1 if rc else 0)
+                lines += [f"[{repo}] {line}" for line in text.splitlines() if line.strip()]
+    except OSError as e:  # the state dir is not writable: no run can record anything
+        print(f"Pipeline dispatch error ({job}): {e}")
+        return 1
+    if lines:
+        print("\n".join(lines))
+    return code
+
+
 def main(argv):
     job = argv[1] if len(argv) > 1 else ""
     if job not in ("triage", "work", "hygiene"):
         print("usage: pipeline-dispatch.py triage|work|hygiene")
         return 2
+    if not ENV.get("PIPELINE_ONE_REPO"):
+        try:
+            primary, repos = pipeline_runtime.repositories(ENV)
+        except ValueError as e:
+            print(f"Pipeline dispatch error: {e}")
+            return 1
+        if len(repos) > 1 or repos.get(primary):  # a listed repository's own settings apply even alone
+            return fan_out(job, primary, repos)
     missing = [k for k, v in (("PIPELINE_REPO", REPO), ("PIPELINE_CHECKOUT", ENV.get("PIPELINE_CHECKOUT")),
                               ("PIPELINE_LIST_CMD", LIST_CMD), ("PIPELINE_MOVE_CMD", MOVE_CMD),
                               ("PIPELINE_OWNERS", OWNERS)) if not v]

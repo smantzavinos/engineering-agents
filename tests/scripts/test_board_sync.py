@@ -668,6 +668,30 @@ class Main(Sync):
         self.assertIn('FAILED to start', out.getvalue())
         self.assertEqual(self.board.writes, [])
 
+    def test_each_repository_of_the_board_syncs_with_its_own_state(self):
+        self.config = {**self.config, 'primary': 'o/r', 'repositories': {'o/r': {}, 'o/s': {}}}
+        self.board.add_issue(1, '🤖 In progress', values={'Waiting for': '👍 approve'})
+        self.board.add_issue(5, '🤖 In progress', values={'Waiting for': '👍 approve'}, repo='o/s')
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = bs.main([], config=self.config)
+        self.assertEqual((code, self.board.value(1, 'Waiting for'), self.board.value(5, 'Waiting for')), (0, '', ''))
+        root = pathlib.Path(self.config['state_dir'])
+        self.assertTrue((root / 'board-sync.json').exists())
+        self.assertTrue((root / 'repositories' / 'o__s' / 'board-sync.json').exists())
+        self.assertEqual(gp.repo_config({**self.config, 'repositories': {'o/s': {'branch_template': 'x/{n}'}}},
+                                        'o/s')['branch_template'], 'x/{n}')
+
+    def test_cards_from_a_repository_nobody_serves_are_reported_once_a_day(self):
+        self.board.add_issue(1, '🤖 In progress', repo='o/x')
+        outs = []
+        for _ in range(2):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                bs.main([], config=self.config)
+            outs.append(out.getvalue())
+        self.assertIn('The board has cards from o/x, which this pipeline does not serve', outs[0])
+        self.assertNotIn('o/x', outs[1])
+
     def test_owners_are_required(self):
         with self.assertRaisesRegex(ValueError, 'PIPELINE_OWNERS'):
             bs.main([], config=config(owners=()))

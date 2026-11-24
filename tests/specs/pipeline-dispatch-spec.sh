@@ -261,6 +261,59 @@ check  "$OUT" "work dispatch runs again" "stopped: the first good tick says it r
 OUT="$(real work ITEMS="$TMP/items-none.json")"
 refute "$OUT" "runs again" "stopped: the recovery line is sent once"
 
+# --- one board, several repositories: one run per repository, each with its own checkout and state
+cat > "$TMP/list-repos" <<'EOF'
+#!/usr/bin/env bash
+echo "$PIPELINE_REPO checkout=$PIPELINE_CHECKOUT state=$PIPELINE_STATE wt=${PIPELINE_WORKTREE_ROOT:-default} base=${PIPELINE_BASE:-}" >> "$LISTLOG"
+[[ "$PIPELINE_REPO" == "${FAIL_FOR:-}" ]] && { echo "list failed" >&2; exit 1; }
+busy=""; [[ "$PIPELINE_REPO" == "${BUSY_FOR:-}" ]] && busy=',{"number":9,"title":"t9","status":"In progress","stage":"Execute","track":"fast-path","priority":"P2","autonomy":"","updatedAt":"2026-01-01T00:00:00Z"}'
+printf '[{"number":1,"title":"t1","status":"Up next","stage":"","track":"fast-path","priority":"P2","autonomy":"","updatedAt":"2026-01-01T00:00:00Z"}%s]' "$busy"
+EOF
+chmod +x "$TMP/list-repos"
+mkdir -p "$TMP/co-s"
+REPOS="{\"o/r\":{},\"o/s\":{\"checkout\":\"$TMP/co-s\",\"base\":\"develop\"}}"
+fan() { run work PIPELINE_LIST_CMD="$TMP/list-repos" LISTLOG="$TMP/list.log" PIPELINE_STATE="$TMP/fan" \
+  PIPELINE_WORKTREE_ROOT="$TMP/shared-wt" PIPELINE_REPOSITORIES="$REPOS" "$@"; }
+OUT="$(fan)"
+check  "$OUT" "[o/r] DRY: would spawn work for #1" "repositories: the primary repository runs with its own items"
+check  "$OUT" "[o/s] DRY: would spawn work for #1" "repositories: each further repository runs too, its output prefixed"
+LOG="$(cat "$TMP/list.log")"
+check  "$LOG" "o/r checkout=$TMP state=$TMP/fan wt=$TMP/shared-wt" "repositories: the primary keeps its state root and worktree root"
+check  "$LOG" "o/s checkout=$TMP/co-s state=$TMP/fan/repositories/o__s wt=default base=develop" \
+  "repositories: a further repository gets its checkout, base and own state dir"
+# A live new-item session in o/s fills the board-wide WIP: neither repository starts another.
+"$PY" -c 'import time; time.sleep(60)' hermes-stand-in & LIVE=$!
+mkdir -p "$TMP/fan/repositories/o__s"
+printf '{"kind":"work","reason":"start","item":9,"pid":%s}\n' "$LIVE" > "$TMP/fan/repositories/o__s/dispatches.jsonl"
+OUT="$(fan PIPELINE_WIP=1)"
+kill "$LIVE" 2>/dev/null || true
+refute "$OUT" "error" "repositories: the full-board run has no error"
+refute "$OUT" "would spawn work" "repositories: WIP holds across the board (another repository's live session counts)"
+# A repository's own live session counts once: its In progress card (a resume, not a new item) leaves one slot.
+"$PY" -c 'import time; time.sleep(60)' hermes-stand-in & LIVE=$!
+printf '{"kind":"work","reason":"resume","item":9,"pid":%s}\n' "$LIVE" > "$TMP/fan/repositories/o__s/dispatches.jsonl"
+OUT="$(fan PIPELINE_WIP=2 BUSY_FOR=o/s)"
+kill "$LIVE" 2>/dev/null || true
+check  "$OUT" "[o/s] DRY: would spawn work for #1" "repositories: a repository's own sessions are not counted twice"
+rm -f "$TMP/fan/repositories/o__s/dispatches.jsonl"
+# One repository failing leaves the others running; the tick still reports the failure.
+RC=0; OUT="$(fan FAIL_FOR=o/r)" || RC=$?
+check  "$OUT" "[o/r] Pipeline dispatch error" "repositories: a failing repository is reported with its name"
+check  "$OUT" "[o/s] DRY: would spawn work for #1" "repositories: the other repositories still run"
+check  "rc=$RC" "rc=1" "repositories: the tick exits non-zero when one repository failed"
+# A run still holding the board: the next tick is silent, unless the lock has been held for half an hour.
+"$PY" -c 'import fcntl, sys, time; f = open(sys.argv[1], "a+"); fcntl.flock(f, fcntl.LOCK_EX); time.sleep(60)' \
+  "$TMP/fan/board-work.lock" & HOLD=$!
+sleep 0.5
+RC=0; OUT="$(fan)" || RC=$?
+check  "rc=$RC out=$OUT" "rc=0 out=" "repositories: a tick finding the board busy is silent"
+echo 1 > "$TMP/fan/board-work.lock"
+RC=0; OUT="$(fan)" || RC=$?
+kill "$HOLD" 2>/dev/null || true
+check  "$OUT" "has held the board for" "repositories: a board held for long is reported"
+OUT="$(fan PIPELINE_REPOSITORIES='{"o/r":{},"o/s":{}}' || true)"
+check  "$OUT" "o/s needs a checkout" "repositories: a further repository without a checkout is an error"
+
 # --- configuration errors are loud
 OUT="$(env -u PIPELINE_OWNERS PIPELINE_DRY=1 PIPELINE_REPO=o/r PIPELINE_LIST_CMD=x PIPELINE_MOVE_CMD=y PR_AGENT_HANDLE=a HERMES_HOME="$TMP" "$PY" "$ROOT/scripts/pipeline-dispatch.py" work || true)"
 check  "$OUT" "PIPELINE_OWNERS" "config: a missing owner allowlist is an error, not open access"
