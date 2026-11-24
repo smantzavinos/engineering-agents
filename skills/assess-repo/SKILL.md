@@ -238,10 +238,12 @@ Document:
 - PR workflow labels use `review-bot:*`, `fix-bot:*` and `needs-human:*`; follow the engineering-agents repo doc `docs/references/delivery-pipeline.md`
 - Apply the same Finish in task capture policy as the Markdown option
 - **Joining an existing board:** the board's scheduled jobs (pipeline dispatcher, PR sweep, board sync, unheard) learn which repositories they serve from a `repositories` map. It lives with the jobs, not in any repository: in the board config file named by `GH_PROJECT_CONFIG`, or in the jobs' `PIPELINE_REPOSITORIES` variable, on the machine that runs them (for example the Hermes host). A session on the repo usually cannot reach it, so do not edit it from here. Instead:
-  1. Prepare the entry: `"owner/repo": {"checkout": "/path"}`, where the path is the repo's checkout on the jobs' machine. `base`, `branch_template` and `worktree_root` are optional (without them the repo uses `PIPELINE_BASE`, `PIPELINE_BRANCH_TEMPLATE` and `<checkout>-worktrees`); a `branch_template` contains `{n}` exactly once.
+  1. Prepare the entry: `"owner/repo": {"checkout": "/path"}`, where the path is an existing clone of the repo on the jobs' machine (clone it there first). `base`, `branch_template` and `worktree_root` are optional (without them the repo uses `PIPELINE_BASE`, `PIPELINE_BRANCH_TEMPLATE` and `<checkout>-worktrees`); a `branch_template` contains `{n}` exactly once.
   2. Check it against what the human tells you of the current map: no other repository has the same checkout or worktree root; the primary repository (`PIPELINE_REPO`, or `repo` in the board config) stays as it is; every job keeps the same `PIPELINE_REPO` and board config.
-  3. Hand the entry to the human to add on the jobs' machine, with those checks and where it goes.
-  4. Record in the repo's task-tracking doc which board serves the repo and that its entry was handed over.
+  3. A first join (the jobs have no `repositories` map yet, only `PIPELINE_REPO` and `PIPELINE_CHECKOUT`) must list the primary repository too, or every job stops with "the primary repository … is not listed": hand over the whole map, for example `{"owner/main-repo": {}, "owner/new-repo": {"checkout": "/path"}}`. The primary may stay `{}`; its checkout falls back to `PIPELINE_CHECKOUT`.
+  4. If the PR sweep job sets `PR_SWEEP_REPOS` (or `PR_SWEEP_REPO`), that list wins over the map and the new repo's PRs are never swept: add the repo there too, or remove the variable so the sweep uses the map (which also gives it each repo's checkout).
+  5. Hand the entry (or the whole map, on a first join) to the human to add on the jobs' machine, with those checks and where it goes. Suggest one dry run afterwards: `board-sync.py --dry` and `PIPELINE_DRY=1 pipeline-dispatch.py work`; each listed repo's output lines start with `[owner/repo]`.
+  6. Record in the repo's task-tracking doc which board serves the repo and that its entry was handed over.
 
   Rules: the engineering-agents `docs/references/delivery-pipeline.md` §5 (Scheduled jobs) and ADR 0008 decision 12
 - Project `Track` maps to Fast path, Standard implementation, Analysis / spike, Docs / process
