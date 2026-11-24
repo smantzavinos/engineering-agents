@@ -13,8 +13,7 @@
     # Pin the audited llm-agents snapshot (Pi 1.3.0) for standalone development
     # and managed-package compatibility; flake.lock also pins its dependencies.
     # Copilot Enterprise compaction (earendil-works/pi#6768) is fixed in core
-    # Pi. pi-checkpoint replaces the summarizer and needs its own endpoint
-    # patch; see the pi-checkpoint patches in nix/modules/pi/config.nix.
+    # Pi and upstream in pi-checkpoint >=0.2.2.
     # Review temporary overlays before future Pi bumps:
     # `rg -n "PI-VERSION-OVERLAY" .`
     llmAgents = {

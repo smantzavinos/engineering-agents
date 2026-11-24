@@ -43,7 +43,7 @@ const body = src.slice(start, end)
   // source escape the immutable-pin check (pi-powerline-footer did exactly that).
   .replace(/^[ \t]*#.*$/gm, "");
 const decls = {};
-const re = /(\S+)\s*=\s*\{\s*source\s*=\s*\{\s*type\s*=\s*"([^"]+)";\s*packageName\s*=\s*"([^"]+)";\s*spec\s*=\s*"([^"]+)";\s*installSpec\s*=\s*"([^"]+)";/g;
+const re = /(\S+)\s*=\s*\{\s*(?:hiddenSkills\s*=\s*\[[^\]]*\];\s*)?source\s*=\s*\{\s*type\s*=\s*"([^"]+)";\s*packageName\s*=\s*"([^"]+)";\s*spec\s*=\s*"([^"]+)";\s*installSpec\s*=\s*"([^"]+)";/g;
 let m;
 while ((m = re.exec(body))) {
   decls[m[1]] = { type: m[2], packageName: m[3], spec: m[4], installSpec: m[5] };
@@ -86,6 +86,18 @@ if [[ "$(jq '[.[] | select(.packageName == "@tintinweb/pi-tasks")] | length' <<<
   pass "no managed declaration materializes into the npm @tintinweb/pi-tasks dir"
 else
   fail "a managed declaration uses packageName @tintinweb/pi-tasks (would clobber pi-ext's npm copy)"
+fi
+
+# pi-checkpoint: smantzavinos fork of nicknisi/pi-extensions (packages/checkpoint)
+# carrying the /self-compact-thresholds runtime override command. Its npm
+# release must be removed from the vendor manifest.
+if jq -e '.["pi-checkpoint"] | .type == "git" and .packageName == "pi-checkpoint" and (.spec | startswith("github:smantzavinos/pi-extensions#"))' \
+     <<<"$DECLS_JSON" >/dev/null \
+  && jq -e '(.dependencies | has("@nicknisi/pi-checkpoint") | not)' \
+       "$VENDOR_DIR/package.json" >/dev/null; then
+  pass "pi-checkpoint uses the smantzavinos fork with npm @nicknisi/pi-checkpoint removed"
+else
+  fail "pi-checkpoint must be the smantzavinos/pi-extensions git fork with no npm @nicknisi/pi-checkpoint in vendor package.json"
 fi
 
 # pi-guardrails: smantzavinos fork (upstream main + #99 tool registration

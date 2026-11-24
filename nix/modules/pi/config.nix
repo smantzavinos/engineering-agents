@@ -60,16 +60,17 @@ let
     };
 
     # Durable self-compaction (`self_compact` tool) for long-running
-    # autonomous sessions and subagents; needs Pi >=0.87. Thresholds are CLI
-    # flags only (no settings), so the vendored copy is patched at build time
-    # to fit small context windows instead of failing closed (see piVendor).
+    # autonomous sessions and subagents; needs Pi >=0.87.
+    # Fork of nicknisi/pi-extensions (0.3.1+ base: includes Copilot endpoint,
+    # thinking level, and 60%/70%/10% small-window fallback upstream) adding
+    # `/self-compact-thresholds`, `/self-compact-thresholds-increase`, and
+    # `/self-compact-thresholds-decrease` for runtime session-persistent overrides.
     pi-checkpoint = {
       source = {
-        type = "npm";
-        packageName = "@nicknisi/pi-checkpoint";
-        spec = "@nicknisi/pi-checkpoint@0.2.1";
-        installSpec = "@nicknisi/pi-checkpoint@0.2.1";
-        version = "0.2.1";
+        type = "git";
+        packageName = "pi-checkpoint";
+        spec = "github:smantzavinos/pi-extensions#dc508c926c1be62eeabdf8c6e94194bd787c9f97";
+        installSpec = "github:smantzavinos/pi-extensions#dc508c926c1be62eeabdf8c6e94194bd787c9f97";
       };
     };
 
@@ -309,6 +310,15 @@ let
         stripRoot = true;
       };
     };
+    "pi-checkpoint" = {
+      rev = "dc508c926c1be62eeabdf8c6e94194bd787c9f97";
+      tarball = pkgs.fetchzip {
+        url = "https://github.com/smantzavinos/pi-extensions/archive/dc508c926c1be62eeabdf8c6e94194bd787c9f97.tar.gz";
+        hash = "sha256-pU81/YyGfoIUQSSUNgPzfDojCBNe6ywHGGCK2UoirG8=";
+        stripRoot = true;
+      };
+      subpath = "packages/checkpoint";
+    };
     "pi-tasks" = {
       rev = "6a4445afe26430e634541723af4ed55aa8a86214";
       tarball = pkgs.fetchzip {
@@ -381,7 +391,7 @@ let
     # `nix build nixpkgs#prefetch-npm-deps` after lockfile edits).
     npmDeps = pkgs.fetchNpmDeps {
       src = ./managed-packages;
-      hash = "sha256-967NNvSVaeMj7kWlmyzSkFGlECiqg5+6wKOfU9tE3Dw=";
+      hash = "sha256-luMh8zpZcOpzuMEo/PXLb1c2Ecq0zvmXG5aPd1ijJF4=";
     };
 
     nativeBuildInputs = [ nodejs pkgs.npmHooks.npmConfigHook ];
@@ -420,44 +430,6 @@ let
       test "$(grep -Fc 'maxTokens: 64,' "$autoname")" -eq 1
       substituteInPlace "$autoname" \
         --replace-fail 'maxTokens: 64,' 'maxTokens: 512,'
-
-      # pi-checkpoint thresholds are CLI flags only (225k/250k/+20k by default)
-      # and subagent children get no extra flags. On a window below ~300k the
-      # defaults do not fit and the extension fails closed, blocking every
-      # ordinary tool call. Patch the vendored copy so thresholds that do not
-      # fit fall back to 55% / 65% / 75% of the window. 1M-window models keep
-      # the upstream token defaults.
-      ckpt="$out/node_modules/@nicknisi/pi-checkpoint/extensions/self-compact/config.ts"
-      test -f "$ckpt"
-      test "$(grep -Fc 'if (!(s > 0 && s < w && w <= h && h <= cap)) {' "$ckpt")" -eq 1
-      substituteInPlace "$ckpt" \
-        --replace-fail 'if (!(s > 0 && s < w && w <= h && h <= cap)) {' 'if (!(s > 0 && s < w && w <= h && h <= cap)) {
-    // engineering-agents patch: proportional fallback for small windows.
-    const fs = Math.round(0.55 * contextWindow);
-    const fw = Math.round(0.65 * contextWindow);
-    const fh = Math.min(Math.round(0.75 * contextWindow), cap);
-    if (fs > 0 && fs < fw && fw <= fh && fh <= cap) {
-      return { ok: true, thresholds: { contextWindow, softTokens: fs, warningTokens: fw, hardTokens: fh, cap }, compactPromptOverride };
-    }'
-
-      # pi-checkpoint summarizes with an explicit apiKey but drops the
-      # credential-resolved baseUrl that getApiKeyAndHeaders returns. With an
-      # explicit key Pi skips OAuth resolution, so GitHub Copilot Business and
-      # Enterprise summaries go to the Individual endpoint and fail with 401.
-      # Apply auth.baseUrl to the model, as Pi's own compaction does. It also
-      # summarizes with no thinking level, which some Copilot Claude models
-      # reject with 400; pass the session's level, as Pi does.
-      # Upstream: https://github.com/nicknisi/pi-extensions/issues/165
-      sc="$out/node_modules/@nicknisi/pi-checkpoint/extensions/self-compact/self-compact.ts"
-      test "$(grep -Fc 'streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context, options),' "$sc")" -eq 1
-      substituteInPlace "$sc" \
-        --replace-fail 'streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context, options),' '// engineering-agents patch: summarize at the session thinking level, as
-        // Pi does. With none, providers send thinking "off", which some models
-        // reject (400) instead of falling back.
-        streamSimple: (m, context, options) => ctx.modelRegistry.streamSimple(m, context,
-          options?.reasoning || !m.reasoning || pi.getThinkingLevel() === "off" ? options : { ...options, reasoning: pi.getThinkingLevel() }),
-        // engineering-agents patch: keep the credential-resolved endpoint.
-        ...(auth.baseUrl ? { model: { ...model, baseUrl: auth.baseUrl } } : {}),'
 
       # jscpd 5 execs a prebuilt glibc binary from its platform package;
       # point it at Nix's loader and libgcc_s (pi-lens-tools wraps the CLI).
@@ -584,9 +556,10 @@ let
 
       installGitPackage = packageName: let
         pin = gitSources.${packageName};
+        srcPath = if pin ? subpath then "${pin.tarball}/${pin.subpath}" else "${pin.tarball}";
       in ''
         rm -rf "$out/vendor/node_modules/${packageName}"
-        cp -r --no-preserve=mode,ownership ${pin.tarball} "$out/vendor/node_modules/${packageName}"
+        cp -r --no-preserve=mode,ownership ${srcPath} "$out/vendor/node_modules/${packageName}"
         cp ${gitMetadataFile pin.rev} "$out/vendor/node_modules/${packageName}/.pi-managed-install.json"
       '';
     in
