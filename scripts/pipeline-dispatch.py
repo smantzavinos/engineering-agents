@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delivery-pipeline dispatcher: the Hermes cron ticks for backlog items (no LLM).
+"""Delivery-pipeline dispatcher: scheduled ticks for backlog items (no LLM).
 
 One script, three jobs (docs/references/delivery-pipeline.md §5, §7):
 
@@ -11,11 +11,12 @@ One script, three jobs (docs/references/delivery-pipeline.md §5, §7):
 The tick decides WHO works on WHICH item, never how. Sessions run the `triage-backlog` and
 `work-item` skills. stdout is the delivery to the human; empty stdout is a silent tick.
 
-Install: copy this file, commands.py, comment_style.py, post-comment.py and pipeline-prompts/ into
-$HERMES_HOME/scripts/, then e.g.
+Install: copy this file, commands.py, comment_style.py, post-comment.py, pipeline_runtime.py,
+session_launcher.py and pipeline-prompts/ into $HERMES_HOME/scripts/, then e.g.
   hermes cron create "every 15m" --no-agent --script "pipeline-dispatch.py triage" --name pipeline-triage
   hermes cron create "every 3m"  --no-agent --script "pipeline-dispatch.py work"   --name pipeline-work
   hermes cron create "every 7d"  --no-agent --script "pipeline-dispatch.py hygiene" --name pipeline-hygiene
+Without Hermes: docs/t3/README.md (systemd timers, PIPELINE_LAUNCHER=t3).
 
 Environment:
   PIPELINE_REPO           owner/repo whose issues are the backlog (required)
@@ -56,7 +57,11 @@ Environment:
   PIPELINE_TRIAGE_BATCH   max items per triage session (default 8; oldest first)
   PIPELINE_TRIAGE_MODEL, PIPELINE_TRIAGE_SKILLS (backlog,triage-backlog)
   PIPELINE_WORK_MODEL, PIPELINE_WORK_SKILLS (backlog,work-item), PIPELINE_REASONING (medium)
-  PIPELINE_SESSION_PROVIDER, PIPELINE_STALE_DAYS (hygiene, default 3)
+  PIPELINE_SESSION_PROVIDER  session provider (T3 provider instance id when using t3)
+  PIPELINE_STALE_DAYS     hygiene threshold (default 3)
+  PIPELINE_LAUNCHER       hermes (default) | t3
+  T3_BIN, T3CODE_HOME     T3 executable (default t3) and data directory selecting the server
+  PIPELINE_GIT_NAME, PIPELINE_GIT_EMAIL  optional local git commit identity, set before launching
   PIPELINE_STATE          state dir (default $HERMES_HOME/state/pipeline); PR_SWEEP_STATE (the PR sweep's, for WIP)
   PIPELINE_REPOSITORIES   one board, several repositories: a JSON object (or "repositories" in GH_PROJECT_CONFIG)
                           {"owner/repo": {"checkout": "/path", "base": "main", "branch_template": "item/{n}",
@@ -86,6 +91,7 @@ from typing import Any
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import commands  # noqa: E402  (shared command parser, scripts/commands.py)
 import pipeline_runtime  # noqa: E402  (quiet hours, shared WIP, stopped alerts: scripts/pipeline_runtime.py)
+import session_launcher  # noqa: E402
 
 ENV = os.environ
 
@@ -203,6 +209,7 @@ MOVED = {}  # item -> status this tick moved it to (the next tick's baseline)
 
 out = []  # lines delivered to the human
 err_out = []  # failure lines: delivered once per pipeline_runtime.DEDUPE_TTL while they repeat
+probe_errors: dict[session_launcher.Handle, str] = {}  # stopped reasons, reported after the tick's work
 
 
 # ---------------------------------------------------------------- pure decisions
@@ -581,10 +588,14 @@ def add_label(n, label):
 
 
 def alive(pid):
-    try:
-        return b"hermes" in pathlib.Path(f"/proc/{pid}/cmdline").read_bytes()
-    except OSError:
-        return False
+    reply = session_launcher.probe(ENV, pid, None if DRY else STATE)
+    if reply["state"] == "asked":
+        line = f"⚠️ Session {pid} is waiting for an answer, so it counts as failed: {reply['link']}".rstrip(": ")
+        if line not in err_out:
+            err_out.append(line)
+    elif reply["state"] == "unknown":
+        probe_errors[pid] = f"T3 could not check {pid}: {reply['detail']}"
+    return reply["state"] in ("live", "unknown")
 
 
 def branch_for(n):
@@ -687,14 +698,13 @@ def spawn(kind, n, title, extra):
     name = (f"{REPO} item #{n} {extra.get('reason', kind)} {tag} — {title[:50]}" if kind == "work"
             else f"Backlog triage {REPO} {tag}")
     model, skills = (WORK_MODEL, WORK_SKILLS) if kind == "work" else (TRIAGE_MODEL, TRIAGE_SKILLS)
-    with open(LOGS / f"{tag}.log", "w") as log:
-        p = subprocess.Popen(
-            [HERMES, "chat", "-Q", "--oneshot", "--query-file", str(pfile), "--source", "tool",
-             "--continue", name, "--create-if-missing", "--reasoning", REASONING, "-s", skills,
-             *(["-m", model] if model else []), *(["--provider", PROVIDER] if PROVIDER else [])],
-            cwd=str(extra.get("worktree") or CHECKOUT), stdin=subprocess.DEVNULL, stdout=log,
-            stderr=subprocess.STDOUT, env=env_clean(), start_new_session=True, close_fds=True)
-    return p.pid, tag
+    pid = session_launcher.launch(
+        ENV, hermes_argv=[HERMES, "chat", "-Q", "--oneshot", "--query-file", str(pfile), "--source", "tool",
+                          "--continue", name, "--create-if-missing", "--reasoning", REASONING, "-s", skills,
+                          *(["-m", model] if model else []), *(["--provider", PROVIDER] if PROVIDER else [])],
+        prompt_file=pfile, title=name, checkout=CHECKOUT, log_file=LOGS / f"{tag}.log",
+        cwd=str(extra.get("worktree") or CHECKOUT), model=model, provider=PROVIDER, child_env=env_clean())
+    return pid, tag
 
 
 def load_records():
@@ -1292,7 +1302,9 @@ def main(argv):
     health = STATE / "health" / job  # stopped record and repeat filter of this job
     stop = ""
     ran = False
+    probe_errors.clear()
     try:
+        session_launcher.kind(ENV)
         deliver(reported)
         if not pipeline_runtime.quiet_now(ENV, job):  # quiet hours: results still arrive, no session starts
             ran = True
@@ -1308,6 +1320,9 @@ def main(argv):
     except Exception as e:  # noqa: BLE001 — surface the failure; never crash silently
         code = 1
         stop = f"Pipeline dispatch error ({job}): {e}"
+    if probe_errors:
+        code = 1
+        stop = "; ".join(([stop] if stop else []) + list(probe_errors.values()))
     if not DRY:
         tmp = REPORTED.with_suffix(".tmp")
         tmp.write_text(json.dumps(sorted(reported)))

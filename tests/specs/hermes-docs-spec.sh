@@ -104,7 +104,7 @@ assert_contains "$HERMES_AUTO" "pr-sweep-dispatch.py" "PR automation doc referen
 assert_contains "$REPO_ROOT/docs/references/pr-review.md" "pr-review verdict=" "PR review process requires the verdict marker"
 assert_contains "$REPO_ROOT/skills/pull-request/SKILL.md" "pr-review verdict=" "pull-request Reviewer posts the verdict marker"
 DISPATCH="$REPO_ROOT/scripts/pr-sweep-dispatch.py"
-assert_contains "$DISPATCH" "start_new_session=True" "Dispatcher launches sessions detached from the tick"
+assert_contains "$REPO_ROOT/scripts/session_launcher.py" "start_new_session=True" "The launcher starts Hermes sessions detached from the tick"
 assert_contains "$DISPATCH" "\"--query-file\"" "Dispatcher hands each session its prompt as a file"
 assert_contains "$DISPATCH" "PR_SWEEP_DRY" "Dispatcher supports a non-mutating dry run"
 assert_contains "$DISPATCH" "PR_SWEEP_UNLABELED" "Dispatcher exposes opt-in vs drift for unlabeled PRs"

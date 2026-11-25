@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Board sync: deterministic tracker hygiene for a GitHub Project and its repositories. Script-only cron entry, no LLM.
+"""Board sync: deterministic tracker hygiene for a GitHub Project and its repositories. Scheduled script, no LLM.
+
+Without Hermes: docs/t3/README.md (systemd timers, PIPELINE_LAUNCHER=t3).
 
     board-sync.py [--dry] [--only reconcile|intake|waiting|jira]
     board-sync.py --digest          (owner digest: everything waiting on a person; read-only; daily cron)

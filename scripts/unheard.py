@@ -22,6 +22,7 @@ GitHub and routine lines to $BOARD_SYNC_STATE/unheard.log.
 
 Install: copy beside gh-project.py and commands.py, then
   hermes cron create "every 5m" --no-agent --script unheard.py --name unheard
+Without Hermes: docs/t3/README.md (systemd timers, PIPELINE_LAUNCHER=t3).
 """
 import datetime
 import difflib

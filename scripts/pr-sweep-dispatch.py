@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-"""PR sweep dispatcher: the Hermes cron tick for PR automation (no LLM).
+"""PR sweep dispatcher: a scheduled tick for PR automation (no LLM).
 
 Each tick reads GitHub state for the owned repos, applies the rules in
-docs/hermes/pr-automation.md, and launches one detached `hermes chat` session
-per job: an independent Reviewer, or one author-side babysit round. The sessions
+docs/hermes/pr-automation.md, and launches one session per job: an independent
+Reviewer, or one author-side babysit round. The sessions
 outlive the tick. Their verdicts land on GitHub, and a later tick delivers their
 result files. stdout is the delivery to the human; empty stdout means a silent,
 zero-token tick.
 
-Install: copy this file, commands.py, comment_style.py, post-comment.py and pr-sweep-prompts/ into
-$HERMES_HOME/scripts/, then
+Install: copy this file, commands.py, comment_style.py, post-comment.py, pipeline_runtime.py,
+session_launcher.py and pr-sweep-prompts/ into $HERMES_HOME/scripts/, then
   hermes cron create "every 2m" --no-agent --script pr-sweep-dispatch.py --name pr-sweep
+Without Hermes: docs/t3/README.md (systemd timers, PIPELINE_LAUNCHER=t3).
 
 Environment:
   PR_SWEEP_REPOS          space-separated owner/repo list (PR_SWEEP_REPO also accepted); default: the board's
@@ -21,7 +22,10 @@ Environment:
   PR_SWEEP_CHECKOUT_ROOT  directory holding local checkouts named by repo (default ~/repos)
   PR_REVIEW_MODEL, PR_REVIEW_REASONING (medium), PR_REVIEW_SKILLS (pull-request)
   PR_BABYSIT_MODEL, PR_BABYSIT_SKILLS (babysit-pr)
-  PR_SESSION_PROVIDER     provider passed to `hermes chat`
+  PR_SESSION_PROVIDER     session provider (T3 provider instance id when using t3)
+  PIPELINE_LAUNCHER       hermes (default) | t3
+  T3_BIN, T3CODE_HOME     T3 executable (default t3) and data directory selecting the server
+  PIPELINE_GIT_NAME, PIPELINE_GIT_EMAIL  optional local git commit identity, set before launching
   PR_SWEEP_UNLABELED      ignore (default: opt-in) | review (drift: unlabeled = awaiting review)
   PR_BABYSIT_STALE_MIN    (60; chat-started claims only)   PR_REVIEW_STUCK_MIN (90)
   PIPELINE_OWNERS         owner logins (required): they command the bots on any PR and their comments keep
@@ -64,6 +68,7 @@ from typing import Any
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import commands  # noqa: E402  (shared command parser, scripts/commands.py)
 import pipeline_runtime  # noqa: E402  (quiet hours, shared WIP, stopped alerts: scripts/pipeline_runtime.py)
+import session_launcher  # noqa: E402
 
 ENV = os.environ
 REPOS = (ENV.get("PR_SWEEP_REPOS") or ENV.get("PR_SWEEP_REPO") or "").split()
@@ -139,6 +144,8 @@ VERDICT_RE = re.compile(r"<!--\s*pr-review verdict=(READY|FIX|BLOCKED) head=([0-
 HEARTBEAT_RE = re.compile(r"(?:fix-bot: owns this branch;|babysit:) session=(\S+) (?:last-active|heartbeat)=(\S+)")
 
 out = []  # lines delivered to the human
+asked_lines: dict[session_launcher.Handle, str] = {}  # one diagnostic per waiting session
+probe_errors: dict[session_launcher.Handle, str] = {}  # stopped reasons, reported after the sweep
 
 
 # ---------------------------------------------------------------- pure decisions
@@ -419,10 +426,13 @@ def react(repo, comment_id):
 
 
 def alive(pid):
-    try:
-        return b"hermes" in pathlib.Path(f"/proc/{pid}/cmdline").read_bytes()
-    except OSError:
-        return False
+    reply = session_launcher.probe(ENV, pid, None if DRY else STATE)
+    if reply["state"] == "asked":
+        asked_lines[pid] = (f"⚠️ Session {pid} is waiting for an answer, so it counts as failed: "
+                            f"{reply['link']}").rstrip(": ")
+    elif reply["state"] == "unknown":
+        probe_errors[pid] = f"T3 could not check {pid}: {reply['detail']}"
+    return reply["state"] in ("live", "unknown")
 
 
 def result_problem(rec):
@@ -709,7 +719,7 @@ def signing_for(repo, branch):
 
 
 def spawn(kind, repo, pr, head, model, reasoning, skills, extra=None):
-    """Launch a detached Hermes session (new session, stdin closed); it outlives this tick."""
+    """Launch a session that outlives this tick."""
     n = pr["number"]
     tag = f"{kind}-pr{n}-{head[:8]}-{time.time_ns()}"
     if DRY:
@@ -720,22 +730,24 @@ def spawn(kind, repo, pr, head, model, reasoning, skills, extra=None):
     extra = {"merge_state": "UNKNOWN", "merge_status": "UNKNOWN", "base_branch": "", "base_sha": "",
              "integrate_strategy": "merge", "signing": "unknown", "fix_loops": 0, "fix_loop_cap": FIX_LOOP_CAP,
              "trusted_logins": ", ".join(sorted(OWNERS)) or "none", "comment_id": "none", **(extra or {})}
+    checkout = checkout_of(repo)
+    short_head = head[:7]
+    rename = session_launcher.rename_step(ENV, hermes_bin=HERMES, number=n, short_head=short_head)
     prompt = (PROMPTS / f"{kind}.md").read_text().format(
-        repo=repo, number=n, head=head, short_head=head[:7], title=pr["title"], branch=pr["headRefName"],
-        checkout=checkout_of(repo), hermes=HERMES, handle=HANDLE,
+        repo=repo, number=n, head=head, short_head=short_head, title=pr["title"], branch=pr["headRefName"],
+        checkout=checkout, rename_step=f"{rename} " if rename else "", handle=HANDLE,
         result_file=(RESULTS / f"{tag}.json").as_posix(), tag=tag, artifacts_dir=artifacts_dir.as_posix(),
         scripts_dir=str(pathlib.Path(__file__).resolve().parent), **extra)
     pfile = LOGS / f"{tag}.prompt.md"
     pfile.write_text(prompt)
     env = {k: v for k, v in ENV.items() if not k.startswith(("HERMES_CRON", "HERMES_SESSION"))}
-    with open(LOGS / f"{tag}.log", "w") as log:
-        p = subprocess.Popen(
-            [HERMES, "chat", "-Q", "--oneshot", "--query-file", str(pfile), "--source", "tool",
-             "--reasoning", reasoning, "-s", skills,
-             *(["-m", model] if model else []), *(["--provider", PROVIDER] if PROVIDER else [])],
-            stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=env,
-            start_new_session=True, close_fds=True)
-    return p.pid, tag
+    pid = session_launcher.launch(
+        ENV, hermes_argv=[HERMES, "chat", "-Q", "--oneshot", "--query-file", str(pfile), "--source", "tool",
+                          "--reasoning", reasoning, "-s", skills,
+                          *(["-m", model] if model else []), *(["--provider", PROVIDER] if PROVIDER else [])],
+        prompt_file=pfile, title=f"PR #{n} {kind} @{short_head} {repo}", checkout=checkout,
+        log_file=LOGS / f"{tag}.log", model=model, provider=PROVIDER, child_env=env)
+    return pid, tag
 
 
 def record(recs, rec):
@@ -1314,8 +1326,11 @@ def main():
                        f"{r.get('summary', '').strip()} {r.get('url', '')}".strip())
 
     errors = []
+    asked_lines.clear()
+    probe_errors.clear()
     config_error = False
     try:
+        session_launcher.kind(ENV)
         quiet = pipeline_runtime.quiet_now(ENV, "pr")  # quiet hours: results still arrive, no session starts
     except ValueError as e:
         quiet = True
@@ -1328,20 +1343,22 @@ def main():
             errors.append(f"PR sweep error ({repo}): {e}")
     if not DRY:
         save_reported(reported)
+    failures = errors + list(probe_errors.values())
     if DRY:
-        lines = out + errors
+        lines = out + list(asked_lines.values()) + failures
     else:
         # Every repository failing: one plain alert, repeated hourly, then one line when it runs again. A single
         # failing repository repeats its line at most once per pipeline_runtime.DEDUPE_TTL.
         health = STATE / "health"
         # A configuration error stops every repository; a quiet tick ran nothing, so it proves no recovery.
-        down = config_error or (bool(errors) and len(errors) == len(REPOS))
-        status = (pipeline_runtime.job_down(health, "PR sweep", "; ".join(errors)) if down
+        down = bool(probe_errors) or config_error or (bool(errors) and len(errors) == len(REPOS))
+        status = (pipeline_runtime.job_down(health, "PR sweep", "; ".join(failures)) if down
                   else [] if quiet else pipeline_runtime.job_up(health, "PR sweep"))
-        lines = status + out + ([] if down else pipeline_runtime.fresh_lines(health, "errors", errors))
+        notices = list(asked_lines.values()) + ([] if down else errors)
+        lines = status + out + (pipeline_runtime.fresh_lines(health, "errors", notices) if notices or not down else [])
     if lines:
         print("\n".join(lines))
-    return 1 if errors else 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

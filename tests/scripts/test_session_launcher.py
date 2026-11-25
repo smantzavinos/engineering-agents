@@ -255,8 +255,10 @@ class LauncherContract(unittest.TestCase):
 
     def test_numeric_handles_follow_proc_even_with_t3_configured(self):
         for marker, state in (('hermes-stand-in', 'live'), ('ordinary-process', 'dead')):
-            with subprocess.Popen([sys.executable, '-c', 'import sys; sys.stdin.read()', marker],
-                                  stdin=subprocess.PIPE) as child:
+            # The child says when it runs: just after exec, /proc/<pid>/cmdline can still read empty.
+            with subprocess.Popen([sys.executable, '-c', 'import sys; print("up", flush=True); sys.stdin.read()', marker],
+                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE) as child:
+                child.stdout.readline()
                 for handle in (child.pid, str(child.pid)):
                     with self.subTest(handle=handle, marker=marker):
                         self.assert_probe(self.env, handle, state)

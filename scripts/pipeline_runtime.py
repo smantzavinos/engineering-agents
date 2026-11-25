@@ -158,7 +158,7 @@ def live_authors(state_dirs, alive):
             if not isinstance(rec, dict) or rec.get('kind') not in ('work', 'babysit') or not rec.get('pid'):
                 continue
             if alive(rec['pid']):
-                live.setdefault(int(rec['pid']), 'coding' if rec['kind'] == 'work' and rec.get('reason') == 'start'
+                live.setdefault(rec['pid'], 'coding' if rec['kind'] == 'work' and rec.get('reason') == 'start'
                                 else 'maintenance')
     return live
 
