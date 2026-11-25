@@ -106,11 +106,15 @@ def launch(env: Env, *, hermes_argv: Sequence[str], prompt_file: Path, title: st
         output = result.stdout + result.stderr
         log.write(output)
     if result.returncode == 0:
-        # The response is the final JSON object; stdout may start with notices.
+        # The response is the last JSON object on stdout; notice lines may come before or after it.
         lines = result.stdout.splitlines()
         for i in range(len(lines) - 1, -1, -1):
             if lines[i].lstrip().startswith("{"):
-                thread_id = _json_object("\n".join(lines[i:])).get("threadId")
+                try:
+                    value, _ = json.JSONDecoder().raw_decode("\n".join(lines[i:]).lstrip())
+                except ValueError:
+                    continue
+                thread_id = value.get("threadId") if isinstance(value, dict) else None
                 if isinstance(thread_id, str) and thread_id.strip():
                     return "t3:" + thread_id
     raise RuntimeError(f"T3 thread start failed: {_tail(output) or f'exit {result.returncode}, no threadId'}")

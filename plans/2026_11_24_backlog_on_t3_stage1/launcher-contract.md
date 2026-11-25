@@ -41,8 +41,8 @@ set, write each one that is set to the local git config of `checkout`
   `T3_BIN` defaults to `t3`. `--model` is passed when `model` is set;
   `--provider` only together with `--model`. No `--worktree`, no `--wait`.
   The command's output goes to `log_file`. Returns `"t3:" + threadId` from
-  the JSON object on stdout; other lines on stdout before it (a notice, a
-  warning) do not make a successful start look failed. A non-zero exit, or output without a `threadId`, raises
+  the JSON object on stdout; other lines on stdout before or after it (a
+  notice, a warning) do not make a successful start look failed. A non-zero exit, or output without a `threadId`, raises
   `RuntimeError` carrying the end of the output. Which server is used comes
   from the environment (`T3CODE_HOME`); the launcher adds no flag for it.
 
@@ -130,7 +130,8 @@ the rendered prompt is the same text as before.
   repository, and stops when every repository fails). Nothing is labeled,
   moved, recorded or counted as a failed dispatch for that repository in
   that tick, and the next tick tries again. So an outage of the T3 server
-  costs no retries. Dry runs do not call `check`.
+  costs no retries. Dry runs do not call `check`, and neither does the
+  `hygiene` job, which starts no session.
 - A failed `launch` is handled as a failed spawn is today (recorded on the
   dispatch record, retried on a later tick).
 - Dry runs start nothing and write no git config.

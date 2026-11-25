@@ -1307,7 +1307,7 @@ def main(argv):
     try:
         session_launcher.kind(ENV)
         deliver(reported)
-        if not DRY:
+        if not DRY and job != "hygiene":  # hygiene starts no session
             session_launcher.check(ENV, CHECKOUT)
         if not pipeline_runtime.quiet_now(ENV, job):  # quiet hours: results still arrive, no session starts
             ran = True

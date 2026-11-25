@@ -206,9 +206,12 @@ not started twice.
 - **Server down, or a clone that is not a project in it:** each tick asks the
   server first. When it cannot, the tick does nothing for that repository:
   no label, no record, no retry used up. It exits 1 and prints a stopped
-  alert (repeated hourly), then one line when it works again. The same
-  happens when the server stops answering about one running session: that
-  session counts as running, so nothing is retried.
+  alert (repeated hourly), then one line when it works again. In a PR sweep
+  over several repositories where only some fail, the others are swept and
+  each failing one gets a plain error line (at most every six hours) instead
+  of the stopped alert. When the server stops answering about one running
+  session, that session counts as running, so nothing is retried, and the
+  stopped alert is raised.
 - **Stopping a thread in T3 does not stop the bots:** the next tick counts the
   session as failed and starts another under the usual retry rules. To take a
   PR or an item away from the bots, use the labels and commands of the

@@ -155,6 +155,11 @@ class LauncherContract(unittest.TestCase):
         self.assertEqual(self.launch(), 't3:thread-test')
         self.assertIn('Notice: update available', self.log.read_text(encoding='utf-8'))
 
+    def test_t3_start_accepts_a_notice_after_the_json(self):
+        # The thread exists: reading this as a failed start would start a second one.
+        self.reply('{"threadId":"thread-test","projectId":"p","runId":"r"}\nNotice: update available\n')
+        self.assertEqual(self.launch(), 't3:thread-test')
+
     def test_t3_start_raises_with_output_tail_even_if_failure_has_an_id(self):
         for output, code, tail in (({'threadId': 'unusable', 'error': 'could not start'}, 7, 'could not start'),
                                    ({'message': 'no id returned'}, 0, 'no id returned')):
