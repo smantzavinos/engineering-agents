@@ -27,6 +27,10 @@
     {
       "source": "docs/references/comment-style.md",
       "target": "docs/references/comment-style.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "docs/references/owner-policy.md"
     }
   ],
   "backlog": [
@@ -41,6 +45,10 @@
     {
       "source": "docs/references/comment-style.md",
       "target": "docs/references/comment-style.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "docs/references/owner-policy.md"
     }
   ],
   "triage-backlog": [
@@ -55,6 +63,10 @@
     {
       "source": "docs/references/comment-style.md",
       "target": "docs/references/comment-style.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "docs/references/owner-policy.md"
     }
   ],
   "work-item": [
@@ -69,6 +81,10 @@
     {
       "source": "docs/references/comment-style.md",
       "target": "docs/references/comment-style.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "docs/references/owner-policy.md"
     }
   ],
   "software-development": [
@@ -83,6 +99,10 @@
     {
       "source": "docs/references/agent-roles.md",
       "target": "references/agent-roles.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "references/owner-policy.md"
     }
   ],
   "execution-orchestrator": [
@@ -115,6 +135,10 @@
     {
       "source": "docs/references/pattern-catalog.md",
       "target": "references/pattern-catalog.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "references/owner-policy.md"
     }
   ],
   "architecture-model": [
@@ -141,6 +165,10 @@
     {
       "source": "docs/references/comment-style.md",
       "target": "docs/references/comment-style.md"
+    },
+    {
+      "source": "docs/references/owner-policy.md",
+      "target": "docs/references/owner-policy.md"
     }
   ]
 }

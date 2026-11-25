@@ -125,7 +125,7 @@ Rules:
   decisions.
 - **`Up next` stays human-controlled.** It is the only gate on *what* gets worked.
 - **Agents create no items without explicit owner approval** ("Finish in
-  task" in `software-development`). Work that belongs to the item is done in
+  task" in `owner-policy.md`). Work that belongs to the item is done in
   the item; only genuine out-of-scope defects and 2–3-way epic splits are
   proposed, on the item or PR, for the human to approve in one comment.
 

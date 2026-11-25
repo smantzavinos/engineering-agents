@@ -40,8 +40,8 @@ verdict and `reviewed@<sha>` stamp come only from an independent Reviewer run
    superseded findings.
 3. Confirm scope and publication boundaries. Follow the repo's canonical
    process docs (`docs/process.md`, `docs/references/pr-review.md`) and the
-   repo's `pr-review-hooks.md` manifest. Follow `software-development`
-   "Decide, don't ask": decide what the sources answer and record it; ask the
+   repo's `pr-review-hooks.md` manifest. Follow "Decide, don't ask" in
+   `docs/references/owner-policy.md`: decide what the sources answer and record it; ask the
    human only about owner-list items (security, irreversible or external
    actions, spend, a FROZEN change, safety). No merge or production deployment
    without approval. No history rewriting on shared PR branches, except the

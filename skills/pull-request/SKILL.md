@@ -37,7 +37,7 @@ exclusions to turn a check green. The human merges.
    manifest: STOP, report the repo as not onboarded, offer assess-repo.
 3. **Verify the code-review gate**: read `<plan-dir>/code_review.md`; its
    latest pass must be COMPLETE (zero open Blocker/Critical/Major). If not,
-   stop and route to `review-code` — do not author or review a PR past an
+   stop and route to the code-review skill (`review-code`; on Pi, `review`) — do not author or review a PR past an
    open code review. Frontier-pipeline plan directories have `review.md`
    instead: its latest code or epic-diff pass must be approved (no open
    blocker or major); if not, route to the `review` skill.
@@ -78,7 +78,7 @@ exclusions to turn a check green. The human merges.
    real evidence links. Fix BLOCKERs, MAJORs and the small MINORs; list the
    rest under "Considered and not done"; declare ESCALATEs (owner-list items
    only) with the question for the human. Never file follow-up issues
-   (`software-development` "Finish in task").
+   ("Finish in task" in `docs/references/owner-policy.md`).
 5. **Open the PR**, set tracking state per `pr-tracking`. The body on GitHub
    must match the prepared body and describe the final SHA you push.
 6. **Link and hand off.** When the work came from a backlog item, the body

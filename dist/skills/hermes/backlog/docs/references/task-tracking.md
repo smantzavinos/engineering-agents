@@ -192,7 +192,7 @@ A ready item should have:
 
 ## Agent Capture Behavior
 
-Owner policy (`software-development` "Finish in task" and "Decide, don't
+Owner policy (`owner-policy.md`, "Finish in task" and "Decide, don't
 ask"): the backlog should shrink. Agents create **no** items without the
 owner's explicit approval.
 

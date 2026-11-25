@@ -119,7 +119,7 @@ The filled table: rule → evidence/link → pass/fail/N-A. Pre-filled by the
 author; confirmed by the reviewer.
 
 ## Decisions made
-Numbered list, each with its source in brackets (`software-development`
+Numbered list, each with its source in brackets (`owner-policy.md`,
 "Decide, don't ask"). The owner vetoes with `revise: D<n>` in a comment.
 
 ## Considered and not done
@@ -170,7 +170,7 @@ repeats these.
 | R5 | **Consistency.** Patterns, UI, APIs, and tests match the repo's existing exemplars. | MAJOR | Diff against neighboring code; manifest review-inputs name the exemplars |
 | R6 | **Tests catch bugs, not mirror implementation.** Each behavioral change has a test that would fail on a real regression; assertions check behavior, not internal call patterns; no tautological tests. | BLOCKER | Invert each new test mentally: would plausible bugs pass it? |
 
-Severity calibration and finding format reuse the `review-code` conventions
+Severity calibration and finding format reuse the code-review skill's conventions
 (Blocker/Critical/Major/Minor/Nit). Common-rule severities above are floors,
 not ceilings.
 

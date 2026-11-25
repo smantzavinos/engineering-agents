@@ -35,8 +35,8 @@ on the item. The dispatch contract is §7 of
    [task-tracking.md](docs/references/task-tracking.md#definition-of-ready):
    understandable problem, concrete outcome, scope boundary, constraints or
    non-goals, verification intent, unresolved decisions called out. Fill
-   gaps yourself from the sources (`software-development` "Decide, don't
-   ask": repo, history, specs, docs) and record them
+   gaps yourself from the sources ("Decide, don't ask" in
+   `docs/references/owner-policy.md`: repo, history, specs, docs) and record them
    in the marker's hidden `decided="…"` attribute; a gap the sources answer
    does not make the item unready.
 3. **Fill empty fields** with the repo's exact values; never change a field
