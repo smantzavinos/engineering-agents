@@ -5,7 +5,8 @@
 # pickup order, dead-session retry bound.
 # Requirement: FR-001
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
+ROOT="$(repo_root)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PY="$(command -v python3 || true)"
 if [[ -z "$PY" ]]; then echo "  FAIL: python3 not on PATH (run inside nix develop)" >&2; exit 1; fi
@@ -319,8 +320,38 @@ OUT="$(env -u PIPELINE_OWNERS PIPELINE_DRY=1 PIPELINE_REPO=o/r PIPELINE_LIST_CMD
 check  "$OUT" "PIPELINE_OWNERS" "config: a missing owner allowlist is an error, not open access"
 check  "$OUT" "PIPELINE_CHECKOUT" "config: a missing checkout is an error, not the current directory"
 
-# Unit tests for the decisions behind this flow (tests/scripts/test_pipeline_*.py).
-for t in test_pipeline_triage_markers test_pipeline_runtime; do
+# A T3 record follows the same work retry path as the Hermes records above.
+T3_FIXTURE="$ROOT/tests/spec-fixtures/session-launcher"
+echo "[$(item 40 'In progress' Execute),$(item 41 'Up next')]" > "$TMP/items-t3.json"
+for state in live unknown asked; do
+  STATE="$TMP/t3-$state"
+  mkdir -p "$STATE"
+  echo '{"kind":"work","item":40,"ts":0,"tag":"w40-t3","pid":"t3:thread-test","stage":"Execute","reason":"start"}' > "$STATE/dispatches.jsonl"
+  RC=0; OUT="$(run work ITEMS="$TMP/items-t3.json" PIPELINE_STATE="$STATE" PR_SWEEP_STATE="$TMP/none" \
+    PIPELINE_WIP=3 PIPELINE_FORCE=1 PIPELINE_LAUNCHER=t3 T3_BIN="$T3_FIXTURE/t3" \
+    PATH="$T3_FIXTURE:$PATH" HERMES_BIN="$TMP/not-hermes" T3_TEST_STATE="$state" 2>&1)" || RC=$?
+  case "$state" in
+    live|unknown) refute "$OUT" 'would spawn work for #40' "T3 $state: running work is not retried" ;;
+    asked) check "$OUT" 'would spawn work for #40' 'T3 asked: the dispatch is eligible for retry' ;;
+  esac
+  case "$state" in
+    live) check "rc=$RC;" 'rc=0;' 'T3 live: tick succeeds' ;;
+    unknown)
+      check "rc=$RC;" 'rc=1;' 'T3 unknown: tick exits 1'
+      check "$(grep -Fi 'T3' <<<"$OUT" || true)" 'connection refused' 'T3 unknown: the reason names T3 and includes its diagnostic'
+      check "$OUT" 'would spawn work for #41' 'T3 unknown: other work is still processed'
+      ;;
+    asked)
+      WAIT_LINES="$(grep -F 'waiting for an answer' <<<"$OUT" || true)"
+      check "lines=$(grep -c . <<<"$WAIT_LINES" || true);" 'lines=1;' 'T3 asked: prints one waiting line'
+      check "$WAIT_LINES" 't3:thread-test' 'T3 asked: waiting line includes the handle'
+      check "$WAIT_LINES" 'https://example.test/threads/thread-test' 'T3 asked: waiting line includes the link'
+      ;;
+  esac
+done
+
+# Unit tests for the decisions behind this flow (including the shared launcher).
+for t in test_pipeline_triage_markers test_pipeline_runtime test_session_launcher; do
   if UOUT="$(cd "$ROOT/tests/scripts" && "$PY" -m unittest -q "$t" 2>&1)"; then
     PASS=$((PASS+1)); echo "  PASS: unit tests: $t ($(grep -Eo 'Ran [0-9]+ tests' <<<"$UOUT"))"
   else

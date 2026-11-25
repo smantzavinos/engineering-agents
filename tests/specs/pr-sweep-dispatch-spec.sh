@@ -6,7 +6,8 @@
 # Finer decisions are unit-tested in tests/scripts/.
 # Requirement: FR-001
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
+ROOT="$(repo_root)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -29,7 +30,14 @@ PY="$(command -v python3 || true)"
 if [[ -z "$PY" ]]; then echo "  FAIL: python3 not on PATH (run inside nix develop)" >&2; exit 1; fi
 run() { env -u GH_TOKEN PR_SWEEP_DRY=1 PR_SWEEP_REPOS=o/r PIPELINE_OWNERS=owner PIPELINE_BOT_LOGINS=agent PR_SWEEP_STATE="$TMP/state" GH_BIN="$TMP/gh" HERMES_HOME="$TMP" "$@" "$PY" "$ROOT/scripts/pr-sweep-dispatch.py"; }
 PASS=0 FAIL=0
-check() { if grep -Fq "$2" <<<"$1"; then PASS=$((PASS+1)); echo "  PASS: $3"; else FAIL=$((FAIL+1)); echo "  FAIL: $3 (missing: $2)" >&2; [[ -n "${SPEC_DEBUG:-}" ]] && printf "%s\n" "$1" >&2; fi; }
+check() {
+  if grep -Fq "$2" <<<"$1"; then
+    PASS=$((PASS+1)); echo "  PASS: $3"
+  else
+    FAIL=$((FAIL+1)); echo "  FAIL: $3 (missing: $2)" >&2
+    if [[ -n "${SPEC_DEBUG:-}" ]]; then printf '%s\n' "$1" >&2; fi
+  fi
+}
 refute() { if grep -Fq "$2" <<<"$1"; then FAIL=$((FAIL+1)); echo "  FAIL: $3 (unexpected: $2)" >&2; else PASS=$((PASS+1)); echo "  PASS: $3"; fi; }
 
 OUT="$(run)"
@@ -283,12 +291,42 @@ refute "$OUT" "would set o/r#10 label review-bot:queued" "resolve-only: a round 
 rm -rf "$TMP/state"
 
 
+# PR #2 is queued, with an in-flight review record at this head; PR #4 is independently due later in the tick.
+T3_FIXTURE="$ROOT/tests/spec-fixtures/session-launcher"
+for state in live unknown asked; do
+  STATE="$TMP/t3-$state"
+  mkdir -p "$STATE"
+  printf '{"ts":%s,"kind":"review","repo":"o/r","pr":2,"head":"2222222222222222222222222222222222222222","tag":"review-pr2-t3","pid":"t3:thread-test"}\n' \
+    "$(date +%s)" > "$STATE/dispatches.jsonl"
+  RC=0; OUT="$(run PR_SWEEP_STATE="$STATE" PIPELINE_STATE="$TMP/none" PIPELINE_FORCE=1 \
+    PIPELINE_LAUNCHER=t3 T3_BIN="$T3_FIXTURE/t3" PATH="$T3_FIXTURE:$PATH" \
+    HERMES_BIN="$TMP/not-hermes" T3_TEST_STATE="$state" 2>&1)" || RC=$?
+  case "$state" in
+    live|unknown) refute "$OUT" 'would spawn review for o/r#2' "T3 $state: running review is not retried" ;;
+    asked) check "$OUT" 'would spawn review for o/r#2' 'T3 asked: the dispatch is eligible for retry' ;;
+  esac
+  case "$state" in
+    live) check "rc=$RC;" 'rc=0;' 'T3 live: tick succeeds' ;;
+    unknown)
+      check "rc=$RC;" 'rc=1;' 'T3 unknown: tick exits 1'
+      check "$(grep -Fi 'T3' <<<"$OUT" || true)" 'connection refused' 'T3 unknown: the reason names T3 and includes its diagnostic'
+      check "$OUT" 'would spawn review for o/r#4' 'T3 unknown: another PR is still processed'
+      ;;
+    asked)
+      WAIT_LINES="$(grep -F 'waiting for an answer' <<<"$OUT" || true)"
+      check "lines=$(grep -c . <<<"$WAIT_LINES" || true);" 'lines=1;' 'T3 asked: prints one waiting line'
+      check "$WAIT_LINES" 't3:thread-test' 'T3 asked: waiting line includes the handle'
+      check "$WAIT_LINES" 'https://example.test/threads/thread-test' 'T3 asked: waiting line includes the link'
+      ;;
+  esac
+done
+
 # Both prompt templates must render with the placeholders spawn() supplies (a stray brace would
 # crash every dispatch, and DRY mode never renders them).
 if "$PY" - "$ROOT/scripts/pr-sweep-prompts" <<'PYEOF'
 import sys, pathlib
 kw = dict(repo="o/r", number=1, head="a" * 40, short_head="aaaaaaa", title="t", branch="b", checkout="/c",
-          hermes="h", handle="@agent", result_file="/r", tag="t", artifacts_dir="/a", scripts_dir="/s",
+          hermes="h", rename_step="", handle="@agent", result_file="/r", tag="t", artifacts_dir="/a", scripts_dir="/s",
           merge_state="CLEAN", merge_status="MERGEABLE", base_branch="main", base_sha="b" * 40,
           integrate_strategy="merge", signing="unknown", fix_loops=0, fix_loop_cap=3, bot_rounds=0, bot_cap=5,
           trigger="owner request", trusted_logins="owner, agent", comment_id=92)

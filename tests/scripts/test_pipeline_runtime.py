@@ -99,6 +99,20 @@ class LiveAuthors(unittest.TestCase):
         live = rt.live_authors([pipe, pr, tmp() / 'missing'], lambda pid: pid != 13)
         self.assertEqual(live, {11: 'coding', 12: 'maintenance', 21: 'maintenance'})
 
+    def test_keeps_t3_and_numeric_handles_as_ledger_keys(self):
+        with tempfile.TemporaryDirectory() as state:
+            records = (
+                {'kind': 'work', 'item': 1, 'reason': 'start', 'pid': 't3:work-thread'},
+                {'kind': 'babysit', 'pr': 9, 'pid': 't3:fix-thread'},
+                {'kind': 'work', 'item': 2, 'reason': 'resume', 'pid': 12},
+                {'kind': 'work', 'item': 3, 'reason': 'resume', 'pid': '13'},
+            )
+            (pathlib.Path(state) / 'dispatches.jsonl').write_text(
+                '\n'.join(map(json.dumps, records)), encoding='utf-8')
+            self.assertEqual(rt.live_authors([state], lambda _: True),
+                             {'t3:work-thread': 'coding', 't3:fix-thread': 'maintenance',
+                              12: 'maintenance', '13': 'maintenance'})
+
 
 class Repositories(unittest.TestCase):
     def test_one_repository_without_a_map(self):

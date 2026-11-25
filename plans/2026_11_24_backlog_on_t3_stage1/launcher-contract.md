@@ -52,6 +52,12 @@ The handle says which launcher made it, whatever `PIPELINE_LAUNCHER` is now.
   `hermes`, else `dead` (today's rule).
 - `t3:<thread id>`: one `<T3_BIN> thread show --json <thread id>` call.
 
+The command prints one JSON object with the thread's fields under `thread`
+(checked on T3 v0.1.10):
+`{"thread": {"status": …, "pendingRequestCount": …, "pendingBackgroundTasks": […], "blockedOnThreadWait": …, "link": …}, "messages": […]}`.
+Output without a `thread` object that has a `status` is not an answer:
+`unknown`.
+
 | `thread show` gives | state |
 |---|---|
 | `status` `preparing`, `queued`, `starting` or `running` | `live` |

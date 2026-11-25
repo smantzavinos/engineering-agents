@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Fake CLI for dispatcher dry runs. Requirement: FR-001
+set -euo pipefail
+if [[ "$#" != 4 || "$*" != 'thread show --json thread-test' ]]; then
+  echo "unexpected dry-run command: $*" >&2
+  exit 2
+fi
+case "$T3_TEST_STATE" in
+  live) echo '{"thread":{"status":"running"},"messages":[]}' ;;
+  unknown) echo 'transport: connection refused' >&2; exit 1 ;;
+  asked) echo '{"thread":{"status":"waiting","pendingRequestCount":1,"link":"https://example.test/threads/thread-test"},"messages":[]}' ;;
+  *) echo "unexpected test state: $T3_TEST_STATE" >&2; exit 2 ;;
+esac

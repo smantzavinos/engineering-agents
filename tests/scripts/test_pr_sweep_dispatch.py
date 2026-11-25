@@ -3,12 +3,14 @@
 Replaces the claimState checks that lived with the retired monitor script.
 Requirement: FR-001
 """
+import contextlib
 import importlib.util
 import json
 import os
 import pathlib
 import tempfile
 import unittest
+from typing import Any
 from unittest import mock
 
 os.environ.setdefault("PR_SWEEP_REPOS", "o/r")
@@ -21,7 +23,9 @@ os.environ["PR_SWEEP_STATE"] = tempfile.mkdtemp(prefix="pr-sweep-test-state-")
 os.environ.setdefault("HERMES_HOME", tempfile.mkdtemp(prefix="pr-sweep-dispatch-test-"))
 _PATH = pathlib.Path(__file__).resolve().parents[2] / "scripts" / "pr-sweep-dispatch.py"
 _spec = importlib.util.spec_from_file_location("dispatch", _PATH)
-d = importlib.util.module_from_spec(_spec)
+if _spec is None or _spec.loader is None:
+    raise ImportError(str(_PATH))
+d: Any = importlib.util.module_from_spec(_spec)  # dynamic module with dispatcher globals
 _spec.loader.exec_module(d)
 
 NOW = 1767268800.0  # 2026-01-01T12:00:00Z
@@ -352,6 +356,43 @@ class ReportedLedger(unittest.TestCase):
         self.assertEqual(rebuilt, {"old.json"})  # result files are recovered...
         self.assertFalse(any(k.split(":")[0] in ("stuck", "ci", "fails", "botcap") for k in rebuilt),
                          "synthetic one-shot keys must not be reconstructible from result files")
+
+
+class ReviewPrompt(unittest.TestCase):
+    def render_via_spawn(self, launcher):
+        # The dry-run spawn path does not render. Exercise the real path with only
+        # local stand-ins for the executables and a scratch checkout and state.
+        with tempfile.TemporaryDirectory() as state:
+            root = pathlib.Path(state)
+            t3 = root / 't3'
+            t3.write_text('#!/bin/sh\ncat >/dev/null\nprintf \'{"threadId":"prompt-test"}\\n\'\n')
+            t3.chmod(0o755)
+            hermes = root / 'hermes'
+            hermes.symlink_to(t3)
+            env = {'T3_BIN': str(t3), 'PATH': f'{root}{os.pathsep}{os.environ["PATH"]}'}
+            if launcher:
+                env['PIPELINE_LAUNCHER'] = launcher
+            with (mock.patch.dict(d.ENV, env, clear=True),
+                  mock.patch.multiple(d, DRY=False, HERMES=str(hermes), LOGS=root / 'logs',
+                                      RESULTS=root / 'results', CHECKOUTS={'o/r': state})):
+                pid, tag = d.spawn('review', 'o/r', {'number': 17, 'title': 'test', 'headRefName': 'b'},
+                                   'abc1234' + '0' * 33, '', '', '')
+                if isinstance(pid, int):
+                    with contextlib.suppress(ChildProcessError):  # Popen may already have reaped it.
+                        os.waitpid(pid, 0)
+                return (d.LOGS / f'{tag}.prompt.md').read_text(encoding='utf-8'), str(hermes)
+
+    def test_default_hermes_preserves_review_prompt_ending(self):
+        prompt, hermes = self.render_via_spawn(None)
+        ending = (f'Last step: run `{hermes} sessions list --source pr-automation --limit 20`, '
+                  'find the session titled `PR #17 review @abc1234 …`, '
+                  f'and rename it with `{hermes} sessions rename <id> "PR #17 review @abc1234 — <VERDICT>"`. '
+                  'Your final chat response is a one-line summary.')
+        self.assertTrue(prompt.rstrip().endswith(ending), prompt.splitlines()[-1])
+
+    def test_t3_review_prompt_has_no_hermes_session_rename(self):
+        prompt, _ = self.render_via_spawn('t3')
+        self.assertFalse('sessions rename' in prompt, 'T3 review prompt still asks for a Hermes session rename')
 
 
 class BoardRepositories(unittest.TestCase):
