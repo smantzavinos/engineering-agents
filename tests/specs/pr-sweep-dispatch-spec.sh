@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dry-run smoke test for scripts/pr-sweep-dispatch.py against a fake `gh`.
+# Dispatcher tests for scripts/pr-sweep-dispatch.py against fake gh and T3 CLIs.
 # Proves the PR label flow in docs/hermes/pr-automation.md: opt-in ignores unlabeled PRs;
 # review-bot:queued dispatches a review; a push after a passed review re-queues it; legacy pr:* labels
 # are renamed; Copilot-review rounds, CI gate, owner commands, resolve-only re-review, prompt rendering.
@@ -11,6 +11,16 @@ ROOT="$(repo_root)"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/gh" <<'EOF'
 #!/usr/bin/env bash
+if [[ -n "${T3_TEST_MUTATIONS:-}" ]]; then
+  case " $* " in *' -X POST '*|*' -X DELETE '*|*' -X PATCH '*) echo "$*" >> "$T3_TEST_MUTATIONS" ;; esac
+  # Only PR #2 participates in the non-dry launcher scenarios.
+  if [[ "$*" == 'pr list '* ]]; then
+    labels='[]'
+    [[ "${T3_TEST_DUE:-1}" == 0 ]] || labels='[{"name":"review-bot:queued"}]'
+    printf '[{"number":2,"title":"wants review","headRefName":"b","headRefOid":"2222222222222222222222222222222222222222","labels":%s,"isDraft":false}]\n' "$labels"
+    exit 0
+  fi
+fi
 case "$*" in
   "pr list"*) cat <<'J'
 [{"number":1,"title":"unlabeled","headRefName":"a","headRefOid":"1111111111111111111111111111111111111111","labels":[],"isDraft":false},
@@ -320,6 +330,28 @@ for state in live unknown asked; do
       ;;
   esac
 done
+
+# Non-dry PR #2 review, against a configured checkout distinct from the other repository.
+T3_HEAD=2222222222222222222222222222222222222222
+t3_tick() {
+  run PR_SWEEP_DRY="${T3_DRY:-}" PR_SWEEP_STATE="$T3_STATE" PIPELINE_STATE="$TMP/no-pipeline-sessions" \
+    PIPELINE_REPO=o/r PIPELINE_REPOSITORIES="{\"o/r\":{\"checkout\":\"$T3_CHECKOUT\"},\"o/else\":{\"checkout\":\"$T3_OTHER\"}}" \
+    PR_SWEEP_UNLABELED=ignore "$@"
+}
+t3_seed_session() {
+  printf '{"ts":%s,"kind":"review","repo":"o/r","pr":2,"head":"%s","tag":"review-old","pid":"t3:thread-test"}\n' \
+    "$(date +%s)" "$T3_HEAD" > "$T3_STATE/dispatches.jsonl"
+}
+t3_seed_result() {
+  # A STALE round need not list verification logs, and #99 no longer appears in the open PR list.
+  printf '{"ts":0,"kind":"review","repo":"o/r","pr":99,"head":"%s","tag":"review-finished","pid":0}\n' \
+    "$T3_HEAD" > "$T3_STATE/dispatches.jsonl"
+  printf '{"kind":"review","repo":"o/r","pr":99,"head":"%s","verdict":"STALE","summary":"finished before outage"}\n' \
+    "$T3_HEAD" > "$T3_STATE/results/review-finished.json"
+}
+t3_expected_title() { printf 'PR #2 review @2222222 o/r'; }
+source "$ROOT/tests/lib/t3-dispatch-cases.sh"
+t3_flow_cases
 
 # Both prompt templates must render with the placeholders spawn() supplies (a stray brace would
 # crash every dispatch, and DRY mode never renders them).

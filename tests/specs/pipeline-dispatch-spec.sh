@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Dry-run tests for scripts/pipeline-dispatch.py against a fake tracker and a fake `gh`.
+# Dispatcher tests against a fake tracker, fake `gh`, and fake T3 CLI.
 # Proves the dispatch contract in docs/references/delivery-pipeline.md §7: triage selection,
 # reply grammar and owner allowlist, consumed replies, discuss parking, reject, WIP limit,
 # pickup order, dead-session retry bound.
@@ -22,6 +22,9 @@ chmod +x "$TMP/list"
 cat > "$TMP/gh" <<'EOF'
 #!/usr/bin/env bash
 d="$(dirname "$0")"
+if [[ -n "${T3_TEST_MUTATIONS:-}" ]]; then
+  case " $* " in *' -X POST '*|*' -X DELETE '*|*' -X PATCH '*) echo "$*" >> "$T3_TEST_MUTATIONS" ;; esac
+fi
 case "$*" in
   *"issues/"*"/comments"*) n="$(sed -E 's#.*issues/([0-9]+)/comments.*#\1#' <<<"$*")"; printf '['; cat "$d/c$n.json" 2>/dev/null || printf '[]'; printf ']\n' ;;
   *"issues/"*"/labels"*)   n="$(sed -E 's#.*issues/([0-9]+)/labels.*#\1#' <<<"$*")";   cat "$d/l$n.json" 2>/dev/null || echo '[]' ;;
@@ -349,6 +352,32 @@ for state in live unknown asked; do
       ;;
   esac
 done
+
+# Non-dry triage, with the same fake tracker and gh as the dry scenarios.
+cat > "$TMP/t3-move" <<'EOF'
+#!/usr/bin/env bash
+printf 'tracker move: %s\n' "$*" >> "$T3_TEST_MUTATIONS"
+EOF
+chmod +x "$TMP/t3-move"
+# A due Inbox card and an answered clarification, which a healthy tick moves back to Inbox.
+echo "[$(item 42 Inbox),$(item 43 'Your turn')]" > "$TMP/items-t3-triage.json"
+echo '[{"id":430,"user":{"login":"agent"},"body":"q? <!-- triage outcome=clarify -->"},{"id":431,"user":{"login":"owner"},"body":"@agent answer: use SQLite"}]' > "$TMP/c43.json"
+t3_tick() {
+  local items="$TMP/items-t3-triage.json"
+  if [[ "${T3_TEST_DUE:-1}" == 0 ]]; then items="$TMP/items-empty.json"; fi
+  run triage PIPELINE_DRY="${T3_DRY:-}" PIPELINE_STATE="$T3_STATE" PIPELINE_CHECKOUT="$T3_CHECKOUT" \
+    PIPELINE_MOVE_CMD="$TMP/t3-move move {number} {status}" ITEMS="$items" "$@"
+}
+t3_seed_session() {
+  echo '{"kind":"triage","items":[42],"ts":0,"tag":"triage-old","pid":"t3:thread-test"}' > "$T3_STATE/dispatches.jsonl"
+}
+t3_seed_result() {
+  echo '{"kind":"triage","items":[99],"ts":0,"tag":"triage-finished","pid":0}' > "$T3_STATE/dispatches.jsonl"
+  echo '{"kind":"triage","items":[99],"outcomes":{"99":"ready"},"summary":"finished before outage"}' > "$T3_STATE/results/triage-finished.json"
+}
+t3_expected_title() { printf 'Backlog triage o/r %s' "$1"; }
+source "$ROOT/tests/lib/t3-dispatch-cases.sh"
+t3_flow_cases
 
 # Unit tests for the decisions behind this flow (including the shared launcher).
 for t in test_pipeline_triage_markers test_pipeline_runtime test_session_launcher; do

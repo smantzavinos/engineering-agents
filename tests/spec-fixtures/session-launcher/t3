@@ -1,13 +1,34 @@
 #!/usr/bin/env bash
-# Fake CLI for dispatcher dry runs. Requirement: FR-001
+# Fake CLI for dispatcher specs. Requirement: FR-001
 set -euo pipefail
-if [[ "$#" != 4 || "$*" != 'thread show --json thread-test' ]]; then
-  echo "unexpected dry-run command: $*" >&2
-  exit 2
+if [[ -n "${T3_TEST_TRACE:-}" ]]; then
+  { printf '%s\t' "$@"; printf '\n'; } >> "$T3_TEST_TRACE"
 fi
-case "$T3_TEST_STATE" in
-  live) echo '{"thread":{"status":"running"},"messages":[]}' ;;
-  unknown) echo 'transport: connection refused' >&2; exit 1 ;;
-  asked) echo '{"thread":{"status":"waiting","pendingRequestCount":1,"link":"https://example.test/threads/thread-test"},"messages":[]}' ;;
-  *) echo "unexpected test state: $T3_TEST_STATE" >&2; exit 2 ;;
+server_available() {
+  if [[ "${T3_TEST_SERVER:-up}" == down ]]; then
+    echo 'No running T3 Code server uses the test home' >&2
+    exit 1
+  fi
+}
+case "$*" in
+  'thread list --json --project '*) server_available; echo '[]' ;;
+  'thread start --json '*)
+    cat > "$T3_TEST_TRACE.prompt"
+    server_available
+    echo '{"threadId":"thread-started","projectId":"project-test","runId":"run-test"}'
+    ;;
+  'thread show --json thread-test')
+    case "$T3_TEST_STATE" in
+      live) echo '{"thread":{"status":"running"},"messages":[]}' ;;
+      dead) echo '{"thread":{"status":"completed"},"messages":[]}' ;;
+      unknown) echo 'transport: connection refused' >&2; exit 1 ;;
+      asked|asked-waiting)
+        status=running
+        [[ "$T3_TEST_STATE" != asked-waiting ]] || status=waiting
+        printf '{"thread":{"status":"%s","pendingRequestCount":1,"link":"https://example.test/threads/thread-test"},"messages":[]}\n' "$status"
+        ;;
+      *) echo "unexpected test state: $T3_TEST_STATE" >&2; exit 2 ;;
+    esac
+    ;;
+  *) echo "unexpected T3 command: $*" >&2; exit 2 ;;
 esac

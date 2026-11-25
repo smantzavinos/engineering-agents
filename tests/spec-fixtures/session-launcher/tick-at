@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Run a dispatcher tick at a fixed clock time, without waiting out the notice TTL.
+
+Requirement: FR-001
+"""
+import os
+import runpy
+import sys
+from unittest import mock
+
+sys.argv.pop(0)
+now = int(os.environ['T3_TEST_NOW'])
+with mock.patch('time.time', return_value=now):
+    runpy.run_path(sys.argv[0], run_name='__main__')

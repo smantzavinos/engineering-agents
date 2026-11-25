@@ -21,7 +21,7 @@ LINK = 'https://example.test/threads/thread-test'
 # The CLI stub reads canned replies beside itself, so probes need not pass their
 # configuration mapping as the child environment. Only `start` reads stdin.
 FAKE_SESSION = r'''
-import json, os, pathlib, select, subprocess, sys
+import json, os, pathlib, select, signal, subprocess, sys
 
 root = pathlib.Path(__file__).resolve().parent
 args = sys.argv[1:]
@@ -44,7 +44,9 @@ if is_hermes:
     print('Hermes stderr', file=sys.stderr)
 else:
     reply = json.loads((root / 'reply.json').read_text())
-    print(reply['output'], file=sys.stderr if reply['code'] else sys.stdout)
+    print(reply['output'], file=sys.stderr if reply['code'] else sys.stdout, flush=True)
+    if reply['hang']:
+        signal.pause()  # The launcher's deadline terminates the child.
     sys.exit(reply['code'])
 '''
 
@@ -96,10 +98,10 @@ class LauncherContract(unittest.TestCase):
         self.log = self.root / 'session.log'
         self.reply({'threadId': 'thread-test'})
 
-    def reply(self, output, code=0):
-        if isinstance(output, dict):
+    def reply(self, output, code=0, *, hang=False):
+        if isinstance(output, (dict, list)):
             output = json.dumps(output)
-        (self.root / 'reply.json').write_text(json.dumps({'output': output, 'code': code}))
+        (self.root / 'reply.json').write_text(json.dumps({'output': output, 'code': code, 'hang': hang}))
 
     def calls(self):
         path = self.root / 'calls.jsonl'
@@ -147,6 +149,11 @@ class LauncherContract(unittest.TestCase):
         fallback.unlink()
         fallback.symlink_to(self.t3)
         self.assertEqual(self.launch(env={'PIPELINE_LAUNCHER': 't3'}), 't3:thread-test')
+
+    def test_t3_start_accepts_a_notice_before_the_json(self):
+        self.reply('Notice: update available\n{"threadId":"thread-test","projectId":"p","runId":"r"}\n')
+        self.assertEqual(self.launch(), 't3:thread-test')
+        self.assertIn('Notice: update available', self.log.read_text(encoding='utf-8'))
 
     def test_t3_start_raises_with_output_tail_even_if_failure_has_an_id(self):
         for output, code, tail in (({'threadId': 'unusable', 'error': 'could not start'}, 7, 'could not start'),
@@ -204,6 +211,42 @@ class LauncherContract(unittest.TestCase):
                         self.finish_hermes(handle)
                     self.fail('launch succeeded after the local git config write failed')
 
+    def check_launcher(self, env):
+        check = getattr(self.launcher, 'check', None)
+        assert callable(check), 'session_launcher.check is required by the launcher contract'
+        return check(env, self.checkout)
+
+    def test_hermes_check_returns_without_calling_t3(self):
+        self.assertIsNone(self.check_launcher({**self.env, 'PIPELINE_LAUNCHER': 'hermes'}))
+        self.assertEqual(self.calls(), [])
+
+    def test_t3_check_lists_threads_for_the_given_project(self):
+        self.reply([])
+        self.assertIsNone(self.check_launcher(self.env))
+        self.assertEqual([c['argv'] for c in self.calls()],
+                         [['thread', 'list', '--json', '--project', str(self.checkout)]])
+
+    def assert_check_error(self, env, tail=''):
+        with self.assertRaises(RuntimeError) as failure:
+            self.check_launcher(env)
+        self.assertRegex(str(failure.exception), r'(?i)\bT3\b')
+        if tail:  # A missing executable has no child output.
+            self.assertIn(tail, str(failure.exception))
+
+    def test_t3_check_reports_nonzero_exit_with_output_tail(self):
+        tail = 'No running T3 Code server uses this home'
+        self.reply('earlier diagnostic\n' * 100 + tail, code=1)
+        self.assert_check_error(self.env, tail)
+
+    def test_t3_check_reports_missing_binary(self):
+        missing = self.root / 'missing-cli'
+        self.assert_check_error({**self.env, 'T3_BIN': str(missing)})
+
+    def test_t3_check_reports_timeout_with_output_tail(self):
+        self.reply('last readiness diagnostic', hang=True)
+        with mock.patch.object(self.launcher, 'T3_TIMEOUT', 2):
+            self.assert_check_error(self.env, 'last readiness diagnostic')
+
     def assert_probe(self, env, handle, state, link='', detail: str | None = ''):
         result = self.launcher.probe(env, handle)
         self.assertEqual(result['state'], state)
@@ -216,11 +259,13 @@ class LauncherContract(unittest.TestCase):
         self.assertIs(self.launcher.alive(env, handle), state in ('live', 'unknown'))
 
     def test_t3_status_table_uses_the_handle_not_the_configured_launcher(self):
-        rows = [({'status': s}, 'live') for s in ('preparing', 'queued', 'starting', 'running')]
-        rows += [({'status': s}, 'dead') for s in
-                 ('completed', 'failed', 'interrupted', 'cancelled', 'idle', 'unlisted')]
+        active = ('preparing', 'queued', 'starting', 'running')
+        finished = ('completed', 'failed', 'interrupted', 'cancelled', 'idle', 'unlisted')
+        rows = [({'status': s}, 'live') for s in active]
+        rows += [({'status': s, 'pendingRequestCount': 1}, 'asked') for s in (*active, 'waiting')]
+        rows += [({'status': s, 'pendingRequestCount': count}, 'dead')
+                 for s in finished for count in (0, 1)]
         rows += [({'status': 'waiting', **fields}, expected) for fields, expected in (
-            ({'pendingRequestCount': 1}, 'asked'),
             ({'pendingRequestCount': 1, 'pendingBackgroundTasks': ['task'], 'blockedOnThreadWait': True}, 'asked'),
             ({'pendingBackgroundTasks': ['task']}, 'live'),
             ({'blockedOnThreadWait': True}, 'live'),
@@ -248,9 +293,8 @@ class LauncherContract(unittest.TestCase):
         self.assert_probe(env, 't3:missing-bin', 'unknown', detail=None)
 
     def test_t3_timeout_is_unknown(self):
-        # Inject the CLI timeout rather than waiting for its (unspecified) duration.
-        with mock.patch('subprocess.run', side_effect=subprocess.TimeoutExpired(
-                [str(self.t3), 'thread', 'show', '--json', 'timeout'], 1, output=b'last output')):
+        self.reply('last output', hang=True)
+        with mock.patch.object(self.launcher, 'T3_TIMEOUT', 2):
             self.assert_probe(self.env, 't3:timeout', 'unknown', detail='last output')
 
     def test_numeric_handles_follow_proc_even_with_t3_configured(self):
@@ -258,7 +302,8 @@ class LauncherContract(unittest.TestCase):
             # The child says when it runs: just after exec, /proc/<pid>/cmdline can still read empty.
             with subprocess.Popen([sys.executable, '-c', 'import sys; print("up", flush=True); sys.stdin.read()', marker],
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE) as child:
-                child.stdout.readline()
+                assert child.stdout is not None
+                self.assertEqual(child.stdout.readline(), b'up\n')
                 for handle in (child.pid, str(child.pid)):
                     with self.subTest(handle=handle, marker=marker):
                         self.assert_probe(self.env, handle, state)
