@@ -60,6 +60,18 @@ def fresh_lines(state_dir, key, lines, ttl=DEDUPE_TTL, now=None):
     return fresh
 
 
+def asked_notices(reported, notices, *, dry):
+    """Return waiting notices once per handle, independently of the link or error TTL."""
+    lines = []
+    for handle, line in notices.items():
+        key = f'asked:{handle}'
+        if dry or key not in reported:
+            lines.append(line)
+            if not dry:
+                reported.add(key)
+    return lines
+
+
 def duration(seconds):
     minutes = int(seconds // 60)
     if minutes < 60:

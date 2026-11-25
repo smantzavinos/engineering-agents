@@ -55,6 +55,23 @@ def _timeout_output(exc: subprocess.TimeoutExpired) -> str:
                      for part in (exc.stdout, exc.stderr) if part)
 
 
+def check(env: Env, checkout: Path) -> None:
+    """Check that T3 can reach the project before the tick changes anything there."""
+    if kind(env) == "hermes":
+        return
+    try:
+        result = subprocess.run(_t3(env, "list") + ["--project", os.fspath(checkout)], stdin=subprocess.DEVNULL,
+                                capture_output=True, encoding="utf-8", errors="replace",
+                                timeout=T3_TIMEOUT, env={**os.environ, **env})
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"T3 readiness check timed out: {_tail(_timeout_output(e)) or e}") from e
+    except OSError as e:
+        raise RuntimeError(f"T3 readiness check failed: {e}") from e
+    if result.returncode:
+        detail = _tail(result.stdout + result.stderr) or f"exit {result.returncode}"
+        raise RuntimeError(f"T3 readiness check failed: {detail}")
+
+
 def launch(env: Env, *, hermes_argv: Sequence[str], prompt_file: Path, title: str,
            checkout: Path, log_file: Path, cwd: Path | None = None, model: str = "",
            provider: str = "", child_env: Env | None = None) -> Handle:
@@ -88,10 +105,15 @@ def launch(env: Env, *, hermes_argv: Sequence[str], prompt_file: Path, title: st
             raise RuntimeError(f"T3 thread start timed out: {_tail(output) or e}") from e
         output = result.stdout + result.stderr
         log.write(output)
-    thread_id = _json_object(result.stdout).get("threadId") if result.returncode == 0 else None
-    if not isinstance(thread_id, str) or not thread_id.strip():
-        raise RuntimeError(f"T3 thread start failed: {_tail(output) or f'exit {result.returncode}, no threadId'}")
-    return "t3:" + thread_id
+    if result.returncode == 0:
+        # The response is the final JSON object; stdout may start with notices.
+        lines = result.stdout.splitlines()
+        for i in range(len(lines) - 1, -1, -1):
+            if lines[i].lstrip().startswith("{"):
+                thread_id = _json_object("\n".join(lines[i:])).get("threadId")
+                if isinstance(thread_id, str) and thread_id.strip():
+                    return "t3:" + thread_id
+    raise RuntimeError(f"T3 thread start failed: {_tail(output) or f'exit {result.returncode}, no threadId'}")
 
 
 def _probe_t3(env: Env, thread_id: str) -> Probe:
@@ -113,14 +135,13 @@ def _probe_t3(env: Env, thread_id: str) -> Probe:
         return reply
     if result.returncode or not isinstance(status, str) or not status:
         return Probe(state="unknown", link=reply["link"], detail=_tail(output) or f"exit {result.returncode}, no thread status")
-    if status in ("preparing", "queued", "starting", "running"):
+    active = status in ("preparing", "queued", "starting", "running")
+    count = thread.get("pendingRequestCount")
+    if (active or status == "waiting") and isinstance(count, int) and count > 0:
+        reply["state"] = "asked"
+    elif active or (status == "waiting" and (thread.get("pendingBackgroundTasks")
+                                            or thread.get("blockedOnThreadWait") is True)):
         reply["state"] = "live"
-    elif status == "waiting":
-        count = thread.get("pendingRequestCount")
-        if isinstance(count, int) and count > 0:
-            reply["state"] = "asked"
-        elif thread.get("pendingBackgroundTasks") or thread.get("blockedOnThreadWait") is True:
-            reply["state"] = "live"
     return reply
 
 

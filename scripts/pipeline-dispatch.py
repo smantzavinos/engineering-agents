@@ -209,6 +209,7 @@ MOVED = {}  # item -> status this tick moved it to (the next tick's baseline)
 
 out = []  # lines delivered to the human
 err_out = []  # failure lines: delivered once per pipeline_runtime.DEDUPE_TTL while they repeat
+asked_lines: dict[session_launcher.Handle, str] = {}  # one diagnostic per waiting session
 probe_errors: dict[session_launcher.Handle, str] = {}  # stopped reasons, reported after the tick's work
 
 
@@ -590,9 +591,8 @@ def add_label(n, label):
 def alive(pid):
     reply = session_launcher.probe(ENV, pid, None if DRY else STATE)
     if reply["state"] == "asked":
-        line = f"⚠️ Session {pid} is waiting for an answer, so it counts as failed: {reply['link']}".rstrip(": ")
-        if line not in err_out:
-            err_out.append(line)
+        asked_lines[pid] = (f"⚠️ Session {pid} is waiting for an answer, so it counts as failed: "
+                            f"{reply['link']}").rstrip(": ")
     elif reply["state"] == "unknown":
         probe_errors[pid] = f"T3 could not check {pid}: {reply['detail']}"
     return reply["state"] in ("live", "unknown")
@@ -1302,10 +1302,13 @@ def main(argv):
     health = STATE / "health" / job  # stopped record and repeat filter of this job
     stop = ""
     ran = False
+    asked_lines.clear()
     probe_errors.clear()
     try:
         session_launcher.kind(ENV)
         deliver(reported)
+        if not DRY:
+            session_launcher.check(ENV, CHECKOUT)
         if not pipeline_runtime.quiet_now(ENV, job):  # quiet hours: results still arrive, no session starts
             ran = True
             items = list_items()
@@ -1323,18 +1326,19 @@ def main(argv):
     if probe_errors:
         code = 1
         stop = "; ".join(([stop] if stop else []) + list(probe_errors.values()))
+    notices = pipeline_runtime.asked_notices(reported, asked_lines, dry=DRY)
     if not DRY:
         tmp = REPORTED.with_suffix(".tmp")
         tmp.write_text(json.dumps(sorted(reported)))
         os.replace(tmp, REPORTED)  # atomic: a failed write never truncates the record
     if DRY:
-        lines = out + err_out + ([stop] if code else [])
+        lines = out + err_out + notices + ([stop] if code else [])
     else:
         # Every tick failing: one plain alert, repeated hourly, then one line when it runs again.
         # A quiet tick ran nothing, so it proves no recovery.
         status = (pipeline_runtime.job_down(health, f"{job} dispatch", stop) if code
                   else pipeline_runtime.job_up(health, f"{job} dispatch") if ran else [])
-        lines = status + out + pipeline_runtime.fresh_lines(health, "errors", err_out)
+        lines = status + out + pipeline_runtime.fresh_lines(health, "errors", err_out) + notices
     if lines:
         print("\n".join(lines))
     return code

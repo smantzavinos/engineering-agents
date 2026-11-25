@@ -1336,16 +1336,20 @@ def main():
         quiet = True
         errors.append(f"PR sweep error: {e}")
         config_error = True
-    for repo in sorted(REPOS) if not quiet else ():
+    for repo in sorted(REPOS) if not config_error else ():
         try:
-            sweep_repo(repo, recs, reported)
+            if not DRY:
+                session_launcher.check(ENV, checkout_of(repo))
+            if not quiet:
+                sweep_repo(repo, recs, reported)
         except Exception as e:  # noqa: BLE001 — one repo failing must not starve the others
             errors.append(f"PR sweep error ({repo}): {e}")
+    notices = pipeline_runtime.asked_notices(reported, asked_lines, dry=DRY)
     if not DRY:
         save_reported(reported)
     failures = errors + list(probe_errors.values())
     if DRY:
-        lines = out + list(asked_lines.values()) + failures
+        lines = out + notices + failures
     else:
         # Every repository failing: one plain alert, repeated hourly, then one line when it runs again. A single
         # failing repository repeats its line at most once per pipeline_runtime.DEDUPE_TTL.
@@ -1354,8 +1358,7 @@ def main():
         down = bool(probe_errors) or config_error or (bool(errors) and len(errors) == len(REPOS))
         status = (pipeline_runtime.job_down(health, "PR sweep", "; ".join(failures)) if down
                   else [] if quiet else pipeline_runtime.job_up(health, "PR sweep"))
-        notices = list(asked_lines.values()) + ([] if down else errors)
-        lines = status + out + (pipeline_runtime.fresh_lines(health, "errors", notices) if notices or not down else [])
+        lines = status + out + notices + ([] if down else pipeline_runtime.fresh_lines(health, "errors", errors))
     if lines:
         print("\n".join(lines))
     return 1 if failures else 0
