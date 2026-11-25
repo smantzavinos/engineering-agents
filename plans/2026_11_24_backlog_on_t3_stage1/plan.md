@@ -131,6 +131,22 @@ Gates: `bash tests/specs/pipeline-dispatch-spec.sh`,
 `bash tests/specs/skill-render-spec.sh`, then `./tests/run-tests.sh fast`;
 a fresh review at the end.
 
+## Corrections after approval (review pass 1)
+
+Both keep what decisions 4 and 5 intend; the wording above is the approved
+text, and `launcher-contract.md` holds the corrected rules.
+
+- **Decision 4.** T3 keeps a run `running` while a question or an approval is
+  pending; only `pendingRequestCount` goes above 0. So "asked" is any
+  unfinished status with a pending request, not `waiting` alone. Without this
+  a session that asks would count as running for good.
+- **Decision 5.** The rule covered only the check of a running session. A tick
+  now also asks the server before its other work (`check`), so an outage
+  stops the job with the alert and uses up no retries. Without this, three
+  ticks of an outage would park every due PR for six hours.
+- **Decision 10.** The setup puts `GH_TOKEN` in a `secrets.env` that every
+  unit loads, not `GH_TOKEN_FILE`, which only the two dispatchers read.
+
 ## Not in this plan
 
 - Work items: the submodule worktree question and the Pi `work-item` bridge

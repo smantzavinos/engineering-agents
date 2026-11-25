@@ -22,7 +22,8 @@ which the owner does not want for bots that act on a team's board.
   `t3:<thread id>`. A thread that waits for an answer counts as a failed
   dispatch. When the server cannot be asked, the session counts as running and
   the tick reports a stopped job, so a server restart does not retry every
-  running session. The result file stays the only proof of a finished session.
+  running session. A tick asks the server before it does anything else, so an
+  outage uses up no retries. The result file stays the only proof of a finished session.
 - **Ticks are systemd timers**, not T3 scheduled tasks: a scheduled task starts
   a model turn on every run, and a tick must cost nothing when nothing is due.
 - **One T3 server per board**, with its own data directory, and clones only

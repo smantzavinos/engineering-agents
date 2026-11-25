@@ -199,15 +199,24 @@ not started twice.
 - **What waits for you** is on the board (`Your turn`) and in the PR labels, as
   with Hermes. Every session is a thread in the board's server, titled with
   its item or PR; open the server's address to read or steer one.
-- **A session that asks a question** counts as failed. The tick prints one
-  line with the thread link, and the usual retry rules apply.
-- **Server down or unreachable:** the sessions the tick cannot ask about count
-  as running, so nothing is retried; the tick exits 1 and prints a stopped
-  alert, then one line when it works again.
+- **A session that asks a question** (or waits for a permission) counts as
+  failed. The first tick that sees it prints one line with the thread link,
+  once, and the usual retry rules apply. Answering it later in T3 lets that
+  thread finish; its result is still delivered.
+- **Server down, or a clone that is not a project in it:** each tick asks the
+  server first. When it cannot, the tick does nothing for that repository:
+  no label, no record, no retry used up. It exits 1 and prints a stopped
+  alert (repeated hourly), then one line when it works again. The same
+  happens when the server stops answering about one running session: that
+  session counts as running, so nothing is retried.
+- **Stopping a thread in T3 does not stop the bots:** the next tick counts the
+  session as failed and starts another under the usual retry rules. To take a
+  PR or an item away from the bots, use the labels and commands of the
+  pipeline.
 - **Failures** of a tick are in the journal only:
   `journalctl --user -u 'devbot-<board>-*' --since today`, and
   `systemctl --user list-timers 'devbot-*'` for the schedule.
 - **Stop everything:** `systemctl --user stop 'devbot-<board>-*.timer'`.
-  Running threads finish; stop one in the T3 server.
+  Threads that are running finish their work.
 - **Session records:** `state/*/dispatches.jsonl`, the prompt and launch output
   under `state/*/logs/`, the result under `state/*/results/`.
