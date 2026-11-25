@@ -1,0 +1,18 @@
+{
+  "repo": "globusmedical/proj-spine",
+  "project_owner": "globusmedical",
+  "project_number": 15,
+  "project_title": "Spine Backlog",
+  "repositories": {
+    "globusmedical/proj-spine": {
+      "checkout": "/home/spiros/devbot/proj-spine/repos/proj-spine",
+      "base": "main"
+    }
+  },
+  "owners": ["smantzavinos-globus"],
+  "bot_logins": ["smantzavinos-globus"],
+  "shared_account": true,
+  "handles": ["/devbot"],
+  "wip": 2,
+  "state_dir": "/home/spiros/devbot/proj-spine/state/board-sync"
+}

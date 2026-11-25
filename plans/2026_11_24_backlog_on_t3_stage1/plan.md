@@ -147,6 +147,29 @@ text, and `launcher-contract.md` holds the corrected rules.
 - **Decision 10.** The setup puts `GH_TOKEN` in a `secrets.env` that every
   unit loads, not `GH_TOKEN_FILE`, which only the two dispatchers read.
 
+## Step 5 results (2026-11-25)
+
+The owner said go for steps 5 and 6 on 2026-11-25.
+
+- **Board:** organization project `globusmedical` number 15, "Spine Backlog"
+  (https://github.com/orgs/globusmedical/projects/15), private, linked to
+  `globusmedical/proj-spine`. `gh-project.py fields` and `labels` ran;
+  `check` reports `ok: true` with no items. No issue was added.
+- **Board config:** [board.proj-spine.json](board.proj-spine.json), with the
+  paths of the layout in `docs/t3/README.md`. It becomes
+  `~/devbot/proj-spine/board.json` on the host.
+- **proj-spine:** draft PR globusmedical/proj-spine#46 (branch
+  `t3/board-task-tracking`), stacked on #45, the tip of the repository's
+  readiness work. That branch already had `pr-review-hooks.md`; the PR adds
+  `docs/3_process/task_tracking.md`, its route in `AGENTS.md`, and the
+  pr-tracking rows for the labels and the sweep.
+- **Found for the host's environment file:** `PR_HUMAN_CHECKS=pr-ready / Require Label`.
+  It is the only required check on `main`, and it needs the `ready for merge`
+  label, which only a person adds.
+- **Step 6 (host)** is proposed in a separate thread of the dotfiles project.
+  The dotfiles flake pins engineering-agents at `42befcb`; the bots need a
+  revision that holds this branch, so the branch has to be pushed first.
+
 ## Not in this plan
 
 - Work items: the submodule worktree question and the Pi `work-item` bridge
