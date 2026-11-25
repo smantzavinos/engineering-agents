@@ -50,6 +50,10 @@ Use this file as the repo entry point. It routes to the canonical docs for this 
 - `docs/execution-patterns.md` — Parallel runtime constraints (sandbox, parent-driven loop).
 - Use plan/worklog artifacts to reference the canonical testing, backlog, and requirements docs instead of restating their policies inconsistently.
 
+## Board Automation
+- `docs/references/delivery-pipeline.md` — the board pipeline: statuses, gates, commands and scheduled jobs.
+- `docs/t3/README.md` — run the board ticks with systemd timers and one T3 server per board; `docs/hermes/README.md` — the Hermes runtime.
+
 ## Operational Memory
 - `docs/issues_learnings.md` — lightweight log for recurring issues and confirmed learnings that should stay visible across plans.
 - `docs/adr/README.md` — ADR index and format guidance for durable repo-level decisions.

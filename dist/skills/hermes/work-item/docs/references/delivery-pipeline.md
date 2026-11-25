@@ -23,9 +23,11 @@ below can be done by a human or an in-session agent.
 | `[C]` | Scheduled job (cron) that dispatches a fresh agent session | Triage, work pickup, PR review, babysit |
 | `[G]` | Tracker automation built into the platform | Close issue on merge |
 
-**Runtime.** Dispatched sessions load the canonical skills directly (Hermes
-does; see `docs/hermes/README.md`). The rendered Pi/OpenCode bundles restrict
-some skills to one harness (`execution-orchestrator` is OpenCode-only,
+**Runtime.** Two runtimes start the scheduled jobs and their sessions: Hermes
+(`docs/hermes/README.md`) and systemd timers with a T3 Code server
+(`docs/t3/README.md`; triage and the PR sweep only, since `work-item` is not
+rendered for Pi). Hermes sessions load the canonical skills directly. The
+rendered Pi/OpenCode bundles restrict some skills to one harness (`execution-orchestrator` is OpenCode-only,
 `discover-and-design` and `babysit-pr` are Pi-only), so a harness that only has
 its rendered bundle cannot run the standard track unattended.
 
@@ -303,10 +305,11 @@ flowchart LR
 | unheard | 5 min | Comments no bot will act on; bot comments missing the 🤖 | None (script only) | Nothing: it replies on the issue or PR |
 | hygiene | Weekly | Whole board and open PRs | None | Stale `Your turn` cards, parked `discuss` items, PRs outside the review flow |
 
-The reference implementation for Hermes is `scripts/pipeline-dispatch.py`
+The reference implementation is `scripts/pipeline-dispatch.py`
 (`triage`, `work`, `hygiene` subcommands) with its session prompts in
 `scripts/pipeline-prompts/`; the PR sweep is `scripts/pr-sweep-dispatch.py`.
-Their headers list the configuration each repo supplies.
+Their headers list the configuration each repo supplies; `PIPELINE_LAUNCHER`
+selects the runtime that starts the sessions (`hermes`, the default, or `t3`).
 
 On a GitHub Project board, `scripts/gh-project.py` is the tracker adapter
 (`list`, `prs`, `check`, `move`, `set`, `fields`, `labels`,
