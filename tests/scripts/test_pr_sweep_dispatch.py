@@ -81,6 +81,23 @@ class StateLabel(unittest.TestCase):
         self.assertEqual(d.state_label(["review-bot:queued", "review-bot:running"], "ignore"), "review-bot:running")
 
 
+class OptInBoundary(unittest.TestCase):
+    def test_unlabeled_pr_without_prior_engagement_is_not_opted_in(self):
+        self.assertFalse(d.opted_in(None, [], None, [], [], None, None))
+        self.assertFalse(d.opted_in(None, ["ready for merge"], None, [comment(1, "owner", "lgtm")], [], None, None))
+
+    def test_each_opt_in_signal_engages_the_pr(self):
+        v = ("READY", "a" * 40, comment(1, "bot", "v"))
+        cmd = comment(2, "owner", "/devbot review")
+        self.assertTrue(d.opted_in("review-bot:queued", ["review-bot:queued"], None, [], [], None, None))
+        self.assertTrue(d.opted_in(None, ["fix-bot:owns-branch"], None, [], [], None, None))
+        self.assertTrue(d.opted_in(None, [], v, [], [], None, None))
+        self.assertTrue(d.opted_in(None, [], None, [beat("babysit-pr7-abc", "2026-01-01T11:00:00Z")], [], None, None))
+        self.assertTrue(d.opted_in(None, [], None, [], [{"kind": "review", "pr": 1}], None, None))
+        self.assertTrue(d.opted_in(None, [], None, [], [], cmd, None))
+        self.assertTrue(d.opted_in(None, [], None, [], [], None, cmd))
+
+
 class BotRounds(unittest.TestCase):
     def test_round_returns_all_unhandled_ids(self):
         revs = [{"id": 701}, {"id": 702}]

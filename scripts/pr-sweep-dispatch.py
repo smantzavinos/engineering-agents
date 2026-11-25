@@ -158,6 +158,16 @@ def state_label(labels, unlabeled=UNLABELED):
     return label
 
 
+def opted_in(label, labels, last_v, comments, mine, mention_review, mention_babysit):
+    """Whether the sweep may act on this PR (labels, verdicts, claims, prior dispatches, or an explicit command).
+
+    Under PR_SWEEP_UNLABELED=ignore (default), a PR with none of these has never opted in and must not trigger
+    automatic babysit rounds (Copilot reviews, botcap, CI, conflicts, cancelled-check alerts). Drift mode
+    (PR_SWEEP_UNLABELED=review) already maps an unlabeled PR to `review-bot:queued`, so `label` is non-None."""
+    return bool(label is not None or FIX_OWNS in labels or last_v is not None or sweep_owned(comments)
+                or mine or mention_review or mention_babysit)
+
+
 def migrate_labels(repo, n, labels):
     """Rewrite pre-rename workflow labels on one PR to the current names; returns the current label list."""
     current = list(dict.fromkeys(LEGACY_LABELS.get(name, name) for name in labels))
@@ -844,14 +854,6 @@ def sweep_repo(repo, recs, reported):
                 cache.append(pr_people(repo, number))
             return cache[0]
         comments = trusted_comments(gh("api", f"repos/{repo}/issues/{n}/comments?per_page=100"), agent_logins(), people)
-        reviews = gh("api", f"repos/{repo}/pulls/{n}/reviews?per_page=100")
-        owner_name, repo_name = repo.split("/")
-        try:
-            threads = gh("api", "graphql", "-f", f"query={THREADS_QUERY}", "-f", f"o={owner_name}",
-                         "-f", f"r={repo_name}", "-F", f"p={n}")["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-            open_threads = unanswered_threads(threads, agent_logins(), lambda: OWNERS | people() | set(BOT_REVIEWERS))
-        except Exception:  # noqa: BLE001 — unknown thread state never blocks the rest of the sweep
-            open_threads = []
         vs = verdicts(comments)
         last_v = vs[-1] if vs else None
         mine = [r for r in recs if r.get("repo") == repo and r["pr"] == n]
@@ -866,6 +868,31 @@ def sweep_repo(repo, recs, reported):
                 bot = "review bot" if r["kind"] == "review" else "fix bot"
                 out.append(f"{repo}#{n}: the {bot} has been running for {int(age)} min, longer than expected. "
                            f"No action needed unless it is still running later (log {LOGS / (r['tag'] + '.log')}).")
+
+        # A request is answered only by a real outcome; a failed or transiently blocked run leaves it
+        # pending (retried after the cooldown, at most MAX_FAILS times, then reported once).
+        answered, exhausted = owner_requests(mine, running)
+        for cid, rec in exhausted.items():
+            rkey = f"ownerreq:{repo}#{n}:{cid}"
+            if rkey not in reported:
+                reported.add(rkey)
+                out.append(f"{repo}#{n}: the fix bot could not carry out your request after {MAX_FAILS} tries: "
+                           f"{why_unfinished(rec)} Reply with a new request once that is resolved.")
+        mention_review, mention_babysit = mentions(comments, HANDLES, answered)
+
+        # Opt-in boundary: under PR_SWEEP_UNLABELED=ignore, a PR that has never been labeled, claimed,
+        # reviewed, dispatched, or explicitly commanded is out of scope — no automatic actions or alerts.
+        if not opted_in(label, labels, last_v, comments, mine, mention_review, mention_babysit):
+            continue
+
+        reviews = gh("api", f"repos/{repo}/pulls/{n}/reviews?per_page=100")
+        owner_name, repo_name = repo.split("/")
+        try:
+            threads = gh("api", "graphql", "-f", f"query={THREADS_QUERY}", "-f", f"o={owner_name}",
+                         "-f", f"r={repo_name}", "-F", f"p={n}")["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
+            open_threads = unanswered_threads(threads, agent_logins(), lambda: OWNERS | people() | set(BOT_REVIEWERS))
+        except Exception:  # noqa: BLE001 — unknown thread state never blocks the rest of the sweep
+            open_threads = []
 
         # Author-push demotion: a sweep-owned author round published this head on a PR
         # without a state label (maintenance-only claim). Re-review it instead of stalling.
@@ -925,17 +952,6 @@ def sweep_repo(repo, recs, reported):
                 reported.add(ckey)
                 out.append(f"{repo}#{n}: needs a person: these checks were cancelled on the latest commit "
                            f"({'; '.join(cancelled)}). Re-run them in GitHub Actions. No fix bot was started.")
-
-        # A request is answered only by a real outcome; a failed or transiently blocked run leaves it
-        # pending (retried after the cooldown, at most MAX_FAILS times, then reported once).
-        answered, exhausted = owner_requests(mine, running)
-        for cid, rec in exhausted.items():
-            rkey = f"ownerreq:{repo}#{n}:{cid}"
-            if rkey not in reported:
-                reported.add(rkey)
-                out.append(f"{repo}#{n}: the fix bot could not carry out your request after {MAX_FAILS} tries: "
-                           f"{why_unfinished(rec)} Reply with a new request once that is resolved.")
-        mention_review, mention_babysit = mentions(comments, HANDLES, answered)
 
         claim = claim_state(labels, comments, time.time())
         babysitter_running = any(r["kind"] == "babysit" for r in running)
@@ -1134,7 +1150,7 @@ def sweep_repo(repo, recs, reported):
                 human_comment(repo, n, head, "conflictheld", "this pull request has merge conflicts",
                               f"the fix bot is not fixing them because {why}.", how, comments, reported)
         author_attempts = [r for r in mine if r['kind'] == 'babysit' and r['head'] == head]
-        if want_babysit and not retry_budget(author_attempts):
+        if want_babysit and not pr["isDraft"] and not retry_budget(author_attempts):
             key = f"author-fails:{repo}#{n}:{head}:{int(time.time() // (6 * 3600))}"
             if key not in reported:
                 reported.add(key)
@@ -1143,7 +1159,7 @@ def sweep_repo(repo, recs, reported):
             want_babysit = False
         # Shared author limit: with PIPELINE_WIP author sessions live (fix rounds here plus the pipeline's work
         # sessions), the round waits for a free slot; the PR does not count as idle meanwhile.
-        deferred = (want_babysit and not babysitter_running
+        deferred = (want_babysit and not babysitter_running and not pr["isDraft"]
                     and len(pipeline_runtime.live_authors([STATE, *(BOARD_STATES or [PIPELINE_STATE])], alive)) >= WIP)
         if deferred:
             want_babysit = False
@@ -1151,7 +1167,7 @@ def sweep_repo(repo, recs, reported):
                 reported.add(f"deferred:{mention_babysit['id']}")
                 out.append(f"{repo}#{n}: your fix request waits for a free bot: all {WIP} author slots are busy "
                            f"(PIPELINE_WIP). It starts by itself when one frees up.")
-        if want_babysit and not babysitter_running:
+        if want_babysit and not babysitter_running and not pr["isDraft"]:
             rec = {"ts": time.time(), "kind": "babysit", "repo": repo, "pr": n, "head": head,
                    "comment_id": mention_babysit["id"] if mention_babysit else None,
                    "verdict_id": verdict_id if fix_round or owner_round else None,

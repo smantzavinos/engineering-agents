@@ -400,9 +400,14 @@ restated in the prompt.
 
 ### Opt-in vs drift
 
-By default an unlabeled PR is **ignored** until someone labels it
-`review-bot:queued` or posts a `<handle> review` command. Otherwise, in a repo with open PRs,
-the first tick would queue every one of them for review. Set
-`PR_SWEEP_UNLABELED=review` to treat an unlabeled PR as drift awaiting review.
+By default (`PR_SWEEP_UNLABELED=ignore`) an unlabeled PR with no workflow
+label (`review-bot:*`, `fix-bot:*`, `needs-human:*`), no `fix-bot:owns-branch`
+claim, no prior bot verdict or dispatch, and no `<handle> review` / `<handle>
+fix` command is **ignored** completely — no reviews, no automatic fix rounds
+(including `PR_BOT_REVIEWERS` / Copilot reviews, CI, or merge conflicts), and
+no alerts (such as `botcap` or cancelled checks). Otherwise, in a repo with
+existing open PRs, the first tick would act on teammates' PRs that never
+opted in. Set `PR_SWEEP_UNLABELED=review` to treat an unlabeled PR as drift
+awaiting review.
 
 Setup is step 2 of the [self-setup checklist](README.md#agent-self-setup-checklist).

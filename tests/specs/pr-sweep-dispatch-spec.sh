@@ -64,6 +64,49 @@ check  "$OUT" "set PIPELINE_OWNERS" "trust: the sweep refuses to run without own
 OUT="$(PR_SWEEP_UNLABELED=review run)"
 check  "$OUT" "would spawn review for o/r#1" "drift mode: unlabeled PR is reviewed"
 
+# Opt-in boundary: under PR_SWEEP_UNLABELED=ignore (default), an unlabeled PR with no workflow
+# label, claim, verdict, or command must NOT trigger bot_round, botcap, cancelled-check alerts,
+# CI rounds, or conflict rounds — even if it carries unrelated labels or Copilot reviews.
+# Opted-in PRs (workflow label or sweep-owned claim) still act as intended.
+OPT="$TMP/gh-opt"
+cat > "$OPT" <<'EOF'
+#!/usr/bin/env bash
+pr11='{"number":11,"title":"teammate unlabeled","headRefName":"feat/a","headRefOid":"1111111111111111111111111111111111111111","labels":[{"name":"ready for merge"}],"isDraft":false,"mergeable":"CONFLICTING","baseRefName":"main","statusCheckRollup":[{"name":"CI","status":"COMPLETED","conclusion":"FAILURE"},{"name":"Lint","status":"COMPLETED","conclusion":"CANCELLED"}]}'
+pr12='{"number":12,"title":"opted-in workflow label","headRefName":"feat/b","headRefOid":"1212121212121212121212121212121212121212","labels":[{"name":"review-bot:queued"}],"isDraft":false,"statusCheckRollup":[]}'
+pr13='{"number":13,"title":"opted-in draft","headRefName":"feat/c","headRefOid":"1313131313131313131313131313131313131313","labels":[{"name":"review-bot:queued"}],"isDraft":true,"statusCheckRollup":[]}'
+pr14='{"number":14,"title":"unlabeled clean","headRefName":"feat/d","headRefOid":"1414141414141414141414141414141414141414","labels":[],"isDraft":false,"mergeable":"MERGEABLE","statusCheckRollup":[]}'
+case "$*" in
+  "pr list"*) echo "[$pr11, $pr12, $pr13, $pr14]" ;;
+  *"issues/"*"/comments"*)
+    if [[ "$*" == *"issues/14/comments"* && -n "${OPT_CMD:-}" ]]; then
+      echo "[{\"id\":140,\"user\":{\"login\":\"owner\"},\"body\":\"$OPT_CMD\"}]"
+    else
+      echo '[]'
+    fi ;;
+  *"pulls/"*"/reviews"*)
+    n="${OPT_BOT_REVIEWS:-1}"; printf '['
+    for i in $(seq 1 "$n"); do [[ $i -gt 1 ]] && printf ','; printf '{"id":%d,"user":{"login":"copilot-pull-request-reviewer[bot]"},"state":"COMMENTED","submitted_at":"2026-01-01T00:00:00Z"}' "$((1100+i))"; done
+    printf ']\n' ;;
+  *) echo '[]' ;;
+esac
+EOF
+chmod +x "$OPT"
+OUT="$(run GH_BIN="$OPT")"
+refute "$OUT" "o/r#11" "opt-in: unlabeled PR with Copilot review, red/cancelled CI and conflicts is completely ignored"
+refute "$OUT" "o/r#14" "opt-in: unlabeled clean PR with Copilot review is ignored"
+check  "$OUT" "would spawn babysit for o/r#12" "opt-in: PR with workflow label still triggers bot_round on Copilot review"
+refute "$OUT" "o/r#13" "draft PR with Copilot review does not spawn babysit or review"
+OUT="$(run OPT_BOT_REVIEWS=6 GH_BIN="$OPT")"
+refute "$OUT" "o/r#11" "opt-in: unlabeled PR past Copilot review cap does not emit botcap"
+check  "$OUT" "o/r#12: Copilot has reviewed this PR 5 times" "opt-in: opted-in PR past Copilot review cap still emits botcap"
+OUT="$(run OPT_CMD='@agent review' PR_AGENT_HANDLE=@agent GH_BIN="$OPT")"
+check  "$OUT" "would spawn review for o/r#14" "opt-in: explicit '<handle> review' opts an unlabeled PR in"
+OUT="$(run OPT_CMD='@agent fix' PR_AGENT_HANDLE=@agent GH_BIN="$OPT")"
+check  "$OUT" "would spawn babysit for o/r#14" "opt-in: explicit '<handle> fix' opts an unlabeled PR in"
+OUT="$(PR_SWEEP_UNLABELED=review run GH_BIN="$OPT")"
+check  "$OUT" "would spawn babysit for o/r#11" "drift mode: unlabeled PR opts in as review-bot:queued (triggers conflict/bot rounds)"
+check  "$OUT" "would spawn review for o/r#14" "drift mode: unlabeled clean PR spawns review"
+
 
 # Babysit on open: a sweep-owned claim gets a round on a new bot review, never ages,
 # and stops at the bot-review cap.
